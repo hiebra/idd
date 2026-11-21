@@ -91,6 +91,8 @@
   - En el diálogo `/skills` aparecen, una vez cada una, las ocho skills del schema y los ocho workflows de OpenSpec. `opencode api skill.list --standalone` devuelve una lista vacía incluso en un proyecto con skills en las tres fuentes, así que no sirve para comprobarlo.
   - Con `npm_config_registry` apuntando a un puerto cerrado y una caché vacía, aparecen dos toasts, `session-start: falló la instalación de dependencias en '.'` y el mismo para `'acceptance-tests'`, cada uno con el extracto del log de npm, y no se escribe ningún sello.
   - Comprobado de paso para el README: con `"plugins": ["-<id>"]` en `~/.config/opencode/opencode.json` no se carga la parte de servidor del plugin, pero la de TUI sí.
-- [ ] 7.3 Ejecutar `openspec validate add-opencode-parity --type change --strict`: ningún error. Los avisos que queden tienen que ser los que ya dan las specs actuales (`openspec validate --specs --strict`)
+- [x] 7.3 Ejecutar `openspec validate add-opencode-parity --type change --strict`: ningún error. Los avisos que queden tienen que ser los que ya dan las specs actuales (`openspec validate --specs --strict`)
+
+  **Resultado (OpenSpec 1.17.0):** ningún `[ERROR]`. Quedan 26 `[WARNING]`, y todos son de los dos tipos que ya da `openspec validate --specs --strict` sobre `session-bootstrap`: "should contain SHALL or MUST", porque los requisitos usan "DEBE", y "missing a WHEN/GIVEN step and a THEN step", porque los pasos van en bloques `gherkin`. Con `--strict` los avisos hacen que los dos comandos terminen con 1.
 - [ ] 7.4 Commit y push de la zona de código pendiente, sin archivos de `openspec/`
 - [ ] 7.5 Archivar con `openspec archive add-opencode-parity` y, en ese mismo commit propio sin archivos de la zona de código, cambiar el `Purpose` de `openspec/specs/session-bootstrap/spec.md` para que hable de los agentes soportados. Push
