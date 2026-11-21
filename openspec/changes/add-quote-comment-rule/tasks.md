@@ -17,10 +17,10 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 3. Contenido de la regla: uno por paso pendiente; en cada uno, rojo → implementar → verde → commit
 
-- [ ] 3.1 Paso `la regla de comentarios del proyecto` (lee la fuente) y un helper que comprueba una sección por su identificador, como `assertGuideSection` del wiki
-- [ ] 3.2 `response-comments: La regla dice cómo contestar a un comentario`: los tres `Then` como secciones (`es-comentario`, `frase-fija`, `acumular`). `frase-fija` comprueba además que la sección contiene la frase fija literal de la spec. Rojo sin las secciones; escribirlas en `rule.md` → verde → commit
-- [ ] 3.3 `response-comments: La regla dice qué hacer con "ya"`: secciones `ya-responde-todos` e `ya-incluye-comentario`. Rojo → escribirlas → verde → commit
-- [ ] 3.4 `response-comments: La regla dice qué hacer con "reformula"`: secciones `reformula-completa`, `reformula-solo-leido` y `reformula-autonoma`. Rojo → escribirlas → verde → commit
+- [x] 3.1 Paso `la regla de comentarios del proyecto` (lee la fuente) y un helper que comprueba una sección por su identificador, como `assertGuideSection` del wiki
+- [x] 3.2 `response-comments: La regla dice cómo contestar a un comentario`: los tres `Then` como secciones (`es-comentario`, `frase-fija`, `acumular`). `frase-fija` comprueba además que la sección contiene la frase fija literal de la spec. Rojo sin las secciones; escribirlas en `rule.md` → verde → commit
+- [x] 3.3 `response-comments: La regla dice qué hacer con "ya"`: secciones `ya-responde-todos` e `ya-incluye-comentario`. Rojo → escribirlas → verde → commit
+- [x] 3.4 `response-comments: La regla dice qué hacer con "reformula"`: secciones `reformula-completa`, `reformula-solo-leido` y `reformula-autonoma`. Rojo → escribirlas → verde → commit. Hecho para 3.2 a 3.4: las secciones ya estaban en `rule.md` desde 1.3, así que el rojo se comprobó quitando temporalmente un identificador de cada escenario
 
 ## 4. Recordatorio con los mensajes (D3, D4): uno por paso pendiente; en cada uno, rojo → implementar → verde → commit
 
