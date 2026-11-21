@@ -78,7 +78,7 @@
 
 ## 7. Cierre
 
-- [ ] 7.1 Ejecutar la suite completa con los deltas del change: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado
+- [x] 7.1 Ejecutar la suite completa con los deltas del change: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado
 - [ ] 7.2 Probar con OpenCode 2 real, sin intervención humana, en un clon recién creado y con la TUI en una sesión de `tmux`:
   - `openspec --version` desde la sesión muestra la versión fijada;
   - aparecen las skills del schema y los workflows de OpenSpec;
