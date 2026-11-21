@@ -14,6 +14,7 @@ const { Project } = require('./project');
 const { ClaudeCodeAgent } = require('./agents/claude-code');
 const { OpenCodeAgent } = require('./agents/opencode');
 const skills = require('./skills');
+const { FakeEngine, refIn, refInText, hasPinnedEngine } = require('./engine');
 
 // Steps run real `npm install`s
 setDefaultTimeout(5 * 60 * 1000);
@@ -32,10 +33,13 @@ class SessionWorld extends World {
     this.machine = new Machine(this.workDir);
     this.project = null;
     this.session = null;
+    // The fake wiki engine is only needed once the project pins one
+    this.engine = hasPinnedEngine() ? new FakeEngine(this.workDir) : null;
+    this.sessions = {};
   }
 
   ensureProject() {
-    if (!this.project) this.project = new Project(path.join(this.workDir, 'project'));
+    if (!this.project) this.project = new Project(path.join(this.workDir, 'project'), { engineUrl: this.engine?.url ?? null });
     return this.project;
   }
 
@@ -45,9 +49,20 @@ class SessionWorld extends World {
     if (!agent) throw new Error(`no adapter for agent '${agentName}'`);
     const project = this.ensureProject();
     this.machine.resetNpmCalls();
+    this.machine.resetGitCalls();
     const session = agent.open({ machine: this.machine, project, workDir: this.workDir });
-    this.session = { ...session, agent: agent.name, npmCalls: this.machine.npmCalls() };
+    this.session = { ...session, agent: agent.name, npmCalls: this.machine.npmCalls(), gitCalls: this.machine.gitCalls() };
+    this.sessions[agent.name] = this.session;
     return this.session;
+  }
+
+  // Opens a session that must open normally, as the setup of a scenario
+  openSetupSession(agentName = DEFAULT_AGENT) {
+    const session = this.openSession(agentName);
+    if (session.error || session.exitCode !== 0 || session.startProblems.length > 0) {
+      throw new Error(`could not open a ${agentName} session for this scenario:\n${session.startProblems.join('\n')}\n${session.log}`);
+    }
+    return session;
   }
 
   // Leaves the project installed by a previous session on an ordinary machine
@@ -91,6 +106,50 @@ class SessionWorld extends World {
 
   installsIn(dir) {
     return this.session.npmCalls.filter((call) => call.dir === dir && call.args[0] === 'install');
+  }
+
+  // --- wiki ---
+
+  // The wiki engine clones made while the session opened
+  engineClones() {
+    return (this.session?.gitCalls ?? []).filter((call) => /^clone\b/.test(call));
+  }
+
+  // What the agent has of the wiki engine: its read-only query and wiki
+  // management, each with the engine ref of the file it comes from, and the
+  // ref the engine's helper reports from a command of the session
+  // (CLAUDE_PLUGIN_ROOT, design D1)
+  loadWikiEngine(agentName) {
+    const project = this.ensureProject();
+    const operations = skills.wikiOperations(agentName, project.dir);
+    const refs = Object.fromEntries(Object.entries(operations).map(([kind, op]) => [kind, op ? refIn(op.file) : null]));
+    const session = this.sessions[agentName];
+    const helper = session ? session.run('"$CLAUDE_PLUGIN_ROOT/bin/llm-wiki"') : null;
+    this.wikiEngine = { agent: agentName, operations, refs, helperRef: helper ? refInText(helper.stdout) : null, helper };
+    return this.wikiEngine;
+  }
+
+  // The engine refs an agent uses, as a set; one element when it is consistent
+  engineRefsOf(agentName) {
+    const { refs, helperRef } = this.loadWikiEngine(agentName);
+    return [...new Set([...Object.values(refs), helperRef])];
+  }
+
+  // Sends a user message in the open session
+  sendMessage(text = 'qué sabemos del dominio del proyecto') {
+    this.sentMessage = { text, result: this.session.sendMessage(text, { reminderFails: Boolean(this.reminderBroken) }) };
+    return this.sentMessage.result;
+  }
+
+  breakReminder() {
+    this.project.breakReminder();
+    this.reminderBroken = true;
+  }
+
+  // The guide as the agent receives it: the project's guide file without its
+  // section identifiers (design D2)
+  guideAsDelivered() {
+    return this.project.readGuide().replace(/<!--[\s\S]*?-->\n?/g, '').trim();
   }
 
   cleanUp() {

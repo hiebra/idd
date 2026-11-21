@@ -7,19 +7,23 @@
 // fake server context and the TUI part's setup with a fake TUI context, wired
 // together by an in-memory plugin RPC. Then it opens a shell the way OpenCode
 // does before every command: it runs the create.before hooks on the command's
-// environment. Like a real session, which stays open, it reports only once
-// the processes the plugin started in the background have finished and their
-// warnings have reached the TUI.
+// environment. Last, it sends one user message: it builds the model request
+// the way OpenCode 2 does and runs the session's `context` hooks on it, which
+// may change its `system` parts and `messages` (checked with OpenCode 2.3.2,
+// tasks 1.2 of add-llm-wiki-support). If a context hook throws, OpenCode
+// fails the request: the message does not reach the model.
 //
 // Usage: node opencode-host.mjs <project dir> <options JSON> <result file>
-// Options: { shell, frozenEnv }
+// Options: { shell, frozenEnv, message, frozenMessages }
 //   shell: "ok" | "none" (a server context without `shell`) | "throws" (its
-//   hook() throws); frozenEnv: the command's environment cannot be changed
-// Result (JSON): { error, setupMs, env, toasts, logs }
+//   hook() throws); frozenEnv: the command's environment cannot be changed;
+//   message: the user message to send; frozenMessages: the request's
+//   messages cannot be changed, so a hook that edits them throws
+// Result (JSON): { error, setupMs, env, toasts, logs, request }
+//   request: { delivered, system, messages, error } of the message, where
+//   system and messages are the texts the model receives
 
-import childProcess from 'node:child_process';
 import fs from 'node:fs';
-import { syncBuiltinESMExports } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -27,7 +31,7 @@ const [projectDir, optionsJson, resultFile] = process.argv.slice(2);
 const options = JSON.parse(optionsJson);
 const PLUGIN_DIR = path.join(projectDir, '.opencode', 'plugins', 'session-bootstrap');
 
-const result = { error: null, setupMs: null, env: null, toasts: [], logs: [] };
+const result = { error: null, setupMs: null, env: null, toasts: [], logs: [], request: null };
 const done = () => {
   fs.writeFileSync(resultFile, JSON.stringify(result));
   process.exit(0);
@@ -39,27 +43,6 @@ const fail = (where, error) => {
 // What escapes the plugin's promises or timers would crash OpenCode's process
 process.on('uncaughtException', (error) => fail('uncaught exception', error));
 process.on('unhandledRejection', (error) => fail('unhandled rejection', error));
-
-// --- Background processes ----------------------------------------------------
-
-// The plugin starts the session-bootstrap core with spawn() and does not wait
-// for it when nothing else does (no shell hook to run). A real session stays
-// open meanwhile, so the host waits for every process the plugin started
-// before reporting. syncBuiltinESMExports() makes the plugin's
-// `import { spawn } from "node:child_process"` see the wrapper.
-const running = new Set();
-const originalSpawn = childProcess.spawn;
-childProcess.spawn = function spawn(...args) {
-  const child = originalSpawn.apply(this, args);
-  const closed = new Promise((resolve) => {
-    child.on('close', resolve);
-    child.on('error', resolve);
-  });
-  running.add(closed);
-  closed.finally(() => running.delete(closed));
-  return child;
-};
-syncBuiltinESMExports();
 
 // --- In-memory plugin RPC ------------------------------------------------------
 
@@ -123,12 +106,21 @@ function clientRpc(definition) {
 // --- Contexts ------------------------------------------------------------------
 
 const shellHooks = [];
+const contextHooks = [];
+// OpenCode's own system prompt, before any plugin edits it
+const BASE_SYSTEM = 'You are OpenCode (simulated system prompt).';
 
 function serverContext() {
   const ctx = {
     location: { directory: projectDir },
     options: {},
     rpc: serverRpc(),
+    session: {
+      async hook(name, callback) {
+        if (name === 'context') contextHooks.push(callback);
+        return { async dispose() {} };
+      },
+    },
   };
   if (options.shell !== 'none') {
     ctx.shell = {
@@ -209,14 +201,57 @@ try {
   fail('shell create.before hook', error);
 }
 
-// Background processes and deliveries to the TUI still in flight; a process
-// that ends may queue new deliveries, so wait until both are done
-const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
-do {
-  while (running.size > 0) await Promise.all([...running]);
-  await settle();
-  while (pending.size > 0) await Promise.all([...pending]);
-  await settle();
-} while (running.size > 0 || pending.size > 0);
+// The user sends a message: OpenCode builds the request and runs the
+// context hooks on it before calling the model
+const textOf = (content) =>
+  typeof content === 'string' ? content : (content ?? []).filter((p) => p?.type === 'text').map((p) => p.text).join('\n');
+try {
+  const messages = [{ role: 'user', content: [{ type: 'text', text: options.message ?? 'hola' }] }];
+  const input = {
+    sessionID: 'ses_suite',
+    model: { providerID: 'simulated', id: 'model' },
+    agent: 'build',
+    system: [{ type: 'text', text: BASE_SYSTEM }],
+    messages: options.frozenMessages ? Object.freeze(messages) : messages,
+    options: {},
+    tools: {},
+  };
+  let error = null;
+  for (const hook of contextHooks) {
+    try {
+      await hook(input);
+    } catch (e) {
+      error = `context hook: ${e?.stack ?? e}`;
+      break;
+    }
+  }
+  result.request = {
+    delivered: error === null,
+    error,
+    system: error ? [] : input.system.map((part) => part.text),
+    messages: error ? [] : input.messages.map((m) => ({ role: m.role, text: textOf(m.content) })),
+    contextHooks: contextHooks.length,
+  };
+} catch (error) {
+  fail('sending a message', error);
+}
+
+// The plugin's child processes still running (the bootstrap core, when no
+// hook waits for it), as OpenCode keeps running while they do; Linux only,
+// with a fixed wait elsewhere
+async function childrenDone() {
+  const file = `/proc/${process.pid}/task/${process.pid}/children`;
+  if (!fs.existsSync(file)) return new Promise((resolve) => setTimeout(resolve, 2000));
+  const deadline = Date.now() + 120000;
+  while (fs.readFileSync(file, 'utf8').trim() !== '' && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+await childrenDone();
+await new Promise((resolve) => setTimeout(resolve, 20));
+
+// Deliveries to the TUI still in flight
+while (pending.size > 0) await Promise.all([...pending]);
+await new Promise((resolve) => setTimeout(resolve, 50));
 log(`shell hooks: ${shellHooks.length}`);
 done();

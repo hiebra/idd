@@ -7,7 +7,10 @@
 //
 // It returns the same session shape as the Claude Code adapter: the messages
 // shown to the user are the TUI part's toasts, and a command "in the session"
-// runs with the environment the create.before hooks left.
+// runs with the environment the create.before hooks left. The context the
+// bootstrap adds is what its `context` hook adds to the system of the first
+// request; a message is sent by opening the simulated host again with it, on
+// the project as it is then.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -70,14 +73,42 @@ class OpenCodeAgent {
       startProblems.push(`the server part's setup took ${result.setupMs} ms: OpenCode waits for it to start`);
     }
     const env = result.env ?? machine.env();
+    const self = this;
+    const request = result.request;
     return {
+      request,
+      context: request?.delivered ? request.system.slice(1) : [],
       exitCode: child.status,
       error: result.error,
       startProblems,
       warnings: result.toasts.flatMap((toast) => String(toast.message).split('\n')),
-      log: `host stderr:\n${child.stderr}\nhost logs:\n${result.logs.join('\n')}\ntoasts: ${JSON.stringify(result.toasts)}\nerror: ${result.error}`,
+      log: `host stderr:\n${child.stderr}\nhost logs:\n${result.logs.join('\n')}\ntoasts: ${JSON.stringify(result.toasts)}\nerror: ${result.error}\nrequest: ${JSON.stringify(result.request)}`,
       run(command) {
         return spawnSync('bash', ['-c', command], { cwd: project.dir, env, encoding: 'utf8' });
+      },
+      // When the reminder cannot be generated, it is also simulated with a
+      // request whose messages cannot be changed, so that the plugin's
+      // context hook fails inside
+      sendMessage(text, { reminderFails = false } = {}) {
+        const variants = reminderFails ? [{ ...options, message: text }, { ...options, message: text, frozenMessages: true }] : [{ ...options, message: text }];
+        const sent = variants.map((variant) => ({ variant, session: self.#open({ machine, project, workDir }, variant) }));
+        const problems = [];
+        for (const { variant, session } of sent) {
+          if (session.error) problems.push(`${JSON.stringify(variant)}: ${session.error}`);
+          if (!session.request) problems.push(`${JSON.stringify(variant)}: no request was made`);
+        }
+        const requests = sent.map(({ session }) => session.request).filter(Boolean);
+        const delivered = requests.length === variants.length && requests.every((r) => r.delivered && r.messages.at(-1)?.role === 'user' && r.messages.at(-1)?.text === text);
+        const first = requests[0];
+        return {
+          delivered,
+          messages: first ? first.messages.filter((m) => m.role === 'user').map((m) => m.text) : [],
+          // Messages added before the user's last one
+          reminders: first?.delivered ? first.messages.slice(0, -1).filter((m) => m.text !== text).map((m) => m.text) : [],
+          problems,
+          hooks: first?.contextHooks ?? 0,
+          log: sent.map(({ variant, session }) => `${JSON.stringify(variant)}\n${session.log}\nrequest: ${JSON.stringify(session.request)}`).join('\n'),
+        };
       },
     };
   }

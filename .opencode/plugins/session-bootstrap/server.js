@@ -3,8 +3,14 @@
 //
 // - Al cargar, lanza el núcleo en segundo plano sobre el proyecto; setup no
 //   espera a la instalación.
-// - Antes de cada comando de shell, espera al núcleo y pone el openspec del
-//   proyecto por delante en el PATH del comando.
+// - Antes de cada comando de shell, espera al núcleo, pone el openspec del
+//   proyecto por delante en el PATH del comando y exporta CLAUDE_PLUGIN_ROOT
+//   con el motor del wiki, para que sus skills encuentren su helper.
+// - Entrega la guía del wiki y el recordatorio por mensaje que prepara el
+//   núcleo, con el hook "context" de la sesión, que se ejecuta antes de cada
+//   petición al modelo y no guarda lo que añade: la guía va al system y el
+//   recordatorio, como mensaje del usuario, justo antes del último mensaje del
+//   usuario, como hace el modo Plan de OpenCode. Así nunca se acumulan.
 // - Los avisos llegan a la TUI (tui.js) por el RPC del plugin: el método
 //   warnings() devuelve los acumulados y el evento "warning" trae los nuevos.
 // - Nunca lanza una excepción hacia OpenCode: un fallo se convierte en aviso.
@@ -21,6 +27,8 @@ const ID = "session-bootstrap";
 const CORE = path.join(".agents", "hooks", "session-bootstrap.sh");
 const PATH_WARNING =
   "session-start: no se ha podido ajustar el PATH de la sesión; ejecuta el CLI del proyecto con 'npx openspec'";
+const ENGINE_WARNING =
+  "session-start: no se ha podido exportar CLAUDE_PLUGIN_ROOT; las operaciones del wiki que usan el helper del motor no lo encontrarán";
 
 // Si el núcleo tarda más que esto, se avisa de que los comandos esperan a la instalación
 const SLOW_CORE_MS = 3000;
@@ -55,19 +63,51 @@ const RPC = {
 
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
-// Ejecuta el núcleo y resuelve con { bin, warnings }; nunca rechaza
+// Ejecuta el núcleo en un modo del wiki (guide o reminder) y resuelve con su
+// texto, o con "" si no hay o falla; nunca rechaza
+function wikiText(directory, mode) {
+  return new Promise((resolve) => {
+    let stdout = "";
+    try {
+      const child = spawn("bash", [path.join(directory, CORE), mode, "opencode", directory], {
+        cwd: directory,
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      child.stdout.on("data", (chunk) => (stdout += chunk));
+      child.on("error", () => resolve(""));
+      child.on("close", (code) => resolve(code === 0 ? stdout.trim() : ""));
+    } catch (error) {
+      log(`wiki ${mode}:`, error);
+      resolve("");
+    }
+  });
+}
+
+// Añade la guía y el recordatorio a una petición al modelo. Lanza si la
+// petición no se deja cambiar; quien la llama lo captura
+function addWikiContext(input, guide, reminder) {
+  if (guide) input.system.push({ type: "text", text: guide });
+  if (reminder) {
+    const messages = input.messages;
+    const at = messages.at(-1)?.role === "user" ? messages.length - 1 : messages.length;
+    messages.splice(at, 0, { role: "user", content: [{ type: "text", text: reminder }] });
+  }
+}
+
+// Ejecuta el núcleo y resuelve con { bin, engine, warnings }; nunca rechaza
 function runCore(directory) {
   return new Promise((resolve) => {
     let stdout = "";
     let stderr = "";
     let child;
     const finish = (extra = []) => {
-      const bin = stdout
-        .split("\n")
-        .find((line) => line.startsWith("bin="))
-        ?.slice("bin=".length);
+      const value = (key) =>
+        stdout
+          .split("\n")
+          .find((line) => line.startsWith(`${key}=`))
+          ?.slice(key.length + 1) || null;
       const warnings = stderr.split("\n").filter((line) => line.trim() !== "");
-      resolve({ bin: bin || null, warnings: [...warnings, ...extra] });
+      resolve({ bin: value("bin"), engine: value("wiki-engine"), warnings: [...warnings, ...extra] });
     };
     try {
       child = spawn("bash", [path.join(directory, CORE), directory], {
@@ -112,6 +152,25 @@ export default {
       log("rpc register:", error);
     }
 
+    // La guía y el recordatorio: una excepción en el hook "context" haría
+    // fallar la petición al modelo, así que todo va dentro de try/catch
+    try {
+      const directory = ctx.location.directory;
+      const wiki = Promise.all([wikiText(directory, "guide"), wikiText(directory, "reminder")]);
+      Promise.resolve(
+        ctx.session.hook("context", async (input) => {
+          try {
+            const [guide, reminder] = await wiki;
+            addWikiContext(input, guide, reminder);
+          } catch (error) {
+            log("context:", error);
+          }
+        })
+      ).catch((error) => log("session.hook:", error));
+    } catch (error) {
+      log("session.hook:", error);
+    }
+
     try {
       const directory = ctx.location.directory;
       let finished = false;
@@ -131,23 +190,30 @@ export default {
       slow.unref?.();
 
       let hooked = false;
-      let pathWarned = false;
+      let envWarned = false;
+      // Lo que no se ha podido poner en el entorno de los comandos, avisado una sola vez
+      const warnEnv = ({ bin, engine }) => {
+        if (envWarned || (!bin && !engine)) return;
+        envWarned = true;
+        addWarnings([...(bin ? [PATH_WARNING] : []), ...(engine ? [ENGINE_WARNING] : [])]);
+      };
       try {
         if (ctx.shell && typeof ctx.shell.hook === "function") {
           ctx.shell.hook("create.before", async (event) => {
+            let result = {};
             try {
-              const { bin } = await core;
-              if (!bin) return;
+              result = await core;
+              const { bin, engine } = result;
+              if (!bin && !engine) return;
               // event.env se cambia en el sitio, como se comprobó con OpenCode 2.3.2
               if (!event.env) event.env = {};
+              if (engine) event.env.CLAUDE_PLUGIN_ROOT = engine;
+              if (!bin) return;
               const current = event.env.PATH ?? process.env.PATH ?? "";
               event.env.PATH = current ? `${bin}${path.delimiter}${current}` : bin;
             } catch (error) {
               log("create.before:", error);
-              if (!pathWarned) {
-                pathWarned = true;
-                addWarnings([PATH_WARNING]);
-              }
+              warnEnv(result);
             }
           });
           hooked = true;
@@ -156,13 +222,8 @@ export default {
         log("shell.hook:", error);
       }
       if (!hooked) {
-        // Solo hace falta avisar si hay un openspec que exponer
-        core.then(({ bin }) => {
-          if (bin && !pathWarned) {
-            pathWarned = true;
-            addWarnings([PATH_WARNING]);
-          }
-        });
+        // Solo hace falta avisar si hay algo que poner en el entorno
+        core.then(warnEnv);
       }
     } catch (error) {
       log("setup:", error);

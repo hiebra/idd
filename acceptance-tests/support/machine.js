@@ -12,6 +12,12 @@
 //     fails, the spy adds a last line with quotes, backslashes, a tab and a
 //     control character, so that the warning that quotes npm's log checks
 //     how each agent adapter escapes it
+//   - git spy: a git wrapper first in PATH that logs every call, so scenarios
+//     can tell whether the wiki engine was cloned
+//   - no user hub: HOME points at an empty directory (npm keeps its cache)
+//   - wiki disabled for the user: PROJECT_WIKI=off in the environment the
+//     agent is launched from (design D4); Claude Code reads it from
+//     .claude/settings.local.json instead, see its adapter
 
 const fs = require('node:fs');
 const os = require('node:os');
@@ -22,7 +28,10 @@ const OLD_NODE_VERSION = '20.11.0';
 const GLOBAL_OPENSPEC_VERSION = '0.9.0';
 const NPM_FAILURE_LINE = 'npm-simulado: "comillas" \\barras\\ tab\tfin \\n literal y control \u0001 fin';
 // System tools the hook needs besides node and npm
-const HOOK_TOOLS = ['bash', 'cat', 'dirname', 'head', 'mktemp', 'rm', 'sed', 'sha256sum', 'sort', 'tail'];
+const HOOK_TOOLS = [
+  'bash', 'cat', 'dirname', 'git', 'grep', 'head', 'ln', 'mkdir', 'mktemp', 'mv', 'readlink', 'rm', 'sed',
+  'sha256sum', 'sort', 'tail', 'timeout', 'wc',
+];
 
 function which(command, searchPath = process.env.PATH || '') {
   for (const dir of searchPath.split(path.delimiter)) {
@@ -49,7 +58,9 @@ function cleanEnv() {
   const env = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (/^npm_/i.test(key) && !keep.test(key)) continue;
-    if (key === 'CLAUDE_ENV_FILE' || key === 'CLAUDE_PROJECT_DIR') continue;
+    if (['CLAUDE_ENV_FILE', 'CLAUDE_PROJECT_DIR', 'CLAUDE_PLUGIN_ROOT', 'PROJECT_WIKI'].includes(key)) continue;
+    // Git settings of the machine that runs the suite would steer the hook's git calls
+    if (/^GIT_/.test(key)) continue;
     env[key] = value;
   }
   return env;
@@ -64,6 +75,10 @@ class Machine {
     this.offline = false;
     // false: the agent offers no way to adjust the session's PATH
     this.sessionPathAdjustable = true;
+    // false: HOME is an empty directory, with no user hub
+    this.hasUserHub = true;
+    // true: the user disabled the wiki in the environment the agent starts from
+    this.wikiDisabled = false;
 
     const realNpm = which('npm');
     if (!realNpm) throw new Error('the acceptance suite needs npm on the machine that runs it');
@@ -73,6 +88,9 @@ class Machine {
     this.nodeDir = path.join(workDir, 'bin', 'node');
     this.basePath = [this.nodeDir, '/usr/bin', '/bin'];
     this.spyLog = path.join(workDir, 'npm-calls.log');
+    this.gitLog = path.join(workDir, 'git-calls.log');
+    this.emptyHome = path.join(workDir, 'home-sin-hub');
+    this.npmCache = process.env.npm_config_cache || path.join(os.homedir(), '.npm');
     this.#buildBins();
   }
 
@@ -97,6 +115,13 @@ class Machine {
         'exit "$status"\n'
     );
 
+    const realGit = which('git');
+    if (!realGit) throw new Error('the acceptance suite needs git on the machine that runs it');
+    writeExecutable(
+      path.join(this.spyDir, 'git'),
+      '#!/bin/bash\n' + `printf '%s\\n' "$*" >> "${this.gitLog}"\n` + `exec "${realGit}" "$@"\n`
+    );
+
     this.oldNodeDir = bin('node-old');
     writeExecutable(
       path.join(this.oldNodeDir, 'node'),
@@ -115,8 +140,11 @@ class Machine {
     if (realNpx) fs.symlinkSync(realNpx, path.join(this.nodeDir, 'npx'));
 
     this.noNpmDir = bin('no-npm');
+    // System directories first: the PATH of the machine that runs the suite
+    // may hold wrappers of these tools that need the rest of that PATH
+    const systemFirst = ['/usr/bin', '/bin', process.env.PATH || ''].join(path.delimiter);
     for (const tool of HOOK_TOOLS) {
-      const target = which(tool);
+      const target = which(tool, systemFirst);
       if (!target) throw new Error(`the acceptance suite needs '${tool}' on the machine that runs it`);
       fs.symlinkSync(target, path.join(this.noNpmDir, tool));
     }
@@ -138,7 +166,7 @@ class Machine {
   }
 
   path() {
-    if (!this.hasNpm) return this.noNpmDir;
+    if (!this.hasNpm) return [this.spyGitOnlyDir(), this.noNpmDir].join(path.delimiter);
     const dirs = [];
     if (this.globalOpenspec) dirs.push(this.globalOpenspecDir);
     if (this.nodeVersion) dirs.push(this.oldNodeDir);
@@ -146,8 +174,25 @@ class Machine {
     return dirs.join(path.delimiter);
   }
 
+  // The git spy alone, for machines without npm
+  spyGitOnlyDir() {
+    const dir = path.join(this.workDir, 'bin', 'git-spy');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.symlinkSync(path.join(this.spyDir, 'git'), path.join(dir, 'git'));
+    }
+    return dir;
+  }
+
   env(extra = {}) {
     const env = { ...cleanEnv(), PATH: this.path(), ...extra };
+    if (!this.hasUserHub) {
+      fs.mkdirSync(this.emptyHome, { recursive: true });
+      Object.assign(env, { HOME: this.emptyHome, npm_config_cache: env.npm_config_cache ?? this.npmCache });
+      delete env.XDG_CONFIG_HOME;
+      delete env.XDG_DATA_HOME;
+    }
+    if (this.wikiDisabled) env.PROJECT_WIKI = 'off';
     if (this.offline) {
       fs.rmSync(this.emptyCache, { recursive: true, force: true });
       Object.assign(env, {
@@ -176,6 +221,16 @@ class Machine {
 
   resetNpmCalls() {
     fs.rmSync(this.spyLog, { force: true });
+  }
+
+  // git calls since the last reset, as argument strings
+  gitCalls() {
+    if (!fs.existsSync(this.gitLog)) return [];
+    return fs.readFileSync(this.gitLog, 'utf8').split('\n').filter(Boolean);
+  }
+
+  resetGitCalls() {
+    fs.rmSync(this.gitLog, { force: true });
   }
 
   static tmpDir() {

@@ -1,3 +1,9 @@
 node_modules/
 acceptance-tests/.extracted/
 acceptance-tests/reports/
+# Motor del wiki instalado por el arranque de sesión (local, nunca versionado)
+.agents/wiki-engine/
+.agents/wiki-engine.*/
+.claude/skills/wiki-manager
+.claude/commands/wiki
+.opencode/skills/wiki-query
