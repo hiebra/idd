@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: CLI de OpenSpec del proyecto disponible al abrir sesión
-Al abrir una sesión de un agente soportado en el proyecto, el arranque de sesión DEBE dejar disponible el `openspec` del proyecto, en la versión fijada por su `package.json`, con prioridad sobre cualquier `openspec` instalado globalmente en la máquina. Los agentes soportados son Claude Code y OpenCode. Si la sesión no permite ajustar el `PATH`, el arranque de sesión DEBE avisar de ello e indicar cómo ejecutar el CLI del proyecto.
+Al abrir una sesión de un agente soportado en el proyecto, el arranque de sesión DEBE dejar disponible el `openspec` del proyecto, en la versión fijada por su `package.json`, con prioridad sobre cualquier `openspec` instalado globalmente en la máquina. Los agentes soportados son Claude Code y OpenCode 2 o superior. Si la sesión no permite ajustar el `PATH`, el arranque de sesión DEBE avisar de ello e indicar cómo ejecutar el CLI del proyecto. Avisar significa mostrar el mensaje al usuario en la interfaz del agente (en OpenCode, en su interfaz de terminal); dejarlo solo en un log o en una salida que el agente no muestra no cuenta como aviso.
 
 #### Scenario: Clon recién creado
 
@@ -122,7 +122,7 @@ Then no se lanza ninguna instalación
 ```
 
 ### Requirement: Aviso sin instalar cuando el entorno no cumple los requisitos
-Cuando la máquina no tiene npm, o tiene una versión de Node.js inferior a la que exige el proyecto, el arranque de sesión DEBE avisar del requisito incumplido en la sesión del agente soportado que se haya abierto, NO DEBE intentar instalar nada y NO DEBE impedir que la sesión arranque.
+Cuando la máquina no tiene npm, o tiene una versión de Node.js inferior a la que exige el proyecto, el arranque de sesión DEBE avisar del requisito incumplido, mostrando el aviso al usuario en la interfaz del agente soportado que se haya abierto, NO DEBE intentar instalar nada y NO DEBE impedir que la sesión arranque.
 
 #### Scenario: Máquina sin npm
 
@@ -156,7 +156,7 @@ And no se lanza ninguna instalación
 ```
 
 ### Requirement: Un fallo de instalación no bloquea la sesión
-Si la instalación de dependencias falla, el arranque de sesión DEBE avisar del fallo en la sesión del agente soportado que se haya abierto, NO DEBE impedir que la sesión arranque y DEBE volver a intentar la instalación en la siguiente sesión, sea del agente que sea.
+Si la instalación de dependencias falla, el arranque de sesión DEBE avisar del fallo, mostrando el aviso al usuario en la interfaz del agente soportado que se haya abierto, NO DEBE impedir que la sesión arranque y DEBE volver a intentar la instalación en la siguiente sesión, sea del agente que sea.
 
 #### Scenario: Sin acceso al registro de paquetes
 

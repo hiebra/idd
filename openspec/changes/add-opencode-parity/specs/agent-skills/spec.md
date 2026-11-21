@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Skills del schema disponibles en cada agente soportado
-Cada skill de `.agents/skills/` DEBE estar disponible, exactamente una vez, en cada agente soportado (Claude Code y OpenCode), sin configurar nada tras clonar, y el nombre que declara DEBE coincidir con el de su directorio. Una skill está disponible en un agente cuando este la encuentra al buscar skills de proyecto en el clon, según las reglas de descubrimiento de ese agente.
+Cada skill de `.agents/skills/` DEBE estar disponible, exactamente una vez, en cada agente soportado (Claude Code y OpenCode 2 o superior), sin configurar nada tras clonar, y el nombre que declara DEBE coincidir con el de su directorio. Una skill está disponible en un agente cuando este la encuentra al buscar skills de proyecto en el clon, según las reglas de descubrimiento de ese agente.
 
 #### Scenario Outline: El agente encuentra las skills del schema
 
