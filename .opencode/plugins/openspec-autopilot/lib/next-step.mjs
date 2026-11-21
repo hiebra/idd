@@ -103,7 +103,7 @@ export function isReviewed(kind) {
 
 // Una descripción corta del paso, para títulos, avisos y el índice
 export function describe(step, change) {
-  const of = { artifact: 'el artefacto', task: 'la task', verify: 'el verify', plan: 'el plan' };
+  const of = { artifact: 'del artefacto', task: 'de la task', verify: 'del verify', plan: 'del plan' };
   const name = change ? ` de ${change}` : '';
   switch (step?.kind) {
     case 'new':
@@ -119,7 +119,7 @@ export function describe(step, change) {
     case 'wiki':
       return `resincronización del wiki${name}`;
     case 'review':
-      return `revisión de ${of[step.of] ?? ''}${step.of === 'verify' || step.of === 'plan' ? '' : ` ${step.id}`}${name}`.replace(/\s+/g, ' ');
+      return `revisión ${of[step.of] ?? ''}${step.of === 'verify' || step.of === 'plan' ? '' : ` ${step.id}`}${name}`.replace(/\s+/g, ' ');
     case 'update':
       return `update-change${name}`;
     default:

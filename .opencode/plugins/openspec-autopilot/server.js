@@ -204,7 +204,9 @@ async function start(ctx) {
       return null;
     }
     for (const other of contenders) {
-      if (other.id !== session.id) await writeMeta(api, other.id, { role: 'free', phase: 'lost' });
+      if (other.id === session.id) continue;
+      await writeMeta(api, other.id, { role: 'free', phase: 'lost' });
+      tui.toast(`openspec-autopilot: la sesión «${other.title}» queda libre; «${session.title}» tiene el control de ${change ?? 'esta rama'}.`);
     }
     if (!clean) {
       tui.toast(`openspec-autopilot: haz el commit de los cambios pendientes; ${describe(step, change)} empezará en cuanto escribas en esta sesión con el árbol limpio.`);

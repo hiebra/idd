@@ -440,7 +440,7 @@ Then('la sesión de `openspec-update-change` recibe las conclusiones de la revis
 
 Then('recibe un índice con cada sesión del change, su paso y el resultado de cada revisión', function () {
   for (const id of this.earlier) assert.ok(this.updateText.includes(id), `${id} is not in the index:\n${this.updateText}`);
-  assert.match(this.updateText, /revisión de el plan|revisión del plan|revisión de .*plan/);
+  assert.match(this.updateText, /revisión del plan/);
   assert.match(this.updateText, /task 3/);
   assert.match(this.updateText, /— ok/);
   assert.match(this.updateText, /— no ok/);

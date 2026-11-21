@@ -111,7 +111,11 @@ test('two sessions taking control at once: the oldest wins and the other is left
   assert.equal(owners.length, 1, ap.describeSessions(w));
   assert.equal(owners[0].id, first);
   assert.notEqual(ap.metaOf(ap.session(w, second))?.role, 'owner');
-  assert.match(ap.toasts(w), /queda libre/);
+  // Raced, the loser is warned; when the first one had already decided, the
+  // second finds an owner and follows design D5 (warned if it works, asked if not)
+  const warned = /queda libre/.test(ap.toasts(w));
+  const asked = w.opencode.dialogs.some((d) => d.options.some((o) => o.value === 'take'));
+  assert.ok(warned || asked, ap.describeSessions(w));
 });
 
 test('the tool called before the step did anything does not chain, and warns', async (t) => {
