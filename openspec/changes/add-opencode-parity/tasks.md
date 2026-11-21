@@ -79,12 +79,18 @@
 ## 7. Cierre
 
 - [x] 7.1 Ejecutar la suite completa con los deltas del change: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado
-- [ ] 7.2 Probar con OpenCode 2 real, sin intervención humana, en un clon recién creado y con la TUI en una sesión de `tmux`:
+- [x] 7.2 Probar con OpenCode 2 real, sin intervención humana, en un clon recién creado y con la TUI en una sesión de `tmux`:
   - `openspec --version` desde la sesión muestra la versión fijada;
   - aparecen las skills del schema y los workflows de OpenSpec;
   - un aviso (por ejemplo, con el registro inaccesible) aparece como toast en el texto de `tmux capture-pane`.
 
   Anotar la versión de OpenCode en el README
+
+  **Resultado (OpenCode 2.3.2, 2026-11-21): correcto.** Cada prueba se hizo en un clon recién creado de la rama, con `opencode --standalone <clon>` en una sesión de `tmux`:
+  - Mientras se instala, aparece el toast informativo `session-start: instalando las dependencias del proyecto…`. Después, `!command -v openspec; openspec --version` en la TUI muestra `<clon>/node_modules/.bin/openspec` y `1.17.0`, y quedan escritos los sellos de la raíz y de `acceptance-tests/`. La máquina tiene también un `openspec` 1.17.0 global, de ahí que se compruebe la ruta además de la versión.
+  - En el diálogo `/skills` aparecen, una vez cada una, las ocho skills del schema y los ocho workflows de OpenSpec. `opencode api skill.list --standalone` devuelve una lista vacía incluso en un proyecto con skills en las tres fuentes, así que no sirve para comprobarlo.
+  - Con `npm_config_registry` apuntando a un puerto cerrado y una caché vacía, aparecen dos toasts, `session-start: falló la instalación de dependencias en '.'` y el mismo para `'acceptance-tests'`, cada uno con el extracto del log de npm, y no se escribe ningún sello.
+  - Comprobado de paso para el README: con `"plugins": ["-<id>"]` en `~/.config/opencode/opencode.json` no se carga la parte de servidor del plugin, pero la de TUI sí.
 - [ ] 7.3 Ejecutar `openspec validate add-opencode-parity --type change --strict`: ningún error. Los avisos que queden tienen que ser los que ya dan las specs actuales (`openspec validate --specs --strict`)
 - [ ] 7.4 Commit y push de la zona de código pendiente, sin archivos de `openspec/`
 - [ ] 7.5 Archivar con `openspec archive add-opencode-parity` y, en ese mismo commit propio sin archivos de la zona de código, cambiar el `Purpose` de `openspec/specs/session-bootstrap/spec.md` para que hable de los agentes soportados. Push
