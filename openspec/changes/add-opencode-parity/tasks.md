@@ -41,7 +41,7 @@
 
 - [x] 3.1 Mover la lógica de instalación a `.agents/hooks/session-bootstrap.sh` con el contrato de D1 (directorio como argumento, avisos por stderr, `bin=` por stdout, siempre 0, sello con el hash del núcleo). Dejar `.claude/hooks/session-start.sh` como adaptador que lo llama. Los escenarios en verde antes de 2.2 siguen en verde
 - [x] 3.2 Paso "se abre una sesión en el proyecto", que usa Claude Code: los escenarios del núcleo con la frase neutral pasan a verde
-- [ ] 3.3 "La sesión no permite ajustar el PATH": el adaptador muestra el aviso con `systemMessage` y menciona `npx openspec`
+- [x] 3.3 "La sesión no permite ajustar el PATH": el adaptador muestra el aviso con `systemMessage` y menciona `npx openspec`
 - [ ] 3.4 "Máquina sin npm" y "Versión de Node.js inferior a la requerida": `systemMessage` construido sin Node
 - [ ] 3.5 "Sin acceso al registro de paquetes": `systemMessage` con el extracto del log de npm. Añadir al soporte un caso con comillas y saltos de línea en el aviso, para comprobar que el JSON sigue siendo válido
 
