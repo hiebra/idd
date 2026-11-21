@@ -2,19 +2,32 @@
 
 ## 1. Comprobaciones previas: confirman D1 y D3 antes de escribir código
 
-- [ ] 1.1 En un proyecto desechable con Claude Code real y una configuración aislada (`CLAUDE_CONFIG_DIR`), comprobar con `claude -p --output-format stream-json --verbose`:
+- [x] 1.1 En un proyecto desechable con Claude Code real y una configuración aislada (`CLAUDE_CONFIG_DIR`), comprobar con `claude -p --output-format stream-json --verbose`:
   - que el `additionalContext` de `SessionStart` y el de `UserPromptSubmit` llegan al modelo (pedirle que repita una palabra clave de cada uno);
   - que una variable exportada por `CLAUDE_ENV_FILE` (`CLAUDE_PLUGIN_ROOT`) llega a los comandos de Bash de un comando de `.claude/commands/wiki/` puesto por symlink;
   - que la skill `wiki-manager` y los comandos `/wiki:*` puestos por symlink desde una copia del tag v1.0.0 aparecen en la misma sesión (ya comprobado con copias en 2.1.330; repetir con symlinks).
 
   Anotar los resultados y la versión de Claude Code en este archivo
-- [ ] 1.2 En un proyecto desechable con OpenCode 2 real (`opencode --standalone` en `tmux`), comprobar:
+
+  **Resultado (Claude Code 2.1.330, 2026-11-21): D1 y D3 se confirman.** Proyecto desechable con `CLAUDE_CONFIG_DIR` vacío, `.claude/skills/wiki-manager` y `.claude/commands/wiki` como symlinks a una copia del tag v1.0.0, y dos hooks que solo imprimen `additionalContext` con una palabra clave cada uno:
+  - Con `claude -p "Repite literalmente las dos palabras clave…" --output-format stream-json --verbose`, el resultado es `ALFAZULU7 BRAVOYANKEE3`: llegan al modelo el `additionalContext` de `SessionStart` y el de `UserPromptSubmit`.
+  - En el evento `init` aparecen la skill `wiki-manager` y los 28 comandos `wiki:*` (más uno de prueba añadido a la copia), en la misma sesión.
+  - Un comando `/wiki:probe` de la copia (por el symlink) que pide ejecutar con Bash `echo "BASH=$CLAUDE_PLUGIN_ROOT"` y `"${CLAUDE_PLUGIN_ROOT}/bin/llm-wiki" --help` devuelve la ruta exportada por `CLAUDE_ENV_FILE` y la ayuda del helper. Así es como lo usan los comandos del motor (instrucciones al modelo, no `` !`…` ``). Un `` !`…` `` con `${…}` en el comando lo rechaza la comprobación de permisos ("A variable in braces in this command can't be checked before it runs"); el motor no lo usa.
+- [x] 1.2 En un proyecto desechable con OpenCode 2 real (`opencode --standalone` en `tmux`), comprobar:
   - que el hook `context` de un plugin local añade texto que el modelo recibe, y que no se acumula entre peticiones;
   - que con `wiki-manager` en `.claude/skills/` y `wiki-query` en `.opencode/skills/` las dos aparecen una sola vez, y que el campo `tools:` del frontmatter de la skill de Claude Code no impide cargarla;
   - que una excepción dentro del hook `context` envuelta en `try/catch` no bloquea el mensaje.
 
   Comprobar primero si hace falta un proveedor de modelo para la prueba del contexto. Si no hay ninguno disponible aquí, comprobar al menos la carga y la precedencia, y dejar la recepción del contexto para 8.3. Anotar los resultados y la versión de OpenCode en este archivo
-- [ ] 1.3 Si 1.1 o 1.2 descartan algo de D1 o D3, cambiar `design.md` (y, si afecta a la decisión, registrar un ADR que sustituya a ADR-0005) en un commit propio, antes de seguir
+
+  **Resultado (OpenCode 2.3.2, `@opencode/cli` 2.3.2, 2026-11-21): D1 y D3 se confirman.** Aquí no hay proveedor de modelo, así que se usó uno falso: un servidor local compatible con OpenAI (`@ai-sdk/openai-compatible` en el `opencode.json` del proyecto desechable) que registra el cuerpo de cada petición. Eso es exactamente lo que recibe el modelo. Se ejecutó `opencode run --standalone` con `XDG_*` aislados, `.claude/skills/wiki-manager` y `.opencode/skills/wiki-query` como symlinks al tag v1.0.0, y un plugin local `.opencode/plugins/wikiprobe/server.js` que registra `ctx.session.hook("context", cb)`. El hook añade `{type:"text", text}` a `input.system` e inserta `{role:"user", content:[{type:"text", text}]}` antes del último mensaje del usuario, como hace el modo Plan (`messages.splice(último user, 0, …)`). El plugin usa objetos planos, sin `@opencode/ai`.
+  - La guía llega en el system y el recordatorio justo antes del mensaje del usuario. La petición de título no pasa por el hook `context`.
+  - Con `-c` en el segundo y el tercer mensaje, cada petición lleva una sola copia del recordatorio, la del último mensaje, y una sola de la guía: no se acumulan.
+  - En la herramienta de skills de la petición aparecen `wiki-manager` y `wiki-query`, una vez cada una. El `tools:` del frontmatter de `wiki-manager` no impide cargarla.
+  - Si se lanza una excepción dentro del `try/catch` del hook, la petición sale sin guía ni recordatorio y el modelo responde. Si se lanza sin capturar, `opencode run` termina con 1 y no se hace la petición al modelo, como decía el design.
+- [x] 1.3 Si 1.1 o 1.2 descartan algo de D1 o D3, cambiar `design.md` (y, si afecta a la decisión, registrar un ADR que sustituya a ADR-0005) en un commit propio, antes de seguir
+
+  **Resultado:** ni 1.1 ni 1.2 descartan nada de D1 o D3, así que `design.md` no cambia. Un detalle para la implementación: en OpenCode, el recordatorio se inserta como mensaje `user` (igual que el modo Plan), no como `system`.
 
 ## 2. Suite: soporte del wiki (zona de código)
 
