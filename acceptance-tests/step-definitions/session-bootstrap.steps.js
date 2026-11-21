@@ -49,3 +49,11 @@ When('se abre una sesión de Claude Code en el proyecto', function () {
 Then('`openspec --version` en la sesión muestra la versión fijada por el proyecto', function () {
   assert.equal(this.openspecVersionInSession(), this.project.pinnedOpenspecVersion());
 });
+
+Then('se avisa de que el PATH no se ha podido ajustar', function () {
+  assert.match(this.session.stderr, /session-start: .*no se ha podido ajustar el PATH/);
+});
+
+Then('el aviso indica que el CLI del proyecto se ejecuta con `npx openspec`', function () {
+  assert.match(this.session.stderr, /npx openspec/);
+});
