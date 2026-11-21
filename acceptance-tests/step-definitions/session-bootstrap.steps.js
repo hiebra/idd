@@ -24,6 +24,21 @@ Given('un clon del proyecto con sus dependencias instaladas', function () {
   this.installProject();
 });
 
+Given('un proyecto creado desde la plantilla que declara dependencias propias además de OpenSpec', function () {
+  this.ensureProject().addDependency('is-number', '7.0.0');
+});
+
+Given('un proyecto con un proyecto de tests de aceptación en `acceptance-tests\\/`', function () {
+  this.ensureProject().addAcceptanceProject();
+});
+
+Given('ninguna de sus dependencias está instalada', function () {
+  assert.equal(this.project.hasNodeModules(), false);
+  if (this.project.hasAcceptanceProject()) {
+    assert.equal(this.project.hasNodeModules(this.project.acceptanceDir), false);
+  }
+});
+
 // --- Máquina ----------------------------------------------------------------
 
 Given('una máquina con otra versión de OpenSpec instalada globalmente', function () {
@@ -48,6 +63,14 @@ When('se abre una sesión de Claude Code en el proyecto', function () {
 
 Then('`openspec --version` en la sesión muestra la versión fijada por el proyecto', function () {
   assert.equal(this.openspecVersionInSession(), this.project.pinnedOpenspecVersion());
+});
+
+Then('todas las dependencias declaradas por el proyecto quedan instaladas', function () {
+  assert.deepEqual(this.project.missingDependencies(), []);
+});
+
+Then('las dependencias del proyecto de tests de aceptación quedan instaladas', function () {
+  assert.deepEqual(this.project.missingDependencies(this.project.acceptanceDir), []);
 });
 
 Then('se avisa de que el PATH no se ha podido ajustar', function () {
