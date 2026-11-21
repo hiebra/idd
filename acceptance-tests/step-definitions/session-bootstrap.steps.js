@@ -47,6 +47,14 @@ Given('las dependencias del proyecto se instalaron con éxito', function () {
   this.installProject();
 });
 
+Given(
+  /^las dependencias del proyecto se instalaron con éxito al abrir una sesión de (Claude Code|OpenCode)$/,
+  function (agent) {
+    this.ensureProject();
+    this.installProject(agent);
+  }
+);
+
 Given('después cambió la lista de dependencias del proyecto', function () {
   this.project.addDependency('is-number', '7.0.0');
 });

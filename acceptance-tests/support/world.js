@@ -50,10 +50,10 @@ class SessionWorld extends World {
   }
 
   // Leaves the project installed by a previous session on an ordinary machine
-  installProject() {
+  installProject(agentName = DEFAULT_AGENT) {
     const saved = { ...this.machine };
     Object.assign(this.machine, { hasNpm: true, nodeVersion: null, globalOpenspec: false, offline: false, sessionPathAdjustable: true });
-    const session = this.openSession();
+    const session = this.openSession(agentName);
     Object.assign(this.machine, saved);
     if (session.exitCode !== 0 || !this.project.hasStamp()) {
       throw new Error(`could not install the project for this scenario:\n${session.log}`);
