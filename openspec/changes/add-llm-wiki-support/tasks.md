@@ -73,7 +73,7 @@
 ## 6. Resincronización al archivar (`openspec/`, commit propio)
 
 - [x] 6.1 Paso de soporte que ejecuta `openspec instructions archive --change <change> --json` y revisa `operationGuidance`, y comprobar que "Las indicaciones de archivado incluyen la resincronización del wiki" está en rojo (zona de código: commit propio)
-- [ ] 6.2 Añadir a `openspec/config.yaml` `operations.archive.guidance` con los siete pasos de D6, y comprobar que el escenario pasa a verde (zona de `openspec/`: commit propio)
+- [x] 6.2 Añadir a `openspec/config.yaml` `operations.archive.guidance` con los siete pasos de D6, y comprobar que el escenario pasa a verde (zona de `openspec/`: commit propio)
 
 ## 7. Documentación (zona de código)
 
