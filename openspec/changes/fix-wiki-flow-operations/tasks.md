@@ -4,9 +4,9 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 1. Núcleo: marcadores por agente en la guía y en el recordatorio (D1)
 
-- [ ] 1.1 Comprobar que los escenarios que entregan la guía y el recordatorio en los dos agentes están en verde antes de tocar nada (`El agente recibe la guía del wiki` de la spec principal y los dos Scenario Outline del recordatorio de la delta)
-- [ ] 1.2 En `wiki_text` de `.agents/hooks/session-bootstrap.sh`, cambiar la sustitución de `{{ll}}` por una tabla única con `{{query}}` e `{{ingest}}`, aplicada a la guía y al recordatorio, y no entregar la guía si le queda algún marcador. Comprobar con `session-bootstrap.sh guide|reminder <agente> .` que, mientras ningún archivo use los marcadores nuevos, la salida es la misma que antes
-- [ ] 1.3 Añadir a `acceptance-tests/core-tests/` una prueba del núcleo: cada marcador se sustituye por el valor de cada agente, y con un marcador desconocido no se entrega ni la guía ni el recordatorio. Rojo → implementar → verde → commit
+- [x] 1.1 Comprobar que los escenarios que entregan la guía y el recordatorio en los dos agentes están en verde antes de tocar nada (`El agente recibe la guía del wiki` de la spec principal y los dos Scenario Outline del recordatorio de la delta)
+- [x] 1.2 En `wiki_text` de `.agents/hooks/session-bootstrap.sh`, cambiar la sustitución de `{{ll}}` por una tabla única con `{{query}}` e `{{ingest}}`, aplicada a la guía y al recordatorio, y no entregar la guía si le queda algún marcador. Comprobar con `session-bootstrap.sh guide|reminder <agente> .` que, mientras ningún archivo use los marcadores nuevos, la salida es la misma que antes
+- [x] 1.3 Añadir a `acceptance-tests/core-tests/` una prueba del núcleo: cada marcador se sustituye por el valor de cada agente, y con un marcador desconocido no se entrega ni la guía ni el recordatorio. Rojo → implementar → verde → commit
 
 ## 2. Pasos de la guía (D2): uno por paso pendiente; en cada uno, rojo por la causa correcta → implementar → verde → commit
 

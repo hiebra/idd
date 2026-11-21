@@ -265,22 +265,41 @@ wiki_text() {
     fi
   else
     text="$(cat "$WIKI_DIR/reminder.md" 2>/dev/null)" || return
-    local ll ingest
-    if [ "$agent" = "claude-code" ]; then
-      ll='`/wiki:ll --local`'
-      ingest='`/wiki:ingest <url> --local`'
-    else
-      ll='pide registrar las lecciones aprendidas'
-      ingest='ingiere la fuente'
-    fi
-    text="${text//'{{ll}}'/$ll}"
-    text="${text//'{{ingest}}'/$ingest}"
-    # Un recordatorio vacío, con marcadores desconocidos o demasiado largo no se entrega
-    [ -n "$text" ] || return
-    [[ "$text" == *'{{'*'}}'* ]] && return
+  fi
+  text="$(fill_markers "$agent" "$text")"
+  # Un texto vacío o con marcadores desconocidos no se entrega
+  [ -n "$text" ] || return
+  [[ "$text" == *'{{'*'}}'* ]] && return
+  if [ "$mode" = "reminder" ]; then
     [ "$(printf '%s' "$text" | wc -m)" -le "$REMINDER_MAX" ] || return
   fi
   printf '%s\n' "$text"
+}
+
+# fill_markers AGENTE TEXTO: TEXTO con cada marcador de operación del motor
+# sustituido por cómo se invoca en el agente (design D1 de fix-wiki-flow-operations)
+fill_markers() {
+  local agent="$1" text="$2" marker value entry
+  local -a table
+  if [ "$agent" = "claude-code" ]; then
+    table=(
+      'query|`/wiki:query --local`'
+      'ingest|`/wiki:ingest <url> --local`'
+      'll|`/wiki:ll --local`'
+    )
+  else
+    table=(
+      'query|la skill `wiki-query`'
+      'ingest|ingiere la fuente'
+      'll|pide registrar las lecciones aprendidas'
+    )
+  fi
+  for entry in "${table[@]}"; do
+    marker="{{${entry%%|*}}}"
+    value="${entry#*|}"
+    text="${text//"$marker"/"$value"}"
+  done
+  printf '%s' "$text"
 }
 
 case "${1:-}" in
