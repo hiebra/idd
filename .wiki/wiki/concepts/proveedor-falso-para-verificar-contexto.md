@@ -6,6 +6,7 @@ sources:
   - raw/repos/2026-11-21-idd-1cf0792.md
 created: 2026-11-21
 updated: 2026-11-21
+verified: 2026-11-21
 tags: [opencode, testing, providers, verification]
 confidence: high
 volatility: warm

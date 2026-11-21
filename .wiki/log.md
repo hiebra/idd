@@ -21,3 +21,5 @@
 ## [2026-11-21] ingest-collection | idd via git: 1 new, 0 skipped, 1 total candidates (manifest-only at f2be9077f3c29cf2a6bcae7440e5e127144fdeb9, README.md)
 
 ## [2026-11-21] compile | 2 sources → 4 new articles, 3 updated (arranque-de-sesion, una-sola-copia-de-las-skills, flujo-wiki-first, suite-de-aceptacion-y-spec-as-source; See Also in carga-en-la-misma-sesion-por-agente, hook-context-opencode, proveedor-falso-para-verificar-contexto)
+
+## [2026-11-21] verify | 7 articles marked verified by the user

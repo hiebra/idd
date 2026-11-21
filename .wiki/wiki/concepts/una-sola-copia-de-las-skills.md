@@ -6,6 +6,7 @@ sources:
   - raw/repos/2026-11-21-idd-f2be907-readme.md
 created: 2026-11-21
 updated: 2026-11-21
+verified: 2026-11-21
 tags: [skills, claude-code, opencode, openspec, adr, spec]
 confidence: high
 volatility: warm
