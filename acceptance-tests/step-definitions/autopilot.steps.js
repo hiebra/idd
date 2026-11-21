@@ -652,3 +652,41 @@ Then('la sesión actual sigue respondiendo al usuario', async function () {
   assert.deepEqual(this.opencode.crashes, [], detail(this));
   assert.deepEqual(this.opencode.toolErrors, [], detail(this));
 });
+
+// --- Suscripciones de la parte de TUI (fix-tui-subscription-cleanup) -------------
+
+// In the simulated OpenCode, closing the TUI is always closing its own server (--standalone)
+Given(/^OpenCode abierto en la TUI(?: con su propio servidor,)? en una rama temporal$/, async function () {
+  const project = this.lifecycleProject();
+  if (this.branches.currentBranch(project) !== ap.BRANCH) this.branches.branch(project, ap.BRANCH);
+  await this.startOpenCode();
+});
+
+async function reloadPlugin(world, times) {
+  for (let i = 0; i < times; i += 1) await world.opencodeCall('reload');
+}
+
+When('OpenCode recarga el plugin dos veces', async function () {
+  await reloadPlugin(this, 2);
+});
+
+Given(/^OpenCode ha recargado el plugin (ninguna vez|dos veces)$/, async function (times) {
+  await reloadPlugin(this, times === 'dos veces' ? 2 : 0);
+});
+
+Then('solo la última carga de la parte de TUI del plugin recibe sus eventos', function () {
+  const { subscriptions, tuiLoad } = this.opencode;
+  const loads = [...new Set(subscriptions.map((s) => s.load))].sort();
+  assert.ok(subscriptions.length > 0, 'the last load of the TUI part has no subscription');
+  assert.deepEqual(loads, [tuiLoad], `TUI loads still subscribed: ${JSON.stringify(subscriptions)}`);
+});
+
+When('el usuario cierra la TUI', async function () {
+  await this.opencodeCall('close');
+});
+
+Then('el terminal no muestra ningún error del plugin', function () {
+  assert.deepEqual(this.opencode.terminal, [], `traces in the terminal:\n${this.opencode.terminal.join('\n')}`);
+  assert.deepEqual(this.opencode.crashes, [], detail(this));
+  assert.equal(ap.toasts(this).match(/cleanup failed/) ?? null, null, ap.toasts(this));
+});

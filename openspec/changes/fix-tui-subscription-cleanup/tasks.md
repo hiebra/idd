@@ -23,8 +23,8 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 2. openspec-autopilot (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 2.1 "Tras recargar, solo recibe eventos la carga nueva": definir los pasos y ver que falla con el `tui.js` actual, con las tres cargas suscritas. Implementar D1 en `.opencode/plugins/openspec-autopilot/tui.js`: un `AbortController` por carga, su `signal` en los dos `events.on` y `setup` que devuelve `() => controller.abort()` siempre, fuera del `try`.
-- [ ] 2.2 "Al cerrar la TUI no queda ningún error", con sus dos ejemplos: definir los pasos y ver que fallan sin 2.1, con el cambio guardado en un stash o revertido temporalmente. Después, ver que pasan con 2.1.
+- [x] 2.1 "Tras recargar, solo recibe eventos la carga nueva": definir los pasos y ver que falla con el `tui.js` actual, con las tres cargas suscritas. Implementar D1 en `.opencode/plugins/openspec-autopilot/tui.js`: un `AbortController` por carga, su `signal` en los dos `events.on` y `setup` que devuelve `() => controller.abort()` siempre, fuera del `try`.
+- [x] 2.2 "Al cerrar la TUI no queda ningún error", con sus dos ejemplos: definir los pasos y ver que fallan sin 2.1, con el cambio guardado en un stash o revertido temporalmente. Después, ver que pasan con 2.1.
 - [ ] 2.3 En `core-tests/autopilot-plugin.test.js`:
   - `setup` devuelve la limpieza también si `context.client.rpc` lanza, y la limpieza no lanza;
   - el test "a hot reload does not duplicate navigations, dialogs or archivings" sigue pasando, ahora con las cargas viejas sin suscripciones.
