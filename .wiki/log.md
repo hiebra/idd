@@ -49,3 +49,5 @@
 ## [2026-11-21] ll | "operaciones del wiki por agente en la guía y el recordatorio" → raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md (4 lessons, 1 article updated)
 
 ## [2026-11-21] ingest-collection | idd via git (manifest-only, b48392d, fix-wiki-flow-operations): 16 new, 0 skipped, 16 total candidates
+
+## [2026-11-21] refresh | 4 articles checked, 0 new raw revisions (sources pinned in raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md), 3 updated, 0 verified, 0 flagged, 0 retracted
