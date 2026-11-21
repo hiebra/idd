@@ -64,6 +64,13 @@ class Project {
     );
   }
 
+  // A schema skill in .agents/skills/ without its .claude/skills/ symlink
+  addUnlinkedSchemaSkill(id) {
+    const dir = this.path('.agents', 'skills', id);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: ${id}\ndescription: Skill del schema sin enlazar.\n---\n\n# ${id}\n`);
+  }
+
   hasAcceptanceProject() {
     return fs.existsSync(path.join(this.acceptanceDir, 'package.json'));
   }

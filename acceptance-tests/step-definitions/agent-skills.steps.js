@@ -40,3 +40,33 @@ Then('el nombre que declara cada skill coincide con el de su directorio', functi
     .map((skill) => `${skill.source}/${skill.id} declares name '${skill.frontmatter.name}'`);
   assert.deepEqual(mismatched, [], `in ${agent}`);
 });
+
+const UNLINKED_SKILL = 'skill-sin-enlazar';
+
+Given('un clon del proyecto con una skill en `.agents\\/skills\\/` que Claude Code no encuentra', function () {
+  this.ensureProject().addUnlinkedSchemaSkill(UNLINKED_SKILL);
+  this.unlinkedSkill = { id: UNLINKED_SKILL, agent: 'Claude Code' };
+});
+
+When('se comprueba la disponibilidad de las skills del proyecto', function () {
+  this.checkSkillAvailability();
+});
+
+Then('la comprobación falla', function () {
+  assert.equal(this.availabilityCheck.failed, true);
+});
+
+Then('indica qué skill falta y en qué agente', function () {
+  const { id, agent } = this.unlinkedSkill;
+  const { problems } = this.availabilityCheck;
+  assert.ok(
+    problems.some((problem) => problem.includes(`'${id}'`) && problem.startsWith(agent)),
+    `no problem names the skill '${id}' and ${agent}: ${JSON.stringify(problems)}`
+  );
+  // OpenCode reads .agents/skills/ directly, so only Claude Code misses it
+  assert.deepEqual(
+    problems.filter((problem) => !problem.startsWith(agent)),
+    [],
+    'only Claude Code should miss the skill'
+  );
+});
