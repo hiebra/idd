@@ -10,7 +10,9 @@
 // environment.
 //
 // Usage: node opencode-host.mjs <project dir> <options JSON> <result file>
-// Options: { shell: boolean } (false: a server context without `shell`)
+// Options: { shell, frozenEnv }
+//   shell: "ok" | "none" (a server context without `shell`) | "throws" (its
+//   hook() throws); frozenEnv: the command's environment cannot be changed
 // Result (JSON): { error, setupMs, env, toasts, logs }
 
 import fs from 'node:fs';
@@ -103,9 +105,10 @@ function serverContext() {
     options: {},
     rpc: serverRpc(),
   };
-  if (options.shell) {
+  if (options.shell !== 'none') {
     ctx.shell = {
       hook(name, callback) {
+        if (options.shell === 'throws') throw new Error('simulated: shell hooks are not available');
         if (name !== 'create.before') throw new Error(`unknown shell hook '${name}'`);
         shellHooks.push(callback);
         return { dispose() {} };
@@ -172,7 +175,9 @@ try {
 // The first command of the session: OpenCode runs the create.before hooks on
 // its environment, then spawns the shell with the resulting environment
 try {
-  const event = { command: 'openspec --version', cwd: projectDir, timeout: 120000, shell: 'bash', env: { ...process.env } };
+  const env = { ...process.env };
+  const event = { command: 'openspec --version', cwd: projectDir, timeout: 120000, shell: 'bash', env: options.frozenEnv ? Object.freeze(env) : env };
+  if (options.frozenEnv) Object.freeze(event);
   for (const hook of shellHooks) await hook(event);
   result.env = event.env;
 } catch (error) {

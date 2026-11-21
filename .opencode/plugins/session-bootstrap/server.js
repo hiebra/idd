@@ -131,6 +131,7 @@ export default {
       slow.unref?.();
 
       let hooked = false;
+      let pathWarned = false;
       try {
         if (ctx.shell && typeof ctx.shell.hook === "function") {
           ctx.shell.hook("create.before", async (event) => {
@@ -143,6 +144,10 @@ export default {
               event.env.PATH = current ? `${bin}${path.delimiter}${current}` : bin;
             } catch (error) {
               log("create.before:", error);
+              if (!pathWarned) {
+                pathWarned = true;
+                addWarnings([PATH_WARNING]);
+              }
             }
           });
           hooked = true;
@@ -152,7 +157,12 @@ export default {
       }
       if (!hooked) {
         // Solo hace falta avisar si hay un openspec que exponer
-        core.then(({ bin }) => bin && addWarnings([PATH_WARNING]));
+        core.then(({ bin }) => {
+          if (bin && !pathWarned) {
+            pathWarned = true;
+            addWarnings([PATH_WARNING]);
+          }
+        });
       }
     } catch (error) {
       log("setup:", error);

@@ -22,9 +22,38 @@ class OpenCodeAgent {
     return 'OpenCode';
   }
 
+  // A version of OpenCode that does not let the plugin adjust the PATH is
+  // simulated three ways (design D6): no `shell` in the server context, a
+  // shell.hook() that throws, and a command environment that cannot be
+  // changed. Each must open normally, with no exception out of the plugin,
+  // and show the same warnings.
   open({ machine, project, workDir }) {
-    const resultFile = path.join(workDir, `opencode-${Date.now()}.json`);
-    const options = { shell: machine.sessionPathAdjustable };
+    if (machine.sessionPathAdjustable) return this.#open({ machine, project, workDir }, { shell: 'ok', frozenEnv: false });
+    const variants = [
+      { shell: 'none', frozenEnv: false },
+      { shell: 'throws', frozenEnv: false },
+      { shell: 'ok', frozenEnv: true },
+    ];
+    const [first, ...others] = variants.map((options) => ({ options, session: this.#open({ machine, project, workDir }, options) }));
+    const session = first.session;
+    const differences = [];
+    for (const { options, session: other } of others) {
+      const name = JSON.stringify(options);
+      if (other.error) differences.push(`${name}: ${other.error}`);
+      differences.push(...other.startProblems.map((problem) => `${name}: ${problem}`));
+      if (JSON.stringify(other.warnings) !== JSON.stringify(session.warnings)) {
+        differences.push(`${name} showed ${JSON.stringify(other.warnings)}\n  instead of ${JSON.stringify(session.warnings)}`);
+      }
+    }
+    // The scenario's steps check one session, so a difference fails the opening itself
+    if (differences.length > 0) {
+      throw new Error(`OpenCode sessions that cannot adjust the PATH differ:\n${differences.join('\n')}`);
+    }
+    return session;
+  }
+
+  #open({ machine, project, workDir }, options) {
+    const resultFile = path.join(workDir, `opencode-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
     const child = spawnSync(process.execPath, [HOST, project.dir, JSON.stringify(options), resultFile], {
       cwd: project.dir,
       env: machine.env(),
