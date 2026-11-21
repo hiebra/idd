@@ -179,9 +179,31 @@ async function start(ctx) {
 
   // --- Al abrir una sesión (design D5) ---
 
-  const takeControl = async (session, branch, { change, step, description = '', zone = null }) => {
-    const clean = await treeClean(directory);
+  // La zona del último paso que escribió, antes de `step`, según las sesiones
+  // del change: la de la última sesión, o la anterior a ella si hacía el mismo paso
+  const zoneBefore = (sessions, change, step) => {
+    const last = changeSessions(sessions, change).at(-1);
+    const lm = last ? meta(last) : null;
+    if (!lm) return null;
+    const same = lm.step?.kind === step.kind && String(lm.step?.id ?? '') === String(step.id ?? '');
+    return same ? lm.zone ?? null : zoneOf(lm.step) ?? lm.zone ?? null;
+  };
+
+  // Si hay que comprobar el árbol antes de empezar `step` (design D11): en el
+  // modo normal, siempre; en el auto, solo en el primer paso tras un cambio de
+  // zona, o si no se sabe en qué zona se escribió por última vez
+  const mustCheckTree = (step, lastZone) => {
+    if (mode === 'normal') return true;
+    const zone = zoneOf(step);
+    if (!zone) return false;
+    return !lastZone || zone !== lastZone;
+  };
+
+  const takeControl = async (session, branch, { change, step, description = '', zone = undefined }) => {
     const sessions = await branchSessions(api, { worktree: directory, branch });
+    const lastZone = zone !== undefined ? zone : change ? zoneBefore(sessions.filter((s) => s.id !== session.id), change, step) : null;
+    zone = lastZone;
+    const clean = mustCheckTree(step, lastZone) ? await treeClean(directory) : true;
     const m = {
       worktree: directory,
       branch,
@@ -370,6 +392,10 @@ async function start(ctx) {
     }
     if (m.step.kind === 'review' && result !== 'ok' && result !== 'no ok') {
       return { content: 'Falta el resultado de la revisión: llama a la tool con result "ok" o "no ok".' };
+    }
+    if (mode === 'auto' && m.step.kind === 'verify' && result !== 'clean' && result !== 'critical') {
+      // Sin veredicto no se pasa al archive (openspec-autopilot, Modo auto)
+      return { content: 'Falta el veredicto del verify: llama a la tool con result "clean" si no hay ningún problema CRITICAL, o "critical" si hay alguno.' };
     }
     if (mode === 'auto' && m.step.kind === 'verify' && result === 'critical') {
       // Se para: la sesión pasa a ser la revisión del verify (design D8)

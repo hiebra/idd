@@ -8,6 +8,8 @@
 // - two sessions taking control at once: the oldest wins (D4);
 // - the tool called before the step did anything does not chain (D6);
 // - a session waiting for a commit checks the tree again on the next message (D11);
+// - in auto mode, a session taking control checks the tree only after a zone
+//   change (D11), and the verify without a verdict does not chain (Modo auto);
 // - no exception leaves setup, the hooks, the tools or the RPC handlers, and
 //   every wait is bounded (D12).
 //
@@ -224,4 +226,55 @@ test('openspec_session reads a session of the change index and refuses any other
   assert.match(read, /no valida las fechas/);
   assert.doesNotMatch(read, /SALIDA-DE-TOOL/);
   assert.match(await call(outsider), /no es del change/);
+});
+
+test('auto mode: taking control checks the tree only on the first step after a zone change', async (t) => {
+  const w = world(t);
+  w.pluginOptions = { auto: true };
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'], tasks: null });
+  await w.startOpenCode({ pluginOptions: { auto: true } });
+  // Same zone: the stopped owner was writing design after specs
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' }, meta: { zone: 'specs' } });
+  fs.appendFileSync(w.project.path('README.md'), '\nSin commit.\n');
+  await w.opencodeCall('answers', { answers: [{ value: 'take' }] });
+  const { sessionID } = await w.opencodeCall('open', { text: 'sigo' });
+  assert.deepEqual(w.opencode.archives, [owner]);
+  const m = ap.metaOf(ap.session(w, sessionID));
+  assert.equal(m.role, 'owner', ap.describeSessions(w));
+  assert.equal(m.phase, 'running');
+  assert.match(ap.injected(w, sessionID).at(-1), /openspec-continue-change/);
+});
+
+test('auto mode: taking control after a zone change waits for the commit', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { tasks: [{ id: '1', done: false }] });
+  await w.startOpenCode({ pluginOptions: { auto: true } });
+  // The last step that wrote was the tasks artifact (specs); the next one, task 1 (code)
+  await ap.seed(w, { title: 'tasks', step: { kind: 'artifact', id: 'tasks' }, archived: true, meta: { role: 'free', phase: 'done', zone: 'specs' } });
+  fs.appendFileSync(w.project.path('README.md'), '\nSin commit.\n');
+  const { sessionID } = await w.opencodeCall('open', { text: 'sigo' });
+  const m = ap.metaOf(ap.session(w, sessionID));
+  assert.equal(m.role, 'owner', ap.describeSessions(w));
+  assert.deepEqual(m.step, { kind: 'task', id: '1' });
+  assert.equal(m.phase, 'waiting-commit');
+  assert.match(ap.injected(w, sessionID).at(-1), /cambios sin commit/);
+});
+
+test('auto mode: the verify without a verdict does not chain to the archive', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { tasks: [{ id: '1', done: true }] });
+  await w.startOpenCode({ pluginOptions: { auto: true } });
+  const owner = await ap.seed(w, { title: 'verify', step: { kind: 'verify' }, meta: { zone: 'code' } });
+  const lastTool = () => ap.session(w, owner).messages.flatMap((m) => (m.content ?? []).filter((p) => p.type === 'tool')).at(-1).state.content[0].text;
+  for (const input of [{}, { result: 'ok' }]) {
+    await ap.scriptTool(w, owner, 'openspec_handoff', input);
+    await w.opencodeCall('message', { sessionID: owner, text: 'ya' });
+    assert.match(lastTool(), /Falta el veredicto del verify/);
+    assert.equal(ap.sessions(w).length, 1, ap.describeSessions(w));
+    assert.equal(ap.metaOf(ap.session(w, owner)).phase, 'running');
+  }
+  await ap.scriptTool(w, owner, 'openspec_handoff', { result: 'clean' });
+  await w.opencodeCall('message', { sessionID: owner, text: 'ya' });
+  assert.deepEqual(ap.metaOf(ap.onlyOwner(w)).step, { kind: 'archive' });
+  assert.equal(w.opencode.dialogs.length, 0);
 });
