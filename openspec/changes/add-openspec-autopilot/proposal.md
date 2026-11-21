@@ -13,6 +13,7 @@ Llevar un change de OpenSpec de principio a fin exige que el usuario lance a man
   - en el modo normal, tras cada artefacto, cada task y el verify, una sesión de revisión humana guiada por el LLM, que termina con una tool del plugin: si la revisión es satisfactoria se pasa al paso siguiente; si no, a `openspec-update-change` y a una revisión del plan;
   - un modo auto, que elige cada usuario como opción del plugin (desactivado por defecto), sin sesiones de revisión, que solo se para cuando un workflow pregunta, en cada cambio entre la zona de specs y la de código (para el commit del usuario) y si el verify encuentra problemas críticos;
   - cada sesión comprueba al empezar que el árbol de trabajo está limpio, salvo en el modo auto dentro de una misma zona;
+  - la sesión de `openspec-update-change` recibe, además de las conclusiones de la revisión, un índice de las sesiones del change (qué paso hizo cada una y cómo acabó cada revisión);
   - si en la rama hay más de un change, el plugin se inhibe y avisa.
 - **El plugin solo existe para OpenCode**: es la primera asimetría deliberada entre agentes. En Claude Code los mismos workflows se siguen lanzando a mano, con el mismo ciclo y el mismo resultado versionado. Se registra una política general sobre cuándo se acepta una asimetría.
 
@@ -35,17 +36,15 @@ Fuera de alcance, como discusiones abiertas: la vuelta de la fusión intermedia 
 - ADRs: la política de asimetrías entre agentes, el plugin, y la sustitución de las puertas heredadas de `openspec-git-discipline`.
 - Proyectos derivados: heredan el ciclo y el plugin.
 
-### Antes del design: pruebas con OpenCode real
+### Pruebas con OpenCode real, hechas antes del design
 
-Lo que el plugin usa de OpenCode 2.3.2 se ha leído en los tipos de `@opencode/plugin`, `@opencode/client` y `@opencode/schema`, sin probarlo. El design se escribe después de comprobarlo en real, en la TUI y con el proveedor falso del wiki:
+Lo que el plugin usa de OpenCode 2.3.2 se comprobó en la TUI con un proveedor falso (2026-11-21; lecciones en `.wiki/raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md`). Lo que condiciona el design:
 
-- P1: archivar con `session.update({ archived: true })`: qué se ve en la TUI y en `list()`, y si se puede archivar la sesión que tiene el foco.
-- P2: `session.update({ metadata })`: si fusiona o sustituye, y si la metadata sobrevive a reiniciar OpenCode.
-- P3: encadenar sesiones: crear la siguiente con `agent` y `metadata`, archivar la anterior y llevar la TUI a la nueva (diálogo y navegación desde la parte de TUI por RPC).
-- P4: lanzar una skill al crear una sesión, antes de que el usuario escriba (`session.command` frente a `prompt` con `skills`).
-- P5: dos TUIs sobre el mismo directorio: si hay carrera al tomar el control.
-- P6: si `experimental.idle` deja de ejecutarse tras una interrupción (Esc).
-- P8: si se puede saber si otra sesión está trabajando o parada, y si se ven los eventos de compactación.
-- P9: qué agente recibe una sesión nueva y si la TUI retoma la última sesión en lugar de crear una.
-- P11: si el modelo llama a una tool registrada por el plugin.
-- P13: si un plugin local recibe `options` desde la configuración del usuario, y si se recarga en caliente al cambiarlas.
+- **Archivar (P1):** `ctx.session.update({ archived: true })` desde el servidor del plugin no hace nada; desde la parte de TUI (`context.client.session.update`) sí archiva. `list()` incluye las archivadas salvo que se filtre, la TUI las oculta y una sesión archivada sigue aceptando mensajes.
+- **Metadata (P2):** `update({ metadata })` la sustituye entera; persiste al reiniciar.
+- **Encadenar (P3, P4):** desde `experimental.idle`, crear la sesión siguiente con su `agent` y su `metadata`, ponerla en marcha (`prompt`, `command`, o `prompt` con `skills`), llevar la TUI a ella (`ui.router.navigate`) y archivar la anterior funciona sin que nadie escriba. `ui.dialog.select` devuelve la opción elegida o `undefined`.
+- **Varias TUIs (P5):** cada una es una instancia del plugin que solo ve los eventos de sus sesiones; la base de datos y `ctx.storage` se comparten, sin operaciones atómicas.
+- **Interrupción y compactación (P6, P8):** tras Esc o `interrupt` no corre `idle` y la sesión queda con `outcome: "interrupted"`; la compactación se ve por su hook y por sus eventos. Si una sesión trabaja se sabe con `get` (`time.busy` frente a `time.idle`).
+- **Abrir una sesión (P9):** la TUI crea la sesión con su primer mensaje, con el agente elegido en ese momento; al arrancar no retoma la última sesión y vuelve al agente build.
+- **Tool del plugin (P11):** solo la ve el modelo si se declara con `options: { codemode: false }`. Que un modelo real la llame cuando se lo pide el prompt queda sin comprobar.
+- **Opciones (P13):** un plugin local recibe `options` desde la configuración del usuario, y OpenCode lo recarga en caliente al cambiarlas o al cambiar sus archivos; cada recarga deja vivos los escuchadores RPC anteriores de la TUI.

@@ -48,13 +48,13 @@ And el repositorio no tiene ningún archivo nuevo que lo registre
 ```
 
 ### Requirement: Qué pasa al abrir una sesión a mano
-Al abrir el usuario una sesión nueva en una rama temporal, el plugin DEBE decidir según el estado de la rama y de la sesión dueña, sea cual sea el agente con el que se abre. Si la rama no tiene change, la sesión DEBE tomar el control y arrancar `openspec-new-change`. Si el change está en curso y no tiene dueña, la sesión DEBE tomar el control sin preguntar y seguir por el paso que indique `openspec status`. Si la dueña está trabajando, la sesión nueva DEBE quedar libre y avisar de qué sesión tiene el control. Si la dueña está parada sin haber terminado su paso, el plugin DEBE preguntar al usuario si quiere ir a la dueña o archivarla y seguir en la sesión nueva; si cierra la pregunta sin elegir, la sesión nueva queda libre. Si la rama tiene un change archivado, la sesión DEBE quedar libre.
+Al abrir el usuario una sesión nueva en una rama temporal (en la TUI, una sesión se crea con su primer mensaje), el plugin DEBE decidir según el estado de la rama y de la sesión dueña, sea cual sea el agente con el que se abre. Si la rama no tiene change, la sesión DEBE tomar el control y arrancar `openspec-new-change`. Si el change está en curso y no tiene dueña, la sesión DEBE tomar el control sin preguntar y seguir por el paso que indique `openspec status`. Si la dueña está trabajando, la sesión nueva DEBE quedar libre y avisar de qué sesión tiene el control. Si la dueña está parada sin haber terminado su paso, el plugin DEBE preguntar al usuario si quiere ir a la dueña o archivarla y seguir en la sesión nueva; si cierra la pregunta sin elegir, la sesión nueva queda libre. Si la rama tiene un change archivado, la sesión DEBE quedar libre.
 
 #### Scenario Outline: Sesión nueva según el estado de la rama
 
 ```gherkin
 Given una rama temporal <estado de la rama>
-When el usuario abre una sesión nueva en la TUI
+When el usuario escribe el primer mensaje de una sesión nueva en la TUI
 Then <resultado>
 
 Examples:
@@ -69,7 +69,7 @@ Examples:
 
 ```gherkin
 Given una rama temporal con un change en curso cuya sesión dueña está parada sin haber terminado su paso
-When el usuario abre una sesión nueva en la TUI
+When el usuario escribe el primer mensaje de una sesión nueva en la TUI
 Then se le pregunta si quiere ir a la sesión dueña o archivarla y seguir en la nueva
 And si <respuesta>, <resultado>
 
@@ -84,12 +84,12 @@ Examples:
 
 ```gherkin
 Given una rama temporal sin change
-When el usuario abre una sesión nueva en la TUI con el agente plan
+When el usuario escribe el primer mensaje de una sesión nueva en la TUI con el agente plan
 Then la sesión toma el control y arranca `openspec-new-change`
 ```
 
 ### Requirement: Una sesión por paso
-Cada paso del ciclo DEBE hacerse en una sesión nueva que crea el plugin, con el workflow y el agente que elige el plugin para ese paso, y que nace con el control. Los pasos son: cada artefacto del plan, cada task, el verify, el archive y la resincronización del wiki, y en el modo normal también las sesiones de revisión y de `openspec-update-change`. Al terminar su paso, la sesión DEBE pasar el control a la siguiente y quedar archivada. Las sesiones archivadas DEBEN conservar su metadata, de modo que el change guarde qué sesiones ha tenido y qué paso hizo cada una. Cambiar de agente dentro de la sesión dueña NO DEBE hacer que el plugin inyecte nada.
+Cada paso del ciclo DEBE hacerse en una sesión nueva que crea el plugin, con el workflow y el agente que elige el plugin para ese paso, y que nace con el control. Los pasos son: cada artefacto del plan, cada task, el verify, el archive y la resincronización del wiki, y en el modo normal también las sesiones de revisión y de `openspec-update-change`. Al terminar su paso, la sesión DEBE pasar el control a la siguiente y quedar archivada. Las sesiones archivadas DEBEN conservar su metadata, de modo que el change guarde qué sesiones ha tenido, qué paso hizo cada una y, en las de revisión, su resultado y sus conclusiones. Cambiar de agente dentro de la sesión dueña NO DEBE hacer que el plugin inyecte nada.
 
 #### Scenario: El siguiente paso en una sesión nueva
 
@@ -144,6 +144,21 @@ Then se crea una sesión de revisión de los cambios en el plan
 Given una rama temporal con el change en curso `exportar-datos`, en modo normal
 When la revisión de la última task termina satisfactoria
 Then se crea una sesión nueva con el control para `openspec-verify-change`
+```
+
+### Requirement: Índice de sesiones para openspec-update-change
+La sesión de `openspec-update-change` DEBE recibir, además de las conclusiones de la revisión que la lanzó, un índice de las sesiones del change, sacado de su metadata: qué paso hizo cada sesión y, en las de revisión, su resultado y sus conclusiones. El índice NO DEBE incluir las transcripciones de las sesiones, y la sesión DEBE poder pedir al plugin el contenido de una sesión concreta del índice.
+
+#### Scenario: update-change recibe el índice del change
+
+```gherkin
+Given una rama temporal con el change en curso `exportar-datos`, en modo normal
+And la revisión del artefacto `design` fue no satisfactoria una vez antes
+When una revisión no satisfactoria de la task 3 lanza `openspec-update-change`
+Then la sesión de `openspec-update-change` recibe las conclusiones de la revisión de la task 3
+And recibe un índice con cada sesión del change, su paso y el resultado de cada revisión
+And el índice incluye las conclusiones de la revisión no satisfactoria del artefacto `design`
+And no recibe la transcripción de ninguna sesión
 ```
 
 ### Requirement: Árbol limpio al empezar un paso
