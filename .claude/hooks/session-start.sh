@@ -16,6 +16,29 @@ warn() {
   echo "session-start: $*" >&2
 }
 
+# install_project DIR SCRIPT: instala las dependencias del proyecto Node en DIR
+# (relativo a la raíz) si faltan o han cambiado desde la última instalación correcta.
+install_project() {
+  local dir="$1" script_path="$2"
+  # D4: un sello por proyecto, con rutas relativas a la raíz
+  local stamp="$dir/node_modules/.session-start.sha256"
+  if sha256sum --check --status "$stamp" >/dev/null 2>&1; then
+    return
+  fi
+  # D4: borrar el sello antes, para que un fallo se reintente en la siguiente sesión
+  rm -f "$stamp"
+  local log
+  log="$(mktemp)"
+  # D3: npm install (no npm ci) de todas las dependencias
+  if (cd "$dir" && npm install --no-audit --no-fund) >"$log" 2>&1; then
+    sha256sum "$dir/package.json" "$dir/package-lock.json" "$script_path" >"$stamp" 2>/dev/null || rm -f "$stamp"
+  else
+    warn "falló la instalación de dependencias en '$dir' (npm install); se reintentará en la siguiente sesión"
+    tail -n 5 "$log" | sed 's/^/session-start:   /' >&2
+  fi
+  rm -f "$log"
+}
+
 main() {
   local script_path="${BASH_SOURCE[0]}"
   cd "${CLAUDE_PROJECT_DIR:-$(dirname "$script_path")/../..}" || {
@@ -46,21 +69,10 @@ main() {
     warn "no se puede comprobar la versión de Node.js (engines.node: '${required:-ausente}'); se continúa"
   fi
 
-  # D4: solo instalar si algo cambió desde la última instalación correcta
-  local stamp="node_modules/.session-start.sha256"
-  if ! sha256sum --check --status "$stamp" >/dev/null 2>&1; then
-    # D4: borrar el sello antes, para que un fallo se reintente en la siguiente sesión
-    rm -f "$stamp"
-    local log
-    log="$(mktemp)"
-    # D3: npm install (no npm ci) de todas las dependencias
-    if npm install --no-audit --no-fund >"$log" 2>&1; then
-      sha256sum package.json package-lock.json "$script_path" >"$stamp" 2>/dev/null || rm -f "$stamp"
-    else
-      warn "falló la instalación de dependencias (npm install); se reintentará en la siguiente sesión"
-      tail -n 5 "$log" | sed 's/^/session-start:   /' >&2
-    fi
-    rm -f "$log"
+  # D3: la raíz y, si existe, el proyecto de tests de aceptación; un fallo en uno no impide el otro
+  install_project "." "$script_path"
+  if [ -f acceptance-tests/package.json ]; then
+    install_project "acceptance-tests" "$script_path"
   fi
 
   # D5: el openspec del proyecto por delante en el PATH
