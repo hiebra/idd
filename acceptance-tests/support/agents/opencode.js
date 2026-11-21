@@ -82,6 +82,9 @@ class OpenCodeAgent {
       error: result.error,
       startProblems,
       warnings: result.toasts.flatMap((toast) => String(toast.message).split('\n')),
+      toasts: result.toasts,
+      terminal: result.terminal ?? [],
+      subscriptions: result.subscriptions ?? [],
       log: `host stderr:\n${child.stderr}\nhost logs:\n${result.logs.join('\n')}\ntoasts: ${JSON.stringify(result.toasts)}\nerror: ${result.error}\nrequest: ${JSON.stringify(result.request)}`,
       run(command) {
         return spawnSync('bash', ['-c', command], { cwd: project.dir, env, encoding: 'utf8' });

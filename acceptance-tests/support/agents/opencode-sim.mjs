@@ -24,8 +24,17 @@
 // - TUI: ui.router.navigate, ui.dialog.select with scripted answers, toasts,
 //   and client.session.update. Without a TUI, tui.js is not loaded.
 // - Plugin RPC in memory. A reload runs setup again: the server keeps only the
-//   last generation's hooks, tools and RPC handlers, while the TUI's earlier
-//   event listeners stay alive (tasks 1.4 of add-openspec-autopilot, lesson 5).
+//   last generation's hooks, tools and RPC handlers (task 1.4 of
+//   add-openspec-autopilot). Before it, as OpenCode 2.3.2 does, it runs the
+//   cleanup that each part's previous setup returned, if it returned a
+//   function. The TUI's event listeners stay alive across reloads only if the
+//   plugin does not release them: events.on(name, handler, { signal }) stops
+//   at the signal's abort and returns a function that unsubscribes
+//   (fix-tui-subscription-cleanup, ADR-0010).
+// - Closing a TUI that runs its own server (--standalone): runs the cleanups,
+//   then closes the server. Each subscription still alive leaves a trace in
+//   the terminal, as OpenCode's client prints its ECONNRESET, and so does
+//   whatever the plugin writes to console.error while closing.
 // - Failures can be injected per operation (e.g. "session.create").
 //
 // The model is a script per scenario: rules matched against the session,
@@ -61,13 +70,18 @@ export class Host {
     this.generation = 0;
     this.hooks = { context: [], 'experimental.idle': [], compaction: [] };
     this.tools = new Map();
-    this.rpc = new Map(); // definition id -> { handlers, listeners: Map(name -> [fn]) }
+    this.rpc = new Map(); // definition id -> { handlers, listeners: Map(name -> [{ fn, load }]) }
+    // What each part's last setup returned to run at reload or close
+    this.cleanups = [];
+    // Loads of the TUI part, the first one is 1
+    this.tuiLoad = 0;
+    this.closed = false;
     this.script = [];
     this.dialogAnswers = [];
     // With dialogWait, a dialog with no queued answer stays open until one arrives
     this.dialogWait = false;
     this.openDialogs = [];
-    this.out = { toasts: [], navigations: [], dialogs: [], archives: [], requests: [], crashes: [], toolErrors: [], logs: [] };
+    this.out = { toasts: [], navigations: [], dialogs: [], archives: [], requests: [], crashes: [], toolErrors: [], logs: [], terminal: [] };
     this.pending = new Set();
     this.interrupted = new Set();
   }
@@ -157,22 +171,67 @@ export class Host {
 
   // Runs setup again, as a hot reload does
   async setup() {
+    await this.runCleanups();
     this.generation += 1;
     this.hooks = { context: [], 'experimental.idle': [], compaction: [] };
     this.tools = new Map();
     try {
-      await this.serverPart.setup(this.serverContext());
+      this.keepCleanup('server', await this.serverPart.setup(this.serverContext()));
     } catch (error) {
       this.crash('server setup', error);
     }
     if (this.tuiPart) {
+      this.tuiLoad += 1;
       try {
-        await this.tuiPart.setup(this.tuiContext());
+        this.keepCleanup('tui', await this.tuiPart.setup(this.tuiContext(this.tuiLoad)));
       } catch (error) {
         this.crash('tui setup', error);
       }
     }
     await this.settle();
+  }
+
+  keepCleanup(part, returned) {
+    if (typeof returned === 'function') this.cleanups.push({ part, fn: returned });
+  }
+
+  // As OpenCode 2.3.2: the last registered first; a failure is a toast
+  async runCleanups() {
+    const cleanups = this.cleanups.splice(0).reverse();
+    for (const { part, fn } of cleanups) {
+      try {
+        await fn();
+      } catch (error) {
+        this.out.toasts.push({ variant: 'error', title: 'Plugin', message: `${part}: cleanup failed: ${error?.message ?? error}` });
+      }
+    }
+  }
+
+  // Closes a TUI that runs its own server (--standalone)
+  async close() {
+    const original = console.error;
+    console.error = (...args) => this.out.terminal.push(args.map((a) => (a instanceof Error ? a.stack : String(a))).join(' '));
+    try {
+      await this.runCleanups();
+      await this.settle();
+      for (const sub of this.subscriptions()) {
+        this.out.terminal.push(`ClientError: Transport: ECONNRESET: The socket connection was closed unexpectedly (rpc.${sub.rpc}.${sub.event}, carga ${sub.load} de la TUI)`);
+      }
+    } finally {
+      console.error = original;
+    }
+    this.closed = true;
+  }
+
+  // The TUI's event subscriptions still alive
+  subscriptions() {
+    const alive = [];
+    for (const [rpc, entry] of this.rpc) {
+      for (const [event, listeners] of entry.listeners) {
+        for (const listener of listeners) alive.push({ rpc, event, load: listener.load });
+      }
+    }
+    return alive;
   }
 
   rpcEntry(id) {
@@ -201,7 +260,7 @@ export class Host {
                     if (host.tuiSilent) return;
                     for (const listener of [...(entry.listeners.get(name) ?? [])]) {
                       try {
-                        await listener({ type: `rpc.${definition.id}.${name}`, data: clone(data) });
+                        await listener.fn({ type: `rpc.${definition.id}.${name}`, data: clone(data) });
                       } catch (error) {
                         host.crash(`rpc listener ${name}`, error);
                       }
@@ -280,7 +339,7 @@ export class Host {
     };
   }
 
-  tuiContext() {
+  tuiContext(load) {
     const host = this;
     return {
       options: clone(this.pluginOptions),
@@ -290,10 +349,15 @@ export class Host {
           const entry = host.rpcEntry(definition.id);
           const client = {
             events: {
-              on(name, handler) {
+              on(name, handler, options) {
+                const signal = options?.signal;
+                if (signal?.aborted) return () => {};
                 if (!entry.listeners.has(name)) entry.listeners.set(name, []);
-                entry.listeners.get(name).push(handler);
-                return () => {};
+                const listener = { fn: handler, load };
+                entry.listeners.get(name).push(listener);
+                const off = () => entry.listeners.set(name, (entry.listeners.get(name) ?? []).filter((l) => l !== listener));
+                signal?.addEventListener('abort', off, { once: true });
+                return off;
               },
             },
           };
@@ -503,6 +567,6 @@ export class Host {
   }
 
   state() {
-    return clone({ sessions: this.store.sessions, ...this.out, generation: this.generation });
+    return clone({ sessions: this.store.sessions, ...this.out, generation: this.generation, tuiLoad: this.tuiLoad, subscriptions: this.subscriptions(), closed: this.closed });
   }
 }

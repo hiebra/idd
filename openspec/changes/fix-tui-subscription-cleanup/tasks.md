@@ -4,7 +4,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 1. Simuladores: el contrato de limpieza de OpenCode 2.3.2 (zona de código)
 
-- [ ] 1.1 En `acceptance-tests/support/agents/opencode-sim.mjs`, según D3:
+- [x] 1.1 En `acceptance-tests/support/agents/opencode-sim.mjs`, según D3:
   - guardar la función que devuelve cada `setup`, de servidor y de TUI;
   - en la recarga, ejecutar las limpiezas de la carga anterior antes de los `setup` nuevos;
   - hacer que `events.on` respete `{ signal }` y devuelva una función para darse de baja;
@@ -13,13 +13,13 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
   - cambiar la cabecera: los escuchadores sobreviven a una recarga solo si el plugin no los libera.
 
   Los escenarios y `core-tests` que ya existen siguen en verde.
-- [ ] 1.2 En `acceptance-tests/support/agents/opencode-host.mjs`, según D3:
+- [x] 1.2 En `acceptance-tests/support/agents/opencode-host.mjs`, según D3:
   - opciones para recargar la parte de TUI un número de veces;
   - emitir después por el RPC del plugin un aviso sintético con un índice nuevo;
   - cerrar con su propio servidor, con el mismo registro de trazas que 1.1.
 
   La cabecera dice que aquí la recarga es solo de la TUI y que el aviso es sintético. Los escenarios de `session-bootstrap` que ya existen siguen en verde.
-- [ ] 1.3 Ejecutar la suite con los deltas del change: los cinco escenarios nuevos salen con pasos sin definir y el resto pasa.
+- [x] 1.3 Ejecutar la suite con los deltas del change: los cinco escenarios nuevos salen con pasos sin definir y el resto pasa.
 
 ## 2. openspec-autopilot (zona de código): por escenario, rojo → implementar → verde → commit
 
