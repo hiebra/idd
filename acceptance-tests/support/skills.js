@@ -11,6 +11,15 @@
 //   order: .claude/skills, .agents/skills, ~/.config/opencode/skills (global,
 //   not a project source), .opencode/skills. It does not require the declared
 //   name to match the directory.
+//
+// Claude Code commands: <project>/.claude/commands/<cmd>.md is /<cmd>, and
+// <project>/.claude/commands/<ns>/<cmd>.md is /<ns>:<cmd>, following symlinks
+// (checked with Claude Code 2.1.330: a symlinked commands/wiki/ gives
+// /wiki:<cmd>). OpenCode 2 has no project commands from these paths.
+//
+// The wiki operations each agent has, and where they come from (design D1):
+// read-only query and wiki management. And the instruction files each agent
+// always loads, which the user cannot turn off.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -105,4 +114,78 @@ function schemaSkillProblems(projectDir) {
   return problems;
 }
 
-module.exports = { discoverSkills, schemaSkillIds, schemaSkillProblems, readFrontmatter, SUPPORTED_AGENTS: Object.keys(SOURCES) };
+// The Claude Code commands of the project, as { name, file }
+function discoverCommands(agent, projectDir) {
+  if (agent !== 'Claude Code') return [];
+  const root = path.join(projectDir, '.claude', 'commands');
+  if (!fs.existsSync(root)) return [];
+  const commands = [];
+  const isFile = (file) => {
+    try {
+      return fs.statSync(file).isFile();
+    } catch {
+      return false;
+    }
+  };
+  const isDir = (dir) => {
+    try {
+      return fs.statSync(dir).isDirectory();
+    } catch {
+      return false;
+    }
+  };
+  for (const entry of fs.readdirSync(root).sort()) {
+    const full = path.join(root, entry);
+    if (entry.endsWith('.md') && isFile(full)) {
+      commands.push({ name: `/${entry.slice(0, -3)}`, file: full });
+    } else if (isDir(full)) {
+      for (const cmd of fs.readdirSync(full).sort()) {
+        const file = path.join(full, cmd);
+        if (cmd.endsWith('.md') && isFile(file)) commands.push({ name: `/${entry}:${cmd.slice(0, -3)}`, file });
+      }
+    }
+  }
+  return commands;
+}
+
+// The wiki operations an agent offers, by kind: each one names how the agent
+// offers it and the file it comes from
+const WIKI_OPERATIONS = {
+  'Claude Code': { query: { command: '/wiki:query' }, management: { skill: 'wiki-manager' } },
+  OpenCode: { query: { skill: 'wiki-query' }, management: { skill: 'wiki-manager' } },
+};
+
+function wikiOperations(agent, projectDir) {
+  const spec = WIKI_OPERATIONS[agent];
+  if (!spec) throw new Error(`no wiki operations for agent '${agent}'`);
+  const skills = discoverSkills(agent, projectDir);
+  const commands = discoverCommands(agent, projectDir);
+  const operations = {};
+  for (const [kind, { skill, command }] of Object.entries(spec)) {
+    const found = skill ? skills.find((s) => s.id === skill) : commands.find((c) => c.name === command);
+    operations[kind] = found ? { name: skill ?? command, file: found.file } : null;
+  }
+  return operations;
+}
+
+// Instruction files an agent always loads from the project
+const ALWAYS_LOADED = {
+  'Claude Code': ['CLAUDE.md', path.join('.claude', 'CLAUDE.md')],
+  // OpenCode reads AGENTS.md, CLAUDE.md as a fallback, and the instructions of opencode.json
+  OpenCode: ['AGENTS.md', 'CLAUDE.md'],
+};
+
+function alwaysLoadedInstructions(agent, projectDir) {
+  const files = ALWAYS_LOADED[agent].filter((rel) => fs.existsSync(path.join(projectDir, rel)));
+  if (agent === 'OpenCode') {
+    for (const config of ['opencode.json', 'opencode.jsonc', path.join('.opencode', 'opencode.json')]) {
+      const file = path.join(projectDir, config);
+      if (!fs.existsSync(file)) continue;
+      const text = fs.readFileSync(file, 'utf8');
+      if (/"instructions"\s*:/.test(text)) files.push(`${config} (instructions)`);
+    }
+  }
+  return files;
+}
+
+module.exports = { discoverCommands, wikiOperations, alwaysLoadedInstructions, discoverSkills, schemaSkillIds, schemaSkillProblems, readFrontmatter, SUPPORTED_AGENTS: Object.keys(SOURCES) };

@@ -31,14 +31,16 @@
 
 ## 2. Suite: soporte del wiki (zona de código)
 
-- [ ] 2.1 Añadir al soporte un motor falso: un repositorio git local con un tag, con la estructura de rutas de nvk/llm-wiki v1.0.0 que usa D1 (`claude-plugin/skills/wiki-manager/`, `claude-plugin/commands/`, `claude-plugin/bin/llm-wiki`, `plugins/llm-wiki-opencode/skills/wiki-query/`), y la forma de apuntar a él el `engine.json` de la copia temporal del proyecto. Añadir también un motor inaccesible (ruta inexistente) y un segundo tag
-- [ ] 2.2 Ampliar `support/skills.js` con el descubrimiento de comandos de Claude Code (`.claude/commands/<ns>/<cmd>.md` → `/<ns>:<cmd>`) y añadir la forma de saber qué versión del motor ve cada agente
-- [ ] 2.3 Ampliar los adaptadores simulados:
+- [x] 2.1 Añadir al soporte un motor falso: un repositorio git local con un tag, con la estructura de rutas de nvk/llm-wiki v1.0.0 que usa D1 (`claude-plugin/skills/wiki-manager/`, `claude-plugin/commands/`, `claude-plugin/bin/llm-wiki`, `plugins/llm-wiki-opencode/skills/wiki-query/`), y la forma de apuntar a él el `engine.json` de la copia temporal del proyecto. Añadir también un motor inaccesible (ruta inexistente) y un segundo tag
+- [x] 2.2 Ampliar `support/skills.js` con el descubrimiento de comandos de Claude Code (`.claude/commands/<ns>/<cmd>.md` → `/<ns>:<cmd>`) y añadir la forma de saber qué versión del motor ve cada agente
+- [x] 2.3 Ampliar los adaptadores simulados:
   - **Claude Code**: recoger el `additionalContext` de `SessionStart` y ejecutar el hook `UserPromptSubmit` con un mensaje;
   - **OpenCode** (`opencode-host.mjs`): llamar al hook `context` con un contexto falso y devolver lo añadido.
 
   Añadir una forma de hacer fallar la generación del recordatorio
-- [ ] 2.4 Ejecutar la suite con los deltas del change y comprobar que los escenarios nuevos de `llm-wiki`, `wiki-first-knowledge` y `session-bootstrap` salen con pasos sin definir o en rojo, y que los existentes siguen en verde
+- [x] 2.4 Ejecutar la suite con los deltas del change y comprobar que los escenarios nuevos de `llm-wiki`, `wiki-first-knowledge` y `session-bootstrap` salen con pasos sin definir o en rojo, y que los existentes siguen en verde
+
+  **Resultado:** los 26 escenarios que ya existían siguen en verde. De los 33 nuevos, 32 salen en rojo y "Las indicaciones de archivado incluyen la resincronización del wiki" sale con pasos sin definir (los define 6.1). En la primera ejecución, "Los dos agentes usan la misma versión" y "El usuario desactiva el wiki" pasaban sin motor fijado; sus pasos exigen ahora `engine.json` y salen en rojo.
 
 ## 3. Instalación del motor (zona de código): por escenario, rojo → implementar → verde → commit
 
