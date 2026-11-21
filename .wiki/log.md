@@ -45,3 +45,5 @@
 ## [2026-11-21] lint | local command + agentic checks: 0 critical, 4 warnings, 2 suggestions, 0 candidates, 4 fixed (1 suggestion left by decision until add-openspec-autopilot is archived)
 
 ## [2026-11-21] inventory | added task compilar-lecciones-de-add-openspec-autopilot-al-archivarlo
+
+## [2026-11-21] ll | "operaciones del wiki por agente en la guía y el recordatorio" → raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md (4 lessons, 1 article updated)

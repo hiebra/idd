@@ -6,7 +6,7 @@ Last updated: 2026-11-21
 
 ## Statistics
 
-- Sources: 9 raw documents
+- Sources: 10 raw documents
 - Articles: 8 compiled wiki articles
 - Inventory records: 3 tracked items
 - Datasets: 0 manifests
@@ -29,6 +29,8 @@ Last updated: 2026-11-21
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-21: 4 lecciones de fix-wiki-flow-operations en raw/notes; artículo de la suite actualizado
 
 - 2026-11-21: Tarea en el inventario para compilar las lecciones de add-openspec-autopilot al archivarlo
 
