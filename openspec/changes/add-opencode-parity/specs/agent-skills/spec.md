@@ -1,0 +1,63 @@
+# agent-skills
+
+Las skills que trae el proyecto (las del schema, en `.agents/skills/`, y los workflows de OpenSpec que genera el CLI del proyecto) están disponibles en cada agente soportado, Claude Code y OpenCode, sin configurar nada tras clonar. "Disponible" significa que el agente la encuentra al buscar skills de proyecto en el clon, según las reglas de descubrimiento de ese agente.
+
+## ADDED Requirements
+
+### Requirement: Skills del schema disponibles en cada agente soportado
+Cada skill de `.agents/skills/` DEBE estar disponible, exactamente una vez, en cada agente soportado (Claude Code y OpenCode), y el nombre que declara DEBE coincidir con el de su directorio.
+
+#### Scenario Outline: El agente encuentra las skills del schema
+
+```gherkin
+Given un clon del proyecto
+When <agente> busca las skills del proyecto
+Then encuentra cada skill de `.agents/skills/`
+And cada una aparece una sola vez
+And el nombre que declara cada skill coincide con el de su directorio
+
+Examples:
+  | agente      |
+  | Claude Code |
+  | OpenCode    |
+```
+
+#### Scenario Outline: Una skill del schema sin enlazar en un agente
+
+```gherkin
+Given un clon del proyecto con una skill en `.agents/skills/` que <agente> no encuentra
+When se comprueba la disponibilidad de las skills del proyecto
+Then la comprobación falla
+And indica qué skill falta y en qué agente
+
+Examples:
+  | agente      |
+  | Claude Code |
+  | OpenCode    |
+```
+
+### Requirement: Workflows de OpenSpec disponibles en cada agente soportado
+Los workflows de OpenSpec que ofrece el proyecto DEBEN estar disponibles como skills en cada agente soportado, y los de todos los agentes DEBEN corresponder a la versión de OpenSpec fijada en el `package.json` del proyecto.
+
+#### Scenario Outline: El agente encuentra los workflows de OpenSpec
+
+```gherkin
+Given un clon del proyecto
+When <agente> busca las skills del proyecto
+Then encuentra estas skills de OpenSpec:
+  | skill                    |
+  | openspec-explore         |
+  | openspec-new-change      |
+  | openspec-continue-change |
+  | openspec-apply-change    |
+  | openspec-update-change   |
+  | openspec-verify-change   |
+  | openspec-sync-specs      |
+  | openspec-archive-change  |
+And todas corresponden a la versión de OpenSpec fijada por el proyecto
+
+Examples:
+  | agente      |
+  | Claude Code |
+  | OpenCode    |
+```
