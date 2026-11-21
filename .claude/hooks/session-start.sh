@@ -5,9 +5,39 @@
 # - Ejecuta el núcleo sobre el proyecto.
 # - Pone el openspec del proyecto por delante en el PATH de la sesión a través
 #   de CLAUDE_ENV_FILE.
+# - Muestra los avisos al usuario: Claude Code solo enseña el "systemMessage"
+#   del JSON que el hook imprime por stdout (stderr no se ve, y el texto plano
+#   en stdout entra en el contexto de Claude). Por eso stdout queda vacío o
+#   lleva un único objeto JSON, construido sin Node.
 # - Nunca bloquea la sesión: sale siempre con 0.
 
 set -u
+
+warnings=()
+
+# json_string TEXT: TEXT como cadena JSON, con barras, comillas y caracteres
+# de control escapados, solo con bash
+json_string() {
+  local s="$1" out="" c i code
+  for ((i = 0; i < ${#s}; i++)); do
+    c="${s:i:1}"
+    case "$c" in
+      '"') out+='\"' ;;
+      '\') out+='\\' ;;
+      $'\n') out+='\n' ;;
+      $'\r') out+='\r' ;;
+      $'\t') out+='\t' ;;
+      *)
+        printf -v code '%d' "'$c"
+        if ((code >= 0 && code < 32)) || ((code == 127)); then
+          printf -v c '\\u%04x' "$code"
+        fi
+        out+="$c"
+        ;;
+    esac
+  done
+  printf '"%s"' "$out"
+}
 
 main() {
   local project="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
@@ -19,8 +49,14 @@ main() {
     if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
       echo "export PATH=\"$bin:\$PATH\"" >>"$CLAUDE_ENV_FILE"
     else
-      echo "session-start: no se ha podido ajustar el PATH de la sesión; ejecuta el CLI del proyecto con 'npx openspec'" >&2
+      warnings+=("session-start: no se ha podido ajustar el PATH de la sesión; ejecuta el CLI del proyecto con 'npx openspec'")
     fi
+  fi
+
+  if ((${#warnings[@]} > 0)); then
+    local message
+    printf -v message '%s\n' "${warnings[@]}"
+    printf '{"systemMessage":%s}\n' "$(json_string "${message%$'\n'}")"
   fi
 }
 
