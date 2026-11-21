@@ -41,9 +41,15 @@ json_string() {
 
 main() {
   local project="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-  local out bin=""
-  out="$(bash "$project/.agents/hooks/session-bootstrap.sh" "$project")"
+  local out bin="" errors line
+  errors="$(mktemp)"
+  out="$(bash "$project/.agents/hooks/session-bootstrap.sh" "$project" 2>"$errors")"
   [[ "$out" == bin=* ]] && bin="${out#bin=}"
+  # Los avisos del núcleo, uno por línea
+  while IFS= read -r line || [ -n "$line" ]; do
+    [ -n "$line" ] && warnings+=("$line")
+  done <"$errors"
+  rm -f "$errors"
 
   if [ -n "$bin" ]; then
     if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
