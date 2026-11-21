@@ -15,6 +15,8 @@ const { ClaudeCodeAgent } = require('./agents/claude-code');
 const { OpenCodeAgent } = require('./agents/opencode');
 const skills = require('./skills');
 const { FakeEngine, refIn, refInText, hasPinnedEngine } = require('./engine');
+const branches = require('./branches');
+const { OpenCodeSim } = require('./agents/opencode-sim');
 
 // Steps run real `npm install`s
 setDefaultTimeout(5 * 60 * 1000);
@@ -36,6 +38,9 @@ class SessionWorld extends World {
     // The fake wiki engine is only needed once the project pins one
     this.engine = hasPinnedEngine() ? new FakeEngine(this.workDir) : null;
     this.sessions = {};
+    // The simulated OpenCode with several sessions, for openspec-autopilot
+    this.sim = null;
+    this.branches = branches;
   }
 
   ensureProject() {
@@ -152,7 +157,35 @@ class SessionWorld extends World {
     return this.project.readGuide().replace(/<!--[\s\S]*?-->\n?/g, '').trim();
   }
 
+  // --- openspec-change-lifecycle and openspec-autopilot ---
+
+  // The project copy with an origin branch whose openspec/changes/ only has
+  // the archive, as on main
+  lifecycleProject() {
+    if (!this.lifecycleReady) {
+      branches.clearActiveChanges(this.ensureProject());
+      this.lifecycleReady = true;
+    }
+    return this.project;
+  }
+
+  // Opens the simulated OpenCode on the project copy with the given plugin
+  async startOpenCode({ plugin = 'openspec-autopilot', tui = true, pluginOptions = {}, failures = {} } = {}) {
+    if (this.sim) await this.sim.stop();
+    this.sim = new OpenCodeSim({ projectDir: this.lifecycleProject().dir, workDir: this.workDir, plugin, tui, pluginOptions, failures });
+    this.opencode = await this.sim.start();
+    return this.opencode;
+  }
+
+  async opencodeCall(op, args) {
+    const value = await this.sim.call(op, args);
+    if (value && value.sessions) this.opencode = value;
+    else if (value && value.state) this.opencode = value.state;
+    return value;
+  }
+
   cleanUp() {
+    this.sim?.dispose();
     fs.rmSync(this.workDir, { recursive: true, force: true });
   }
 }

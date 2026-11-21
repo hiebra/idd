@@ -1,8 +1,8 @@
 // Simulated OpenCode 2 host (design D6), run as a child process with the
 // simulated machine's environment, as OpenCode runs plugins in its own process.
 //
-// It loads the project's local plugin the way OpenCode 2 does: the parts of
-// .opencode/plugins/session-bootstrap/ by file name (server.js, tui.js), each
+// It loads a local plugin of the project the way OpenCode 2 does: the parts
+// of .opencode/plugins/<plugin>/ by file name (server.js, tui.js), each
 // a default export { id, setup }. It calls the server part's setup with a
 // fake server context and the TUI part's setup with a fake TUI context, wired
 // together by an in-memory plugin RPC. Then it opens a shell the way OpenCode
@@ -14,7 +14,9 @@
 // fails the request: the message does not reach the model.
 //
 // Usage: node opencode-host.mjs <project dir> <options JSON> <result file>
-// Options: { shell, frozenEnv, message, frozenMessages }
+// Options: { plugin, shell, frozenEnv, message, frozenMessages }
+//   plugin: the directory name of the plugin under .opencode/plugins/
+//   (default: session-bootstrap);
 //   shell: "ok" | "none" (a server context without `shell`) | "throws" (its
 //   hook() throws); frozenEnv: the command's environment cannot be changed;
 //   message: the user message to send; frozenMessages: the request's
@@ -29,7 +31,7 @@ import { pathToFileURL } from 'node:url';
 
 const [projectDir, optionsJson, resultFile] = process.argv.slice(2);
 const options = JSON.parse(optionsJson);
-const PLUGIN_DIR = path.join(projectDir, '.opencode', 'plugins', 'session-bootstrap');
+const PLUGIN_DIR = path.join(projectDir, '.opencode', 'plugins', options.plugin ?? 'session-bootstrap');
 
 const result = { error: null, setupMs: null, env: null, toasts: [], logs: [], request: null };
 const done = () => {

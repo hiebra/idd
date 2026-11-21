@@ -19,8 +19,8 @@ Las comprobaciones con OpenCode real usan el banco de la lección 9 de `.wiki/ra
 
 ## 2. Suite: host de OpenCode con varias sesiones y repositorios git de prueba (zona de código)
 
-- [ ] 2.1 Generalizar `acceptance-tests/support/agents/opencode-host.mjs` para que cargue cualquier plugin local por su directorio, y comprobar que los escenarios de `session-bootstrap` siguen en verde
-- [ ] 2.2 Añadir al host la simulación de D16. La metadata que se sustituye entera y `archived`, que solo aplica el cliente de la TUI, salen de las lecciones 1 y 2. La simulación cubre:
+- [x] 2.1 Generalizar `acceptance-tests/support/agents/opencode-host.mjs` para que cargue cualquier plugin local por su directorio, y comprobar que los escenarios de `session-bootstrap` siguen en verde
+- [x] 2.2 Añadir al host la simulación de D16. La metadata que se sustituye entera y `archived`, que solo aplica el cliente de la TUI, salen de las lecciones 1 y 2. La simulación cubre:
   - sesiones en memoria: `create`, `get`, `list` con y sin filtro de archivadas, `update`;
   - `time.busy` y `time.idle`, `prompt`, `command` y el hook `context`;
   - `experimental.idle`, interrupción y compactación (hook y eventos);
@@ -29,14 +29,15 @@ Las comprobaciones con OpenCode real usan el banco de la lección 9 de `.wiki/ra
   - recargas en caliente que vuelven a ejecutar `setup` y dejan vivos los escuchadores anteriores;
   - fallos inyectables por operación;
   - reinicio (un proceso nuevo del host con la misma base de sesiones).
-- [ ] 2.3 Añadir un modelo guionizado por escenario: para cada sesión, qué responde a cada petición (texto, una pregunta, o una llamada a tool con sus argumentos). Registrar qué recibe el modelo en cada petición (system, mensajes, skills inyectadas), para las aserciones
-- [ ] 2.4 Añadir al World los repositorios git de prueba sobre la copia del proyecto:
+- [x] 2.3 Añadir un modelo guionizado por escenario: para cada sesión, qué responde a cada petición (texto, una pregunta, o una llamada a tool con sus argumentos). Registrar qué recibe el modelo en cada petición (system, mensajes, skills inyectadas), para las aserciones
+- [x] 2.4 Añadir al World los repositorios git de prueba sobre la copia del proyecto:
   - una rama de origen, con `x-main` o sin él;
   - ramas temporales con changes en curso o archivados, con commit o sin él;
   - HEAD separado;
   - un `tasks.md` con tasks marcadas o sin marcar;
   - un `openspec status` real del proyecto copiado.
-- [ ] 2.5 Ejecutar la suite con los deltas del change y comprobar que los escenarios nuevos de `openspec-change-lifecycle` y `openspec-autopilot` salen con pasos sin definir o en rojo
+- [x] 2.5 Ejecutar la suite con los deltas del change y comprobar que los escenarios nuevos de `openspec-change-lifecycle` y `openspec-autopilot` salen con pasos sin definir o en rojo
+  - Resultado: 113 escenarios, 57 en verde (los de antes, también los de `session-bootstrap` con el host generalizado) y 56 sin definir: los 50 de este change y 6 de `fix-wiki-flow-operations`, que sigue en curso en la misma rama.
 
 ## 3. El ciclo de un change (zona de código): por escenario, rojo → implementar → verde → commit
 
