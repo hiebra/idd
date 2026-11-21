@@ -8,7 +8,10 @@
 //   - no npm: a directory holding only the system tools the hook uses
 //   - Node 20: a fake `node` that reports v20.11.0 and delegates the rest
 //   - global OpenSpec: a fake `openspec` that reports another version
-//   - offline: npm pointed at a closed port, with an empty cache
+//   - offline: npm pointed at a closed port, with an empty cache; when npm
+//     fails, the spy adds a last line with quotes, backslashes, a tab and a
+//     control character, so that the warning that quotes npm's log checks
+//     how each agent adapter escapes it
 
 const fs = require('node:fs');
 const os = require('node:os');
@@ -17,6 +20,7 @@ const path = require('node:path');
 const REAL_NODE = process.execPath;
 const OLD_NODE_VERSION = '20.11.0';
 const GLOBAL_OPENSPEC_VERSION = '0.9.0';
+const NPM_FAILURE_LINE = 'npm-simulado: "comillas" \\barras\\ tab\tfin \\n literal y control \u0001 fin';
 // System tools the hook needs besides node and npm
 const HOOK_TOOLS = ['bash', 'cat', 'dirname', 'head', 'mktemp', 'rm', 'sed', 'sha256sum', 'sort', 'tail'];
 
@@ -75,10 +79,18 @@ class Machine {
       return dir;
     };
 
+    this.failureLineFile = path.join(this.workDir, 'npm-failure-line.txt');
+    fs.writeFileSync(this.failureLineFile, NPM_FAILURE_LINE + '\n');
     this.spyDir = bin('npm-spy');
     writeExecutable(
       path.join(this.spyDir, 'npm'),
-      `#!/bin/bash\necho "$PWD npm $*" >> "${this.spyLog}"\nexec "${this.realNpm}" "$@"\n`
+      '#!/bin/bash\n' +
+        `echo "$PWD npm $*" >> "${this.spyLog}"\n` +
+        `if [ -z "\${SIMULATED_OFFLINE:-}" ]; then exec "${this.realNpm}" "$@"; fi\n` +
+        `"${this.realNpm}" "$@"\n` +
+        'status=$?\n' +
+        `if [ "$status" -ne 0 ]; then cat "${this.failureLineFile}" >&2; fi\n` +
+        'exit "$status"\n'
     );
 
     this.oldNodeDir = bin('node-old');
@@ -106,6 +118,11 @@ class Machine {
     return OLD_NODE_VERSION;
   }
 
+  // The last line npm prints when it fails on the offline machine
+  get npmFailureLine() {
+    return NPM_FAILURE_LINE;
+  }
+
   get globalOpenspecVersion() {
     return GLOBAL_OPENSPEC_VERSION;
   }
@@ -124,6 +141,7 @@ class Machine {
     if (this.offline) {
       fs.rmSync(this.emptyCache, { recursive: true, force: true });
       Object.assign(env, {
+        SIMULATED_OFFLINE: '1',
         npm_config_registry: 'http://127.0.0.1:9/',
         npm_config_cache: this.emptyCache,
         npm_config_fetch_retries: '0',

@@ -174,6 +174,11 @@ Then('el aviso indica la versión requerida y la versión encontrada', function 
 
 Then('se avisa de que la instalación de dependencias falló', function () {
   assert.match(shownWarnings(this), /falló la instalación de dependencias/);
+  // The warning quotes npm's log verbatim, special characters included
+  assert.ok(
+    this.session.warnings.some((line) => line.endsWith(this.machine.npmFailureLine)),
+    `npm's last log line is not in the warnings: ${JSON.stringify(this.session.warnings)}`
+  );
 });
 
 Then('se avisa de que el PATH no se ha podido ajustar', function () {
