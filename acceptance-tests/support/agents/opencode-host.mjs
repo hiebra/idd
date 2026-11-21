@@ -130,8 +130,11 @@ function tuiContext() {
   };
 }
 
-async function loadPart(name) {
+// A part the plugin directory does not have is skipped, as OpenCode does;
+// the server part is required, since it is what the session needs
+async function loadPart(name, { required }) {
   const file = path.join(PLUGIN_DIR, `${name}.js`);
+  if (!required && !fs.existsSync(file)) return null;
   const plugin = (await import(pathToFileURL(file).href)).default;
   if (!plugin || typeof plugin.id !== 'string' || typeof plugin.setup !== 'function') {
     throw new Error(`${file} does not export { id, setup } by default`);
@@ -146,8 +149,8 @@ const log = (message) => result.logs.push(message);
 let server;
 let tui;
 try {
-  server = await loadPart('server');
-  tui = await loadPart('tui');
+  server = await loadPart('server', { required: true });
+  tui = await loadPart('tui', { required: false });
 } catch (error) {
   fail('loading the plugin', error);
 }
@@ -161,7 +164,7 @@ try {
 }
 
 try {
-  await tui.setup(tuiContext());
+  if (tui) await tui.setup(tuiContext());
 } catch (error) {
   fail('tui setup', error);
 }
