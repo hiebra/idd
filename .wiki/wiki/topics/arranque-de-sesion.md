@@ -4,6 +4,7 @@ category: topic
 sources:
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-f2be907-readme.md
+  - raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md
 created: 2026-11-21
 updated: 2026-11-21
 verified: 2026-11-21
@@ -26,7 +27,7 @@ summary: "Qué hace el arranque de sesión de la plantilla, por qué se divide e
 
 ADR-0002 (`idd@1cf0792:adr/0002-agent-neutral-session-bootstrap.md`) sustituye a ADR-0001 cuando entra OpenCode 2. Los dos agentes disparan el arranque, exponen el `PATH` y muestran los avisos de forma distinta.
 
-- **El núcleo** (`idd@1cf0792:.agents/hooks/session-bootstrap.sh`) es bash y está fuera de la configuración de cualquier agente. Tiene toda la lógica, recibe el directorio del proyecto y termina siempre con éxito. Avisa por stderr con el prefijo `session-start:` y devuelve por stdout líneas `bin=` y `wiki-engine=`. Además tiene los modos `guide` y `reminder`, que preparan la guía y el recordatorio del wiki para un agente.
+- **El núcleo** (`idd@1cf0792:.agents/hooks/session-bootstrap.sh`) es bash y está fuera de la configuración de cualquier agente. Tiene toda la lógica, recibe el directorio del proyecto y termina siempre con éxito. Avisa por stderr con el prefijo `session-start:` y devuelve por stdout líneas `bin=` y `wiki-engine=`. Además tiene los modos `guide` y `reminder`, que preparan la guía y el recordatorio del wiki para un agente: rellenan sus marcadores de operación (`{{query}}`, `{{ingest}}`) con cómo se invoca cada una en ese agente y no entregan el texto si queda alguno sin rellenar (`idd@b48392d:.agents/hooks/session-bootstrap.sh`, `fill_markers`).
 - **No está escrito en Node** porque no podría avisar de que falta Node o de que su versión no llega. Reimplementarlo en el plugin de OpenCode duplicaría la lógica (ADR-0002, alternativas).
 - **Cada adaptador** solo aporta cómo se dispara el arranque, cómo se expone el entorno y cómo se muestran los avisos:
 
@@ -66,4 +67,5 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 ## Sources
 
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `adr/0001-session-bootstrap-hook.md`, `adr/0002-agent-neutral-session-bootstrap.md`, `adr/0005-wiki-engine-through-session-bootstrap.md`, `openspec/specs/session-bootstrap/spec.md`, `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/session-start.sh`, `.claude/hooks/user-prompt-submit.sh`, `.opencode/plugins/session-bootstrap/server.js`.
+- [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `.agents/hooks/session-bootstrap.sh`.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.

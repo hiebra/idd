@@ -15,8 +15,8 @@ const GUIDE_MAX = 6000;
 
 // How each agent names the engine operations in the reminder (design D2)
 const REMINDER_OPERATIONS = {
-  'Claude Code': { ll: /\/wiki:ll --local/, ingest: /\/wiki:ingest <url> --local/ },
-  OpenCode: { ll: /lecciones aprendidas/i, ingest: /ingiere la fuente/i },
+  'Claude Code': { query: /`\/wiki:query --local`/, ingest: /\/wiki:ingest <url> --local/ },
+  OpenCode: { query: /la skill `wiki-query`/, ingest: /ingiere la fuente/i },
 };
 
 function shown(world) {
@@ -267,12 +267,22 @@ Then('el recordatorio recuerda consultar antes de responder y preguntar ante un 
   assert.match(this.reminder, /pregunt/i);
 });
 
-Then(new RegExp(`^el recordatorio nombra las lecciones aprendidas y la ingesta de fuentes como se invocan en ${AGENT}$`), function (agent) {
+Then(new RegExp(`^el recordatorio nombra la consulta y la ingesta de fuentes como se invocan en ${AGENT}$`), function (agent) {
   const ops = REMINDER_OPERATIONS[agent];
-  assert.match(this.reminder, ops.ll);
+  assert.match(this.reminder, ops.query);
   assert.match(this.reminder, ops.ingest);
   assert.doesNotMatch(this.reminder, /\{\{\w+\}\}/, 'a marker was not replaced');
   if (agent === 'OpenCode') assert.doesNotMatch(this.reminder, /\/wiki:/, 'OpenCode has no /wiki:* commands');
+});
+
+Then('el recordatorio recuerda apuntar como candidato lo que se comprueba', function () {
+  assert.match(this.reminder, /candidat/i);
+});
+
+// Lessons learned are proposed at a closing point, not with every message
+Then('el recordatorio no nombra las lecciones aprendidas', function () {
+  assert.doesNotMatch(this.reminder, /lecciones aprendidas/i);
+  assert.doesNotMatch(this.reminder, /\/wiki:ll\b/);
 });
 
 Then('el recordatorio remite a la guía del wiki', function () {
@@ -317,6 +327,13 @@ const GUIDE_SECTIONS = {
   'indica que los artículos citan la versión exacta de la fuente': 'citar-version',
   'indica hacer una ingesta inicial del repositorio al crear el wiki del proyecto': 'ingesta-inicial',
   'indica excluir de esa ingesta lo generado y lo que no aporta conocimiento': 'ingesta-inicial-exclusiones',
+  'indica modificarlo con la operación del motor que lo modifica': 'modificar-wiki',
+  'indica hacerlo solo cuando el usuario confirma lo que el agente propone': 'modificar-con-confirmacion',
+  'indica no usar esa operación para consultar': 'modificar-no-consultar',
+  'indica apuntarlo como lección candidata mientras se trabaja, sin escribir nada': 'apuntar-candidatas',
+  'indica proponer registrar las candidatas una sola vez, en un punto de cierre': 'registrar-en-cierre',
+  'nombra como puntos de cierre el final de una tarea, antes de un commit, cuando el usuario da la sesión por terminada y el archive de un change':
+    'puntos-de-cierre',
 };
 const GAP_OPTIONS = {
   'responder con conocimiento interno, indicando su origen': 'hueco-conocimiento-interno',
@@ -324,7 +341,7 @@ const GAP_OPTIONS = {
   'no hacer nada más': 'hueco-nada',
 };
 const DISCOVERY_OPERATIONS = {
-  'comprobado al trabajar|lecciones aprendidas': 'registrar-comprobado-ll',
+  'comprobado al trabajar|lecciones aprendidas': 'registrar-en-cierre',
   'encontrado en internet|ingesta de la fuente': 'registrar-internet-ingesta',
 };
 
@@ -337,7 +354,7 @@ Given('la guía del wiki del proyecto', function () {
   this.guideText = this.ensureProject().readGuide();
 });
 
-When(/^se revisa (?:qué|cómo) (?:indica|peticiones exigen) .+$/, function () {
+When(/^se revisa (?:qué|cómo|cuándo) (?:indica|peticiones exigen) .+$/, function () {
   // The review reads the whole guide; each Then names what it looks for
 });
 
@@ -346,6 +363,32 @@ for (const [text, id] of Object.entries(GUIDE_SECTIONS)) {
     assertGuideSection(this, id);
   });
 }
+
+// The text of a section of the guide file, from its identifier to the next one
+function guideSection(guideText, id) {
+  const marker = `<!-- wiki-guide:${id} -->`;
+  const start = guideText.indexOf(marker);
+  assert.ok(start >= 0, `the wiki guide has no section ${marker}`);
+  const next = guideText.indexOf('<!-- wiki-guide:', start + marker.length);
+  return guideText.slice(start + marker.length, next < 0 ? undefined : next);
+}
+
+// The guide as delivered strips the section identifiers, so the section is
+// found in the source and what is delivered is checked as a whole
+When('se revisa con qué operación indica la guía consultar el wiki', function () {
+  this.guideText = this.project.readGuide();
+  this.deliveredGuide = deliveredContext(this);
+});
+
+Then(/^nombra (`\/wiki:query --local`|la skill `wiki-query`)$/, function (operation) {
+  assert.ok(this.deliveredGuide.includes(operation), `${this.session.agent}: the guide delivered does not name ${operation}`);
+  assert.doesNotMatch(this.deliveredGuide, /\{\{\w+\}\}/, 'a marker was not replaced');
+  assert.match(guideSection(this.guideText, 'consultar-con-lectura'), /\{\{query\}\}/);
+});
+
+Then('no nombra `wiki-manager` para consultar', function () {
+  assert.doesNotMatch(guideSection(this.guideText, 'consultar-con-lectura'), /wiki-manager/);
+});
 
 Then('ofrece estas opciones:', function (table) {
   for (const { opción } of table.hashes()) {

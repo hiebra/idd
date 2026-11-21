@@ -45,3 +45,15 @@
 ## [2026-11-21] lint | local command + agentic checks: 0 critical, 4 warnings, 2 suggestions, 0 candidates, 4 fixed (1 suggestion left by decision until add-openspec-autopilot is archived)
 
 ## [2026-11-21] inventory | added task compilar-lecciones-de-add-openspec-autopilot-al-archivarlo
+
+## [2026-11-21] ll | "operaciones del wiki por agente en la guía y el recordatorio" → raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md (4 lessons, 1 article updated)
+
+## [2026-11-21] ingest-collection | idd via git (manifest-only, b48392d, fix-wiki-flow-operations): 16 new, 0 skipped, 16 total candidates
+
+## [2026-11-21] refresh | 4 articles checked, 0 new raw revisions (sources pinned in raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md), 3 updated, 0 verified, 0 flagged, 0 retracted
+
+## [2026-11-21] librarian | scanned 8 articles, 0 stale, 0 low-quality
+
+## [2026-11-21] ll | "archivado de fix-wiki-flow-operations" → raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md (2 lessons, 2 articles updated)
+
+## [2026-11-21] lint | local command: 0 critical, 0 warnings, 1 suggestion (left by decision until add-openspec-autopilot is archived), 0 auto-fixed

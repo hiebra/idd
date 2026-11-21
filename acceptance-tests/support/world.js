@@ -27,6 +27,11 @@ const AGENTS = {
 };
 // Scenarios that do not name an agent open a Claude Code session
 const DEFAULT_AGENT = 'Claude Code';
+// How each agent invokes the engine operations the guide names by marker
+const GUIDE_OPERATIONS = {
+  'Claude Code': { query: '`/wiki:query --local`', ingest: '`/wiki:ingest <url> --local`' },
+  OpenCode: { query: 'la skill `wiki-query`', ingest: 'ingiere la fuente' },
+};
 
 class SessionWorld extends World {
   constructor(options) {
@@ -152,9 +157,15 @@ class SessionWorld extends World {
   }
 
   // The guide as the agent receives it: the project's guide file without its
-  // section identifiers (design D2)
-  guideAsDelivered() {
-    return this.project.readGuide().replace(/<!--[\s\S]*?-->\n?/g, '').trim();
+  // section identifiers (design D2), with each operation marker replaced by
+  // how the agent invokes it (design D1 of fix-wiki-flow-operations)
+  guideAsDelivered(agentName = this.session?.agent ?? DEFAULT_AGENT) {
+    const operations = GUIDE_OPERATIONS[agentName];
+    return this.project
+      .readGuide()
+      .replace(/<!--[\s\S]*?-->\n?/g, '')
+      .replace(/\{\{(\w+)\}\}/g, (marker, name) => operations[name] ?? marker)
+      .trim();
   }
 
   // --- openspec-change-lifecycle and openspec-autopilot ---

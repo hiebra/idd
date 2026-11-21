@@ -22,7 +22,7 @@ Solo las specs vigentes de `openspec/specs/`, tal cual:
 npm run test:specs
 ```
 
-Pruebas del núcleo del arranque que no están en las specs (conflictos de nombres con el motor del wiki y `.wiki/` ignorado por otra regla), con `node --test`:
+Pruebas del núcleo del arranque que no están en las specs (conflictos de nombres con el motor del wiki, `.wiki/` ignorado por otra regla y marcadores de operación en la guía y el recordatorio), con `node --test`:
 
 ```bash
 npm run test:core

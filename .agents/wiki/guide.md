@@ -24,6 +24,8 @@ Tú disciernes en cada caso; ante la duda, consulta.
 Ante una petición que requiere conocimiento, consulta el wiki en modo de solo lectura antes de usar tu conocimiento interno.
 <!-- wiki-guide:orden-de-consulta -->
 Consulta primero el wiki del proyecto y, si no basta, el topic que corresponda del hub del usuario, si existe. Cita los artículos en los que te basas.
+<!-- wiki-guide:consultar-con-lectura -->
+Consulta con {{query}}, que no modifica el wiki.
 
 ## Si el wiki no responde
 
@@ -44,6 +46,15 @@ Si no está claro qué ámbito corresponde, pregunta.
 <!-- wiki-guide:hub-a-proyecto -->
 El conocimiento del hub llega al proyecto incorporándolo directamente al wiki del proyecto o mediante un checkpoint del hub; nunca copies artículos a mano.
 
+## Modificar el wiki
+
+<!-- wiki-guide:modificar-wiki -->
+Registrar lecciones, ingerir fuentes, compilar o corregir artículos modifica el wiki: se hace con la skill `wiki-manager` o sus comandos `/wiki:*`.
+<!-- wiki-guide:modificar-con-confirmacion -->
+Hazlo solo cuando el usuario confirma lo que le propones.
+<!-- wiki-guide:modificar-no-consultar -->
+No uses `wiki-manager` para consultar.
+
 ## Lo que descubres al trabajar
 
 <!-- wiki-guide:descubrimientos -->
@@ -54,8 +65,12 @@ Cuando servirá en otra ocasión, y no solo para la tarea en curso, propón al u
 Tú disciernes cuándo procede: lo trivial o lo que solo sirve para esta tarea no se registra.
 
 Cada tipo se registra con su operación del motor:
-<!-- wiki-guide:registrar-comprobado-ll -->
-- **Lo comprobado al trabajar**, con las lecciones aprendidas (`/wiki:ll --local`).
+<!-- wiki-guide:apuntar-candidatas -->
+- **Lo comprobado al trabajar**: mientras trabajas, apúntalo en la conversación como lección candidata, sin escribir nada en el wiki.
+<!-- wiki-guide:registrar-en-cierre -->
+  En un punto de cierre, propón registrar las candidatas una sola vez, con las lecciones aprendidas en dry-run (`/wiki:ll --dry-run --local`), y escribe solo lo que confirme el usuario. Si no hay candidatas, no propongas nada.
+<!-- wiki-guide:puntos-de-cierre -->
+  Son puntos de cierre el final de una tarea, antes de un commit, cuando el usuario da la sesión por terminada y el archive de un change; en el archive, sigue sus indicaciones de archivado, que ya incluyen este paso.
 <!-- wiki-guide:registrar-internet-ingesta -->
 - **Lo encontrado en internet**, ingiriendo la fuente (`/wiki:ingest <url> --local`), para conservar su procedencia.
 

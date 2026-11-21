@@ -1,0 +1,130 @@
+{
+ "completed_at": "2026-11-21",
+ "wiki": ".wiki",
+ "passes": [
+  "staleness",
+  "quality"
+ ],
+ "freshness_threshold": 70,
+ "articles": [
+  {
+   "path": "wiki/concepts/hook-context-opencode.md",
+   "staleness": 100,
+   "quality": 60.0,
+   "sources": 2,
+   "resolved": 2,
+   "words": 355,
+   "headings": 5,
+   "depth": 3,
+   "source_quality": 3,
+   "flags": [],
+   "missing": []
+  },
+  {
+   "path": "wiki/concepts/origen-de-openspec-git-discipline.md",
+   "staleness": 100,
+   "quality": 65.0,
+   "sources": 5,
+   "resolved": 5,
+   "words": 749,
+   "headings": 7,
+   "depth": 3,
+   "source_quality": 4,
+   "flags": [],
+   "missing": []
+  },
+  {
+   "path": "wiki/concepts/proveedor-falso-para-verificar-contexto.md",
+   "staleness": 100,
+   "quality": 60.0,
+   "sources": 2,
+   "resolved": 2,
+   "words": 293,
+   "headings": 5,
+   "depth": 3,
+   "source_quality": 3,
+   "flags": [],
+   "missing": []
+  },
+  {
+   "path": "wiki/concepts/una-sola-copia-de-las-skills.md",
+   "staleness": 100,
+   "quality": 60.0,
+   "sources": 2,
+   "resolved": 2,
+   "words": 374,
+   "headings": 5,
+   "depth": 3,
+   "source_quality": 3,
+   "flags": [],
+   "missing": []
+  },
+  {
+   "path": "wiki/topics/arranque-de-sesion.md",
+   "staleness": 100,
+   "quality": 60.0,
+   "sources": 3,
+   "resolved": 3,
+   "words": 768,
+   "headings": 6,
+   "depth": 3,
+   "source_quality": 3,
+   "flags": [],
+   "missing": []
+  },
+  {
+   "path": "wiki/topics/carga-en-la-misma-sesion-por-agente.md",
+   "staleness": 100,
+   "quality": 60.0,
+   "sources": 2,
+   "resolved": 2,
+   "words": 583,
+   "headings": 5,
+   "depth": 3,
+   "source_quality": 3,
+   "flags": [],
+   "missing": []
+  },
+  {
+   "path": "wiki/topics/flujo-wiki-first.md",
+   "staleness": 100,
+   "quality": 60.0,
+   "sources": 3,
+   "resolved": 3,
+   "words": 854,
+   "headings": 7,
+   "depth": 3,
+   "source_quality": 3,
+   "flags": [],
+   "missing": []
+  },
+  {
+   "path": "wiki/topics/suite-de-aceptacion-y-spec-as-source.md",
+   "staleness": 100,
+   "quality": 65.0,
+   "sources": 4,
+   "resolved": 4,
+   "words": 566,
+   "headings": 5,
+   "depth": 3,
+   "source_quality": 4,
+   "flags": [],
+   "missing": []
+  }
+ ],
+ "summary": {
+  "scanned": 8,
+  "stale": 0,
+  "low_quality": 0,
+  "avg_staleness": 100,
+  "avg_quality": 61.2
+ },
+ "content_review": {
+  "scope": "claims affected by fix-wiki-flow-operations (idd@b48392d)",
+  "contradicted": [],
+  "obsolete": [],
+  "suggestions": [
+   "wiki/topics/flujo-wiki-first.md: summary and topics/_index.md row do not mention the read/write split or the closing point for lessons (ADR-0009); optional wording update."
+  ]
+ }
+}
