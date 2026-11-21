@@ -6,17 +6,18 @@ Last updated: 2026-11-21
 
 ## Statistics
 
-- Sources: 1 raw documents
-- Articles: 0 compiled wiki articles
-- Inventory records: 0 tracked items
+- Sources: 2 raw documents
+- Articles: 3 compiled wiki articles
+- Inventory records: 1 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
-- Last compiled: never
+- Last compiled: 2026-11-21
 - Last lint: never
 
 ## Quick Navigation
 
 - [All Sources](raw/_index.md)
+- [Inventory](inventory/_index.md)
 - [Concepts](wiki/concepts/_index.md)
 - [Topics](wiki/topics/_index.md)
 - [References](wiki/references/_index.md)
@@ -28,6 +29,8 @@ Last updated: 2026-11-21
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-21: Compiladas las lecciones y el manifiesto en 3 artículos
 
 - 2026-11-21: Ingesta inicial del repositorio (manifiesto en raw/repos/)
 
