@@ -1,7 +1,7 @@
 # openspec-change-lifecycle Specification
 
 ## Purpose
-TBD - created by archiving change add-openspec-autopilot. Update Purpose after archive.
+El ciclo git de un change es el mismo en los dos agentes soportados (Claude Code y OpenCode 2): cada change se hace entero en una rama temporal, que sale de la rama de origen (la última de `x-main`, o `main`) y llega a ella en una sola fusión, con el archive hecho en la rama. El change de cada rama se lee de git, sin apuntarlo en ningún sitio, y los commits y las fusiones los hace siempre el usuario.
 
 ## Requirements
 

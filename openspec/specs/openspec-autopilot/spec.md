@@ -1,7 +1,7 @@
 # openspec-autopilot Specification
 
 ## Purpose
-TBD - created by archiving change add-openspec-autopilot. Update Purpose after archive.
+En OpenCode 2, el plugin `openspec-autopilot` automatiza el ciclo del change de una rama temporal. Da una sesión nueva a cada paso, con el workflow y el agente que tocan, y guarda el control del change en la metadata de las sesiones. En el modo normal hace una revisión humana guiada tras cada paso; en el modo auto, que elige cada usuario, no la hace. El plugin nunca bloquea OpenCode y no deja nada en Claude Code, donde los mismos workflows se lanzan a mano.
 
 ## Requirements
 
