@@ -74,7 +74,7 @@
   - qué ocurre al abrir sesión: núcleo, adaptadores y avisos en la interfaz;
   - cómo desactivarlo en local en cada agente;
   - que OpenCode Desktop y `opencode run` solo dejan los avisos en el log.
-- [ ] 6.2 Actualizar `acceptance-tests/README.md`: cómo se simula cada agente y dónde están sus reglas de descubrimiento de skills
+- [x] 6.2 Actualizar `acceptance-tests/README.md`: cómo se simula cada agente y dónde están sus reglas de descubrimiento de skills
 
 ## 7. Cierre
 
