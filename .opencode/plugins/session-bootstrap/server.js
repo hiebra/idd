@@ -5,6 +5,8 @@
 //   espera a la instalación.
 // - Antes de cada comando de shell, espera al núcleo y pone el openspec del
 //   proyecto por delante en el PATH del comando.
+// - Los avisos llegan a la TUI (tui.js) por el RPC del plugin: el método
+//   warnings() devuelve los acumulados y el evento "warning" trae los nuevos.
 // - Nunca lanza una excepción hacia OpenCode: un fallo se convierte en aviso.
 //
 // Sin dependencias: exporta un objeto literal { id, setup } en lugar de usar
@@ -19,6 +21,37 @@ const ID = "session-bootstrap";
 const CORE = path.join(".agents", "hooks", "session-bootstrap.sh");
 const PATH_WARNING =
   "session-start: no se ha podido ajustar el PATH de la sesión; ejecuta el CLI del proyecto con 'npx openspec'";
+
+// Si el núcleo tarda más que esto, se avisa de que los comandos esperan a la instalación
+const SLOW_CORE_MS = 3000;
+
+// Contrato del RPC del plugin, el mismo en tui.js. Rpc.define de
+// @opencode/plugin/rpc solo lo comprueba y lo devuelve tal cual.
+const RPC = {
+  id: ID,
+  methods: {
+    warnings: {
+      input: { type: "object" },
+      output: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: { index: { type: "number" }, message: { type: "string" }, variant: { type: "string" } },
+          required: ["index", "message", "variant"],
+        },
+      },
+    },
+  },
+  events: {
+    warning: {
+      schema: {
+        type: "object",
+        properties: { index: { type: "number" }, message: { type: "string" }, variant: { type: "string" } },
+        required: ["index", "message", "variant"],
+      },
+    },
+  },
+};
 
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
@@ -57,20 +90,45 @@ function runCore(directory) {
 export default {
   id: ID,
   setup(ctx) {
-    const warnings = [];
-    const addWarnings = (list) => {
-      for (const warning of list) {
-        warnings.push(warning);
-        log(warning);
-      }
+    // Avisos por lotes: cada lote es un toast
+    const batches = [];
+    let registration = null;
+    const addWarnings = (list, variant = "warning") => {
+      if (list.length === 0) return;
+      const batch = { index: batches.length, message: list.join("\n"), variant };
+      batches.push(batch);
+      for (const warning of list) log(warning);
+      Promise.resolve(registration)
+        .then((reg) => reg?.events.emit("warning", batch))
+        .catch((error) => log("rpc emit:", error));
     };
 
     try {
+      registration = Promise.resolve(ctx.rpc.register(RPC, { warnings: async () => batches })).catch((error) => {
+        log("rpc register:", error);
+        return null;
+      });
+    } catch (error) {
+      log("rpc register:", error);
+    }
+
+    try {
       const directory = ctx.location.directory;
+      let finished = false;
       const core = runCore(directory).then((result) => {
+        finished = true;
         addWarnings(result.warnings);
         return result;
       });
+      const slow = setTimeout(() => {
+        if (!finished) {
+          addWarnings(
+            ["session-start: instalando las dependencias del proyecto; los comandos de la sesión esperan a que termine"],
+            "info"
+          );
+        }
+      }, SLOW_CORE_MS);
+      slow.unref?.();
 
       let hooked = false;
       try {
