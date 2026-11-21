@@ -363,3 +363,39 @@ Then('asigna estas operaciones del motor:', function (table) {
   }
 });
 
+
+// --- Indicaciones de archivado -------------------------------------------------
+
+const openspec = require('../support/openspec');
+
+// Each step of the resync, as the engine operation or action that does it
+// (design D6), so that the check does not depend on the guidance's wording
+const RESYNC_STEPS = {
+  'fijar como fuentes, en el commit del archivado, el código, specs y ADRs que tocó': /\/wiki:ingest-collection\b.*--manifest-only/,
+  'refrescar los artículos cuyas fuentes cambiaron y compilar las fuentes nuevas': /\/wiki:refresh\b.*\/wiki:compile\b/,
+  'revisar con el librarian, sin modificar, lo que quedó obsoleto o contradicho': /\/wiki:librarian scan\b/,
+  'extraer las lecciones aprendidas sin escribir': /\/wiki:ll\b.*--dry-run/,
+  'presentarlo al usuario y escribir solo lo que confirme': /confirm/i,
+  'pasar el lint del wiki hasta dejarlo sin errores': /\/wiki:lint\b/,
+  'hacer el commit del wiki después del commit del archivado': /commit del wiki.*después del commit del archivado/i,
+};
+
+Given('un change del proyecto listo para archivar', function () {
+  this.archiveChange = openspec.addChangeReadyToArchive(this.ensureProject(), 'cambio-de-prueba');
+});
+
+When('se consultan las indicaciones de archivado de OpenSpec para ese change', function () {
+  this.archiveGuidance = openspec.archiveInstructions(this.project, this.archiveChange).operationGuidance ?? [];
+});
+
+Then('incluyen resincronizar el wiki del proyecto con estos pasos, en este orden:', function (table) {
+  const guidance = this.archiveGuidance.map(String);
+  let last = -1;
+  for (const { paso } of table.hashes()) {
+    const pattern = RESYNC_STEPS[paso];
+    assert.ok(pattern, `no engine operation is defined for the step '${paso}'`);
+    const at = guidance.findIndex((entry, i) => i > last && pattern.test(entry));
+    assert.ok(at > last, `the archive guidance has no '${paso}' after the previous step:\n${JSON.stringify(guidance, null, 2)}`);
+    last = at;
+  }
+});
