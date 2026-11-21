@@ -27,3 +27,19 @@
 ## [2026-11-21] ll | "APIs de sesión de OpenCode 2.3.2 para orquestar un change" → raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md (9 lessons, 2 articles updated, 1 inventory record)
 
 ## [2026-11-21] ll | "Cierre de revisión con un modelo real" → raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md (1 lesson appended, 10 total, 0 articles updated)
+
+## [2026-11-21] ingest | openspec-git-discipline behaves poorly when developing with a protected main branch (raw/articles/2026-11-21-issue-11-git-discipline-main-protegida.md)
+
+## [2026-11-21] ingest-collection | intent-driven-template via git: 2 files (manifest-only at a8b8231ff68250a503516b27b2bd70b7a5640c99)
+
+## [2026-11-21] ingest-collection | skills via git: 1 file (manifest-only at 04cd70e6a3aa32419415b630e3bcbdabc992d5c2)
+
+## [2026-11-21] ingest-collection | idd via git: 2 files (manifest-only at 2e89fa368f25628f08b7e5dfce65bfe14ce8be44)
+
+## [2026-11-21] compile | 4 sources → 1 new article, 0 updated (origen-de-openspec-git-discipline)
+
+## [2026-11-21] ingest-collection | idd via git: 1 file (manifest-only at c59392aa6829f55eb72cc9eeeb4f1b7f32cd4607)
+
+## [2026-11-21] compile | 1 source → 0 new articles, 1 updated (origen-de-openspec-git-discipline)
+
+## [2026-11-21] lint | local command + agentic checks: 0 critical, 4 warnings, 2 suggestions, 0 candidates, 4 fixed (1 suggestion left by decision until add-openspec-autopilot is archived)

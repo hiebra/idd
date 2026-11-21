@@ -6,13 +6,13 @@ Last updated: 2026-11-21
 
 ## Statistics
 
-- Sources: 4 raw documents
-- Articles: 7 compiled wiki articles
+- Sources: 9 raw documents
+- Articles: 8 compiled wiki articles
 - Inventory records: 2 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
 - Last compiled: 2026-11-21
-- Last lint: never
+- Last lint: 2026-11-21
 
 ## Quick Navigation
 
@@ -29,6 +29,10 @@ Last updated: 2026-11-21
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-21: Lint con 4 arreglos; ADR-0007 incorporado al artículo del origen de openspec-git-discipline
+
+- 2026-11-21: Ingerido el origen de openspec-git-discipline (issue 11 y 3 manifiestos) y compilado en 1 concepto
 
 - 2026-11-21: 4 artículos compilados de ADRs, specs y código; manifiesto del README actual
 

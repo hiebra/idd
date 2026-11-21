@@ -61,6 +61,7 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - [El hook context de OpenCode](../concepts/hook-context-opencode.md)
 - [El flujo wiki-first](flujo-wiki-first.md)
 - [La suite de aceptación y spec-as-source](suite-de-aceptacion-y-spec-as-source.md)
+- [Una sola copia de las skills, vista por cada agente](../concepts/una-sola-copia-de-las-skills.md)
 
 ## Sources
 

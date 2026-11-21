@@ -23,4 +23,5 @@ Last updated: 2026-11-21
 
 | File | Kind | Status | Priority | Next Action | Updated |
 |------|------|--------|----------|-------------|---------|
+| [volver-a-comprobar-apis-de-sesion-al-subir-opencode.md](candidates/volver-a-comprobar-apis-de-sesion-al-subir-opencode.md) | watch | active | p2 | Al subir de versión OpenCode, repetir con el banco de la lección 9 las pruebas de archivado desde el plugin, de tools con codemode y de escuchadores RPC que sobreviven a la recarga, y revisar el design de add-openspec-autopilot si algo cambia. | 2026-11-21 |
 | [volver-a-comprobar-hook-context-al-subir-opencode.md](candidates/volver-a-comprobar-hook-context-al-subir-opencode.md) | watch | active | p2 | Al subir de versión OpenCode, repetir con la versión nueva las comprobaciones de la tarea 1.2 de add-llm-wiki-support y, si algo cambia, actualizar el plugin y opencode-host.mjs. | 2026-11-21 |
