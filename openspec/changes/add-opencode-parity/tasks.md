@@ -68,7 +68,7 @@
 
 ## 6. Documentación (zona de código)
 
-- [ ] 6.1 Actualizar `README.md` según D7:
+- [x] 6.1 Actualizar `README.md` según D7:
   - qué ofrece, con los dos agentes;
   - requisitos, con OpenCode 2 o superior;
   - qué ocurre al abrir sesión: núcleo, adaptadores y avisos en la interfaz;
