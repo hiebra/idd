@@ -1,0 +1,12 @@
+{
+  "name": "intent-driven-project",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Project created from the intent-driven OpenSpec template",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "devDependencies": {
+    "@fission-ai/openspec": "1.17.0"
+  }
+}
