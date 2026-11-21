@@ -13,6 +13,7 @@ const { Machine } = require('./machine');
 const { Project } = require('./project');
 const { ClaudeCodeAgent } = require('./agents/claude-code');
 const { OpenCodeAgent } = require('./agents/opencode');
+const skills = require('./skills');
 
 // Steps run real `npm install`s
 setDefaultTimeout(5 * 60 * 1000);
@@ -66,6 +67,26 @@ class SessionWorld extends World {
   // `openspec --version` as a command in the opened session sees it
   openspecVersionInSession() {
     return (this.session.run('openspec --version').stdout || '').trim();
+  }
+
+  // --- agent-skills ---
+
+  // The project skills the agent finds in the clone, by its discovery rules
+  findSkills(agentName) {
+    this.foundSkills = { agent: agentName, skills: skills.discoverSkills(agentName, this.ensureProject().dir) };
+    return this.foundSkills;
+  }
+
+  schemaSkillIds() {
+    return skills.schemaSkillIds(this.ensureProject().dir);
+  }
+
+  // Checks that every schema skill is available in every supported agent;
+  // records the failure, if any
+  checkSkillAvailability() {
+    const problems = skills.schemaSkillProblems(this.ensureProject().dir);
+    this.availabilityCheck = { failed: problems.length > 0, problems };
+    return this.availabilityCheck;
   }
 
   installsIn(dir) {
