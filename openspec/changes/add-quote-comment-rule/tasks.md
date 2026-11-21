@@ -36,7 +36,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 6. Documentación y cierre
 
-- [ ] 6.1 README: añadir la regla de comentarios a "Qué ofrece", con cómo se usa (`'…'`, "ya", "reformula") y cómo se desactiva (`PROJECT_COMMENTS=off`), y enlazar ADR-0010 → commit
+- [x] 6.1 README: añadir la regla de comentarios a "Qué ofrece", con cómo se usa (`'…'`, "ya", "reformula") y cómo se desactiva (`PROJECT_COMMENTS=off`), y enlazar ADR-0010 → commit
 - [ ] 6.2 Ejecutar la suite efectiva entera (`npm test` en `acceptance-tests/`): todos los escenarios de este change y de las specs vigentes pasan, sin pasos pendientes ni sin definir de este change, y se genera el informe HTML. Ejecutar también `npm run test:core` y `npm run lint:specs`
 - [ ] 6.3 Abrir una sesión nueva de Claude Code en el proyecto y comprobar a mano que recibe la regla al empezar, que un mensaje que empieza por `'` recibe el recordatorio y que el agente contesta con la frase fija
 - [ ] 6.4 Ejecutar `openspec validate add-quote-comment-rule --type change --strict` antes del archive. Como en los changes anteriores, el criterio es la validación sin `--strict`; en modo estricto solo deben quedar los avisos de idioma (SHALL/MUST) y de formato (Gherkin en bloques de código)
