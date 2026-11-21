@@ -83,7 +83,7 @@ Cada usuario DEBE poder desactivar el wiki para sí mismo, en cada agente soport
 
 ```gherkin
 Given un clon del proyecto
-And el usuario ha desactivado el wiki en su configuración local de <agente>
+And el usuario ha desactivado el wiki para sí mismo en <agente>
 When se abre una sesión de <agente> en el proyecto
 Then no se instala el motor del wiki
 And el agente no recibe la guía del wiki

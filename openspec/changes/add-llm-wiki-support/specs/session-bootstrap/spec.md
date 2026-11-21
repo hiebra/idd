@@ -46,7 +46,7 @@ Examples:
 ```
 
 ### Requirement: Un fallo al instalar el motor del wiki no bloquea la sesión
-Si la instalación del motor del wiki falla, o el agente no permite instalarlo desde el arranque, el arranque de sesión DEBE avisar del fallo indicando cómo instalarlo a mano, NO DEBE impedir que la sesión arranque y DEBE volver a intentarlo en la siguiente sesión.
+Si la instalación del motor del wiki falla, el arranque de sesión DEBE avisar del fallo indicando cómo instalarlo a mano, NO DEBE impedir que la sesión arranque y DEBE volver a intentarlo en la siguiente sesión.
 
 #### Scenario Outline: Sin acceso al repositorio del motor
 
@@ -62,17 +62,6 @@ Examples:
   | agente      |
   | Claude Code |
   | OpenCode    |
-```
-
-#### Scenario: Una versión de Claude Code que no permite instalar plugins
-
-```gherkin
-Given un clon del proyecto sin el motor del wiki instalado
-And una versión de Claude Code que no permite instalar plugins desde el arranque de sesión
-When se abre una sesión de Claude Code en el proyecto
-Then la sesión arranca con normalidad
-And se avisa de que el motor del wiki no se ha podido instalar
-And el aviso indica cómo instalarlo a mano
 ```
 
 #### Scenario Outline: Reintento tras una instalación del motor fallida
