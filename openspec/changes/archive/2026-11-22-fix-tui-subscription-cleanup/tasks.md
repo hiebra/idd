@@ -67,7 +67,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
     No se ha visto un toast tras la recarga, pero va por el mismo canal de peticiones que `select` y `navigate`.
 - [x] 5.3 Ejecutar `openspec validate fix-tui-subscription-cleanup --type change --strict`: ningún error. Los avisos que queden son los mismos tipos que ya da `openspec validate --specs --strict`: requisitos con "DEBE" y pasos en bloques `gherkin`.
 - [x] 5.4 Commit de la zona de código pendiente, sin archivos de `openspec/`. Ya estaba todo en commits: el último es `385bf5e`.
-- [ ] 5.5 Archivar `fix-tui-subscription-cleanup` en su rama temporal, en un commit propio sin archivos de la zona de código. Después, resincronizar el wiki en un commit aparte, que propone al usuario:
+- [x] 5.5 Archivar `fix-tui-subscription-cleanup` en su rama temporal, en un commit propio sin archivos de la zona de código. Después, resincronizar el wiki en un commit aparte, que propone al usuario:
   - corregir la regla de la lección 5;
   - corregir el artículo `ciclo-de-un-change-y-autopilot.md`;
   - registrar el contrato de limpieza de `setup` y el `signal` de `events.on`;
