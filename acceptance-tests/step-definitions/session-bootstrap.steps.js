@@ -32,6 +32,37 @@ Given('un proyecto con un proyecto de tests de aceptación en `acceptance-tests\
   this.ensureProject().addAcceptanceProject();
 });
 
+Given('las dependencias del proyecto se instalaron con éxito con los archivos actuales', function () {
+  this.ensureProject();
+  this.installProject();
+});
+
+Given('las dependencias del proyecto se instalaron con éxito', function () {
+  this.ensureProject();
+  this.installProject();
+});
+
+Given('después cambió la lista de dependencias del proyecto', function () {
+  this.project.addDependency('is-number', '7.0.0');
+});
+
+Given('las dependencias del proyecto de tests de aceptación se instalaron con éxito', function () {
+  this.ensureProject().addAcceptanceProject();
+  this.installProject();
+});
+
+Given('después cambió la lista de dependencias de los tests de aceptación', function () {
+  this.project.addDependency('is-odd', '3.0.1', this.project.acceptanceDir);
+});
+
+Given('la última instalación de dependencias falló', function () {
+  this.ensureProject();
+  this.machine.offline = true;
+  const session = this.openSession();
+  this.machine.offline = false;
+  assert.equal(this.project.hasStamp(), false, `the setup install did not fail:\n${session.stderr}`);
+});
+
 Given('ninguna de sus dependencias está instalada', function () {
   assert.equal(this.project.hasNodeModules(), false);
   if (this.project.hasAcceptanceProject()) {
@@ -44,6 +75,26 @@ Given('ninguna de sus dependencias está instalada', function () {
 Given('una máquina con otra versión de OpenSpec instalada globalmente', function () {
   this.machine.globalOpenspec = true;
   assert.notEqual(this.machine.globalOpenspecVersion, this.ensureProject().pinnedOpenspecVersion());
+});
+
+Given('una máquina sin npm', function () {
+  this.machine.hasNpm = false;
+});
+
+Given('una máquina con Node.js 20', function () {
+  this.machine.nodeVersion = this.machine.oldNodeVersion;
+});
+
+Given('el proyecto exige Node.js 22.12 o superior', function () {
+  assert.equal(this.ensureProject().requiredNode(), '>=22.12');
+});
+
+Given('la máquina no puede acceder al registro de paquetes', function () {
+  this.machine.offline = true;
+});
+
+Given('la máquina vuelve a tener acceso al registro de paquetes', function () {
+  this.machine.offline = false;
 });
 
 Given('una versión de Claude Code que no permite ajustar el PATH de la sesión', function () {
@@ -71,6 +122,47 @@ Then('todas las dependencias declaradas por el proyecto quedan instaladas', func
 
 Then('las dependencias del proyecto de tests de aceptación quedan instaladas', function () {
   assert.deepEqual(this.project.missingDependencies(this.project.acceptanceDir), []);
+});
+
+Then('las dependencias del proyecto quedan instaladas', function () {
+  assert.deepEqual(this.project.missingDependencies(), []);
+  assert.equal(this.project.hasStamp(), true);
+});
+
+Then('no se lanza ninguna instalación', function () {
+  assert.deepEqual(this.session.npmCalls.filter((call) => call.args[0] === 'install'), []);
+  assert.equal(this.project.hasNodeModules() && !this.project.hasStamp(), false);
+});
+
+Then('las dependencias se instalan de nuevo según la lista actual', function () {
+  assert.equal(this.installsIn(this.project.dir).length, 1);
+  assert.deepEqual(this.project.missingDependencies(), []);
+});
+
+Then('las dependencias de los tests de aceptación se instalan de nuevo según la lista actual', function () {
+  assert.equal(this.installsIn(this.project.acceptanceDir).length, 1);
+  assert.deepEqual(this.project.missingDependencies(this.project.acceptanceDir), []);
+});
+
+Then('las dependencias de la raíz no se instalan de nuevo', function () {
+  assert.deepEqual(this.installsIn(this.project.dir), []);
+});
+
+Then('la sesión arranca con normalidad', function () {
+  assert.equal(this.session.exitCode, 0);
+  assert.equal(this.session.stdout, '');
+});
+
+Then('se avisa de que hace falta Node.js con npm', function () {
+  assert.match(this.session.stderr, /session-start: hace falta Node\.js con npm/);
+});
+
+Then('el aviso indica la versión requerida y la versión encontrada', function () {
+  assert.match(this.session.stderr, /session-start: .*>=22\.12.*20\.11\.0/);
+});
+
+Then('se avisa de que la instalación de dependencias falló', function () {
+  assert.match(this.session.stderr, /session-start: falló la instalación de dependencias/);
 });
 
 Then('se avisa de que el PATH no se ha podido ajustar', function () {
