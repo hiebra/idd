@@ -38,37 +38,37 @@ Las secciones 1 a 6 se hicieron con verificación manual en copias desechables d
 
 ## 7. Suite de aceptación: puesta en marcha (zona de código)
 
-- [ ] 7.1 Confirmar el stack: `stack: javascript` en `openspec/config.yaml`
-- [ ] 7.2 Crear `acceptance-tests/` como proyecto Node independiente: `package.json` con `@cucumber/cucumber`, `glob`, `cheerio` y `gherkin-lint` en `devDependencies` y los scripts `test`, `test:specs` y `lint:specs` de la skill, y su `package-lock.json`
-- [ ] 7.3 Copiar tal cual los archivos de referencia de `acceptance-test-authoring` (`extract-gherkin.cjs`, `cucumber.cjs`, `openspec-effective-paths.cjs` y `.gherkin-lintrc`), y comprobar que las rutas resueltas solo apuntan a `.extracted/` y nada de `changes/archive/`
-- [ ] 7.4 Comprobar que `npm test` genera siempre el informe HTML en `acceptance-tests/reports/`, y añadir `acceptance-tests/.extracted/` y `acceptance-tests/reports/` al `.gitignore`
-- [ ] 7.5 Comprobar que `npm run lint:specs` pasa sobre la spec de `session-bootstrap`
-- [ ] 7.6 Crear el soporte de D9 en `acceptance-tests/support/`: World con copias desechables del proyecto, máquinas simuladas (herramientas sin npm, `node` 20 falso, `openspec` global falso, espía de npm, registro inaccesible), `Before`/`After` que crean y borran los temporales, y tiempo máximo por paso ampliado
-- [ ] 7.7 Escribir `acceptance-tests/README.md`: cómo ejecutar la suite, dónde queda el informe HTML y cómo se simulan las máquinas
-- [ ] 7.8 Ejecutar la suite y comprobar que todos los escenarios de `session-bootstrap` salen con pasos sin definir (rojo)
+- [x] 7.1 Confirmar el stack: `stack: javascript` en `openspec/config.yaml`
+- [x] 7.2 Crear `acceptance-tests/` como proyecto Node independiente: `package.json` con `@cucumber/cucumber`, `glob`, `cheerio` y `gherkin-lint` en `devDependencies` y los scripts `test`, `test:specs` y `lint:specs` de la skill, y su `package-lock.json`
+- [x] 7.3 Copiar tal cual los archivos de referencia de `acceptance-test-authoring` (`extract-gherkin.cjs`, `cucumber.cjs`, `openspec-effective-paths.cjs` y `.gherkin-lintrc`), y comprobar que las rutas resueltas solo apuntan a `.extracted/` y nada de `changes/archive/`
+- [x] 7.4 Comprobar que `npm test` genera siempre el informe HTML en `acceptance-tests/reports/`, y añadir `acceptance-tests/.extracted/` y `acceptance-tests/reports/` al `.gitignore`
+- [x] 7.5 Comprobar que `npm run lint:specs` pasa sobre la spec de `session-bootstrap`
+- [x] 7.6 Crear el soporte de D9 en `acceptance-tests/support/`: World con copias desechables del proyecto, máquinas simuladas (herramientas sin npm, `node` 20 falso, `openspec` global falso, espía de npm, registro inaccesible), `Before`/`After` que crean y borran los temporales, y tiempo máximo por paso ampliado
+- [x] 7.7 Escribir `acceptance-tests/README.md`: cómo ejecutar la suite, dónde queda el informe HTML y cómo se simulan las máquinas
+- [x] 7.8 Ejecutar la suite y comprobar que todos los escenarios de `session-bootstrap` salen con pasos sin definir (rojo)
 
 ## 8. Step definitions (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 8.1 "Clon recién creado"
-- [ ] 8.2 "La máquina tiene otra versión de OpenSpec instalada globalmente"
-- [ ] 8.3 "La sesión no permite ajustar el PATH"
-- [ ] 8.4 "Proyecto derivado con dependencias propias"
-- [ ] 8.5 "Proyecto con tests de aceptación": con el escenario en rojo, ampliar el hook para instalar `acceptance-tests/` si existe, con su propio sello y siguiendo aunque falle la otra instalación (D3, D4)
-- [ ] 8.6 "Dependencias al día"
-- [ ] 8.7 "Las dependencias cambiaron desde la última instalación"
-- [ ] 8.8 "Las dependencias de los tests de aceptación cambiaron"
-- [ ] 8.9 "Máquina sin npm"
-- [ ] 8.10 "Versión de Node.js inferior a la requerida"
-- [ ] 8.11 "Sin acceso al registro de paquetes"
-- [ ] 8.12 "Reintento tras una instalación fallida"
+- [x] 8.1 "Clon recién creado"
+- [x] 8.2 "La máquina tiene otra versión de OpenSpec instalada globalmente"
+- [x] 8.3 "La sesión no permite ajustar el PATH"
+- [x] 8.4 "Proyecto derivado con dependencias propias"
+- [x] 8.5 "Proyecto con tests de aceptación": con el escenario en rojo, ampliar el hook para instalar `acceptance-tests/` si existe, con su propio sello y siguiendo aunque falle la otra instalación (D3, D4)
+- [x] 8.6 "Dependencias al día"
+- [x] 8.7 "Las dependencias cambiaron desde la última instalación"
+- [x] 8.8 "Las dependencias de los tests de aceptación cambiaron"
+- [x] 8.9 "Máquina sin npm"
+- [x] 8.10 "Versión de Node.js inferior a la requerida"
+- [x] 8.11 "Sin acceso al registro de paquetes"
+- [x] 8.12 "Reintento tras una instalación fallida"
 
 ## 9. ADR y README (zona de código)
 
-- [ ] 9.1 Crear `adr/0001-session-bootstrap-hook.md` (título, Status, Date y secciones Context, Decision y Consequences) con la decisión del manifiesto `adr.md`
-- [ ] 9.2 Actualizar `README.md` según D8: suite de aceptación, cómo ejecutarla, instalación manual también en `acceptance-tests/`, qué heredan los proyectos derivados; quitar el apartado de changes efímeros
+- [x] 9.1 Crear `adr/0001-session-bootstrap-hook.md` (título, Status, Date y secciones Context, Decision y Consequences) con la decisión del manifiesto `adr.md`
+- [x] 9.2 Actualizar `README.md` según D8: suite de aceptación, cómo ejecutarla, instalación manual también en `acceptance-tests/`, qué heredan los proyectos derivados; quitar el apartado de changes efímeros
 
 ## 10. Cierre
 
-- [ ] 10.1 Ejecutar la suite completa: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado
-- [ ] 10.2 Commit y push de la zona de código pendiente, sin archivos de `openspec/`
-- [ ] 10.3 Archivar el change con `openspec archive bootstrap-openspec-tooling` en un commit propio, sin archivos de la zona de código, y push
+- [x] 10.1 Ejecutar la suite completa: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado
+- [x] 10.2 Commit y push de la zona de código pendiente, sin archivos de `openspec/`
+- [x] 10.3 Archivar el change con `openspec archive bootstrap-openspec-tooling` en un commit propio, sin archivos de la zona de código, y push
