@@ -8,6 +8,7 @@ Last updated: 2026-11-21
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-21-idd-772d0f0-add-openspec-autopilot.md](2026-11-21-idd-772d0f0-add-openspec-autopilot.md) | Manifiesto de lo que tocó add-openspec-autopilot en el commit del archivado (idd@772d0f0) | collection, collection-manifest, git | 2026-11-21 |
 | [2026-11-21-idd-b48392d-fix-wiki-flow-operations.md](2026-11-21-idd-b48392d-fix-wiki-flow-operations.md) | Manifiesto de lo que tocó fix-wiki-flow-operations en el commit del archivado (idd@b48392d) | collection, collection-manifest, git | 2026-11-21 |
 | [2026-11-21-idd-c59392a-adr-0007.md](2026-11-21-idd-c59392a-adr-0007.md) | Manifiesto de ADR-0007, que sustituye las puertas de openspec-git-discipline (idd@c59392a) | collection, collection-manifest, git | 2026-11-21 |
 | [2026-11-21-idd-2e89fa3-git-discipline.md](2026-11-21-idd-2e89fa3-git-discipline.md) | Manifiesto de la skill heredada y la propuesta de add-openspec-autopilot (idd@2e89fa3) | collection, collection-manifest, git | 2026-11-21 |
@@ -19,6 +20,8 @@ Last updated: 2026-11-21
 ## Categories
 
 ## Recent Changes
+
+- 2026-11-21: Manifiesto del archivado de add-openspec-autopilot (idd@772d0f0)
 
 - 2026-11-21: Manifiesto de ADR-0007
 

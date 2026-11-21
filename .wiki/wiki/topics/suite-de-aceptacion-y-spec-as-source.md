@@ -6,6 +6,7 @@ sources:
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-f2be907-readme.md
   - raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md
+  - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
 created: 2026-11-21
 updated: 2026-11-21
 verified: 2026-11-21
@@ -32,6 +33,8 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - **Archivos copiados**: `cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gherkin-lintrc` son copias literales de la skill `acceptance-test-authoring`.
 - **Pasos**: los pasos solo llaman a métodos de intención del World y hacen aserciones.
 - **Sin agentes reales**: cada escenario trabaja sobre una copia temporal del proyecto, en una máquina simulada (`PATH` y entorno). Los adaptadores de `support/agents/` imitan cómo invoca cada agente el arranque: Claude Code ejecuta los hooks de `.claude/settings.json`, y OpenCode es un host Node que carga el plugin con contextos falsos (`idd@1cf0792:acceptance-tests/support/agents/opencode-host.mjs`).
+- **El ciclo de un change** (`openspec-change-lifecycle`): cada escenario monta el estado de git que necesita sobre la copia, que ya es un repositorio con `main` (`idd@772d0f0:acceptance-tests/support/branches.js`). El change y las puertas salen de `branch-change.mjs` de la copia; como la suite no ejecuta el modelo de los workflows, comprueba la puerta y que la skill `openspec-git-discipline` la usa, por sus identificadores de sección `<!-- lifecycle:<id> -->` (`idd@772d0f0:acceptance-tests/README.md`).
+- **El plugin `openspec-autopilot`**: se prueba en un OpenCode simulado con varias sesiones, un proceso hijo de larga duración que el World maneja por IPC (`idd@772d0f0:acceptance-tests/support/agents/opencode-sim.mjs` y `opencode-sim.js`). Reiniciar OpenCode es un proceso nuevo sobre el mismo almacén de sesiones. Simula el contrato comprobado con OpenCode 2.3.2: metadata sustituida entera, `archived` ignorado en el servidor, `list` por páginas, tools solo con `codemode: false`, recargas con escuchadores de la TUI vivos y fallos inyectables. El modelo es un guion por escenario, y de cada petición se registra lo que recibe (ver [El ciclo de un change y su automatización en OpenCode](ciclo-de-un-change-y-autopilot.md)).
 - **El wiki**: se simula con un motor falso, un repositorio git local con dos tags y una marca de versión en cada archivo (`idd@1cf0792:acceptance-tests/support/engine.js`).
 - **Lo que no está en las specs**, como los conflictos de nombres con el motor o `.wiki/` ignorado por otra regla, se prueba con `node --test` en `acceptance-tests/core-tests/` (`npm run test:core`).
 - **Textos que el arranque transforma**: la estructura se comprueba en la fuente y el contenido en lo entregado. El soporte de la suite replica la transformación (`GUIDE_OPERATIONS` en `idd@b48392d:acceptance-tests/support/world.js`), y `idd@b48392d:acceptance-tests/core-tests/wiki-markers.test.js` fija la tabla de marcadores para que las dos copias no diverjan ([lecciones de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md)).
@@ -49,6 +52,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - [El arranque de sesión](arranque-de-sesion.md)
 - [Proveedor falso para verificar el contexto](../concepts/proveedor-falso-para-verificar-contexto.md)
 - [El hook context de OpenCode](../concepts/hook-context-opencode.md)
+- [El ciclo de un change y su automatización en OpenCode](ciclo-de-un-change-y-autopilot.md)
 
 ## Sources
 
@@ -57,3 +61,4 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `openspec/config.yaml`, `acceptance-tests/README.md`, `acceptance-tests/support/agents/opencode-host.mjs`, `acceptance-tests/support/engine.js`, `adr/0002-agent-neutral-session-bootstrap.md`.
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `acceptance-tests/support/world.js`, `acceptance-tests/core-tests/wiki-markers.test.js`.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
+- [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `acceptance-tests/README.md`, `acceptance-tests/support/branches.js`, `acceptance-tests/support/agents/opencode-sim.mjs`, `acceptance-tests/support/agents/opencode-sim.js`.

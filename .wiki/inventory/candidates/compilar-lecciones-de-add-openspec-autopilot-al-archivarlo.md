@@ -1,12 +1,12 @@
 ---
 title: "Compilar las lecciones de las pruebas de add-openspec-autopilot al archivarlo"
 kind: task
-status: active
+status: ingested
 priority: p2
 created: 2026-11-21
 updated: 2026-11-21
 last_checked: 2026-11-21
-next_action: "Al archivar add-openspec-autopilot, en el paso 2 de la resincronización del wiki, compilar raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md con /wiki:compile junto con los manifiestos nuevos del change, y cerrar este registro."
+next_action: "Ninguna: compilada en wiki/topics/ciclo-de-un-change-y-autopilot.md al archivar add-openspec-autopilot."
 sources:
   - raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md
 tags: [opencode, task, compile, add-openspec-autopilot]
@@ -24,7 +24,9 @@ La resincronización del archivado (`openspec/config.yaml`) no la cubriría sola
 
 ## Current State
 
-Pendiente. La nota la cita únicamente el registro de vigilancia [volver-a-comprobar-apis-de-sesion-al-subir-opencode](volver-a-comprobar-apis-de-sesion-al-subir-opencode.md), que no cuenta como cobertura.
+Hecho el 2026-11-21: en la resincronización del archivado de `add-openspec-autopilot`, la nota se compiló en [El ciclo de un change y su automatización en OpenCode](../../wiki/topics/ciclo-de-un-change-y-autopilot.md), junto con el [manifiesto del commit del archivado](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md).
+
+Antes, pendiente. La nota la cita únicamente el registro de vigilancia [volver-a-comprobar-apis-de-sesion-al-subir-opencode](volver-a-comprobar-apis-de-sesion-al-subir-opencode.md), que no cuenta como cobertura.
 
 ## Next Action
 

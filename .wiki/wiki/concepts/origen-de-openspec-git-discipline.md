@@ -8,13 +8,14 @@ sources:
   - raw/repos/2026-11-21-idd-c59392a-adr-0007.md
   - raw/articles/2026-11-21-issue-11-git-discipline-main-protegida.md
   - raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md
+  - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
 created: 2026-11-21
 updated: 2026-11-21
 verified: 2026-11-21
 tags: [openspec, openspec-git-discipline, git, procedencia, skills]
 confidence: high
 volatility: warm
-summary: "La skill openspec-git-discipline exige cruzar main dos veces por change (la propuesta antes de apply y la implementación antes de archive) y archivar desde main. Ni este proyecto ni su origen registran por qué; la única discusión es la issue 11 del origen, abierta y sin respuesta. ADR-0007 sustituye esas puertas en este proyecto."
+summary: "La skill openspec-git-discipline exige cruzar main dos veces por change (la propuesta antes de apply y la implementación antes de archive) y archivar desde main. Ni este proyecto ni su origen registran por qué; la única discusión es la issue 11 del origen, abierta y sin respuesta. ADR-0007 sustituye esas puertas en este proyecto, y la copia de la skill se reescribió con ellas en add-openspec-autopilot."
 ---
 
 # openspec-git-discipline: una regla heredada sin justificación registrada
@@ -44,7 +45,7 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 
 ## Qué hace este proyecto con ella
 
-- **La propuesta** (`idd@2e89fa3:openspec/changes/add-openspec-autopilot/proposal.md`, de un change activo) recoge la falta de justificación como parte del problema, cita la issue 11 y propone una rama y una sola fusión por change.
+- **La propuesta** (`idd@2e89fa3:openspec/changes/add-openspec-autopilot/proposal.md`, del change ya archivado: `idd@772d0f0:openspec/changes/archive/2026-11-21-add-openspec-autopilot/proposal.md`, mismo blob) recoge la falta de justificación como parte del problema, cita la issue 11 y propone una rama y una sola fusión por change.
 - **ADR-0007 lo decide** (`idd@c59392a:adr/0007-single-branch-change-lifecycle.md`, aceptado):
   - Un change, una rama temporal y una sola fusión: propuesta, implementación, archive y resincronización del wiki se hacen en la rama, y el archive nunca en una rama permanente.
   - Las ramas permanentes se configuran con `x-main` en `openspec/config.yaml` (por defecto `["main"]`), y el change de cada rama temporal se lee de git desde su merge-base.
@@ -52,20 +53,21 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
   - Los commits y las fusiones los sigue haciendo el usuario.
   - Descarta mantener las puertas heredadas, añadir una skill propia junto a la heredada, retirarla sin sustituto y registrar el change de cada rama en un archivo.
   - Asume el riesgo de que la propuesta ya no se revise ni se fusione por separado, y deja abierta la vuelta de la fusión intermedia.
-- **La copia de la skill se reescribirá** con esas puertas, mismo nombre y misma descripción de activación, divergiendo del origen a propósito. Al actualizar desde `intent-driven-template` habrá que revisarla, no sobrescribirla (ADR-0007). A `idd@c59392a` la reescritura aún no está hecha: la copia sigue siendo el blob `835e065` del origen, y la reescritura pertenece a `add-openspec-autopilot`, sin implementar ni archivar.
+- **La copia de la skill está reescrita** con esas puertas, con el mismo nombre y la misma descripción de activación, divergiendo del origen a propósito (`idd@772d0f0:.agents/skills/openspec-git-discipline/SKILL.md`, blob `6cd1ad0`, ya distinto del `835e065` del origen). Las puertas ya no las decide el modelo leyendo git: la skill manda ejecutar `node .agents/openspec/branch-change.mjs check <propose|apply|archive>` y obedecer su salida, y enumera como señales de alarma exigir la propuesta en la rama de origen antes del apply y archivar en una rama permanente. Un comentario al principio avisa de que no se sobrescriba al actualizar desde `intent-driven-template` sin revisarla (ADR-0007). Ver [El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md).
 
 ## Lo que no se sabe
 
 - **El motivo original.** Puede que exista fuera de los repositorios (conversaciones, otra documentación), pero no consta en ninguna fuente revisada.
 - **El estado de la issue después del 2026-11-21.** Es una fuente viva: puede recibir respuesta o cerrarse.
-- **La copia reescrita.** Cuando `add-openspec-autopilot` se archive, este artículo debe citar la nueva versión de la skill.
 
 ## See Also
 
 - [Una sola copia de las skills, vista por cada agente](una-sola-copia-de-las-skills.md)
+- [El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md)
 
 ## Sources
 
+- [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `.agents/skills/openspec-git-discipline/SKILL.md`, `.agents/openspec/branch-change.mjs`.
 - [Lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md): una rama con dos changes.
 - [Collection: openspec-git-discipline en su origen (intent-driven-template@a8b8231)](../../raw/repos/2026-11-21-intent-driven-template-a8b8231-git-discipline.md): `.agents/skills/openspec-git-discipline/SKILL.md`, `AGENTS.md`.
 - [Collection: openspec-git-discipline copiada a intent-driven-dev/skills@04cd70e](../../raw/repos/2026-11-21-skills-04cd70e-git-discipline.md): `.agents/skills/openspec-git-discipline/SKILL.md`.

@@ -57,3 +57,15 @@
 ## [2026-11-21] ll | "archivado de fix-wiki-flow-operations" → raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md (2 lessons, 2 articles updated)
 
 ## [2026-11-21] lint | local command: 0 critical, 0 warnings, 1 suggestion (left by decision until add-openspec-autopilot is archived), 0 auto-fixed
+
+## [2026-11-21] ingest-collection | idd via git (manifest-only, 772d0f0, add-openspec-autopilot): 36 new, 0 skipped, 36 total candidates
+
+## [2026-11-21] refresh | 3 articles checked against raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md: 3 updated (origen-de-openspec-git-discipline, suite-de-aceptacion-y-spec-as-source, flujo-wiki-first), 0 flagged, 0 retracted
+
+## [2026-11-21] compile | 2 sources (manifest idd@772d0f0, raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md) → 1 new article (ciclo-de-un-change-y-autopilot), 3 updated
+
+## [2026-11-21] inventory | compilar-lecciones-de-add-openspec-autopilot-al-archivarlo → ingested
+
+## [2026-11-21] librarian | scanned 9 articles, 0 stale, 0 low-quality, 1 suggestion (hook-context-opencode cites opencode-host.mjs at idd@1cf0792; generalized in idd@772d0f0, claim still holds)
+
+## [2026-11-21] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed (the uncited lessons note is now compiled)

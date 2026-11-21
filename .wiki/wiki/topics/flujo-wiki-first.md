@@ -6,6 +6,7 @@ sources:
   - raw/repos/2026-11-21-idd-f2be907-readme.md
   - raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md
   - raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md
+  - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
 created: 2026-11-21
 updated: 2026-11-21
 verified: 2026-11-21
@@ -62,8 +63,14 @@ Las indicaciones de archivado (`idd@1cf0792:openspec/config.yaml`, `operations.a
 
 Lo que cambia fuera de un change no lo recoge este paso.
 
+Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
+
+- la resincronización se hace en la rama temporal del change, después del commit del archivado y antes de fusionarla (ADR-0007);
+- las rutas que tocó el change salen del diff entre el merge-base de la rama con la rama de origen y el commit del archivado, más sus specs y sus ADRs;
+- las lecciones del paso 4 parten de las lecciones candidatas que haya recibido la sesión de las sesiones del change (en OpenCode, de su metadata) y, si no hay, de la sesión en curso.
+
 - **Antes de mover el change**, revisa los enlaces relativos de sus artefactos que salen del change: el archive lo baja un nivel y necesitan un `../` más. Citar por la ruta desde la raíz del repositorio lo evita ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 1).
-- **Las rutas que tocó el change** salen de sus propios commits si la rama lleva más de un change; el diff de la rama contra `main` mezcla los de ambos ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 2).
+- **Las rutas que tocó el change** salen de sus propios commits si la rama lleva más de un change; el diff de la rama contra `main` mezcla los de ambos. Con el ciclo de ADR-0007 una rama lleva un solo change, y el plugin no actúa en una rama con varios ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 2).
 
 ## El motor
 
@@ -79,10 +86,12 @@ Lo que cambia fuera de un change no lo recoge este paso.
 - [El arranque de sesión](arranque-de-sesion.md)
 - [Qué carga cada agente y cuándo](carga-en-la-misma-sesion-por-agente.md)
 - [Una sola copia de las skills](../concepts/una-sola-copia-de-las-skills.md)
+- [El ciclo de un change y su automatización en OpenCode](ciclo-de-un-change-y-autopilot.md)
 
 ## Sources
 
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `adr/0004-wiki-first-project-knowledge.md`, `adr/0005-wiki-engine-through-session-bootstrap.md`, `openspec/specs/llm-wiki/spec.md`, `openspec/specs/wiki-first-knowledge/spec.md`, `.agents/wiki/guide.md`, `.agents/wiki/reminder.md`, `openspec/config.yaml`, `acceptance-tests/step-definitions/wiki.steps.js`, `openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`.
 - [Lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md): enlaces relativos al archivar y rutas que tocó un change.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
+- [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `openspec/config.yaml`.
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `adr/0009-wiki-read-and-write-operations.md`, `openspec/specs/wiki-first-knowledge/spec.md`, `.agents/wiki/guide.md`, `.agents/wiki/reminder.md`.
