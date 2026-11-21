@@ -102,6 +102,18 @@ function addContext(input, systemTexts, reminders) {
   }
 }
 
+// El texto del último mensaje del usuario de una petición al modelo, o null
+function lastUserText(messages) {
+  const last = [...messages].reverse().find((m) => m.role === "user");
+  if (!last) return null;
+  if (typeof last.content === "string") return last.content;
+  if (!Array.isArray(last.content)) return null;
+  return last.content
+    .filter((part) => part?.type === "text" && typeof part.text === "string")
+    .map((part) => part.text)
+    .join("\n");
+}
+
 // Ejecuta el núcleo y resuelve con { bin, engine, warnings }; nunca rechaza
 function runCore(directory) {
   return new Promise((resolve) => {
@@ -164,6 +176,7 @@ export default {
     // fallar la petición al modelo, así que todo va dentro de try/catch
     try {
       const directory = ctx.location.directory;
+      let comments = { message: null, reminder: Promise.resolve("") };
       const texts = Promise.all([
         coreText(directory, "guide"),
         coreText(directory, "reminder"),
@@ -173,7 +186,15 @@ export default {
         ctx.session.hook("context", async (input) => {
           try {
             const [guide, reminder, rule] = await texts;
-            addContext(input, [guide, rule], [reminder]);
+            // El recordatorio de comentarios depende del mensaje: el núcleo
+            // decide, y solo se le pregunta cuando cambia el último mensaje
+            // del usuario (design D4 de add-quote-comment-rule)
+            const message = lastUserText(input.messages);
+            if (message !== null && message !== comments.message) {
+              comments = { message, reminder: coreText(directory, "comments-reminder", message) };
+            }
+            const commentsReminder = message === null ? "" : await comments.reminder;
+            addContext(input, [guide, rule], [reminder, commentsReminder]);
           } catch (error) {
             log("context:", error);
           }

@@ -83,4 +83,33 @@ for (const [text, id] of Object.entries(RULE_SECTIONS)) {
   });
 }
 
+// --- Recordatorio con los mensajes -------------------------------------------
+
+const REMINDER = path.join('.agents', 'comments', 'reminder.md');
+
+function commentsReminder(world) {
+  return fs.readFileSync(path.join(world.ensureProject().dir, REMINDER), 'utf8').trim();
+}
+
+// The rest of the line is the message: the examples carry single and double quotes
+When(/^el usuario envía el mensaje (.+)$/, function (text) {
+  this.sendMessage(text);
+});
+
+Then('el agente recibe el mensaje junto con el recordatorio de la regla de comentarios', function () {
+  const sent = this.sentMessage.result;
+  assert.equal(sent.delivered, true, sent.log);
+  assert.deepEqual(sent.problems, [], sent.log);
+  assert.ok(sent.messages.includes(this.sentMessage.text), sent.log);
+  assert.ok(sent.reminders.some((text) => text.includes(commentsReminder(this))), `no comments reminder:\n${sent.log}`);
+});
+
+Then('el agente recibe el mensaje sin el recordatorio de la regla de comentarios', function () {
+  const sent = this.sentMessage.result;
+  assert.equal(sent.delivered, true, sent.log);
+  assert.deepEqual(sent.problems, [], sent.log);
+  assert.ok(sent.messages.includes(this.sentMessage.text), sent.log);
+  assert.ok(!sent.reminders.some((text) => text.includes(commentsReminder(this))), `unexpected comments reminder:\n${sent.log}`);
+});
+
 module.exports = { ruleAsDelivered, FIXED_REPLY };

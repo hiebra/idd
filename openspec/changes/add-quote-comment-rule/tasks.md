@@ -24,11 +24,11 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 4. Recordatorio con los mensajes (D3, D4): uno por paso pendiente; en cada uno, rojo → implementar → verde → commit
 
-- [ ] 4.1 Paso `el usuario envía el mensaje <mensaje>`, como expresión regular que toma el resto de la línea (los mensajes llevan comillas simples y dobles), y que envía ese texto con `sendMessage`
-- [ ] 4.2 `response-comments: El agente recibe el recordatorio con un mensaje que activa la regla`, paso `el agente recibe el mensaje junto con el recordatorio de la regla de comentarios`: el mensaje llega y algún texto de `reminders` contiene el recordatorio de `reminder.md`. Rojo en los dos agentes. En Claude Code, añadir `json_field` a `.claude/hooks/json.sh` y hacer que `user-prompt-submit.sh` lea el `prompt`, pida `comments-reminder` y combine el resultado con el recordatorio del wiki en un solo `additionalContext`. En OpenCode, en el hook `context`, pedir `comments-reminder` con el último mensaje del usuario, guardar el resultado por texto e insertarlo antes del último mensaje → verde en los dos → commit
-- [ ] 4.3 `response-comments: El agente no recibe el recordatorio con otros mensajes`, paso `el agente recibe el mensaje sin el recordatorio de la regla de comentarios`. Comprobar que está en verde → commit
-- [ ] 4.4 Añadir a `core-tests/` una prueba de `json_field`: prompts con comillas, barras, saltos de línea, `\uXXXX` y acentos dan el texto original; un JSON sin `prompt` o mal formado da una cadena vacía → commit
-- [ ] 4.5 Comprobar que los escenarios del recordatorio del wiki siguen en verde en los dos agentes, incluido `Un fallo del recordatorio no bloquea el mensaje`
+- [x] 4.1 Paso `el usuario envía el mensaje <mensaje>`, como expresión regular que toma el resto de la línea (los mensajes llevan comillas simples y dobles), y que envía ese texto con `sendMessage`
+- [x] 4.2 `response-comments: El agente recibe el recordatorio con un mensaje que activa la regla`, paso `el agente recibe el mensaje junto con el recordatorio de la regla de comentarios`: el mensaje llega y algún texto de `reminders` contiene el recordatorio de `reminder.md`. Rojo en los dos agentes. En Claude Code, añadir `json_field` a `.claude/hooks/json.sh` y hacer que `user-prompt-submit.sh` lea el `prompt`, pida `comments-reminder` y combine el resultado con el recordatorio del wiki en un solo `additionalContext`. En OpenCode, en el hook `context`, pedir `comments-reminder` con el último mensaje del usuario, guardar el resultado por texto e insertarlo antes del último mensaje → verde en los dos → commit
+- [x] 4.3 `response-comments: El agente no recibe el recordatorio con otros mensajes`, paso `el agente recibe el mensaje sin el recordatorio de la regla de comentarios`. Comprobar que está en verde → commit
+- [x] 4.4 Añadir a `core-tests/` una prueba de `json_field`: prompts con comillas, barras, saltos de línea, `\uXXXX` y acentos dan el texto original; un JSON sin `prompt` o mal formado da una cadena vacía → commit
+- [x] 4.5 Comprobar que los escenarios del recordatorio del wiki siguen en verde en los dos agentes, incluido `Un fallo del recordatorio no bloquea el mensaje`
 
 ## 5. Desactivación (D5): rojo → implementar → verde → commit
 
