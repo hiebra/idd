@@ -1,1 +1,3 @@
 node_modules/
+acceptance-tests/.extracted/
+acceptance-tests/reports/
