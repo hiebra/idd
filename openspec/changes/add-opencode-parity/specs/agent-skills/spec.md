@@ -1,11 +1,9 @@
 # agent-skills
 
-Las skills que trae el proyecto (las del schema, en `.agents/skills/`, y los workflows de OpenSpec que genera el CLI del proyecto) están disponibles en cada agente soportado, Claude Code y OpenCode, sin configurar nada tras clonar. "Disponible" significa que el agente la encuentra al buscar skills de proyecto en el clon, según las reglas de descubrimiento de ese agente.
-
 ## ADDED Requirements
 
 ### Requirement: Skills del schema disponibles en cada agente soportado
-Cada skill de `.agents/skills/` DEBE estar disponible, exactamente una vez, en cada agente soportado (Claude Code y OpenCode), y el nombre que declara DEBE coincidir con el de su directorio.
+Cada skill de `.agents/skills/` DEBE estar disponible, exactamente una vez, en cada agente soportado (Claude Code y OpenCode), sin configurar nada tras clonar, y el nombre que declara DEBE coincidir con el de su directorio. Una skill está disponible en un agente cuando este la encuentra al buscar skills de proyecto en el clon, según las reglas de descubrimiento de ese agente.
 
 #### Scenario Outline: El agente encuentra las skills del schema
 
@@ -37,7 +35,7 @@ Examples:
 ```
 
 ### Requirement: Workflows de OpenSpec disponibles en cada agente soportado
-Los workflows de OpenSpec que ofrece el proyecto DEBEN estar disponibles como skills en cada agente soportado, y los de todos los agentes DEBEN corresponder a la versión de OpenSpec fijada en el `package.json` del proyecto.
+Los workflows de OpenSpec que ofrece el proyecto DEBEN estar disponibles como skills en cada agente soportado, sin configurar nada tras clonar y en el mismo sentido de "disponible" que las skills del schema, y los de todos los agentes DEBEN corresponder a la versión de OpenSpec fijada en el `package.json` del proyecto.
 
 #### Scenario Outline: El agente encuentra los workflows de OpenSpec
 

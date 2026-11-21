@@ -1,7 +1,5 @@
 # session-bootstrap
 
-El arranque de sesión deja de ser exclusivo de Claude Code: cubre las sesiones de cualquier agente soportado (Claude Code y OpenCode), con el mismo comportamiento en ambos. Los escenarios que dependen de cómo cada agente dispara el arranque, expone el `PATH` y muestra los avisos se verifican para cada agente; el resto del comportamiento es común a todos los agentes y se describe sin nombrar ninguno.
-
 ## MODIFIED Requirements
 
 ### Requirement: CLI de OpenSpec del proyecto disponible al abrir sesión
