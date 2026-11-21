@@ -44,11 +44,16 @@
 
 ## 3. Instalación del motor (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 3.1 "Clon recién creado" (Claude Code y OpenCode): crear `.agents/wiki/engine.json` y el paso del núcleo que clona el ref en `.agents/wiki-engine/` con sello, y los symlinks de D1; añadir las rutas a `.gitignore` (D8)
-- [ ] 3.2 "El motor ya está en la versión fijada" y "El motor está instalado en otra versión": sello comparado con el ref y sustitución atómica
-- [ ] 3.3 "Sin acceso al repositorio del motor" y "Reintento tras una instalación del motor fallida": aviso `session-start:` con la instalación manual, sin bloquear
-- [ ] 3.4 "El agente dispone de las operaciones del wiki", "Los dos agentes usan la misma versión" y "Subir la versión del motor" (`llm-wiki`): exportar `CLAUDE_PLUGIN_ROOT` en los dos adaptadores
-- [ ] 3.5 Caso de D8: si ya existe una skill o un comando con esos nombres y no es un symlink del motor, no se sobrescribe y se avisa (escenario de soporte o prueba del núcleo, sin cambiar la spec)
+- [x] 3.1 "Clon recién creado" (Claude Code y OpenCode): crear `.agents/wiki/engine.json` y el paso del núcleo que clona el ref en `.agents/wiki-engine/` con sello, y los symlinks de D1; añadir las rutas a `.gitignore` (D8)
+- [x] 3.2 "El motor ya está en la versión fijada" y "El motor está instalado en otra versión": sello comparado con el ref y sustitución atómica
+- [x] 3.3 "Sin acceso al repositorio del motor" y "Reintento tras una instalación del motor fallida": aviso `session-start:` con la instalación manual, sin bloquear
+- [x] 3.4 "El agente dispone de las operaciones del wiki", "Los dos agentes usan la misma versión" y "Subir la versión del motor" (`llm-wiki`): exportar `CLAUDE_PLUGIN_ROOT` en los dos adaptadores
+- [x] 3.5 Caso de D8: si ya existe una skill o un comando con esos nombres y no es un symlink del motor, no se sobrescribe y se avisa (escenario de soporte o prueba del núcleo, sin cambiar la spec)
+
+  **Resultado:** prueba del núcleo en `acceptance-tests/core-tests/engine-links.test.js` (`npm run test:core`, con `node --test`). Cubre una skill propia y un espacio de comandos propio con esos nombres (no se sobrescriben y se avisa) y un symlink del motor obsoleto (se sustituye). De paso:
+  - el simulador de OpenCode espera ahora a los procesos hijo del plugin antes de informar. Sin `shell`, nada espera al núcleo, y con el clonado del motor el aviso llegaba tarde;
+  - la máquina simulada busca sus herramientas primero en `/usr/bin` y `/bin`, porque el `PATH` de esta sesión tiene un envoltorio de `rm` que necesita el resto del `PATH`;
+  - el plugin de OpenCode avisa también cuando no puede exportar `CLAUDE_PLUGIN_ROOT`, como el adaptador de Claude Code, y con los mismos avisos en las tres variantes.
 
 ## 4. Guía y recordatorio (zona de código): por escenario, rojo → implementar → verde → commit
 

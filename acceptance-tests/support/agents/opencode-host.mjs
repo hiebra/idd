@@ -236,6 +236,20 @@ try {
   fail('sending a message', error);
 }
 
+// The plugin's child processes still running (the bootstrap core, when no
+// hook waits for it), as OpenCode keeps running while they do; Linux only,
+// with a fixed wait elsewhere
+async function childrenDone() {
+  const file = `/proc/${process.pid}/task/${process.pid}/children`;
+  if (!fs.existsSync(file)) return new Promise((resolve) => setTimeout(resolve, 2000));
+  const deadline = Date.now() + 120000;
+  while (fs.readFileSync(file, 'utf8').trim() !== '' && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+await childrenDone();
+await new Promise((resolve) => setTimeout(resolve, 20));
+
 // Deliveries to the TUI still in flight
 while (pending.size > 0) await Promise.all([...pending]);
 await new Promise((resolve) => setTimeout(resolve, 50));

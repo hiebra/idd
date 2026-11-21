@@ -3,8 +3,9 @@
 # (.agents/hooks/session-bootstrap.sh, ADR-0002).
 #
 # - Ejecuta el núcleo sobre el proyecto.
-# - Pone el openspec del proyecto por delante en el PATH de la sesión a través
-#   de CLAUDE_ENV_FILE.
+# - Pone el openspec del proyecto por delante en el PATH de la sesión y
+#   exporta CLAUDE_PLUGIN_ROOT con el motor del wiki, para que sus comandos
+#   encuentren su helper, a través de CLAUDE_ENV_FILE.
 # - Muestra los avisos al usuario: Claude Code solo enseña el "systemMessage"
 #   del JSON que el hook imprime por stdout (stderr no se ve, y el texto plano
 #   en stdout entra en el contexto de Claude). Por eso stdout queda vacío o
@@ -41,10 +42,15 @@ json_string() {
 
 main() {
   local project="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-  local out bin="" errors line
+  local out bin="" engine="" errors line
   errors="$(mktemp)"
   out="$(bash "$project/.agents/hooks/session-bootstrap.sh" "$project" 2>"$errors")"
-  [[ "$out" == bin=* ]] && bin="${out#bin=}"
+  while IFS= read -r line; do
+    case "$line" in
+      bin=*) bin="${line#bin=}" ;;
+      wiki-engine=*) engine="${line#wiki-engine=}" ;;
+    esac
+  done <<<"$out"
   # Los avisos del núcleo, uno por línea
   while IFS= read -r line || [ -n "$line" ]; do
     [ -n "$line" ] && warnings+=("$line")
@@ -56,6 +62,13 @@ main() {
       echo "export PATH=\"$bin:\$PATH\"" >>"$CLAUDE_ENV_FILE"
     else
       warnings+=("session-start: no se ha podido ajustar el PATH de la sesión; ejecuta el CLI del proyecto con 'npx openspec'")
+    fi
+  fi
+  if [ -n "$engine" ]; then
+    if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+      echo "export CLAUDE_PLUGIN_ROOT=\"$engine\"" >>"$CLAUDE_ENV_FILE"
+    else
+      warnings+=("session-start: no se ha podido exportar CLAUDE_PLUGIN_ROOT; los comandos /wiki:* que usan el helper del motor no lo encontrarán")
     fi
   fi
 

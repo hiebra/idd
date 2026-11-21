@@ -140,8 +140,11 @@ class Machine {
     if (realNpx) fs.symlinkSync(realNpx, path.join(this.nodeDir, 'npx'));
 
     this.noNpmDir = bin('no-npm');
+    // System directories first: the PATH of the machine that runs the suite
+    // may hold wrappers of these tools that need the rest of that PATH
+    const systemFirst = ['/usr/bin', '/bin', process.env.PATH || ''].join(path.delimiter);
     for (const tool of HOOK_TOOLS) {
-      const target = which(tool);
+      const target = which(tool, systemFirst);
       if (!target) throw new Error(`the acceptance suite needs '${tool}' on the machine that runs it`);
       fs.symlinkSync(target, path.join(this.noNpmDir, tool));
     }
