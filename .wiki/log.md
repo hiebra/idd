@@ -47,3 +47,5 @@
 ## [2026-11-21] inventory | added task compilar-lecciones-de-add-openspec-autopilot-al-archivarlo
 
 ## [2026-11-21] ll | "operaciones del wiki por agente en la guía y el recordatorio" → raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md (4 lessons, 1 article updated)
+
+## [2026-11-21] ingest-collection | idd via git (manifest-only, b48392d, fix-wiki-flow-operations): 16 new, 0 skipped, 16 total candidates
