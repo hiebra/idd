@@ -40,11 +40,11 @@ rules:
 operations:
   archive:
     guidance:
-      - "Después del commit del archivado, resincroniza el wiki del proyecto (.wiki/) con lo que tocó el change, con las operaciones del motor del wiki y en este orden. Las rutas que tocó el change son las del diff entre la base de la rama del change y main tras fusionarla, más sus specs y sus ADRs."
+      - "Después del commit del archivado, en la rama temporal del change y antes de fusionarla, resincroniza el wiki del proyecto (.wiki/) con lo que tocó el change, con las operaciones del motor del wiki y en este orden. Las rutas que tocó el change son las del diff entre el merge-base de la rama con la rama de origen (la última de x-main, o main) y el commit del archivado, más sus specs y sus ADRs."
       - "1. Fija como fuentes, en el commit del archivado, el código, las specs y los ADRs que tocó el change: /wiki:ingest-collection . --adapter git --manifest-only --revision <commit del archivado> --include <rutas que tocó el change> --local"
       - "2. Refresca los artículos cuyas fuentes cambiaron con /wiki:refresh, y compila las fuentes nuevas con /wiki:compile."
       - "3. Revisa con el librarian, sin modificar nada, lo que quedó obsoleto o contradicho: /wiki:librarian scan --local"
-      - "4. Extrae las lecciones aprendidas del change sin escribir: /wiki:ll --local --dry-run"
+      - "4. Extrae las lecciones aprendidas del change sin escribir: parte de las lecciones candidatas que haya recibido la sesión de las sesiones del change y, si no ha recibido ninguna, de la sesión en curso: /wiki:ll --local --dry-run"
       - "5. Presenta al usuario lo que propondrían los pasos 3 y 4, y escribe solo lo que confirme."
       - "6. Pasa el lint del wiki con /wiki:lint --local, y con --fix, hasta que no dé errores."
       - "7. Haz el commit del wiki aparte: el commit del wiki va después del commit del archivado, nunca en el mismo, porque .wiki/ está fuera de openspec/."
