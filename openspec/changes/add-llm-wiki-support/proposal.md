@@ -1,37 +1,47 @@
 ## Why
 
-Los proyectos creados desde esta plantilla acumulan conocimiento que no cabe en specs ni en ADRs: investigación de dominio, fuentes consultadas, comparativas, lecciones aprendidas en sesiones con el agente. Hoy ese conocimiento se pierde entre sesiones o queda disperso. [nvk/llm-wiki](https://github.com/nvk/llm-wiki) (v1.0.0, MIT) resuelve justo eso: un wiki en Markdown que el propio agente investiga, ingiere, compila, consulta y revisa, con soporte para Claude Code y OpenCode, los dos agentes que soporta la plantilla. Integrarlo en la plantilla hace que cada proyecto nazca con ese wiki disponible en los dos agentes sin configurar nada, igual que ya ocurre con OpenSpec y las skills del schema.
+Los proyectos creados desde esta plantilla acumulan conocimiento que no cabe en specs ni ADRs (investigación de dominio, fuentes, comparativas, comprobaciones hechas durante el trabajo) y que hoy se pierde entre sesiones o queda en la memoria del modelo, sin fuente ni revisión. El concepto de *LLM wiki* (una base de conocimiento en Markdown que el propio agente consulta, amplía y mantiene) lo resuelve si el agente la usa de verdad: que consulte antes de responder con su conocimiento interno y registre lo que aprende. Ni Claude Code ni OpenCode lo hacen de serie, aun con el motor instalado: el motor de referencia, [nvk/llm-wiki](https://github.com/nvk/llm-wiki), solo consulta el wiki cuando el modelo decide cargar su skill y, si no encuentra nada, responde de memoria sin preguntar.
 
 ## What Changes
 
-- **llm-wiki disponible en Claude Code nada más clonar.** El proyecto declara en su configuración compartida el marketplace `nvk/llm-wiki` y el plugin `wiki@llm-wiki`, de modo que Claude Code ofrece instalarlo al confiar en la carpeta y quedan disponibles `/wiki` y sus subcomandos (`/wiki:research`, `/wiki:ingest`, `/wiki:query`, `/wiki:lint`…).
-- **llm-wiki disponible en OpenCode 2 nada más clonar**, con el paquete que el proyecto publica para OpenCode (`plugins/llm-wiki-opencode/`), cargado desde la configuración de proyecto.
-- **Versión fijada.** Los dos agentes usan la misma versión de llm-wiki, fijada por el proyecto (hoy v1.0.0), no la rama `master`. Subirla es una acción explícita y documentada, como subir OpenSpec.
-- **Wiki del proyecto dentro del repositorio.** El proyecto usa el modo local de llm-wiki (`.wiki/` en la raíz), que no necesita permisos sobre directorios externos ni configuración del usuario. El hub personal del usuario (`~/wiki` o el de `~/.config/llm-wiki/config.json`) sigue funcionando como siempre y no es requisito.
-- **Política de versionado del wiki.** Se decide y se documenta si `.wiki/` se versiona con el proyecto (llm-wiki lo añade a `.gitignore` por defecto al inicializarlo en modo local).
-- **Desactivable en local**, sin tocar la configuración del repositorio, igual que el arranque de sesión.
-- **Suite de aceptación** ampliada con los escenarios de disponibilidad de llm-wiki en cada agente y de versión fijada.
-- **Documentación**: README de la plantilla (qué ofrece, requisitos, cómo desactivarlo, cómo subir de versión) y lo que heredan los proyectos creados desde ella.
+- **Dos ámbitos de conocimiento**, con papeles distintos:
+  - **Wiki del proyecto** (`.wiki/` en la raíz, **versionado** con el repositorio): el conocimiento específico del proyecto y lo externo que le concierne.
+  - **Hub del usuario** (fuera del repositorio): sus topics personales. Opcional; su ausencia, por ejemplo en sesiones en la nube, no es un error.
+  - El conocimiento pasa del hub al proyecto incorporándolo directamente o mediante *checkpoint*, nunca copiando artículos a mano.
+- **Consulta antes de responder.** Ante una petición que requiere conocimiento (dominio, decisiones técnicas, herramientas, hechos externos; no operaciones sobre el código, como renombrar o reformatear), el agente consulta primero el wiki del proyecto y, si no basta, el hub, en modo de solo lectura, antes de usar su conocimiento interno.
+- **Preguntar ante un hueco.** Si el wiki no responde, el agente pregunta si responder con conocimiento interno (indicando que no viene del wiki), investigar fuera y registrar lo encontrado, o dejarlo.
+- **Registro en el ámbito correcto**, preguntando cuando no está claro cuál toca.
+- **Las comprobaciones empíricas son conocimiento.** Lo que el agente verifica ejecutando, midiendo o leyendo código o documentación externa se registra cuando procede (tiene valor más allá de la tarea en curso); el agente discierne cuándo procede y, en caso de duda, lo propone en lugar de registrarlo sin más.
+- **Recordatorio en cada mensaje.** Cada agente recibe en cada mensaje del usuario un recordatorio de este flujo, para que no dependa de que el modelo recuerde una instrucción del principio de la sesión.
+- **Motor disponible en los dos agentes nada más clonar**, en una versión fijada por el proyecto (hoy nvk/llm-wiki v1.0.0):
+  - **Claude Code:** el arranque de sesión instala el plugin si falta o no es la versión fijada.
+  - **OpenCode 2:** el diseño decide entre la vía canónica del motor (`instructions` con la URL del tag fijado) y una skill instalada por el arranque.
+- **Regla del proyecto** en un `AGENTS.md` en la raíz (que Claude Code lee mediante un `CLAUDE.md` que lo importa), como fuente única del flujo para los dos agentes.
+- **Desactivable en local**, sin tocar la configuración del repositorio.
+- **Suite de aceptación** ampliada y **README** actualizado (qué ofrece, requisitos, cómo desactivarlo, cómo subir la versión del motor).
 
 Fuera de alcance:
-- Codex, DeepSeek Harness, Pi y otros runtimes que llm-wiki también soporta: la plantilla solo soporta Claude Code y OpenCode 2.
-- La captura automática de sesiones de llm-wiki (`.sessions/`): sigue siendo opcional y a elección de cada usuario.
-- Vendorizar o modificar el código de llm-wiki.
+- Codex, DeepSeek Harness, Pi y otros runtimes del motor.
+- Comandos `/wiki:*` en OpenCode.
+- La captura automática de sesiones del motor (`.sessions/`).
+- Vendorizar o modificar el motor.
 
 ## Capabilities
 
 ### New Capabilities
-- `llm-wiki-integration`: llm-wiki está disponible en cada agente soportado nada más clonar, en la versión fijada por el proyecto, con el wiki del proyecto en el propio repositorio y la posibilidad de desactivarlo en local.
+- `llm-wiki`: el wiki del proyecto y el hub del usuario están disponibles en cada agente soportado nada más clonar, con el motor en la versión fijada por el proyecto; el wiki del proyecto se versiona y el hub es opcional.
+- `wiki-first-knowledge`: el agente consulta el wiki antes de usar su conocimiento interno, pregunta ante un hueco, registra en el ámbito correcto (incluidas las comprobaciones empíricas que procedan) y recibe un recordatorio del flujo en cada mensaje.
 
 ### Modified Capabilities
-<!-- Ninguna en principio. Si design.md decide exponer la skill de llm-wiki a OpenCode a través de `.agents/skills/`, cambiaría `agent-skills` (y habría que revisar ADR-0003). -->
+- `session-bootstrap`: el arranque de sesión instala también el motor del wiki en la versión fijada (al menos para Claude Code), con las mismas garantías: no bloquea la sesión, avisa si falla y lo reintenta en la siguiente.
 
 ## Impact
 
-- **Configuración de agentes:** `.claude/settings.json` (marketplace y plugin habilitado) y una configuración de proyecto para OpenCode (`opencode.json` u otra vía que decida el diseño).
-- **Repositorio:** nuevo `.wiki/` (o su reserva en `.gitignore`, según la política que se decida).
-- **Dependencias externas:** el repositorio `nvk/llm-wiki` en GitHub, en un tag fijado. La instalación en Claude Code necesita red y la aprobación del usuario al confiar en la carpeta. Los helpers deterministas de llm-wiki (`llm-wiki lint`, etc.) requieren Python 3; los workflows agénticos no.
-- **Contexto del agente:** la skill completa de OpenCode ocupa ~30 KB. Si se carga como instrucción permanente, consume contexto en cada sesión; el diseño debe valorar cargarla bajo demanda o usar el preset de solo lectura `wiki-query` (~2,8 KB).
-- **ADRs:** probablemente uno nuevo sobre cómo se integran herramientas de terceros por agente (plugin frente a skill frente a instrucción) y sobre fijar su versión. Puede afectar a ADR-0003 si la skill de llm-wiki pasa por `.agents/skills/`.
-- **Suite de aceptación:** nuevos escenarios en `acceptance-tests/`.
+- **Configuración de agentes:** `.claude/settings.json` (hook de recordatorio por mensaje), `AGENTS.md` y `CLAUDE.md` nuevos, y la configuración de OpenCode que decida el diseño (`opencode.json` o `.opencode/skills/`), además del plugin `.opencode/plugins/session-bootstrap/` para el recordatorio.
+- **Arranque de sesión:** `.agents/hooks/session-bootstrap.sh` y sus adaptadores.
+- **Repositorio:** `.wiki/` versionado; la copia instalada del motor, si la hay, ignorada por git.
+- **Dependencias externas:** GitHub (`nvk/llm-wiki` en un tag fijado), red en la primera sesión de cada clon y al subir de versión. Python 3 para los helpers deterministas del motor (no para los workflows agénticos).
+- **Contexto del agente:** la regla de `AGENTS.md` y el recordatorio por mensaje consumen contexto en cada sesión y cada mensaje; deben ser breves. En OpenCode, la vía `instructions` añade ~30 KB por sesión.
+- **ADRs:** uno nuevo sobre el wiki como fuente de conocimiento (concepto independiente del motor, dos ámbitos, consulta primero) y la integración del motor por agente con versión fijada.
+- **Suite de aceptación:** escenarios nuevos y los de `session-bootstrap` ampliados.
 - **README** de la plantilla.
