@@ -38,7 +38,7 @@ const CHANGES = 'openspec/changes/';
 const DEFAULT_PERMANENT = ['main'];
 
 function git(dir, ...args) {
-  const result = spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
+  const result = spawnSync('git', args, { cwd: dir, encoding: 'utf8', timeout: 10000 });
   return { ok: result.status === 0, out: (result.stdout ?? '').trim() };
 }
 

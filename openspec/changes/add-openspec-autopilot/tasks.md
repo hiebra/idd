@@ -56,53 +56,53 @@ Las comprobaciones con OpenCode real usan el banco de la lección 9 de `.wiki/ra
 
 ## 4. Plugin: dónde actúa (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 4.1 Crear `.opencode/plugins/openspec-autopilot/` con `server.js`, `tui.js` y `lib/`, sin dependencias, y el RPC de D13 (generación, `hello`, peticiones con identificador y una sola respuesta por petición). Cubrir en `core-tests`, con el host, que una recarga no duplica navegaciones, diálogos ni archivados, y que sin `hello` el servidor no orquesta nada (sin TUI)
-- [ ] 4.2 "El plugin no actúa", con sus dos ejemplos: el plugin usa `branch-change.mjs` y se inhibe con `permanent` y `unknown`
-- [ ] 4.3 "Varios changes en la misma rama": aviso en la TUI con los nombres de los changes
-- [ ] 4.4 "Claude Code no tiene nada del plugin": en `.claude/` no hay hooks, skills ni comandos que nombren el plugin, sus tools o su RPC
+- [x] 4.1 Crear `.opencode/plugins/openspec-autopilot/` con `server.js`, `tui.js` y `lib/`, sin dependencias, y el RPC de D13 (generación, `hello`, peticiones con identificador y una sola respuesta por petición). Cubrir en `core-tests`, con el host, que una recarga no duplica navegaciones, diálogos ni archivados, y que sin `hello` el servidor no orquesta nada (sin TUI)
+- [x] 4.2 "El plugin no actúa", con sus dos ejemplos: el plugin usa `branch-change.mjs` y se inhibe con `permanent` y `unknown`
+- [x] 4.3 "Varios changes en la misma rama": aviso en la TUI con los nombres de los changes
+- [x] 4.4 "Claude Code no tiene nada del plugin": en `.claude/` no hay hooks, skills ni comandos que nombren el plugin, sus tools o su RPC
 
 ## 5. Plugin: el control del change y la apertura de sesiones (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 5.1 "El control sobrevive a reiniciar OpenCode": `lib/state.mjs` con la clave `openspec` de D4, escritura por lectura, combinación, escritura y relectura, y la dueña como sesión no archivada con `role: "owner"` de ese `worktree` y esa `branch`. El repositorio no cambia
-- [ ] 5.2 "Sesión nueva según el estado de la rama", con sus cuatro ejemplos: la decisión de D5 en la primera petición de una sesión sin la clave, e inyección de la instrucción del paso una sola vez
-- [ ] 5.3 "La dueña está parada sin haber terminado", con sus tres ejemplos: diálogo con el límite fijado en 1.3, navegar, archivar desde la TUI y comprobarlo con `get`
-- [ ] 5.4 "El agente con el que se abre la sesión no cuenta"
-- [ ] 5.5 Cubrir en `core-tests` el desempate entre dos sesiones que toman el control a la vez (D4): gana la de `time.created` más antiguo y la otra queda libre con un aviso
+- [x] 5.1 "El control sobrevive a reiniciar OpenCode": `lib/state.mjs` con la clave `openspec` de D4, escritura por lectura, combinación, escritura y relectura, y la dueña como sesión no archivada con `role: "owner"` de ese `worktree` y esa `branch`. El repositorio no cambia
+- [x] 5.2 "Sesión nueva según el estado de la rama", con sus cuatro ejemplos: la decisión de D5 en la primera petición de una sesión sin la clave, e inyección de la instrucción del paso una sola vez
+- [x] 5.3 "La dueña está parada sin haber terminado", con sus tres ejemplos: diálogo con el límite fijado en 1.3, navegar, archivar desde la TUI y comprobarlo con `get`
+- [x] 5.4 "El agente con el que se abre la sesión no cuenta"
+- [x] 5.5 Cubrir en `core-tests` el desempate entre dos sesiones que toman el control a la vez (D4): gana la de `time.created` más antiguo y la otra queda libre con un aviso
 
 ## 6. Plugin: una sesión por paso (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 6.1 Cubrir en `core-tests` la función pura `lib/next-step.mjs` (D6): artefactos según `openspec status`, tasks según `tasks.md`, verify, archive, wiki y fin del ciclo, en los dos modos, con los cambios de zona de D11
-- [ ] 6.2 "El siguiente paso en una sesión nueva": la tool `openspec_handoff` con `codemode: false` y el traspaso desde `experimental.idle` de D7:
+- [x] 6.1 Cubrir en `core-tests` la función pura `lib/next-step.mjs` (D6): artefactos según `openspec status`, tasks según `tasks.md`, verify, archive, wiki y fin del ciclo, en los dos modos, con los cambios de zona de D11
+- [x] 6.2 "El siguiente paso en una sesión nueva": la tool `openspec_handoff` con `codemode: false` y el traspaso desde `experimental.idle` de D7:
   - crea la sesión con su agente y su metadata, y la arranca con `prompt` y `skills` según la tabla de D6;
   - navega a ella y archiva la anterior desde la TUI;
   - es idempotente por `phase` y `seq`;
   - comprueba antes que el paso hizo algo.
-- [ ] 6.3 "Cambiar de agente no inyecta nada"
-- [ ] 6.4 "Tras la última task viene el verify"
-- [ ] 6.5 Cubrir en `core-tests` que, si el modelo llama a la tool sin que el paso haya hecho nada (artefacto no `done`, task sin marcar), no se encadena y se avisa
+- [x] 6.3 "Cambiar de agente no inyecta nada"
+- [x] 6.4 "Tras la última task viene el verify"
+- [x] 6.5 Cubrir en `core-tests` que, si el modelo llama a la tool sin que el paso haya hecho nada (artefacto no `done`, task sin marcar), no se encadena y se avisa
 
 ## 7. Plugin: revisión humana guiada (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 7.1 "Resultado de una revisión", con sus cuatro ejemplos: la sesión de revisión con la instrucción de `lib/prompts.mjs` y el agente que fijó 1.2, y la confirmación en la TUI dentro de la tool (D8)
-- [ ] 7.2 "El usuario no confirma el cierre de la revisión": la tool devuelve al modelo que la revisión sigue y no se guarda `handoff`
-- [ ] 7.3 "Tras un update-change viene una revisión del plan"
-- [ ] 7.4 "update-change recibe el índice del change": el índice de D9, sin transcripciones, y la tool `openspec_session` según lo que dio 1.1, que se niega con sesiones de fuera del change
+- [x] 7.1 "Resultado de una revisión", con sus cuatro ejemplos: la sesión de revisión con la instrucción de `lib/prompts.mjs` y el agente que fijó 1.2, y la confirmación en la TUI dentro de la tool (D8)
+- [x] 7.2 "El usuario no confirma el cierre de la revisión": la tool devuelve al modelo que la revisión sigue y no se guarda `handoff`
+- [x] 7.3 "Tras un update-change viene una revisión del plan"
+- [x] 7.4 "update-change recibe el índice del change": el índice de D9, sin transcripciones, y la tool `openspec_session` según lo que dio 1.1, que se niega con sesiones de fuera del change
 
 ## 8. Plugin: lecciones candidatas (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 8.1 "Las candidatas no tocan el repositorio": `lessons` de la tool en `openspec.lessons`, y el árbol de trabajo sin cambios
-- [ ] 8.2 "La resincronización del wiki recibe las candidatas del change": la sesión `wiki` recibe todas las candidatas del índice y la instrucción de registrar solo las confirmadas
+- [x] 8.1 "Las candidatas no tocan el repositorio": `lessons` de la tool en `openspec.lessons`, y el árbol de trabajo sin cambios
+- [x] 8.2 "La resincronización del wiki recibe las candidatas del change": la sesión `wiki` recibe todas las candidatas del índice y la instrucción de registrar solo las confirmadas
 
 ## 9. Plugin: árbol limpio y modo auto (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 9.1 "Comprobación del árbol al empezar un paso", con sus tres ejemplos: `git status --porcelain` antes de arrancar el paso; con el árbol sucio, la sesión queda en `waiting-commit` sin `prompt`, con el toast y el título, y el hook `context` vuelve a comprobarlo en el mensaje siguiente (D11)
-- [ ] 9.2 "Sin la opción, el modo es normal": el modo sale de `ctx.options.auto` (D14), y el proyecto no declara el plugin en ningún `opencode.json` ni fija la opción
-- [ ] 9.3 "Veredicto del verify en modo auto", con sus dos ejemplos: sin problemas críticos se pasa al archive sin confirmación; con problemas críticos la sesión queda parada como una revisión del verify
+- [x] 9.1 "Comprobación del árbol al empezar un paso", con sus tres ejemplos: `git status --porcelain` antes de arrancar el paso; con el árbol sucio, la sesión queda en `waiting-commit` sin `prompt`, con el toast y el título, y el hook `context` vuelve a comprobarlo en el mensaje siguiente (D11)
+- [x] 9.2 "Sin la opción, el modo es normal": el modo sale de `ctx.options.auto` (D14), y el proyecto no declara el plugin en ningún `opencode.json` ni fija la opción
+- [x] 9.3 "Veredicto del verify en modo auto", con sus dos ejemplos: sin problemas críticos se pasa al archive sin confirmación; con problemas críticos la sesión queda parada como una revisión del verify
 
 ## 10. Plugin: compactación y fallos (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 10.1 "La sesión dueña se compacta": aviso con el workflow en curso y el comando para retomarlo, sin reinyectar nada (D15)
-- [ ] 10.2 "Falla una operación de sesión": aviso en la TUI, la sesión actual libre y la petición en curso sin tocar (D12). Cubrir en `core-tests` que ninguna excepción sale de `setup`, de los hooks, de las tools ni de los manejadores RPC, y que todas las esperas tienen límite
+- [x] 10.1 "La sesión dueña se compacta": aviso con el workflow en curso y el comando para retomarlo, sin reinyectar nada (D15)
+- [x] 10.2 "Falla una operación de sesión": aviso en la TUI, la sesión actual libre y la petición en curso sin tocar (D12). Cubrir en `core-tests` que ninguna excepción sale de `setup`, de los hooks, de las tools ni de los manejadores RPC, y que todas las esperas tienen límite
 
 ## 11. Documentación (zona de código)
 

@@ -154,7 +154,7 @@ Given('una rama temporal que sale de ella después de ese change', function () {
   this.branches.branch(this.project, TEMP_BRANCH);
 });
 
-When('se consulta el change de la rama', function () {
+When(/^se consulta el change de la rama(?: temporal)?$/, function () {
   this.branchState = this.branches.branchChange(this.project);
 });
 

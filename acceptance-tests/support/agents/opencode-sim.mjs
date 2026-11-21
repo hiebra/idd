@@ -47,7 +47,9 @@ const now = () => {
 const clone = (value) => (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
 
 export class Host {
-  constructor({ projectDir, plugin, dbFile, tui = true, pluginOptions = {}, failures = {} }) {
+  constructor({ projectDir, plugin, dbFile, tui = true, pluginOptions = {}, failures = {}, tuiSilent = false }) {
+    // A TUI that never answers what the server asks it (its event listeners get nothing)
+    this.tuiSilent = tuiSilent;
     this.projectDir = projectDir;
     this.pluginDir = path.join(projectDir, '.opencode', 'plugins', plugin);
     this.dbFile = dbFile;
@@ -61,7 +63,10 @@ export class Host {
     this.rpc = new Map(); // definition id -> { handlers, listeners: Map(name -> [fn]) }
     this.script = [];
     this.dialogAnswers = [];
-    this.out = { toasts: [], navigations: [], dialogs: [], requests: [], crashes: [], toolErrors: [], logs: [] };
+    // With dialogWait, a dialog with no queued answer stays open until one arrives
+    this.dialogWait = false;
+    this.openDialogs = [];
+    this.out = { toasts: [], navigations: [], dialogs: [], archives: [], requests: [], crashes: [], toolErrors: [], logs: [] };
     this.pending = new Set();
     this.interrupted = new Set();
   }
@@ -192,6 +197,7 @@ export class Host {
               emit: (name, data) =>
                 host.track(
                   (async () => {
+                    if (host.tuiSilent) return;
                     for (const listener of [...(entry.listeners.get(name) ?? [])]) {
                       try {
                         await listener({ type: `rpc.${definition.id}.${name}`, data: clone(data) });
@@ -297,7 +303,10 @@ export class Host {
           update: async ({ sessionID, archived, title }) => {
             host.inject('tui.session.update');
             const session = host.session(sessionID);
-            if (archived === true) session.time.archived = now();
+            if (archived === true) {
+              session.time.archived = now();
+              host.out.archives.push(sessionID);
+            }
             if (archived === false) delete session.time.archived;
             if (title !== undefined) session.title = title;
             session.time.updated = now();
@@ -318,9 +327,15 @@ export class Host {
         },
         dialog: {
           select: async (options) => {
-            const answer = host.dialogAnswers.length > 0 ? host.dialogAnswers.shift() : { value: undefined };
-            host.out.dialogs.push({ title: options.title, options: options.options.map((o) => ({ title: o.title, value: o.value, description: o.description })), answer: answer.value ?? null });
+            const shown = { title: options.title, options: options.options.map((o) => ({ title: o.title, value: o.value, description: o.description })), answer: null, open: true };
+            host.out.dialogs.push(shown);
+            let answer;
+            if (host.dialogAnswers.length > 0) answer = host.dialogAnswers.shift();
+            else if (host.dialogWait) answer = await new Promise((resolve) => host.openDialogs.push(resolve));
+            else answer = { value: undefined };
             if (answer.delayMs) await new Promise((resolve) => setTimeout(resolve, answer.delayMs));
+            shown.answer = answer.value ?? null;
+            shown.open = false;
             return answer.value;
           },
         },
@@ -472,6 +487,13 @@ export class Host {
     }
     session.messages = [{ type: 'synthetic', text: input.result?.summary ?? 'Resumen de la conversación (simulado).' }];
     this.save();
+  }
+
+  // Answers the oldest open dialog, or queues the answer for the next one
+  answer(answer) {
+    const open = this.openDialogs.shift();
+    if (open) open(answer);
+    else this.dialogAnswers.push(answer);
   }
 
   state() {

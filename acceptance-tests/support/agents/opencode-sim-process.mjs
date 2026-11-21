@@ -46,9 +46,35 @@ const OPS = {
     host.script.push(...rules);
     return true;
   },
-  answers({ answers }) {
-    host.dialogAnswers.push(...answers);
+  // Answers dialogs: the open ones first, then the next ones
+  async answers({ answers, settle = false }) {
+    for (const answer of answers) host.answer(answer);
+    if (settle) await host.settle();
+    return host.state();
+  },
+  dialogWait({ on = true }) {
+    host.dialogWait = on;
     return true;
+  },
+  // Writes a message without waiting for what it sets off (a dialog may stay open)
+  messageAsync({ sessionID, text }) {
+    host.startTurn(sessionID, { text });
+    return true;
+  },
+  openAsync({ text, agent = 'build' }) {
+    const id = host.seedSession({ title: text.slice(0, 40), agent });
+    delete host.session(id).time.idle;
+    host.startTurn(id, { text });
+    return id;
+  },
+  // Waits until a dialog is open
+  async waitDialog({ limitMs = 10000 }) {
+    const deadline = Date.now() + limitMs;
+    while (host.openDialogs.length === 0) {
+      if (Date.now() > deadline) throw new Error('no dialog was opened');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    return host.state();
   },
   fail({ failures }) {
     Object.assign(host.failures, failures);
