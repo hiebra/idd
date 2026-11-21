@@ -34,7 +34,7 @@ And el aviso indica que el CLI del proyecto se ejecuta con `npx openspec`
 ```
 
 ### Requirement: Instalación de todas las dependencias del proyecto
-El arranque de sesión DEBE instalar todas las dependencias declaradas por el proyecto, no solo OpenSpec, tanto en sesiones locales como en la nube.
+El arranque de sesión DEBE instalar todas las dependencias declaradas por el proyecto, no solo OpenSpec, tanto en sesiones locales como en la nube. Si el proyecto tiene un proyecto de tests de aceptación en `acceptance-tests/`, DEBE instalar también sus dependencias.
 
 #### Scenario: Proyecto derivado con dependencias propias
 
@@ -45,8 +45,17 @@ When se abre una sesión de Claude Code en el proyecto
 Then todas las dependencias declaradas por el proyecto quedan instaladas
 ```
 
+#### Scenario: Proyecto con tests de aceptación
+
+```gherkin
+Given un proyecto con un proyecto de tests de aceptación en `acceptance-tests/`
+And ninguna de sus dependencias está instalada
+When se abre una sesión de Claude Code en el proyecto
+Then las dependencias del proyecto de tests de aceptación quedan instaladas
+```
+
 ### Requirement: Reinstalación solo cuando algo ha cambiado
-El arranque de sesión DEBE omitir la instalación cuando las dependencias ya se instalaron con éxito con el mismo `package.json`, el mismo `package-lock.json` y el mismo script de arranque, y DEBE reinstalarlas cuando cualquiera de los tres haya cambiado.
+El arranque de sesión DEBE omitir la instalación de un proyecto (la raíz o `acceptance-tests/`) cuando sus dependencias ya se instalaron con éxito con el mismo `package.json`, el mismo `package-lock.json` y el mismo script de arranque, y DEBE reinstalarlas cuando cualquiera de los tres haya cambiado.
 
 #### Scenario: Dependencias al día
 
@@ -64,6 +73,16 @@ Given las dependencias del proyecto se instalaron con éxito
 And después cambió la lista de dependencias del proyecto
 When se abre una sesión de Claude Code en el proyecto
 Then las dependencias se instalan de nuevo según la lista actual
+```
+
+#### Scenario: Las dependencias de los tests de aceptación cambiaron
+
+```gherkin
+Given las dependencias del proyecto de tests de aceptación se instalaron con éxito
+And después cambió la lista de dependencias de los tests de aceptación
+When se abre una sesión de Claude Code en el proyecto
+Then las dependencias de los tests de aceptación se instalan de nuevo según la lista actual
+And las dependencias de la raíz no se instalan de nuevo
 ```
 
 ### Requirement: Aviso sin instalar cuando el entorno no cumple los requisitos
