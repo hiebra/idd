@@ -45,6 +45,7 @@ summary: "Las skills del schema viven solo en .agents/skills/ y los workflows de
 - [Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md)
 - [El arranque de sesión](../topics/arranque-de-sesion.md)
 - [El flujo wiki-first](../topics/flujo-wiki-first.md)
+- [openspec-git-discipline: una regla heredada sin justificación registrada](origen-de-openspec-git-discipline.md)
 
 ## Sources
 

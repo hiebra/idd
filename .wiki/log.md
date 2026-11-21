@@ -37,3 +37,9 @@
 ## [2026-11-21] ingest-collection | idd via git: 2 files (manifest-only at 2e89fa368f25628f08b7e5dfce65bfe14ce8be44)
 
 ## [2026-11-21] compile | 4 sources → 1 new article, 0 updated (origen-de-openspec-git-discipline)
+
+## [2026-11-21] ingest-collection | idd via git: 1 file (manifest-only at c59392aa6829f55eb72cc9eeeb4f1b7f32cd4607)
+
+## [2026-11-21] compile | 1 source → 0 new articles, 1 updated (origen-de-openspec-git-discipline)
+
+## [2026-11-21] lint | local command + agentic checks: 0 critical, 4 warnings, 2 suggestions, 0 candidates, 4 fixed (1 suggestion left by decision until add-openspec-autopilot is archived)

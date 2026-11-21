@@ -5,6 +5,7 @@ sources:
   - raw/repos/2026-11-21-intent-driven-template-a8b8231-git-discipline.md
   - raw/repos/2026-11-21-skills-04cd70e-git-discipline.md
   - raw/repos/2026-11-21-idd-2e89fa3-git-discipline.md
+  - raw/repos/2026-11-21-idd-c59392a-adr-0007.md
   - raw/articles/2026-11-21-issue-11-git-discipline-main-protegida.md
 created: 2026-11-21
 updated: 2026-11-21
@@ -12,12 +13,12 @@ verified: 2026-11-21
 tags: [openspec, openspec-git-discipline, git, procedencia, skills]
 confidence: high
 volatility: warm
-summary: "La skill openspec-git-discipline exige cruzar main dos veces por change (la propuesta antes de apply y la implementación antes de archive) y archivar desde main. Ni este proyecto ni su origen registran por qué; la única discusión es la issue 11 del origen, abierta y sin respuesta."
+summary: "La skill openspec-git-discipline exige cruzar main dos veces por change (la propuesta antes de apply y la implementación antes de archive) y archivar desde main. Ni este proyecto ni su origen registran por qué; la única discusión es la issue 11 del origen, abierta y sin respuesta. ADR-0007 sustituye esas puertas en este proyecto."
 ---
 
 # openspec-git-discipline: una regla heredada sin justificación registrada
 
-> La disciplina de git de OpenSpec que usa este proyecto es una copia literal de la del origen, y en ningún sitio consta por qué es así. La única discusión sobre ella es una crítica abierta y sin respuesta. Todo lo de esta página sale de las fuentes citadas, comprobado el 2026-11-21.
+> La disciplina de git de OpenSpec que hereda este proyecto es una copia literal de la del origen, y en ningún sitio consta por qué es así. La única discusión sobre ella es una crítica abierta y sin respuesta. ADR-0007 la sustituye aquí sin haber encontrado tampoco el motivo. Todo lo de esta página sale de las fuentes citadas, comprobado el 2026-11-21.
 
 ## Qué exige
 
@@ -37,21 +38,25 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 ## Nadie registra por qué
 
 - **En el origen**: en todo el historial de los dos repositorios, la skill solo aparece en archivos que repiten la regla (`SKILL.md`, `AGENTS.md`, `README.md`, `INSTALL_TEMPLATE.md`, `openspec-bulk-apply-change`). Ningún mensaje de commit da el motivo.
-- **En este proyecto**: ningún ADR la menciona (`adr/0001` a `adr/0005` en `idd@2e89fa3`). El primer manifiesto del wiki la excluyó por ser copia de otro repositorio.
+- **En este proyecto**: hasta `idd@2e89fa3` ningún ADR la mencionaba (`adr/0001` a `adr/0005`), y el primer manifiesto del wiki la excluyó por ser copia de otro repositorio. El primer ADR que la trata, ADR-0007, constata la misma falta de motivo en su contexto; no la suple (ver abajo).
 - **La única discusión** es [intent-driven-dev/intent-driven-template#11](https://github.com/intent-driven-dev/intent-driven-template/issues/11) ([fuente](../../raw/articles/2026-11-21-issue-11-git-discipline-main-protegida.md)). Su autor sostiene que, con un `main` protegido, la regla obliga a 13 pasos y tres PR por change (propuesta, implementación y archive), y que choca con gitflow y con el desarrollo por PR. La abrió el 2026-11-07 y el 2026-11-21 sigue sin comentarios ni PR enlazadas: no hay respuesta que dé el motivo.
 
 ## Qué hace este proyecto con ella
 
-`idd@2e89fa3:openspec/changes/add-openspec-autopilot/proposal.md`, de un change activo todavía sin archivar:
-
-- **Recoge la falta de justificación** como parte del problema y cita la issue 11.
-- **Propone una rama y una sola fusión** por change: sin la fusión intermedia de la propuesta y con el archive hecho en la rama. Sustituye esas puertas de la skill, asume el riesgo y deja abierta la discusión de si la fusión intermedia debe volver.
-- **Anuncia un ADR** sobre esa sustitución. Cuando exista, será el primer registro de una decisión sobre esta disciplina.
+- **La propuesta** (`idd@2e89fa3:openspec/changes/add-openspec-autopilot/proposal.md`, de un change activo) recoge la falta de justificación como parte del problema, cita la issue 11 y propone una rama y una sola fusión por change.
+- **ADR-0007 lo decide** (`idd@c59392a:adr/0007-single-branch-change-lifecycle.md`, aceptado):
+  - Un change, una rama temporal y una sola fusión: propuesta, implementación, archive y resincronización del wiki se hacen en la rama, y el archive nunca en una rama permanente.
+  - Las ramas permanentes se configuran con `x-main` en `openspec/config.yaml` (por defecto `["main"]`), y el change de cada rama temporal se lee de git desde su merge-base.
+  - Los commits y las fusiones los sigue haciendo el usuario.
+  - Descarta mantener las puertas heredadas, añadir una skill propia junto a la heredada, retirarla sin sustituto y registrar el change de cada rama en un archivo.
+  - Asume el riesgo de que la propuesta ya no se revise ni se fusione por separado, y deja abierta la vuelta de la fusión intermedia.
+- **La copia de la skill se reescribirá** con esas puertas, mismo nombre y misma descripción de activación, divergiendo del origen a propósito. Al actualizar desde `intent-driven-template` habrá que revisarla, no sobrescribirla (ADR-0007). A `idd@c59392a` la reescritura aún no está hecha: la copia sigue siendo el blob `835e065` del origen, y la reescritura pertenece a `add-openspec-autopilot`, sin implementar ni archivar.
 
 ## Lo que no se sabe
 
 - **El motivo original.** Puede que exista fuera de los repositorios (conversaciones, otra documentación), pero no consta en ninguna fuente revisada.
 - **El estado de la issue después del 2026-11-21.** Es una fuente viva: puede recibir respuesta o cerrarse.
+- **La copia reescrita.** Cuando `add-openspec-autopilot` se archive, este artículo debe citar la nueva versión de la skill.
 
 ## See Also
 
@@ -62,4 +67,5 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 - [Collection: openspec-git-discipline en su origen (intent-driven-template@a8b8231)](../../raw/repos/2026-11-21-intent-driven-template-a8b8231-git-discipline.md): `.agents/skills/openspec-git-discipline/SKILL.md`, `AGENTS.md`.
 - [Collection: openspec-git-discipline copiada a intent-driven-dev/skills@04cd70e](../../raw/repos/2026-11-21-skills-04cd70e-git-discipline.md): `.agents/skills/openspec-git-discipline/SKILL.md`.
 - [Collection: openspec-git-discipline en este proyecto (idd@2e89fa3)](../../raw/repos/2026-11-21-idd-2e89fa3-git-discipline.md): `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/changes/add-openspec-autopilot/proposal.md`.
+- [Collection: ADR-0007, el ciclo de un change en una rama (idd@c59392a)](../../raw/repos/2026-11-21-idd-c59392a-adr-0007.md): `adr/0007-single-branch-change-lifecycle.md`.
 - [openspec-git-discipline behaves poorly when developing with a protected main branch](../../raw/articles/2026-11-21-issue-11-git-discipline-main-protegida.md): intent-driven-dev/intent-driven-template#11.

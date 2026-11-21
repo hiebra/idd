@@ -17,6 +17,8 @@ Last updated: 2026-11-21
 
 ## Recent Changes
 
+- 2026-11-21: origen-de-openspec-git-discipline actualizado con ADR-0007
+
 - 2026-11-21: 1 concepto compilado del origen de openspec-git-discipline
 
 - 2026-11-21: 1 concepto compilado de los productos del repositorio

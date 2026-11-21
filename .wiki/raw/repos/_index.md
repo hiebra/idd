@@ -8,6 +8,7 @@ Last updated: 2026-11-21
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-21-idd-c59392a-adr-0007.md](2026-11-21-idd-c59392a-adr-0007.md) | Manifiesto de ADR-0007, que sustituye las puertas de openspec-git-discipline (idd@c59392a) | collection, collection-manifest, git | 2026-11-21 |
 | [2026-11-21-idd-2e89fa3-git-discipline.md](2026-11-21-idd-2e89fa3-git-discipline.md) | Manifiesto de la skill heredada y la propuesta de add-openspec-autopilot (idd@2e89fa3) | collection, collection-manifest, git | 2026-11-21 |
 | [2026-11-21-skills-04cd70e-git-discipline.md](2026-11-21-skills-04cd70e-git-discipline.md) | Manifiesto de la copia de la skill en intent-driven-dev/skills@04cd70e | collection, collection-manifest, git | 2026-11-21 |
 | [2026-11-21-intent-driven-template-a8b8231-git-discipline.md](2026-11-21-intent-driven-template-a8b8231-git-discipline.md) | Manifiesto del nacimiento de la skill en intent-driven-template@a8b8231 | collection, collection-manifest, git | 2026-11-21 |
@@ -17,6 +18,8 @@ Last updated: 2026-11-21
 ## Categories
 
 ## Recent Changes
+
+- 2026-11-21: Manifiesto de ADR-0007
 
 - 2026-11-21: Manifiestos del origen de openspec-git-discipline (intent-driven-template, skills, idd)
 
