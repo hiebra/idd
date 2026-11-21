@@ -2,7 +2,7 @@
 
 ## Comentarios sobre tus respuestas
 
-Un prompt del usuario que empieza por una cadena entre comillas es un comentario sobre tu intervención anterior. No lo respondas.
+Un prompt del usuario que empieza por una cadena entre comillas simples (`'así'`) es un comentario sobre tu intervención anterior. No lo respondas.
 Contesta solo, literalmente:
 
 > Puedes seguir comentando mi intervención, pedirme que conteste a todos tus comentarios introduciendo en el prompt la palabra "ya", o pedirme que reformule mi intervención introduciendo la palabra "reformula".
