@@ -9,6 +9,9 @@ const { Given, When, Then } = require('@cucumber/cucumber');
 
 const AGENT = '(Claude Code|OpenCode)';
 const REMINDER_MAX = 600;
+// The guide takes context in every session (design D2): well under the
+// 10,000 characters a Claude Code hook accepts
+const GUIDE_MAX = 6000;
 
 // How each agent names the engine operations in the reminder (design D2)
 const REMINDER_OPERATIONS = {
@@ -228,6 +231,8 @@ Then('el contexto de la sesión incluye la guía del wiki', function () {
 });
 
 Then('esa guía procede del único archivo de guía del proyecto', function () {
+  const length = [...this.guideAsDelivered()].length;
+  assert.ok(length < GUIDE_MAX, `the guide delivered has ${length} characters`);
   assert.ok(
     deliveredContext(this).includes(this.guideAsDelivered()),
     `the context is not the guide of ${this.project.guideFile()}:\n${deliveredContext(this).slice(0, 500)}`
