@@ -8,11 +8,14 @@ Last updated: 2026-11-21
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-21-idd-f2be907-readme.md](2026-11-21-idd-f2be907-readme.md) | Manifiesto del README tras el archivado (idd@f2be907) | collection, collection-manifest, git | 2026-11-21 |
 | [2026-11-21-idd-1cf0792.md](2026-11-21-idd-1cf0792.md) | Manifiesto del repositorio en el commit del archivado de add-llm-wiki-support | collection, collection-manifest, git | 2026-11-21 |
 
 ## Categories
 
 ## Recent Changes
+
+- 2026-11-21: Manifiesto del README actual
 
 - 2026-11-21: Manifiesto inicial del repositorio (idd@1cf0792)
 

@@ -40,6 +40,9 @@ La plantilla aplica las tres cosas. El núcleo enlaza `.claude/skills/wiki-manag
 
 - [El hook context de OpenCode](../concepts/hook-context-opencode.md)
 - [Proveedor falso para verificar el contexto](../concepts/proveedor-falso-para-verificar-contexto.md)
+- [El arranque de sesión](arranque-de-sesion.md)
+- [Una sola copia de las skills](../concepts/una-sola-copia-de-las-skills.md)
+- [El flujo wiki-first](flujo-wiki-first.md)
 
 ## Sources
 

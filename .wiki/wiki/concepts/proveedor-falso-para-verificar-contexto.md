@@ -36,6 +36,7 @@ Comprueba qué recibe el modelo, no qué hace con ello. Para eso hace falta un m
 
 - [El hook context de OpenCode](hook-context-opencode.md)
 - [Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md)
+- [La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md)
 
 ## Sources
 

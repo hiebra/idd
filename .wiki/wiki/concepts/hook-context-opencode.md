@@ -38,6 +38,8 @@ Es una API de plugins de una versión concreta. La suite la simula (`idd@1cf0792
 
 - [Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md)
 - [Proveedor falso para verificar el contexto](proveedor-falso-para-verificar-contexto.md)
+- [El arranque de sesión](../topics/arranque-de-sesion.md)
+- [La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md)
 
 ## Sources
 

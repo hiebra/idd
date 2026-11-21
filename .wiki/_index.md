@@ -6,8 +6,8 @@ Last updated: 2026-11-21
 
 ## Statistics
 
-- Sources: 2 raw documents
-- Articles: 3 compiled wiki articles
+- Sources: 3 raw documents
+- Articles: 7 compiled wiki articles
 - Inventory records: 1 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
@@ -29,6 +29,8 @@ Last updated: 2026-11-21
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-21: 4 artículos compilados de ADRs, specs y código; manifiesto del README actual
 
 - 2026-11-21: Compiladas las lecciones y el manifiesto en 3 artículos
 
