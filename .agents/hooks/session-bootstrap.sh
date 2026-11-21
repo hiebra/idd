@@ -285,13 +285,11 @@ fill_markers() {
     table=(
       'query|`/wiki:query --local`'
       'ingest|`/wiki:ingest <url> --local`'
-      'll|`/wiki:ll --local`'
     )
   else
     table=(
       'query|la skill `wiki-query`'
       'ingest|ingiere la fuente'
-      'll|pide registrar las lecciones aprendidas'
     )
   fi
   for entry in "${table[@]}"; do

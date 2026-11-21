@@ -15,8 +15,8 @@ const GUIDE_MAX = 6000;
 
 // How each agent names the engine operations in the reminder (design D2)
 const REMINDER_OPERATIONS = {
-  'Claude Code': { ll: /\/wiki:ll --local/, ingest: /\/wiki:ingest <url> --local/ },
-  OpenCode: { ll: /lecciones aprendidas/i, ingest: /ingiere la fuente/i },
+  'Claude Code': { query: /`\/wiki:query --local`/, ingest: /\/wiki:ingest <url> --local/ },
+  OpenCode: { query: /la skill `wiki-query`/, ingest: /ingiere la fuente/i },
 };
 
 function shown(world) {
@@ -273,6 +273,24 @@ Then(new RegExp(`^el recordatorio nombra las lecciones aprendidas y la ingesta d
   assert.match(this.reminder, ops.ingest);
   assert.doesNotMatch(this.reminder, /\{\{\w+\}\}/, 'a marker was not replaced');
   if (agent === 'OpenCode') assert.doesNotMatch(this.reminder, /\/wiki:/, 'OpenCode has no /wiki:* commands');
+});
+
+Then(new RegExp(`^el recordatorio nombra la consulta y la ingesta de fuentes como se invocan en ${AGENT}$`), function (agent) {
+  const ops = REMINDER_OPERATIONS[agent];
+  assert.match(this.reminder, ops.query);
+  assert.match(this.reminder, ops.ingest);
+  assert.doesNotMatch(this.reminder, /\{\{\w+\}\}/, 'a marker was not replaced');
+  if (agent === 'OpenCode') assert.doesNotMatch(this.reminder, /\/wiki:/, 'OpenCode has no /wiki:* commands');
+});
+
+Then('el recordatorio recuerda apuntar como candidato lo que se comprueba', function () {
+  assert.match(this.reminder, /candidat/i);
+});
+
+// Lessons learned are proposed at a closing point, not with every message
+Then('el recordatorio no nombra las lecciones aprendidas', function () {
+  assert.doesNotMatch(this.reminder, /lecciones aprendidas/i);
+  assert.doesNotMatch(this.reminder, /\/wiki:ll\b/);
 });
 
 Then('el recordatorio remite a la guía del wiki', function () {
