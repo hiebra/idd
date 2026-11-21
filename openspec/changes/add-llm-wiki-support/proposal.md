@@ -23,7 +23,7 @@ Los proyectos creados desde esta plantilla acumulan conocimiento que no cabe en 
   6. pasar el lint del wiki hasta dejarlo limpio;
   7. hacer el commit del wiki después del commit del archivado.
 - **Motor disponible en los dos agentes nada más clonar**, en una versión fijada por el proyecto (hoy nvk/llm-wiki v1.0.0), instalado por el arranque de sesión si falta o no es la versión fijada:
-  - **Claude Code:** el plugin del motor.
+  - **Claude Code:** la skill y los comandos `/wiki:*` del motor, en las carpetas de skills y comandos del proyecto, ignorados por git. No se usa el plugin del motor: instalado desde el arranque, solo se carga en la sesión siguiente, y en la nube cada sesión empieza de cero.
   - **OpenCode 2:** las skills del motor para OpenCode, en una carpeta de skills del proyecto ignorada por git. No se usa la vía `instructions` del motor, porque un usuario no puede desactivarla en local.
 - **Guía del wiki en un único archivo**, que entregan al agente los adaptadores del arranque de sesión de cada agente (al empezar la sesión) junto con el recordatorio (en cada mensaje). No hay `AGENTS.md` ni `CLAUDE.md`: OpenCode los cargaría siempre, sin que el usuario pueda desactivarlos.
 - **Desactivable en local**, sin tocar la configuración del repositorio: con el wiki desactivado, el arranque no instala el motor ni entrega la guía ni el recordatorio.
@@ -47,7 +47,7 @@ Fuera de alcance:
 
 ## Impact
 
-- **Configuración de agentes:** `.claude/settings.json` (hook de recordatorio por mensaje y marketplace del motor), el hook de arranque de Claude Code (entrega de la guía), el plugin `.opencode/plugins/session-bootstrap/` (guía y recordatorio en OpenCode) y la carpeta de skills de OpenCode donde se instala el motor.
+- **Configuración de agentes:** `.claude/settings.json` (hook de recordatorio por mensaje), el hook de arranque de Claude Code (entrega de la guía), el plugin `.opencode/plugins/session-bootstrap/` (guía y recordatorio en OpenCode) y la carpeta de skills de OpenCode donde se instala el motor.
 - **Guía del wiki:** un archivo nuevo, única fuente del flujo para los dos agentes.
 - **Arranque de sesión:** `.agents/hooks/session-bootstrap.sh` y sus adaptadores.
 - **OpenSpec:** `openspec/config.yaml` (indicaciones de archivado).
