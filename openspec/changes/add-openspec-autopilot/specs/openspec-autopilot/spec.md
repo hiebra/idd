@@ -111,7 +111,7 @@ Then el plugin no añade ningún mensaje ni instrucción a la sesión
 ```
 
 ### Requirement: Revisión humana guiada en el modo normal
-En el modo normal, tras cada artefacto del plan, cada task y el verify, el plugin DEBE abrir una sesión de revisión, en la que el LLM guía al usuario por la revisión. La sesión de revisión DEBE terminar llamando a una tool del plugin con el resultado: satisfactoria o no satisfactoria, y en ese caso con las conclusiones de la revisión. Si es satisfactoria, el plugin DEBE pasar al paso que indique `openspec status`. Si no lo es, DEBE pasar a una sesión de `openspec-update-change` que recibe esas conclusiones, seguida de una revisión del plan. Una revisión satisfactoria del verify DEBE llevar al archive.
+En el modo normal, tras cada artefacto del plan, cada task y el verify, el plugin DEBE abrir una sesión de revisión, en la que el LLM guía al usuario por la revisión. La sesión de revisión DEBE terminar llamando a una tool del plugin con el resultado: satisfactoria o no satisfactoria, y en ese caso con las conclusiones de la revisión. Antes de pasar el control, el plugin DEBE pedir al usuario en la TUI que confirme el cierre, mostrándole el resultado y las conclusiones; si no lo confirma, la revisión DEBE seguir abierta y el LLM DEBE saber que el usuario no la ha dado por terminada. Confirmado el cierre, si la revisión es satisfactoria, el plugin DEBE pasar al paso que indique `openspec status`. Si no lo es, DEBE pasar a una sesión de `openspec-update-change` que recibe esas conclusiones, seguida de una revisión del plan. Una revisión satisfactoria del verify DEBE llevar al archive.
 
 #### Scenario Outline: Resultado de una revisión
 
@@ -119,6 +119,7 @@ En el modo normal, tras cada artefacto del plan, cada task y el verify, el plugi
 Given una rama temporal con el change en curso `exportar-datos`, en modo normal
 And una sesión de revisión de <lo revisado>
 When la revisión termina con la tool y el resultado <resultado>
+And el usuario confirma el cierre en la TUI
 Then se crea una sesión nueva con el control para <siguiente>
 And la sesión de revisión queda archivada
 
@@ -128,6 +129,17 @@ Examples:
   | la task 3              | satisfactoria      | el paso que indique `openspec status`                       |
   | la task 3              | no satisfactoria   | `openspec-update-change`, con las conclusiones de la revisión |
   | el verify              | satisfactoria      | el archive                                                  |
+```
+
+#### Scenario: El usuario no confirma el cierre de la revisión
+
+```gherkin
+Given una sesión de revisión del artefacto `design` de `exportar-datos`, en modo normal
+When el LLM llama a la tool con el resultado satisfactoria
+Then se pide al usuario en la TUI que confirme el cierre, con el resultado y las conclusiones
+And si el usuario no lo confirma, la sesión de revisión conserva el control
+And el LLM recibe que el usuario no ha dado por terminada la revisión
+And no se crea ninguna sesión nueva
 ```
 
 #### Scenario: Tras un update-change viene una revisión del plan
@@ -201,7 +213,7 @@ Examples:
 ```
 
 ### Requirement: Modo auto
-El plugin DEBE tener un modo auto, que cada usuario activa con la opción `auto` del plugin en su propia configuración de OpenCode, y que está desactivado si no se indica. El proyecto NO DEBE fijar esa opción. En el modo auto NO DEBE haber sesiones de revisión, y el ciclo DEBE pararse solo cuando un workflow pregunta algo al usuario, en cada cambio de zona y cuando el verify encuentra problemas críticos. La sesión de verify del modo auto DEBE terminar llamando a la tool del plugin con su veredicto. Si no hay problemas críticos, el plugin DEBE pasar al archive. Si los hay, DEBE pararse y dejar la sesión esperando al usuario, que la cierra como una revisión del modo normal.
+El plugin DEBE tener un modo auto, que cada usuario activa con la opción `auto` del plugin en su propia configuración de OpenCode, y que está desactivado si no se indica. El proyecto NO DEBE fijar esa opción. En el modo auto NO DEBE haber sesiones de revisión, y el ciclo DEBE pararse solo cuando un workflow pregunta algo al usuario, en cada cambio de zona y cuando el verify encuentra problemas críticos. La sesión de verify del modo auto DEBE terminar llamando a la tool del plugin con su veredicto. Si no hay problemas críticos, el plugin DEBE pasar al archive. Si los hay, DEBE pararse y dejar la sesión esperando al usuario, que la cierra como una revisión del modo normal, confirmación incluida. El veredicto del verify sin problemas críticos NO DEBE pedir confirmación.
 
 #### Scenario: Sin la opción, el modo es normal
 
