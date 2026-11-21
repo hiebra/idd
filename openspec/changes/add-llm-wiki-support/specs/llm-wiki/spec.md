@@ -87,6 +87,7 @@ And el usuario ha desactivado el wiki en su configuración local de <agente>
 When se abre una sesión de <agente> en el proyecto
 Then no se instala el motor del wiki
 And el agente no recibe la guía del wiki
+And el agente no recibe el recordatorio del wiki con los mensajes
 And ningún archivo versionado del proyecto ha cambiado
 
 Examples:

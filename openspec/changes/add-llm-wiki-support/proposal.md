@@ -22,11 +22,11 @@ Los proyectos creados desde esta plantilla acumulan conocimiento que no cabe en 
   5. escribir solo lo que confirme el usuario;
   6. pasar el lint del wiki hasta dejarlo limpio;
   7. hacer el commit del wiki después del commit del archivado.
-- **Motor disponible en los dos agentes nada más clonar**, en una versión fijada por el proyecto (hoy nvk/llm-wiki v1.0.0):
-  - **Claude Code:** el arranque de sesión instala el plugin si falta o no es la versión fijada.
-  - **OpenCode 2:** el diseño decide entre la vía canónica del motor (`instructions` con la URL del tag fijado) y una skill instalada por el arranque.
-- **Regla del proyecto** en un `AGENTS.md` en la raíz (que Claude Code lee mediante un `CLAUDE.md` que lo importa), como fuente única del flujo para los dos agentes.
-- **Desactivable en local**, sin tocar la configuración del repositorio.
+- **Motor disponible en los dos agentes nada más clonar**, en una versión fijada por el proyecto (hoy nvk/llm-wiki v1.0.0), instalado por el arranque de sesión si falta o no es la versión fijada:
+  - **Claude Code:** el plugin del motor.
+  - **OpenCode 2:** las skills del motor para OpenCode, en una carpeta de skills del proyecto ignorada por git. No se usa la vía `instructions` del motor, porque un usuario no puede desactivarla en local.
+- **Guía del wiki en un único archivo**, que entregan al agente los adaptadores del arranque de sesión de cada agente (al empezar la sesión) junto con el recordatorio (en cada mensaje). No hay `AGENTS.md` ni `CLAUDE.md`: OpenCode los cargaría siempre, sin que el usuario pueda desactivarlos.
+- **Desactivable en local**, sin tocar la configuración del repositorio: con el wiki desactivado, el arranque no instala el motor ni entrega la guía ni el recordatorio.
 - **Suite de aceptación** ampliada y **README** actualizado (qué ofrece, requisitos, cómo desactivarlo, cómo subir la versión del motor).
 
 Fuera de alcance:
@@ -43,16 +43,17 @@ Fuera de alcance:
 - `wiki-first-knowledge`: el agente consulta el wiki antes de usar su conocimiento interno, pregunta ante un hueco, registra en el ámbito correcto (incluidas las comprobaciones empíricas que procedan) y recibe un recordatorio del flujo en cada mensaje.
 
 ### Modified Capabilities
-- `session-bootstrap`: el arranque de sesión instala también el motor del wiki en la versión fijada (al menos para Claude Code), con las mismas garantías: no bloquea la sesión, avisa si falla y lo reintenta en la siguiente.
+- `session-bootstrap`: el arranque de sesión instala también el motor del wiki en la versión fijada, en los dos agentes, con las mismas garantías (no bloquea la sesión, avisa si falla y lo reintenta en la siguiente), y sus adaptadores entregan la guía del wiki y el recordatorio por mensaje.
 
 ## Impact
 
-- **Configuración de agentes:** `.claude/settings.json` (hook de recordatorio por mensaje), `AGENTS.md` y `CLAUDE.md` nuevos, y la configuración de OpenCode que decida el diseño (`opencode.json` o `.opencode/skills/`), además del plugin `.opencode/plugins/session-bootstrap/` para el recordatorio.
+- **Configuración de agentes:** `.claude/settings.json` (hook de recordatorio por mensaje y marketplace del motor), el hook de arranque de Claude Code (entrega de la guía), el plugin `.opencode/plugins/session-bootstrap/` (guía y recordatorio en OpenCode) y la carpeta de skills de OpenCode donde se instala el motor.
+- **Guía del wiki:** un archivo nuevo, única fuente del flujo para los dos agentes.
 - **Arranque de sesión:** `.agents/hooks/session-bootstrap.sh` y sus adaptadores.
 - **OpenSpec:** `openspec/config.yaml` (indicaciones de archivado).
 - **Repositorio:** `.wiki/` versionado; la copia instalada del motor, si la hay, ignorada por git.
 - **Dependencias externas:** GitHub (`nvk/llm-wiki` en un tag fijado), red en la primera sesión de cada clon y al subir de versión. Python 3 para los helpers deterministas del motor (no para los workflows agénticos).
-- **Contexto del agente:** la regla de `AGENTS.md` y el recordatorio por mensaje consumen contexto en cada sesión y cada mensaje; deben ser breves. En OpenCode, la vía `instructions` añade ~30 KB por sesión.
+- **Contexto del agente:** la guía y el recordatorio por mensaje consumen contexto en cada sesión y cada mensaje; deben ser breves. Las skills del motor solo ocupan contexto cuando se usan.
 - **ADRs:** uno nuevo sobre el wiki como fuente de conocimiento (concepto independiente del motor, dos ámbitos, consulta primero) y la integración del motor por agente con versión fijada.
 - **Suite de aceptación:** escenarios nuevos y los de `session-bootstrap` ampliados.
 - **README** de la plantilla.
