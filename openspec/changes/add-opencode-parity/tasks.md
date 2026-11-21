@@ -49,7 +49,7 @@
 
 - [x] 4.1 Añadir al soporte el adaptador de OpenCode de D6, que importa `server.js` y `tui.js` con contextos falsos de servidor y de TUI, ejecuta los comandos de la sesión a través del callback `create.before` y recoge los toasts como avisos mostrados. Comprobar que "Clon recién creado en OpenCode" está en rojo porque el plugin no existe
 - [x] 4.2 "Clon recién creado en OpenCode": crear `.opencode/plugins/session-bootstrap/server.js` sin dependencias. Lanza el núcleo en segundo plano y antepone `bin` al `PATH` de cada comando cuando termina (D3)
-- [ ] 4.3 "La máquina tiene otra versión de OpenSpec instalada globalmente en OpenCode"
+- [x] 4.3 "La máquina tiene otra versión de OpenSpec instalada globalmente en OpenCode"
 - [ ] 4.4 "Cambiar de agente no reinstala"
 - [ ] 4.5 "Máquina sin npm en OpenCode": crear `tui.js` y el transporte de avisos de D4 (o su alternativa si así lo decidió 1.3), con los avisos pendientes recogidos al cargar
 - [ ] 4.6 "Sin acceso al registro de paquetes en OpenCode"
