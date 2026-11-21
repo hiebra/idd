@@ -11,8 +11,9 @@ Los proyectos creados desde esta plantilla acumulan conocimiento que no cabe en 
 - **Consulta antes de responder.** Ante una petición que requiere conocimiento (dominio, decisiones técnicas, herramientas, hechos externos; no operaciones sobre el código, como renombrar o reformatear), el agente consulta primero el wiki del proyecto y, si no basta, el hub, en modo de solo lectura, antes de usar su conocimiento interno.
 - **Preguntar ante un hueco.** Si el wiki no responde, el agente pregunta si responder con conocimiento interno (indicando que no viene del wiki), investigar fuera y registrar lo encontrado, o dejarlo.
 - **Registro en el ámbito correcto**, preguntando cuando no está claro cuál toca.
-- **Las comprobaciones empíricas son conocimiento.** Lo que el agente verifica ejecutando, midiendo o leyendo código o documentación externa se registra cuando procede (tiene valor más allá de la tarea en curso); el agente discierne cuándo procede y, en caso de duda, lo propone en lugar de registrarlo sin más.
-- **Recordatorio en cada mensaje.** Cada agente recibe en cada mensaje del usuario un recordatorio de este flujo, para que no dependa de que el modelo recuerde una instrucción del principio de la sesión.
+- **Lo descubierto al trabajar es conocimiento.** Lo que el agente comprueba empíricamente (ejecutando, midiendo, leyendo código) y lo que encuentra en internet, también cuando busca por su cuenta en medio de una tarea, se registra cuando servirá en otra ocasión y no solo para la tarea en curso. El agente discierne cuándo procede y lo propone en lugar de registrarlo sin más: lo comprobado, con las lecciones aprendidas del motor; lo encontrado en internet, ingiriendo la fuente.
+- **Recordatorio en cada mensaje.** Cada agente recibe en cada mensaje del usuario un recordatorio breve de este flujo (consultar primero, preguntar ante un hueco, proponer registrar lo que servirá en otra ocasión con la operación que corresponde), para que no dependa de que el modelo recuerde una instrucción del principio de la sesión.
+- **Actualización del wiki al archivar un change**, mediante las indicaciones de archivado de OpenSpec del proyecto (`operations.archive.guidance` en `openspec/config.yaml`) y con las operaciones del motor: lecciones aprendidas sin escribir, incorporación y compilación del change archivado si procede, y revisión del librarian, sin modificar, de lo que el change pudo dejar obsoleto. El usuario confirma qué se escribe, y se hace en un commit posterior al del archivado. El wiki no duplica specs ni ADRs.
 - **Motor disponible en los dos agentes nada más clonar**, en una versión fijada por el proyecto (hoy nvk/llm-wiki v1.0.0):
   - **Claude Code:** el arranque de sesión instala el plugin si falta o no es la versión fijada.
   - **OpenCode 2:** el diseño decide entre la vía canónica del motor (`instructions` con la URL del tag fijado) y una skill instalada por el arranque.
@@ -39,6 +40,7 @@ Fuera de alcance:
 
 - **Configuración de agentes:** `.claude/settings.json` (hook de recordatorio por mensaje), `AGENTS.md` y `CLAUDE.md` nuevos, y la configuración de OpenCode que decida el diseño (`opencode.json` o `.opencode/skills/`), además del plugin `.opencode/plugins/session-bootstrap/` para el recordatorio.
 - **Arranque de sesión:** `.agents/hooks/session-bootstrap.sh` y sus adaptadores.
+- **OpenSpec:** `openspec/config.yaml` (indicaciones de archivado).
 - **Repositorio:** `.wiki/` versionado; la copia instalada del motor, si la hay, ignorada por git.
 - **Dependencias externas:** GitHub (`nvk/llm-wiki` en un tag fijado), red en la primera sesión de cada clon y al subir de versión. Python 3 para los helpers deterministas del motor (no para los workflows agénticos).
 - **Contexto del agente:** la regla de `AGENTS.md` y el recordatorio por mensaje consumen contexto en cada sesión y cada mensaje; deben ser breves. En OpenCode, la vía `instructions` añade ~30 KB por sesión.
