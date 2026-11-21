@@ -5,6 +5,9 @@
 // OpenCode with several sessions:
 // - a hot reload does not duplicate navigations, dialogs or archivings, and
 //   without a TUI that says hello the server orchestrates nothing (D13);
+// - the TUI part's setup always returns a cleanup that releases its
+//   subscriptions and never throws, even when the RPC fails
+//   (fix-tui-subscription-cleanup, ADR-0010);
 // - two sessions taking control at once: the oldest wins (D4);
 // - the tool called before the step did anything does not chain (D6);
 // - a session waiting for a commit checks the tree again on the next message (D11);
@@ -68,6 +71,8 @@ test('a hot reload does not duplicate navigations, dialogs or archivings', async
   await w.opencodeCall('reload');
   await w.opencodeCall('reload');
   assert.equal(w.opencode.generation, 3);
+  // The earlier loads of the TUI part released their subscriptions (ADR-0010)
+  assert.deepEqual([...new Set(w.opencode.subscriptions.map((s) => s.load))], [3], JSON.stringify(w.opencode.subscriptions));
   // A stopped owner: opening a session asks once, and archiving it happens once
   const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'specs' } });
   await w.opencodeCall('answers', { answers: [{ value: 'take' }] });
@@ -83,6 +88,50 @@ test('a hot reload does not duplicate navigations, dialogs or archivings', async
   assert.deepEqual(w.opencode.navigations, [{ type: 'session', sessionID: next.id }], ap.describeSessions(w));
   assert.deepEqual(w.opencode.archives, [owner, sessionID]);
   assert.deepEqual(w.opencode.crashes, []);
+});
+
+const TUI = path.join(REPO_ROOT, '.opencode', 'plugins', 'openspec-autopilot', 'tui.js');
+
+test("the TUI part's setup returns a cleanup that aborts every subscription", async () => {
+  const tui = (await import(`${pathToFileURL(TUI).href}?cleanup`)).default;
+  const signals = [];
+  const context = {
+    client: {
+      rpc: () => ({
+        events: { on: (name, handler, options) => signals.push({ name, signal: options?.signal }) },
+        hello: async () => ({}),
+        reply: async () => ({}),
+      }),
+    },
+  };
+  const cleanup = await tui.setup(context);
+  assert.equal(typeof cleanup, 'function');
+  assert.deepEqual(signals.map((s) => s.name).sort(), ['hello-request', 'request']);
+  assert.ok(signals.every((s) => s.signal instanceof AbortSignal && !s.signal.aborted));
+  assert.doesNotThrow(() => cleanup());
+  assert.ok(signals.every((s) => s.signal.aborted));
+});
+
+test("the TUI part's setup returns a cleanup that does not throw when the RPC fails", async () => {
+  const tui = (await import(`${pathToFileURL(TUI).href}?rpc-fails`)).default;
+  const errors = [];
+  const original = console.error;
+  console.error = (...args) => errors.push(args.join(' '));
+  let cleanup;
+  try {
+    cleanup = await tui.setup({
+      client: {
+        rpc: () => {
+          throw new Error('simulated: rpc unavailable');
+        },
+      },
+    });
+  } finally {
+    console.error = original;
+  }
+  assert.equal(typeof cleanup, 'function');
+  assert.doesNotThrow(() => cleanup());
+  assert.match(errors.join('\n'), /rpc unavailable/);
 });
 
 test('without a TUI the server orchestrates nothing', async (t) => {
