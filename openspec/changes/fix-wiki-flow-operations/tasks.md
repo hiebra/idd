@@ -29,7 +29,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 4. Cierre
 
-- [ ] 4.1 Ejecutar la suite efectiva entera (`npm test` en `acceptance-tests/`): todos los escenarios de este change y de las specs vigentes pasan, y no queda ningún paso pendiente ni sin definir de este change. Se genera el informe HTML. Los pasos sin definir de `add-openspec-autopilot` quedan fuera de este criterio. Ejecutar también `npm run test:core` y `npm run lint:specs`
+- [x] 4.1 Ejecutar la suite efectiva entera (`npm test` en `acceptance-tests/`): todos los escenarios de este change y de las specs vigentes pasan, y no queda ningún paso pendiente ni sin definir de este change. Se genera el informe HTML. Los pasos sin definir de `add-openspec-autopilot` quedan fuera de este criterio. Ejecutar también `npm run test:core` y `npm run lint:specs`
 - [ ] 4.2 Abrir una sesión nueva de Claude Code en el proyecto y comprobar a mano que la guía recibida nombra `/wiki:query --local` y que el recordatorio no nombra `/wiki:ll`
 - [ ] 4.3 Ejecutar `openspec validate fix-wiki-flow-operations --type change --strict` antes del archive
 - [ ] 4.4 Decidir con el usuario el orden de archivado respecto a `add-openspec-autopilot`, que también toca las indicaciones de archivado y la forma de las lecciones candidatas, y anotarlo aquí
