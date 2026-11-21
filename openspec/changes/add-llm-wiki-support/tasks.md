@@ -77,8 +77,8 @@
 
 ## 7. Documentación (zona de código)
 
-- [ ] 7.1 README de la plantilla: qué ofrece el wiki y su concepto, requisitos (git, acceso a GitHub en la primera sesión, Python 3 para el helper del motor, `OPENCODE_ENABLE_EXA` para buscar en la web desde OpenCode), cómo desactivarlo (`PROJECT_WIKI=off`), cómo subir la versión del motor y qué revisar al hacerlo, el permiso que pide Claude Code para el helper y qué heredan los proyectos creados desde la plantilla
-- [ ] 7.2 `acceptance-tests/README.md`: cómo simula la suite el motor y la entrega de la guía y el recordatorio en cada agente
+- [x] 7.1 README de la plantilla: qué ofrece el wiki y su concepto, requisitos (git, acceso a GitHub en la primera sesión, Python 3 para el helper del motor, `OPENCODE_ENABLE_EXA` para buscar en la web desde OpenCode), cómo desactivarlo (`PROJECT_WIKI=off`), cómo subir la versión del motor y qué revisar al hacerlo, el permiso que pide Claude Code para el helper y qué heredan los proyectos creados desde la plantilla
+- [x] 7.2 `acceptance-tests/README.md`: cómo simula la suite el motor y la entrega de la guía y el recordatorio en cada agente
 
 ## 8. Cierre
 
