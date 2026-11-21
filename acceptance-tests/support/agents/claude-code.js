@@ -18,7 +18,27 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const HOOK = path.join('.claude', 'hooks', 'session-start.sh');
-const WARNING_RE = /^session-start: /;
+
+// Claude Code shows the user the `systemMessage` of the JSON a SessionStart
+// hook prints on stdout; stderr is not shown, and plain text on stdout goes
+// into Claude's context. So stdout must be empty or exactly one JSON object.
+function readHookOutput(stdout) {
+  if (stdout === '') return { problems: [], warnings: [] };
+  let output;
+  try {
+    output = JSON.parse(stdout);
+  } catch (error) {
+    return { problems: [`the hook stdout is not one valid JSON value (${error.message}): ${JSON.stringify(stdout)}`], warnings: [] };
+  }
+  if (output === null || typeof output !== 'object' || Array.isArray(output)) {
+    return { problems: [`the hook stdout is not a JSON object: ${JSON.stringify(stdout)}`], warnings: [] };
+  }
+  if (output.systemMessage === undefined) return { problems: [], warnings: [] };
+  if (typeof output.systemMessage !== 'string') {
+    return { problems: [`systemMessage is not a string: ${JSON.stringify(stdout)}`], warnings: [] };
+  }
+  return { problems: [], warnings: output.systemMessage.split('\n') };
+}
 
 class ClaudeCodeAgent {
   get name() {
@@ -36,13 +56,13 @@ class ClaudeCodeAgent {
       env: machine.env(extra),
       encoding: 'utf8',
     });
+    const { problems, warnings } = readHookOutput(result.stdout ?? '');
     return {
       exitCode: result.status,
       error: result.error ?? null,
-      // Hook stdout goes into Claude's context: it must stay empty
-      startProblems: result.stdout === '' ? [] : [`the hook wrote to stdout: ${JSON.stringify(result.stdout)}`],
-      warnings: result.stderr.split('\n').filter((line) => WARNING_RE.test(line)),
-      log: result.stderr,
+      startProblems: problems,
+      warnings,
+      log: `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
       run(command) {
         const source = envFile ? `source '${envFile}'; ` : '';
         return spawnSync('bash', ['-c', `${source}${command}`], {
