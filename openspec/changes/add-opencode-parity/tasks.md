@@ -2,11 +2,17 @@
 
 ## 1. Comprobaciones previas: deciden D2 y D4 antes de escribir código
 
-- [ ] 1.1 En una sesión real de Claude Code, comprobar si un hook `SessionStart` que imprime `{"systemMessage":"prueba"}` y termina con 0 muestra el mensaje al usuario. Anotar el resultado y la versión de Claude Code en este archivo
+- [ ] 1.1 Comprobar sin intervención humana si un hook `SessionStart` que imprime `{"systemMessage":"prueba"}` y termina con 0 hace llegar el mensaje al usuario. Se hace en un proyecto desechable con ese hook, y de dos formas:
+  - **A, stream-json:** `claude -p --output-format stream-json --verbose --include-hook-events` y buscar `prueba` en los eventos que emite el CLI;
+  - **B, tmux:** `claude` interactivo en una sesión oculta, `tmux capture-pane` y buscar `prueba` en el texto de la pantalla.
+
+  Si `claude` no arranca aquí por falta de credenciales, escribir un script de un solo comando (`scripts/check-session-start-message.sh`, fuera de la suite) que haga A y B en la máquina del usuario y termine imprimiendo `OK` o `FALLO`. Lo ejecuta el usuario una vez desde el terminal de VS Code. Anotar el resultado y la versión de Claude Code en este archivo
 - [ ] 1.2 Instalar OpenCode 2 (`@opencode/cli`) en un proyecto desechable y comprobar con un plugin local de `.opencode/plugins/`, sin `package.json` ni `node_modules`, tres cosas:
   - que se carga un `server.js` que exporta un objeto literal `{ id, setup }`;
   - que su `ctx.shell.hook("create.before")` cambia el `PATH` de un comando;
   - que puede importar `@opencode/plugin/rpc`, y que un `tui.js` puede recibir su evento y mostrar un toast.
+
+  El toast se comprueba con la TUI de OpenCode en una sesión de `tmux` y `tmux capture-pane`, buscando su texto. Comprobar primero si la TUI y los plugins cargan sin configurar un proveedor de modelo.
 
   Anotar los resultados y la versión de OpenCode en este archivo
 - [ ] 1.3 Si 1.1 o 1.2 descartan lo previsto en D2 o D4, cambiar `design.md` a la alternativa que ya documenta (código de salida 2 o archivo de avisos) en un commit propio de `openspec/`, antes de seguir
@@ -59,10 +65,10 @@
 ## 7. Cierre
 
 - [ ] 7.1 Ejecutar la suite completa con los deltas del change: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado
-- [ ] 7.2 Probar a mano en OpenCode 2 real, en un clon recién creado:
+- [ ] 7.2 Probar con OpenCode 2 real, sin intervención humana, en un clon recién creado y con la TUI en una sesión de `tmux`:
   - `openspec --version` desde la sesión muestra la versión fijada;
   - aparecen las skills del schema y los workflows de OpenSpec;
-  - un aviso (por ejemplo, con el registro inaccesible) aparece como toast.
+  - un aviso (por ejemplo, con el registro inaccesible) aparece como toast en el texto de `tmux capture-pane`.
 
   Anotar la versión de OpenCode en el README
 - [ ] 7.3 Ejecutar `openspec validate add-opencode-parity --type change --strict`: ningún error. Los avisos que queden tienen que ser los que ya dan las specs actuales (`openspec validate --specs --strict`)
