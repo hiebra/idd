@@ -147,6 +147,31 @@ install_wiki_engine() {
   echo "wiki-engine=$PWD/$ENGINE_DIR/claude-plugin"
 }
 
+# .wiki/ se versiona siempre (design D5): el motor lo añade a .gitignore al
+# inicializar un wiki en modo local. Las líneas exactas ".wiki" o ".wiki/" se
+# retiran; si lo ignora otra regla, solo se avisa
+keep_wiki_versioned() {
+  [ -d .wiki ] || return
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return
+  wiki_ignored || return
+  if [ -f .gitignore ] && grep -qxE '\.wiki/?' .gitignore; then
+    local tmp
+    tmp="$(mktemp)"
+    # grep -v termina con 1 si no queda ninguna línea, y eso también vale
+    grep -vxE '\.wiki/?' .gitignore >"$tmp"
+    cat "$tmp" >.gitignore && warn "se ha quitado '.wiki/' de .gitignore: el wiki del proyecto se versiona con el repositorio"
+    rm -f "$tmp"
+  fi
+  if wiki_ignored; then
+    warn "git ignora archivos de .wiki/ por otra regla; el wiki del proyecto debe versionarse (compruébalo con 'git check-ignore -v .wiki/<archivo>')"
+  fi
+}
+
+wiki_ignored() {
+  git check-ignore -q .wiki 2>/dev/null ||
+    [ -n "$(git ls-files --others --ignored --exclude-standard -- .wiki 2>/dev/null | head -n 1)" ]
+}
+
 # install_project DIR: instala las dependencias del proyecto Node en DIR
 # (relativo a la raíz) si faltan o han cambiado desde la última instalación correcta.
 install_project() {
@@ -211,6 +236,7 @@ main() {
   fi
   # El motor no depende de Node, así que va antes y se instala aunque falte npm
   install_wiki_engine
+  wiki_disabled || keep_wiki_versioned
   install_dependencies
 }
 

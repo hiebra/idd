@@ -64,9 +64,11 @@
 
 ## 5. Ámbitos, `.wiki/` y desactivación (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 5.1 "Inicializar el wiki del proyecto": el núcleo detecta `.wiki/` ignorado, retira las líneas `.wiki` o `.wiki/` de `.gitignore` y avisa (D5)
-- [ ] 5.2 "Máquina sin hub del usuario" en los dos agentes: ningún aviso sobre el hub
-- [ ] 5.3 "El usuario desactiva el wiki" en los dos agentes: `PROJECT_WIKI=off` (D4)
+- [x] 5.1 "Inicializar el wiki del proyecto": el núcleo detecta `.wiki/` ignorado, retira las líneas `.wiki` o `.wiki/` de `.gitignore` y avisa (D5)
+- [x] 5.2 "Máquina sin hub del usuario" en los dos agentes: ningún aviso sobre el hub
+- [x] 5.3 "El usuario desactiva el wiki" en los dos agentes: `PROJECT_WIKI=off` (D4)
+
+  **Resultado:** 5.2 y 5.3 estaban en rojo en 2.4 y pasaron a verde con la instalación del motor (3) y la entrega de la guía y el recordatorio (4), sin código propio: el núcleo no consulta el hub, y `PROJECT_WIKI=off` ya lo atendían esos pasos. Para 5.1, el núcleo comprueba `.wiki/` al empezar cada sesión (D5), así que el paso "el motor inicializa el wiki del proyecto" simula la inicialización durante una sesión y abre la siguiente. El caso de D5 en que otra regla ignora `.wiki/` (solo se avisa) se prueba en `acceptance-tests/core-tests/wiki-versioned.test.js`.
 
 ## 6. Resincronización al archivar (`openspec/`, commit propio)
 
