@@ -5,15 +5,15 @@ source: session
 ingested: 2026-11-21
 tags: [lessons-learned, opencode, plugins, sessions, tui, openspec]
 lesson_kind: lessons-learned
-lesson_count: 9
+lesson_count: 10
 category: notes
 confidence: high
-summary: "Pruebas P1-P13 del change add-openspec-autopilot: archivar, metadata, tools del plugin, recarga en caliente, opciones, encadenar sesiones desde idle, interrupción, compactación, varias TUIs y claves x-* de OpenSpec."
+summary: "Pruebas P1-P13 del change add-openspec-autopilot: archivar, metadata, tools del plugin, recarga en caliente, opciones, encadenar sesiones desde idle, interrupción, compactación, varias TUIs, claves x-* de OpenSpec y un modelo real que cierra una revisión antes de tiempo."
 ---
 
 # Lessons Learned: APIs de sesión de OpenCode 2.3.2 para orquestar un change
 
-> Sesión del 2026-11-21 (explore y pruebas de add-openspec-autopilot), con OpenCode 2.3.2 y OpenSpec 1.17.0. Mismas etiquetas de evidencia que [la nota anterior](2026-11-21-ll-wiki-en-dos-agentes-2.md). Salvo que se indique otra cosa, todo es **[comprobado]** en la TUI (`--standalone`, en tmux) con el proveedor falso; el banco de pruebas se describe en la lección 9 y no quedó en el repositorio.
+> Sesión del 2026-11-21 (explore y pruebas de add-openspec-autopilot), con OpenCode 2.3.2 y OpenSpec 1.17.0. Mismas etiquetas de evidencia que [la nota anterior](2026-11-21-ll-wiki-en-dos-agentes-2.md). Salvo que se indique otra cosa, todo es **[comprobado]** en la TUI (`--standalone`, en tmux) con el proveedor falso (la lección 10, con un modelo real y `opencode run`); el banco de pruebas se describe en la lección 9 y no quedó en el repositorio.
 
 ## Lección 1: El ctx.session.update del plugin ignora `archived`; se archiva desde la parte de TUI
 
@@ -98,3 +98,12 @@ Además, también [comprobado]: `list()` sin filtro incluye las archivadas (con 
 4. La TUI `--standalone` en tmux, manejada con `send-keys`.
 
 `opencode serve` exige contraseña: `opencode api` la toma de `OPENCODE_PASSWORD`. La configuración de proveedor al estilo v1 (`provider.<id>.npm = "@ai-sdk/openai-compatible"`) sigue funcionando en 2.3.2.
+
+## Lección 10: Un modelo real puede cerrar una revisión que el usuario no ha dado por terminada
+
+**Category**: gotcha
+**Context**: Comprobar con un modelo real (Alibaba Model Studio, `qwen3.8-flash`, por `@ai-sdk/openai-compatible` contra `dashscope-intl.aliyuncs.com/compatible-mode/v1`) que la sesión de revisión llama a la tool de traspaso solo al terminar. El prompt le pedía llamarla "solo cuando el usuario la da por terminada… y nunca antes".
+**Symptom**: Acierta en cuatro casos: no la llama ante una pregunta a mitad de revisión ni ante un "Vale." (pregunta si se da por terminada); la llama con `ok` ante "Me parece bien, doy la revisión por terminada", y con `no ok` y conclusiones concretas ante "No me convence… termino aquí la revisión". Pero ante "Gracias, lo miro luego." la cierra con `ok`, y las lecciones candidatas de ese cierre son ruido ("en este repo no hay código").
+**Root cause**: Decidir si una frase cierra la revisión es una interpretación del modelo, y un aplazamiento educado se parece a un visto bueno. [inferencia] Un modelo más fuerte fallaría menos, pero no lo garantiza.
+**Fix**: (para el diseño) La tool no traspasa sola: el plugin pide al usuario en la TUI que confirme el cierre, con el resultado y las conclusiones, y si no lo confirma la revisión sigue.
+**Rule**: Cuando una tool llamada por el modelo dispara algo que el usuario debería decidir, la decisión del modelo es una propuesta: hay que confirmarla con el usuario fuera del modelo. Las lecciones candidatas que propone el modelo hay que filtrarlas antes de registrarlas.

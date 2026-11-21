@@ -25,3 +25,5 @@
 ## [2026-11-21] verify | 7 articles marked verified by the user
 
 ## [2026-11-21] ll | "APIs de sesión de OpenCode 2.3.2 para orquestar un change" → raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md (9 lessons, 2 articles updated, 1 inventory record)
+
+## [2026-11-21] ll | "Cierre de revisión con un modelo real" → raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md (1 lesson appended, 10 total, 0 articles updated)

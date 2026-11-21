@@ -8,7 +8,7 @@ Last updated: 2026-11-21
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
-| [2026-11-21-ll-sesiones-opencode-autopilot.md](2026-11-21-ll-sesiones-opencode-autopilot.md) | 9 lecciones de las pruebas P1-P13 de add-openspec-autopilot | lessons-learned, opencode, plugins | 2026-11-21 |
+| [2026-11-21-ll-sesiones-opencode-autopilot.md](2026-11-21-ll-sesiones-opencode-autopilot.md) | 10 lecciones de las pruebas P1-P13 de add-openspec-autopilot, una con un modelo real | lessons-learned, opencode, plugins | 2026-11-21 |
 | [2026-11-21-ll-wiki-en-dos-agentes-2.md](2026-11-21-ll-wiki-en-dos-agentes-2.md) | 5 lecciones con la evidencia de cada afirmación | lessons-learned, claude-code, opencode | 2026-11-21 |
 
 ## Categories
