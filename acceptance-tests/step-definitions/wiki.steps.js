@@ -350,6 +350,32 @@ for (const [text, id] of Object.entries(GUIDE_SECTIONS)) {
   });
 }
 
+// The text of a section of the guide file, from its identifier to the next one
+function guideSection(guideText, id) {
+  const marker = `<!-- wiki-guide:${id} -->`;
+  const start = guideText.indexOf(marker);
+  assert.ok(start >= 0, `the wiki guide has no section ${marker}`);
+  const next = guideText.indexOf('<!-- wiki-guide:', start + marker.length);
+  return guideText.slice(start + marker.length, next < 0 ? undefined : next);
+}
+
+// The guide as delivered strips the section identifiers, so the section is
+// found in the source and what is delivered is checked as a whole
+When('se revisa con qué operación indica la guía consultar el wiki', function () {
+  this.guideText = this.project.readGuide();
+  this.deliveredGuide = deliveredContext(this);
+});
+
+Then(/^nombra (`\/wiki:query --local`|la skill `wiki-query`)$/, function (operation) {
+  assert.ok(this.deliveredGuide.includes(operation), `${this.session.agent}: the guide delivered does not name ${operation}`);
+  assert.doesNotMatch(this.deliveredGuide, /\{\{\w+\}\}/, 'a marker was not replaced');
+  assert.match(guideSection(this.guideText, 'consultar-con-lectura'), /\{\{query\}\}/);
+});
+
+Then('no nombra `wiki-manager` para consultar', function () {
+  assert.doesNotMatch(guideSection(this.guideText, 'consultar-con-lectura'), /wiki-manager/);
+});
+
 Then('ofrece estas opciones:', function (table) {
   for (const { opción } of table.hashes()) {
     const id = GAP_OPTIONS[opción];

@@ -11,7 +11,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 ## 2. Pasos de la guía (D2): uno por paso pendiente; en cada uno, rojo por la causa correcta → implementar → verde → commit
 
 - [x] 2.1 `wiki-first-knowledge: La guía reserva la operación que modifica el wiki`. Definir los pasos `indica modificarlo con la operación del motor que lo modifica`, `indica hacerlo solo cuando el usuario confirma lo que el agente propone` e `indica no usar esa operación para consultar` como secciones de `GUIDE_SECTIONS` (`modificar-wiki`, `modificar-con-confirmacion`, `modificar-no-consultar`). Están en rojo mientras falten las secciones. Añadir a `.agents/wiki/guide.md` la sección "Modificar el wiki", que nombra `wiki-manager` o sus comandos `/wiki:*` → verde → commit
-- [ ] 2.2 `wiki-first-knowledge: La guía nombra la operación de lectura de cada agente`. Definir:
+- [x] 2.2 `wiki-first-knowledge: La guía nombra la operación de lectura de cada agente`. Definir:
   - `se revisa con qué operación indica la guía consultar el wiki`: toma la guía entregada por el adaptador del agente de la sesión;
   - `nombra <operación>`: la guía entregada contiene `/wiki:query --local` (Claude Code) o la skill `wiki-query` (OpenCode), y la sección `consultar-con-lectura` de la fuente (desde su identificador hasta el siguiente) contiene `{{query}}`;
   - `no nombra \`wiki-manager\` para consultar`: esa sección de la fuente no contiene `wiki-manager`.

@@ -24,6 +24,8 @@ Tú disciernes en cada caso; ante la duda, consulta.
 Ante una petición que requiere conocimiento, consulta el wiki en modo de solo lectura antes de usar tu conocimiento interno.
 <!-- wiki-guide:orden-de-consulta -->
 Consulta primero el wiki del proyecto y, si no basta, el topic que corresponda del hub del usuario, si existe. Cita los artículos en los que te basas.
+<!-- wiki-guide:consultar-con-lectura -->
+Consulta con {{query}}, que no modifica el wiki.
 
 ## Si el wiki no responde
 
