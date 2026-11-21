@@ -41,10 +41,10 @@ Las comprobaciones con OpenCode real usan el banco de la lección 9 de `.wiki/ra
 
 ## 3. El ciclo de un change (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 3.1 "Sin x-main, la única rama permanente es main" y "La rama de origen es la última de x-main": crear `.agents/openspec/branch-change.mjs` sin dependencias (D1), con la lectura mínima de `x-main` y su CLI `--json`. Un `x-main` con otra forma se trata como ausente y avisa (cubrirlo en `core-tests`)
-- [ ] 3.2 "Qué rama es temporal", con sus cuatro ejemplos
-- [ ] 3.3 "Estado de la rama según lo que ha cambiado en openspec/changes/", con sus cinco ejemplos, y "Los changes de la rama de origen no cuentan". Cubrir en `core-tests` la rama de origen solo como `origin/<rama>` y su ausencia (`unknown`)
-- [ ] 3.4 "OpenSpec acepta la clave x-main": `list`, `status`, `instructions` y `validate` reales sobre un proyecto de prueba con `x-main: [main, develop]`
+- [x] 3.1 "Sin x-main, la única rama permanente es main" y "La rama de origen es la última de x-main": crear `.agents/openspec/branch-change.mjs` sin dependencias (D1), con la lectura mínima de `x-main` y su CLI `--json`. Un `x-main` con otra forma se trata como ausente y avisa (cubrirlo en `core-tests`)
+- [x] 3.2 "Qué rama es temporal", con sus cuatro ejemplos
+- [x] 3.3 "Estado de la rama según lo que ha cambiado en openspec/changes/", con sus cinco ejemplos, y "Los changes de la rama de origen no cuentan". Cubrir en `core-tests` la rama de origen solo como `origin/<rama>` y su ausencia (`unknown`)
+- [x] 3.4 "OpenSpec acepta la clave x-main": `list`, `status`, `instructions` y `validate` reales sobre un proyecto de prueba con `x-main: [main, develop]`
 - [ ] 3.5 "El apply empieza con la propuesta solo en la rama temporal", "El archive se hace en la rama temporal" y "El archive no se hace en una rama permanente". Reescribir `.agents/skills/openspec-git-discipline/SKILL.md` con las puertas de D2, con el mismo `name` y la misma descripción. Las puertas las decide un subcomando determinista de `branch-change.mjs` (`check apply|archive <change>`) que la skill manda ejecutar y obedecer; los pasos comprueban ese subcomando y que la skill lo usa y ya no exige la rama de origen
 - [ ] 3.6 "Un artefacto terminado queda sin commit": la skill pide el commit tras cada artefacto, task, archive y resincronización del wiki, y no manda hacer commits, ramas ni fusiones
 - [ ] 3.7 En un commit propio de `openspec/`, cambiar las indicaciones de archivado de `openspec/config.yaml` según D2 y D10:
