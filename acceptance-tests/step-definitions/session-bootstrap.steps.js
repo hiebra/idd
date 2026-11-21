@@ -113,7 +113,12 @@ Given('una máquina con Node.js 22.12 o superior y npm', function () {
 
 // --- Sesión -----------------------------------------------------------------
 
-When('se abre una sesión de Claude Code en el proyecto', function () {
+When(/^se abre una sesión de (Claude Code|OpenCode) en el proyecto$/, function (agent) {
+  this.openSession(agent);
+});
+
+// Scenarios of the agent-neutral core: the World opens a Claude Code session
+When('se abre una sesión en el proyecto', function () {
   this.openSession();
 });
 
