@@ -2,11 +2,15 @@
 
 ## 1. Comprobaciones previas: deciden D2 y D4 antes de escribir código
 
-- [ ] 1.1 Comprobar sin intervención humana si un hook `SessionStart` que imprime `{"systemMessage":"prueba"}` y termina con 0 hace llegar el mensaje al usuario. Se hace en un proyecto desechable con ese hook, y de dos formas:
+- [x] 1.1 Comprobar sin intervención humana si un hook `SessionStart` que imprime `{"systemMessage":"prueba"}` y termina con 0 hace llegar el mensaje al usuario. Se hace en un proyecto desechable con ese hook, y de dos formas:
   - **A, stream-json:** `claude -p --output-format stream-json --verbose --include-hook-events` y buscar `prueba` en los eventos que emite el CLI;
   - **B, tmux:** `claude` interactivo en una sesión oculta, `tmux capture-pane` y buscar `prueba` en el texto de la pantalla.
 
   Si `claude` no arranca aquí por falta de credenciales, escribir un script de un solo comando (`scripts/check-session-start-message.sh`, fuera de la suite) que haga A y B en la máquina del usuario y termine imprimiendo `OK` o `FALLO`. Lo ejecuta el usuario una vez desde el terminal de VS Code. Anotar el resultado y la versión de Claude Code en este archivo
+
+  **Resultado (Claude Code 2.1.330, 2026-11-21): D2 se confirma.** `claude` arrancó aquí con credenciales, así que no hizo falta el script.
+  - A: el evento `hook_response` de `SessionStart` trae el JSON en `stdout`, pero eso es la salida cruda del hook y no prueba que se muestre.
+  - B: en la TUI, tras aceptar la confianza en la carpeta, la pantalla muestra `⎿  SessionStart:startup says: prueba`. Con el mismo hook escribiendo `aviso-stderr` por stderr y terminando con 0, ese texto no aparece en la pantalla.
 - [ ] 1.2 Instalar OpenCode 2 (`@opencode/cli`) en un proyecto desechable y comprobar con un plugin local de `.opencode/plugins/`, sin `package.json` ni `node_modules`, tres cosas:
   - que se carga un `server.js` que exporta un objeto literal `{ id, setup }`;
   - que su `ctx.shell.hook("create.before")` cambia el `PATH` de un comando;
