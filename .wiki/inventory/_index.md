@@ -6,13 +6,13 @@ Last updated: 2026-11-21
 
 ## Statistics
 
-- Total records: 1
+- Total records: 2
 - Items: 0
 - Ideas: 0
-- Candidates: 1
+- Candidates: 2
 - Entities: 0
 - Corpora: 0
-- Active: 1
+- Active: 2
 - Blocked: 0
 
 ## Quick Navigation

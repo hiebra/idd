@@ -23,3 +23,5 @@
 ## [2026-11-21] compile | 2 sources → 4 new articles, 3 updated (arranque-de-sesion, una-sola-copia-de-las-skills, flujo-wiki-first, suite-de-aceptacion-y-spec-as-source; See Also in carga-en-la-misma-sesion-por-agente, hook-context-opencode, proveedor-falso-para-verificar-contexto)
 
 ## [2026-11-21] verify | 7 articles marked verified by the user
+
+## [2026-11-21] ll | "APIs de sesión de OpenCode 2.3.2 para orquestar un change" → raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md (9 lessons, 2 articles updated, 1 inventory record)

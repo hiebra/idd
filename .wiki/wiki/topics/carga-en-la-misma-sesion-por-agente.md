@@ -31,6 +31,7 @@ La plantilla aplica las tres cosas. El núcleo enlaza `.claude/skills/wiki-manag
 - **Precedencia ante un ID repetido.** **[heredado]** OpenCode busca en `.claude/skills`, `.agents/skills` y `.opencode/skills`, y gana `.claude/skills`. Es la lectura del código fuente de OpenCode recogida en `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/design.md` y en `idd@1cf0792:acceptance-tests/support/skills.js`. No se ha comprobado en ejecución con un ID repetido.
 - **`opencode run` deja el arranque a medias.** **[comprobado]** Tras `opencode run`, en un clon recién creado, no quedaron symlinks del motor y sí un `.agents/wiki-engine.tmp.<pid>`. **[inferencia]** Lo más probable es que el núcleo, que el plugin lanza en segundo plano, muera cuando `opencode run` termina al responder el modelo. En la TUI, que sigue abierta, no ocurre **[comprobado]**. El núcleo clona ahora en un temporal, lo sustituye con un renombrado y borra los restos cuyo proceso ya no existe.
 - **Contexto: por el hook `context`**, no por `AGENTS.md` ni `instructions`, que el usuario no puede desactivar. Ver [El hook context de OpenCode](../concepts/hook-context-opencode.md).
+- **Plugins locales: se recargan en caliente.** **[comprobado]** Editar los archivos del plugin, o sus `options` en la configuración, vuelve a ejecutar `setup` sin reiniciar; los escuchadores RPC de la TUI anteriores siguen vivos ([lecciones 4 y 5](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md)).
 
 ## Consecuencias para la plantilla
 
