@@ -12,7 +12,7 @@ const path = require('node:path');
 const { ENGINE_JSON, git } = require('./engine');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const EXCLUDED_AT_ROOT = new Set(['.git', 'acceptance-tests']);
+const EXCLUDED_AT_ROOT = new Set(['.git', 'acceptance-tests', '.wiki']);
 const STAMP = path.join('node_modules', '.session-start.sha256');
 // What the session bootstrap installs for the wiki engine, ignored by git (design D1, D8)
 const ENGINE_DIR = path.join('.agents', 'wiki-engine');
