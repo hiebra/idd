@@ -176,7 +176,7 @@ Además de los archivos de arriba, un proyecto creado desde la plantilla hereda 
 - **ADRs** en `adr/`: las decisiones duraderas de la plantilla, vigentes también para el proyecto mientras ningún ADR posterior las sustituya.
 - **Changes archivados** en `openspec/changes/archive/`: la historia de la plantilla. La suite no los ejecuta nunca.
 - **La suite de aceptación**, que ejecuta los escenarios heredados junto a los del proyecto y debe seguir en verde.
-- **El wiki**: la guía, el recordatorio y la versión fijada del motor en `.agents/wiki/`, y las indicaciones de archivado de `openspec/config.yaml`. El proyecto empieza sin `.wiki/`: lo crea el motor la primera vez que se usa, y la guía indica hacer entonces la ingesta inicial del repositorio. El hub de cada usuario no se hereda: es suyo.
+- **El wiki**: la guía, el recordatorio y la versión fijada del motor en `.agents/wiki/`, y las indicaciones de archivado de `openspec/config.yaml`. También hereda `.wiki/`, el wiki de la plantilla: su ingesta inicial (las specs, los ADRs y el código fijados a un commit) y lo comprobado al construirla. Es conocimiento de la plantilla, como los changes archivados. Un proyecto puede conservarlo o vaciarlo; si lo vacía, la guía indica hacer la ingesta inicial de su propio repositorio cuando vuelva a crearlo. El hub de cada usuario no se hereda: es suyo.
 
 ## Subir de versión OpenSpec
 
