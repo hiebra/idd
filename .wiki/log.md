@@ -8,15 +8,12 @@
 
 ## [2026-11-21] lint | local command: 0 critical, 0 warnings, 0 suggestions, 2 auto-fixed
 
-## [2026-11-21] ll | "motor del wiki en Claude Code y OpenCode 2" → raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md (5 lessons, 0 articles updated)
-
 ## [2026-11-21] inventory | added watch volver-a-comprobar-hook-context-al-subir-opencode
 
 ## [2026-11-21] lint | local command: 0 critical, 0 warnings, 0 suggestions, 3 auto-fixed
 
 ## [2026-11-21] compile | 2 sources → 3 new articles, 0 updated (carga-en-la-misma-sesion-por-agente, hook-context-opencode, proveedor-falso-para-verificar-contexto)
 
-## [2026-11-21] ll | revisión con evidencia por afirmación → raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md (supersedes raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md); comprobado el plugin instalado desde SessionStart
 ## [2026-11-21] compile | 1 source → 0 new articles, 3 updated (carga-en-la-misma-sesion-por-agente, hook-context-opencode, proveedor-falso-para-verificar-contexto)
 
 ## [2026-11-21] retract | 1 raw source removed with its downstream references
