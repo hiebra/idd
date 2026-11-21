@@ -14,6 +14,7 @@ Llevar un change de OpenSpec de principio a fin exige que el usuario lance a man
   - un modo auto, que elige cada usuario como opción del plugin (desactivado por defecto), sin sesiones de revisión, que solo se para cuando un workflow pregunta, en cada cambio entre la zona de specs y la de código (para el commit del usuario) y si el verify encuentra problemas críticos;
   - cada sesión comprueba al empezar que el árbol de trabajo está limpio, salvo en el modo auto dentro de una misma zona;
   - la sesión de `openspec-update-change` recibe, además de las conclusiones de la revisión, un índice de las sesiones del change (qué paso hizo cada una y cómo acabó cada revisión);
+  - cada sesión puede dejar lecciones candidatas al pasar el control, guardadas en su metadata y no en el repositorio; la resincronización del wiki tras el archive las recibe todas y solo registra las que confirma el usuario;
   - si en la rama hay más de un change, el plugin se inhibe y avisa.
 - **El plugin solo existe para OpenCode**: es la primera asimetría deliberada entre agentes. En Claude Code los mismos workflows se siguen lanzando a mano, con el mismo ciclo y el mismo resultado versionado. Se registra una política general sobre cuándo se acepta una asimetría.
 
@@ -30,7 +31,7 @@ Fuera de alcance, como discusiones abiertas: la vuelta de la fusión intermedia 
 ## Impact
 
 - Un plugin local nuevo en `.opencode/plugins/` (servidor y TUI), con el patrón de `session-bootstrap`: sin dependencias, solo módulos `node:`, sin lanzar nunca una excepción hacia OpenCode.
-- `openspec/config.yaml`: la clave `x-main`, y las indicaciones de archivado, que hoy dan por hecho que el archive se hace tras fusionar con `main`.
+- `openspec/config.yaml`: la clave `x-main`, y las indicaciones de archivado, que hoy dan por hecho que el archive se hace tras fusionar con `main` y que las lecciones salen de la sesión en curso.
 - `openspec-git-discipline` (`.agents/skills/`), una copia del origen sin cambios hasta ahora: sus puertas de la fusión intermedia y del archive desde `main` quedan sustituidas.
 - Suite de aceptación: la simulación de OpenCode (`acceptance-tests/support/agents/opencode-host.mjs`) tiene que cubrir las APIs de sesión, TUI, herramientas y opciones que use el plugin, y comprobar que en Claude Code no queda nada a medias.
 - ADRs: la política de asimetrías entre agentes, el plugin, y la sustitución de las puertas heredadas de `openspec-git-discipline`.

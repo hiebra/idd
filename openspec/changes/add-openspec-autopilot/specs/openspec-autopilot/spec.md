@@ -161,6 +161,27 @@ And el índice incluye las conclusiones de la revisión no satisfactoria del art
 And no recibe la transcripción de ninguna sesión
 ```
 
+### Requirement: Lecciones candidatas, registradas en el archive
+Al pasar el control, cada sesión PUEDE dar a la tool del plugin lecciones candidatas: lo que comprobó o le corrigieron en su paso y servirá en otra ocasión. El plugin DEBE guardarlas en la metadata de la sesión y NO DEBE escribirlas en el repositorio. La sesión que resincroniza el wiki tras el archive DEBE recibir las lecciones candidatas de todas las sesiones del change, y el wiki DEBE registrar solo las que el usuario confirme, en el commit del wiki.
+
+#### Scenario: Las candidatas no tocan el repositorio
+
+```gherkin
+Given una sesión dueña que termina el artefacto `design` de `exportar-datos`
+When pasa el control con una lección candidata
+Then la lección queda en la metadata de la sesión
+And el árbol de trabajo no tiene cambios nuevos
+```
+
+#### Scenario: La resincronización del wiki recibe las candidatas del change
+
+```gherkin
+Given un change `exportar-datos` cuyas sesiones dejaron tres lecciones candidatas
+When se crea la sesión que resincroniza el wiki tras el archive
+Then la sesión recibe las tres lecciones candidatas
+And el wiki solo registra las que el usuario confirma
+```
+
 ### Requirement: Árbol limpio al empezar un paso
 Antes de que el modelo empiece a trabajar, la sesión dueña DEBE comprobar que el árbol de trabajo está limpio (sin cambios sin commit). Si no lo está, NO DEBE empezar y DEBE pedir al usuario que haga el commit. En el modo auto, la comprobación DEBE hacerse solo en el primer paso tras un cambio de zona. Las zonas son las de `spec-as-source`: la de specs es `openspec/`, salvo los `tasks.md`, y la de código es todo lo demás. Los cambios de zona del ciclo son tres: del plan a las tasks, de las tasks al archive y del archive a la resincronización del wiki.
 
