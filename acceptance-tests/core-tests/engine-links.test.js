@@ -72,3 +72,17 @@ test('a stale symlink of the engine is replaced', (t) => {
   assert.equal(fs.readlinkSync(link), '../../.agents/wiki-engine/plugins/llm-wiki-opencode/skills/wiki-query');
   assert.ok(!session.warnings.some((w) => w.includes('wiki-query')), JSON.stringify(session.warnings));
 });
+
+test('leftovers of an interrupted engine install are removed', (t) => {
+  const { workDir, machine, project } = setUp();
+  t.after(() => fs.rmSync(workDir, { recursive: true, force: true }));
+  // A PID no process has: the bootstrap that left it was killed mid-clone
+  const stale = project.path('.agents', 'wiki-engine.tmp.4194999');
+  fs.mkdirSync(stale, { recursive: true });
+
+  const session = new ClaudeCodeAgent().open({ machine, project, workDir });
+
+  assert.equal(session.exitCode, 0, session.log);
+  assert.equal(fs.existsSync(stale), false);
+  assert.ok(project.hasEngineInstall());
+});

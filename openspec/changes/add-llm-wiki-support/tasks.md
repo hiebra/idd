@@ -82,6 +82,21 @@
 
 ## 8. Cierre
 
-- [ ] 8.1 Ejecutar la suite completa: todos los escenarios pasan, sin pasos pendientes ni sin definir, con el informe HTML generado
-- [ ] 8.2 Ejecutar `openspec validate add-llm-wiki-support --type change --strict`
+- [x] 8.1 Ejecutar la suite completa: todos los escenarios pasan, sin pasos pendientes ni sin definir, con el informe HTML generado
+
+  **Resultado (2026-11-21):** 59 escenarios y 326 pasos, todos en verde, con `reports/cucumber-report.html` generado. `npm run test:core` da 5 de 5.
+- [x] 8.2 Ejecutar `openspec validate add-llm-wiki-support --type change --strict`
+
+  **Resultado:** ningún error. Quedan 28 avisos de los mismos dos tipos que ya dan las specs actuales (`openspec validate --specs --strict`), como en `add-opencode-parity`: 18 de "should contain SHALL or MUST", porque los requisitos están en español con "DEBE", y 10 de "missing a WHEN/GIVEN step and a THEN step", porque los escenarios son Gherkin en bloques de código.
 - [ ] 8.3 Comprobar con Claude Code y OpenCode 2 reales en este clon que, en una sesión nueva, el motor queda disponible en la misma sesión, la guía y el recordatorio llegan al modelo y `/wiki:query` (o `wiki-query`) responde sobre un `.wiki/` de prueba; anotar los resultados y las versiones en este archivo
+
+  **Resultado (2026-11-21): Claude Code correcto; en OpenCode falta que `wiki-query` responda con un modelo real.** Cada prueba se hizo en un clon recién creado de la rama, sin motor instalado.
+  - **Claude Code 2.1.330** (`claude -p --output-format stream-json --verbose`, con `CLAUDE_CONFIG_DIR` vacío):
+    - En la primera sesión, el evento `init` ya trae `wiki-manager` y los 28 `wiki:*`, y `/wiki:wiki init prueba --local` crea `.wiki/`. Además, el modelo no añade `.wiki/` al `.gitignore`, como pide la guía. `git status` solo muestra `?? .wiki/`.
+    - Tras añadir a mano un artículo con un dato inventado, `/wiki:query ¿Qué color identifica al proyecto Zeta?` responde con el dato y cita el artículo.
+    - En otra sesión, el modelo cita literalmente el título de la guía (`# Guía del wiki del proyecto`) y el principio del recordatorio. `echo $CLAUDE_PLUGIN_ROOT` da la ruta del motor del clon, y `"$CLAUDE_PLUGIN_ROOT/bin/llm-wiki" --help` responde. Claude Code no pidió permiso para el helper, porque la prueba lo autorizó con `--allowedTools Bash`.
+  - **OpenCode 2.3.2** (`opencode --standalone` en `tmux`). Aquí no hay proveedor de modelo real, así que se usó el proveedor falso de 1.2, configurado en el `opencode.json` global (fuera del repositorio). El cuerpo de cada petición es lo que recibe el modelo:
+    - En la misma sesión de la TUI, el motor queda instalado a los pocos segundos. Al enviar un mensaje desde esa misma sesión, la petición lista `wiki-manager` y `wiki-query` una vez cada una, y lleva la guía en el system (precedida de la nota para OpenCode) y el recordatorio con la redacción de OpenCode justo antes del mensaje.
+    - `!echo "$CLAUDE_PLUGIN_ROOT"; "$CLAUDE_PLUGIN_ROOT/bin/llm-wiki" --help` en la TUI muestra la ruta del motor y la ayuda del helper.
+    - **Sin comprobar:** que `wiki-query` responda sobre `.wiki/`, porque hace falta un modelo real. Queda pendiente para una máquina con un proveedor configurado en OpenCode.
+    - **Problema encontrado y corregido:** con `opencode run`, el proceso termina en cuanto responde el modelo y mata al núcleo a medio clonar. Quedaba un `.agents/wiki-engine.tmp.<pid>` (ignorado por git) y, en esa ejecución, el motor sin instalar hasta la siguiente sesión. El núcleo borra ahora esos restos cuando su proceso ya no existe (prueba en `core-tests/engine-links.test.js`). En la TUI, que sigue abierta, el problema no se da.

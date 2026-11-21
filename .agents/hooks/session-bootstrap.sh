@@ -123,7 +123,12 @@ install_wiki_engine() {
       warn "falló la instalación del motor del wiki ($repo $ref): hace falta git; se reintentará en la siguiente sesión. Para instalarlo a mano: $manual"
     else
       # Se descarga aparte y se sustituye al final, para no dejar nunca una copia a medias
-      local tmp="$ENGINE_DIR.tmp.$$" old="$ENGINE_DIR.old.$$" log
+      local tmp="$ENGINE_DIR.tmp.$$" old="$ENGINE_DIR.old.$$" log stale
+      # Restos de un arranque que se interrumpió (su proceso ya no existe)
+      for stale in "$ENGINE_DIR".tmp.* "$ENGINE_DIR".old.*; do
+        [ -e "$stale" ] || continue
+        kill -0 "${stale##*.}" 2>/dev/null || rm -rf "$stale"
+      done
       log="$(mktemp)"
       rm -rf "$tmp"
       if GIT_TERMINAL_PROMPT=0 timeout 300 git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$ref" "$url" "$tmp" >"$log" 2>&1 &&
