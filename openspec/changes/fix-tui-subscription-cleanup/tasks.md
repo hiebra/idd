@@ -44,8 +44,8 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 5. Cierre
 
-- [ ] 5.1 Ejecutar la suite completa con los deltas del change, y `npm run test:core`: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado.
-- [ ] 5.2 Probar con OpenCode 2.3.2 real, fuera del repositorio. Usar una copia del proyecto de la rama, con la TUI `--standalone` manejada por un pseudoterminal de Python. Comprobar:
+- [x] 5.1 Ejecutar la suite completa con los deltas del change, y `npm run test:core`: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado.
+- [x] 5.2 Probar con OpenCode 2.3.2 real, fuera del repositorio. Usar una copia del proyecto de la rama, con la TUI `--standalone` manejada por un pseudoterminal de Python. Comprobar:
   - al cerrar enseguida, no sale ninguna traza `ECONNRESET`;
   - tras dos recargas en caliente, editando `tui.js` con un plugin sonda, solo la carga nueva recibe eventos;
   - el autopilot sigue navegando y mostrando avisos tras una recarga.
@@ -58,9 +58,15 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
     | `main`, sin el arreglo | 9 `ECONNRESET` (3 trazas) | 27 (9 trazas: 3 cargas × 3 suscripciones) |
     | esta rama | 0 | 0 |
 
-  - Pendiente: que el autopilot sigue navegando y mostrando avisos tras una recarga. Exige enviar mensajes a un modelo, y aún no se ha hecho.
+  - El autopilot sigue funcionando tras dos recargas (2026-11-22, OpenCode 2.3.2 con `alibaba/qwen3.8-flash`, en una copia de la rama con una rama temporal y un change con solo la proposal; la parte de TUI de la copia, instrumentada para registrar cada carga y cada petición que atiende):
+    - la primera sesión toma el control del change;
+    - con ella parada, se recarga el plugin dos veces editando `tui.js`. OpenCode ejecuta la limpieza de cada carga justo antes del `setup` de la siguiente;
+    - una sesión nueva recibe el diálogo de la sesión dueña parada una sola vez, en la última carga. Al elegir "Ir a la sesión dueña", esa carga atiende el `navigate`;
+    - al cerrar, la limpieza de la última carga se ejecuta y no sale ninguna traza `ECONNRESET`.
+
+    No se ha visto un toast tras la recarga, pero va por el mismo canal de peticiones que `select` y `navigate`.
 - [x] 5.3 Ejecutar `openspec validate fix-tui-subscription-cleanup --type change --strict`: ningún error. Los avisos que queden son los mismos tipos que ya da `openspec validate --specs --strict`: requisitos con "DEBE" y pasos en bloques `gherkin`.
-- [ ] 5.4 Commit de la zona de código pendiente, sin archivos de `openspec/`.
+- [x] 5.4 Commit de la zona de código pendiente, sin archivos de `openspec/`. Ya estaba todo en commits: el último es `385bf5e`.
 - [ ] 5.5 Archivar `fix-tui-subscription-cleanup` en su rama temporal, en un commit propio sin archivos de la zona de código. Después, resincronizar el wiki en un commit aparte, que propone al usuario:
   - corregir la regla de la lección 5;
   - corregir el artículo `ciclo-de-un-change-y-autopilot.md`;
