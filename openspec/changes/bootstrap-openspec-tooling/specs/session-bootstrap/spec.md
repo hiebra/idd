@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: CLI de OpenSpec del proyecto disponible al abrir sesión
-Al abrir una sesión de Claude Code en el proyecto, el arranque de sesión DEBE dejar disponible el `openspec` del proyecto, en la versión fijada por su `package.json`, con prioridad sobre cualquier `openspec` instalado globalmente en la máquina.
+Al abrir una sesión de Claude Code en el proyecto, el arranque de sesión DEBE dejar disponible el `openspec` del proyecto, en la versión fijada por su `package.json`, con prioridad sobre cualquier `openspec` instalado globalmente en la máquina. Si la sesión no permite ajustar el `PATH`, el arranque de sesión DEBE avisar de ello e indicar cómo ejecutar el CLI del proyecto.
 
 #### Scenario: Clon recién creado
 
@@ -21,6 +21,16 @@ Given una máquina con otra versión de OpenSpec instalada globalmente
 And un clon del proyecto con sus dependencias instaladas
 When se abre una sesión de Claude Code en el proyecto
 Then `openspec --version` en la sesión muestra la versión fijada por el proyecto
+```
+
+#### Scenario: La sesión no permite ajustar el PATH
+
+```gherkin
+Given un clon del proyecto con sus dependencias instaladas
+And una versión de Claude Code que no permite ajustar el PATH de la sesión
+When se abre una sesión de Claude Code en el proyecto
+Then se avisa de que el PATH no se ha podido ajustar
+And el aviso indica que el CLI del proyecto se ejecuta con `npx openspec`
 ```
 
 ### Requirement: Instalación de todas las dependencias del proyecto

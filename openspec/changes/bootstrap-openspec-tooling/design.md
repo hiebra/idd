@@ -95,6 +95,20 @@ El `package.json` declara `engines.node: ">=22.12"`. El hook lee ese campo y, si
 
 El script termina siempre con código 0. Los avisos (sin npm, Node antiguo, instalación fallida, `PATH` sin ajustar) van a stderr con el prefijo `session-start:`. La comprobación de npm es lo primero, antes de leer nada.
 
+### D8. Contenido del README
+
+El `README.md` es la documentación de la plantilla: lo propio de ella vive ahí y no en `openspec/`. Se da por terminado cuando cubre:
+
+- **Qué ofrece:** schema `intent-driven`, `spec-as-source`, `stack: javascript`, los workflows incluidos y las skills del schema.
+- **Requisitos:** Node.js 22.12 o superior, npm y bash.
+- **Qué ocurre al abrir sesión:** el hook instala las dependencias y ajusta el `PATH`; la primera sesión de cada clon tarda más.
+- **Cómo desactivar el hook** en local, para quien prefiera gestionar las dependencias a mano.
+- **Instalación manual** donde el hook no corre (por ejemplo, Windows sin bash): `npm install` y `npx openspec`.
+- **Cómo se trabaja en la propia plantilla:** changes efímeros que se borran al terminar en lugar de archivarse, para que los proyectos derivados nazcan con `openspec/` vacío.
+- **Aviso a los proyectos derivados:** deben reemplazar este README por el suyo.
+
+- *Alternativa: documentar la plantilla en specs de `openspec/specs/`.* Se heredarían en cada proyecto derivado, que debe nacer vacío.
+
 ## Risks / Trade-offs
 
 - [La primera sesión de un proyecto derivado grande tarda en arrancar] -> Es un coste único por clon; D4 evita repetirlo. Se documenta en el README.
