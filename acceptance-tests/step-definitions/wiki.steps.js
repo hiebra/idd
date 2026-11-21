@@ -210,8 +210,11 @@ Then('no se instala el motor del wiki', function () {
   assert.deepEqual(this.project.engineLocalPaths(), []);
 });
 
+// The context may carry other instructions of the project, such as the
+// comments rule (ADR-0010), but not the guide
 Then('el agente no recibe la guía del wiki', function () {
-  assert.deepEqual(this.session.context, []);
+  const guide = this.guideAsDelivered();
+  assert.ok(!this.session.context.some((text) => text.includes(guide)), `${this.session.agent}:\n${this.session.log}`);
 });
 
 Then('el agente no recibe el recordatorio del wiki con los mensajes', function () {

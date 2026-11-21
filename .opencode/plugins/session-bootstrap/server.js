@@ -6,10 +6,10 @@
 // - Antes de cada comando de shell, espera al núcleo, pone el openspec del
 //   proyecto por delante en el PATH del comando y exporta CLAUDE_PLUGIN_ROOT
 //   con el motor del wiki, para que sus skills encuentren su helper.
-// - Entrega la guía del wiki y el recordatorio por mensaje que prepara el
-//   núcleo, con el hook "context" de la sesión, que se ejecuta antes de cada
-//   petición al modelo y no guarda lo que añade: la guía va al system y el
-//   recordatorio, como mensaje del usuario, justo antes del último mensaje del
+// - Entrega la guía del wiki, la regla de comentarios y sus recordatorios por
+//   mensaje que prepara el núcleo, con el hook "context" de la sesión, que se
+//   ejecuta antes de cada petición al modelo y no guarda lo que añade: la guía
+//   y la regla van al system y cada recordatorio, como mensaje del usuario, justo antes del último mensaje del
 //   usuario, como hace el modo Plan de OpenCode. Así nunca se acumulan.
 // - Los avisos llegan a la TUI (tui.js) por el RPC del plugin: el método
 //   warnings() devuelve los acumulados y el evento "warning" trae los nuevos.
@@ -63,32 +63,40 @@ const RPC = {
 
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
-// Ejecuta el núcleo en un modo del wiki (guide o reminder) y resuelve con su
-// texto, o con "" si no hay o falla; nunca rechaza
-function wikiText(directory, mode) {
+// Ejecuta el núcleo en un modo que imprime un texto para el agente (guide,
+// reminder, comments-rule o comments-reminder, que lee `input` por stdin) y
+// resuelve con ese texto, o con "" si no hay o falla; nunca rechaza
+function coreText(directory, mode, input = null) {
   return new Promise((resolve) => {
     let stdout = "";
     try {
       const child = spawn("bash", [path.join(directory, CORE), mode, "opencode", directory], {
         cwd: directory,
-        stdio: ["ignore", "pipe", "ignore"],
+        stdio: [input === null ? "ignore" : "pipe", "pipe", "ignore"],
       });
+      if (input !== null) {
+        child.stdin.on("error", () => {});
+        child.stdin.end(input);
+      }
       child.stdout.on("data", (chunk) => (stdout += chunk));
       child.on("error", () => resolve(""));
       child.on("close", (code) => resolve(code === 0 ? stdout.trim() : ""));
     } catch (error) {
-      log(`wiki ${mode}:`, error);
+      log(`core ${mode}:`, error);
       resolve("");
     }
   });
 }
 
-// Añade la guía y el recordatorio a una petición al modelo. Lanza si la
-// petición no se deja cambiar; quien la llama lo captura
-function addWikiContext(input, guide, reminder) {
-  if (guide) input.system.push({ type: "text", text: guide });
-  if (reminder) {
-    const messages = input.messages;
+// Añade al system de una petición al modelo los textos de sesión (la guía
+// del wiki y la regla de comentarios) y, justo antes del último mensaje del
+// usuario, cada recordatorio. Lanza si la petición no se deja cambiar; quien
+// la llama lo captura
+function addContext(input, systemTexts, reminders) {
+  for (const text of systemTexts) if (text) input.system.push({ type: "text", text });
+  const messages = input.messages;
+  for (const reminder of reminders) {
+    if (!reminder) continue;
     const at = messages.at(-1)?.role === "user" ? messages.length - 1 : messages.length;
     messages.splice(at, 0, { role: "user", content: [{ type: "text", text: reminder }] });
   }
@@ -156,12 +164,16 @@ export default {
     // fallar la petición al modelo, así que todo va dentro de try/catch
     try {
       const directory = ctx.location.directory;
-      const wiki = Promise.all([wikiText(directory, "guide"), wikiText(directory, "reminder")]);
+      const texts = Promise.all([
+        coreText(directory, "guide"),
+        coreText(directory, "reminder"),
+        coreText(directory, "comments-rule"),
+      ]);
       Promise.resolve(
         ctx.session.hook("context", async (input) => {
           try {
-            const [guide, reminder] = await wiki;
-            addWikiContext(input, guide, reminder);
+            const [guide, reminder, rule] = await texts;
+            addContext(input, [guide, rule], [reminder]);
           } catch (error) {
             log("context:", error);
           }

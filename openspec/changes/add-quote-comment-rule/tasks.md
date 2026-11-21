@@ -11,9 +11,9 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 2. Entrega al empezar la sesión (D3, D4): uno por paso pendiente; en cada uno, rojo por la causa correcta → implementar → verde → commit
 
-- [ ] 2.1 `response-comments: El agente recibe la regla de comentarios`, pasos `el contexto de la sesión incluye la regla de comentarios` y `esa regla procede del único archivo de la regla de comentarios del proyecto` (lo entregado contiene la regla tal como la imprime `comments-rule`), en `step-definitions/comments.steps.js`. Rojo en los dos agentes. En Claude Code, `session-start.sh` combina la guía del wiki y la regla en un solo `additionalContext`; en OpenCode, el plugin pide la regla al cargarse y la añade al `system` → verde en los dos → commit
-- [ ] 2.2 Mismo escenario, paso `el proyecto no tiene archivos de instrucciones que <agente> cargue siempre con la regla de comentarios`, con `alwaysLoadedInstructions`. Comprobar que está en verde sin tocar nada → commit
-- [ ] 2.3 Comprobar que los escenarios de entrega de la guía del wiki siguen en verde en los dos agentes, ahora que el `additionalContext` y el `system` llevan también la regla
+- [x] 2.1 `response-comments: El agente recibe la regla de comentarios`, pasos `el contexto de la sesión incluye la regla de comentarios` y `esa regla procede del único archivo de la regla de comentarios del proyecto` (lo entregado contiene la regla tal como la imprime `comments-rule`), en `step-definitions/comments.steps.js`. Rojo en los dos agentes. En Claude Code, `session-start.sh` combina la guía del wiki y la regla en un solo `additionalContext`; en OpenCode, el plugin pide la regla al cargarse y la añade al `system` → verde en los dos → commit
+- [x] 2.2 Mismo escenario, paso `el proyecto no tiene archivos de instrucciones que <agente> cargue siempre con la regla de comentarios`, con `alwaysLoadedInstructions`. Comprobar que está en verde sin tocar nada → commit
+- [x] 2.3 Comprobar que los escenarios de entrega de la guía del wiki siguen en verde en los dos agentes, ahora que el `additionalContext` y el `system` llevan también la regla. Hecho: el paso `el agente no recibe la guía del wiki` exigía un contexto vacío y fallaba con el wiki desactivado, porque ahora llega la regla; pasa a comprobar que el contexto no incluye la guía, que es lo que pide la spec
 
 ## 3. Contenido de la regla: uno por paso pendiente; en cada uno, rojo → implementar → verde → commit
 

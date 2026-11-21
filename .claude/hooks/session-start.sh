@@ -10,8 +10,9 @@
 #   del JSON que el hook imprime por stdout (stderr no se ve, y el texto plano
 #   en stdout entra en el contexto de Claude). Por eso stdout queda vacío o
 #   lleva un único objeto JSON, construido sin Node.
-# - Entrega la guía del wiki que prepara el núcleo como "additionalContext"
-#   del mismo JSON.
+# - Entrega la guía del wiki y la regla de comentarios que prepara el núcleo
+#   como un solo "additionalContext" del mismo JSON (Claude Code no admite más
+#   de uno por salida).
 # - Nunca bloquea la sesión: sale siempre con 0.
 
 set -u
@@ -53,8 +54,12 @@ main() {
     fi
   fi
 
-  local guide fields=()
+  local guide rule fields=()
   guide="$(bash "$project/.agents/hooks/session-bootstrap.sh" guide claude-code "$project" 2>/dev/null)"
+  rule="$(bash "$project/.agents/hooks/session-bootstrap.sh" comments-rule claude-code "$project" 2>/dev/null)"
+  if [ -n "$rule" ]; then
+    guide="${guide:+$guide$'\n\n'}$rule"
+  fi
   if ((${#warnings[@]} > 0)); then
     local message
     printf -v message '%s\n' "${warnings[@]}"
