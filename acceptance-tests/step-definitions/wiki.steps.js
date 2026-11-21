@@ -320,6 +320,10 @@ const GUIDE_SECTIONS = {
   'indica modificarlo con la operación del motor que lo modifica': 'modificar-wiki',
   'indica hacerlo solo cuando el usuario confirma lo que el agente propone': 'modificar-con-confirmacion',
   'indica no usar esa operación para consultar': 'modificar-no-consultar',
+  'indica apuntarlo como lección candidata mientras se trabaja, sin escribir nada': 'apuntar-candidatas',
+  'indica proponer registrar las candidatas una sola vez, en un punto de cierre': 'registrar-en-cierre',
+  'nombra como puntos de cierre el final de una tarea, antes de un commit, cuando el usuario da la sesión por terminada y el archive de un change':
+    'puntos-de-cierre',
 };
 const GAP_OPTIONS = {
   'responder con conocimiento interno, indicando su origen': 'hueco-conocimiento-interno',
@@ -327,7 +331,7 @@ const GAP_OPTIONS = {
   'no hacer nada más': 'hueco-nada',
 };
 const DISCOVERY_OPERATIONS = {
-  'comprobado al trabajar|lecciones aprendidas': 'registrar-comprobado-ll',
+  'comprobado al trabajar|lecciones aprendidas': 'registrar-en-cierre',
   'encontrado en internet|ingesta de la fuente': 'registrar-internet-ingesta',
 };
 
@@ -340,7 +344,7 @@ Given('la guía del wiki del proyecto', function () {
   this.guideText = this.ensureProject().readGuide();
 });
 
-When(/^se revisa (?:qué|cómo) (?:indica|peticiones exigen) .+$/, function () {
+When(/^se revisa (?:qué|cómo|cuándo) (?:indica|peticiones exigen) .+$/, function () {
   // The review reads the whole guide; each Then names what it looks for
 });
 

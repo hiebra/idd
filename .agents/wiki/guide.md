@@ -65,8 +65,12 @@ Cuando servirá en otra ocasión, y no solo para la tarea en curso, propón al u
 Tú disciernes cuándo procede: lo trivial o lo que solo sirve para esta tarea no se registra.
 
 Cada tipo se registra con su operación del motor:
-<!-- wiki-guide:registrar-comprobado-ll -->
-- **Lo comprobado al trabajar**, con las lecciones aprendidas (`/wiki:ll --local`).
+<!-- wiki-guide:apuntar-candidatas -->
+- **Lo comprobado al trabajar**: mientras trabajas, apúntalo en la conversación como lección candidata, sin escribir nada en el wiki.
+<!-- wiki-guide:registrar-en-cierre -->
+  En un punto de cierre, propón registrar las candidatas una sola vez, con las lecciones aprendidas en dry-run (`/wiki:ll --dry-run --local`), y escribe solo lo que confirme el usuario. Si no hay candidatas, no propongas nada.
+<!-- wiki-guide:puntos-de-cierre -->
+  Son puntos de cierre el final de una tarea, antes de un commit, cuando el usuario da la sesión por terminada y el archive de un change; en el archive, sigue sus indicaciones de archivado, que ya incluyen este paso.
 <!-- wiki-guide:registrar-internet-ingesta -->
 - **Lo encontrado en internet**, ingiriendo la fuente (`/wiki:ingest <url> --local`), para conservar su procedencia.
 
