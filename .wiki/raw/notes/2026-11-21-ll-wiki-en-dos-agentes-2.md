@@ -1,5 +1,5 @@
 ---
-title: "Lessons Learned (revisada): motor del wiki, guía y recordatorio en Claude Code y OpenCode 2"
+title: "Lessons Learned: motor del wiki, guía y recordatorio en Claude Code y OpenCode 2"
 type: notes
 source: session
 ingested: 2026-11-21
@@ -8,13 +8,12 @@ lesson_kind: lessons-learned
 lesson_count: 5
 category: notes
 confidence: medium-high
-supersedes: raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md
-summary: "Revisión de las lecciones de add-llm-wiki-support con la evidencia de cada afirmación: qué se comprobó ejecutando, qué se hereda del design o de leer código, y qué es inferencia. Retira una explicación inventada y añade la comprobación del plugin instalado desde SessionStart."
+summary: "Lecciones de add-llm-wiki-support con la evidencia de cada afirmación: qué se comprobó ejecutando, qué se hereda del design o de leer código, y qué es inferencia; incluye la comprobación del plugin instalado desde SessionStart."
 ---
 
-# Lessons Learned (revisada): motor del wiki, guía y recordatorio en Claude Code y OpenCode 2
+# Lessons Learned: motor del wiki, guía y recordatorio en Claude Code y OpenCode 2
 
-> Sustituye a [la nota anterior](2026-11-21-ll-wiki-en-dos-agentes.md), que mezclaba lo comprobado con lo no comprobado, todo con confianza alta, e incluía una explicación sin base (la causa de la lección 1). Sesión del 2026-11-21, con Claude Code 2.1.330 y OpenCode 2.3.2.
+> Sesión del 2026-11-21, con Claude Code 2.1.330 y OpenCode 2.3.2.
 
 Cada afirmación lleva su tipo de evidencia:
 

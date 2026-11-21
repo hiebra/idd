@@ -3,7 +3,6 @@ title: "Qué carga cada agente y cuándo"
 category: topic
 sources:
   - raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md
-  - raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md
   - raw/repos/2026-11-21-idd-1cf0792.md
 created: 2026-11-21
 updated: 2026-11-21
@@ -15,7 +14,7 @@ summary: "Qué ven Claude Code 2.1.330 y OpenCode 2.3.2 en la misma sesión en q
 
 # Qué carga cada agente y cuándo
 
-> El arranque de sesión instala cosas mientras el agente ya está arrancando. Lo que importa es qué ve el agente **en esa misma sesión**, porque en la nube cada sesión empieza en un contenedor nuevo. Cada afirmación lleva su evidencia: **[comprobado]**, **[heredado]**, **[lectura de código]** o **[inferencia]**, con el sentido de [la nota de lecciones revisada](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md).
+> El arranque de sesión instala cosas mientras el agente ya está arrancando. Lo que importa es qué ve el agente **en esa misma sesión**, porque en la nube cada sesión empieza en un contenedor nuevo. Cada afirmación lleva su evidencia: **[comprobado]**, **[heredado]**, **[lectura de código]** o **[inferencia]**, con el sentido de [la nota de lecciones](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md).
 
 ## Claude Code 2.1.330
 
@@ -44,6 +43,5 @@ La plantilla aplica las tres cosas. El núcleo enlaza `.claude/skills/wiki-manag
 
 ## Sources
 
-- [Lessons Learned (revisada)](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lecciones 1, 2 y 5 y "Lo que no es de esta sesión".
-- [Lessons Learned (sustituida)](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md): solo como linaje. Su explicación de la causa de la lección 1 no tenía base y se ha retirado.
+- [Lessons Learned](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lecciones 1, 2 y 5 y "Lo que no es de esta sesión".
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `idd@1cf0792:.agents/hooks/session-bootstrap.sh`, `idd@1cf0792:.claude/hooks/session-start.sh`, `idd@1cf0792:acceptance-tests/support/skills.js`, `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md` y `design.md`.

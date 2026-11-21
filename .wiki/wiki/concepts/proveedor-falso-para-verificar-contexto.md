@@ -3,7 +3,6 @@ title: "Proveedor falso para verificar el contexto"
 category: concept
 sources:
   - raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md
-  - raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md
   - raw/repos/2026-11-21-idd-1cf0792.md
 created: 2026-11-21
 updated: 2026-11-21
@@ -15,7 +14,7 @@ summary: "Para saber exactamente qué recibe el modelo en OpenCode sin claves de
 
 # Proveedor falso para verificar el contexto
 
-> Preguntarle al modelo si recibió algo es indirecto y depende de él. Interceptar la petición dice exactamente qué le llega. Todo lo de esta página está **[comprobado]** con OpenCode 2.3.2 el 2026-11-21 (lección 4 de [la nota revisada](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md); tareas 1.2 y 8.3 en `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`).
+> Preguntarle al modelo si recibió algo es indirecto y depende de él. Interceptar la petición dice exactamente qué le llega. Todo lo de esta página está **[comprobado]** con OpenCode 2.3.2 el 2026-11-21 (lección 4 de [la nota de lecciones](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md); tareas 1.2 y 8.3 en `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`).
 
 ## Cómo
 
@@ -40,6 +39,5 @@ Comprueba qué recibe el modelo, no qué hace con ello. Para eso hace falta un m
 
 ## Sources
 
-- [Lessons Learned (revisada)](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lección 4.
-- [Lessons Learned (sustituida)](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md): solo como linaje.
+- [Lessons Learned](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lección 4.
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `tasks.md` del change archivado.

@@ -3,7 +3,6 @@ title: "El hook context de OpenCode"
 category: concept
 sources:
   - raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md
-  - raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md
   - raw/repos/2026-11-21-idd-1cf0792.md
 created: 2026-11-21
 updated: 2026-11-21
@@ -15,7 +14,7 @@ summary: "Contrato del hook context de OpenCode 2.3.2, comprobado capturando los
 
 # El hook context de OpenCode
 
-> Un plugin de OpenCode 2 registra `ctx.session.hook("context", cb)` para cambiar lo que recibe el modelo en cada petición. Lo comprobado se vio en los cuerpos de las peticiones, capturados con un [proveedor falso](proveedor-falso-para-verificar-contexto.md) (OpenCode 2.3.2, 2026-11-21; lección 3 de [la nota revisada](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md), tarea 1.2 en `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`).
+> Un plugin de OpenCode 2 registra `ctx.session.hook("context", cb)` para cambiar lo que recibe el modelo en cada petición. Lo comprobado se vio en los cuerpos de las peticiones, capturados con un [proveedor falso](proveedor-falso-para-verificar-contexto.md) (OpenCode 2.3.2, 2026-11-21; lección 3 de [la nota de lecciones](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md), tarea 1.2 en `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`).
 
 ## Contrato
 
@@ -42,6 +41,5 @@ Es una API de plugins de una versión concreta. La suite la simula (`idd@1cf0792
 
 ## Sources
 
-- [Lessons Learned (revisada)](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lección 3.
-- [Lessons Learned (sustituida)](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md): solo como linaje.
+- [Lessons Learned](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lección 3.
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `server.js`, `opencode-host.mjs`, y `tasks.md` y `design.md` del change archivado.

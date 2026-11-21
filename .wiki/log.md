@@ -18,3 +18,5 @@
 
 ## [2026-11-21] ll | revisión con evidencia por afirmación → raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md (supersedes raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md); comprobado el plugin instalado desde SessionStart
 ## [2026-11-21] compile | 1 source → 0 new articles, 3 updated (carga-en-la-misma-sesion-por-agente, hook-context-opencode, proveedor-falso-para-verificar-contexto)
+
+## [2026-11-21] retract | 1 raw source removed with its downstream references
