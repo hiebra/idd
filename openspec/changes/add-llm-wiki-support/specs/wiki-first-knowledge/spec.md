@@ -102,7 +102,7 @@ Then asigna estas operaciones del motor:
 ```
 
 ### Requirement: Actualizar el wiki al archivar un change
-Las indicaciones de archivado de OpenSpec del proyecto DEBEN incluir la actualización del wiki del proyecto con las operaciones del motor: extraer las lecciones aprendidas sin escribir; incorporar y compilar el change archivado como fuente cuando proceda; revisar con el librarian, sin modificar, qué artículos ha podido dejar obsoletos o contradichos el change; presentar todo al usuario y escribir solo lo que confirme; y hacerlo en un commit posterior al del archivado. El wiki NO DEBE duplicar lo que ya recogen las specs y los ADRs.
+Las indicaciones de archivado de OpenSpec del proyecto DEBEN incluir la actualización del wiki del proyecto con las operaciones del motor: recoger lo aprendido y lo escrito en el change, revisar qué artículos ha podido dejar obsoletos, escribir solo lo que confirme el usuario y hacerlo en un commit posterior al del archivado. El wiki NO DEBE duplicar lo que ya recogen las specs y los ADRs.
 
 #### Scenario: Las indicaciones de archivado incluyen la actualización del wiki
 
@@ -120,7 +120,7 @@ And indican no duplicar lo que ya recogen las specs y los ADRs
 ```
 
 ### Requirement: Recordatorio del flujo en cada mensaje
-Cada agente soportado DEBE recibir, con cada mensaje del usuario, un recordatorio breve del flujo del wiki que remita a la guía, de modo que el flujo no dependa de que el modelo recuerde una instrucción del principio de la sesión. El recordatorio DEBE recordar consultar antes de responder, preguntar ante un hueco y proponer registrar lo que servirá en otra ocasión con la operación que corresponde, nombrada como se invoca en ese agente. El recordatorio NO DEBE ocupar más de 600 caracteres. Si no se puede generar, el mensaje del usuario DEBE llegar al agente igualmente.
+Cada agente soportado DEBE recibir, con cada mensaje del usuario, un recordatorio del flujo del wiki que remita a la guía: consultar antes de responder, preguntar ante un hueco y proponer registrar lo que servirá en otra ocasión, con cada operación nombrada como se invoca en ese agente. NO DEBE ocupar más de 600 caracteres. Si no se puede generar, el mensaje del usuario DEBE llegar al agente igualmente.
 
 #### Scenario Outline: El agente recibe el recordatorio con cada mensaje
 
