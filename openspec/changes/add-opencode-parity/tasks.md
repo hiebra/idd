@@ -62,7 +62,7 @@
   - OpenCode 2: `.claude/skills`, `.agents/skills` y `.opencode/skills` por precedencia, sin duplicar IDs.
 
   Añadir también la lectura del frontmatter (`name`, `metadata.generatedBy`)
-- [ ] 5.2 "El agente encuentra las skills del schema", con Claude Code y con OpenCode
+- [x] 5.2 "El agente encuentra las skills del schema", con Claude Code y con OpenCode
 - [ ] 5.3 "Una skill del schema sin enlazar en Claude Code": el fallo dice qué skill falta y en qué agente
 - [ ] 5.4 "El agente encuentra los workflows de OpenSpec", con Claude Code y con OpenCode: los ocho workflows y `generatedBy` igual a la versión de `@fission-ai/openspec` del `package.json`
 
