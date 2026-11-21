@@ -25,7 +25,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 - [x] 3.1 `wiki-first-knowledge: El agente recibe el recordatorio con cada mensaje`, paso `el recordatorio nombra la consulta y la ingesta de fuentes como se invocan en <agente>`. Cambiar `REMINDER_OPERATIONS` a `{ query, ingest }` (`/wiki:query --local` y `/wiki:ingest <url> --local`; la skill `wiki-query` e "ingiere la fuente") y definir el paso. Rojo con el recordatorio actual. Cambiar `{{ll}}` por `{{query}}` en `.agents/wiki/reminder.md` → verde
 - [x] 3.2 Mismo escenario, pasos `el recordatorio recuerda apuntar como candidato lo que se comprueba` (`/candidat/i`) y `el recordatorio no nombra las lecciones aprendidas` (ni `/lecciones aprendidas/i` ni `/\/wiki:ll\b/`). Rojo con el texto de 3.1. Reescribir el recordatorio según D3, por debajo de 600 caracteres en los dos agentes → verde → commit
-- [ ] 3.3 Quitar de `wiki.steps.js` el paso `el recordatorio nombra las lecciones aprendidas y la ingesta de fuentes como se invocan en <agente>`, que ya no usa ningún escenario efectivo, y comprobar que `Un fallo del recordatorio no bloquea el mensaje` sigue en verde en los dos agentes → commit
+- [x] 3.3 Quitar de `wiki.steps.js` el paso `el recordatorio nombra las lecciones aprendidas y la ingesta de fuentes como se invocan en <agente>`, que ya no usa ningún escenario efectivo, y comprobar que `Un fallo del recordatorio no bloquea el mensaje` sigue en verde en los dos agentes → commit
 
 ## 4. Cierre
 

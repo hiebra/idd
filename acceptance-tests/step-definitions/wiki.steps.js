@@ -267,14 +267,6 @@ Then('el recordatorio recuerda consultar antes de responder y preguntar ante un 
   assert.match(this.reminder, /pregunt/i);
 });
 
-Then(new RegExp(`^el recordatorio nombra las lecciones aprendidas y la ingesta de fuentes como se invocan en ${AGENT}$`), function (agent) {
-  const ops = REMINDER_OPERATIONS[agent];
-  assert.match(this.reminder, ops.ll);
-  assert.match(this.reminder, ops.ingest);
-  assert.doesNotMatch(this.reminder, /\{\{\w+\}\}/, 'a marker was not replaced');
-  if (agent === 'OpenCode') assert.doesNotMatch(this.reminder, /\/wiki:/, 'OpenCode has no /wiki:* commands');
-});
-
 Then(new RegExp(`^el recordatorio nombra la consulta y la ingesta de fuentes como se invocan en ${AGENT}$`), function (agent) {
   const ops = REMINDER_OPERATIONS[agent];
   assert.match(this.reminder, ops.query);
