@@ -58,9 +58,9 @@
 ## 4. Guía y recordatorio (zona de código): por escenario, rojo → implementar → verde → commit
 
 - [x] 4.1 Escribir `.agents/wiki/guide.md` con una sección identificada por cada parte del flujo (D2), en menos de 6.000 caracteres, y los pasos de revisión de la guía: "La guía exige consultar antes de responder", "La guía distingue las peticiones que requieren conocimiento", "La guía ofrece las tres opciones ante un hueco", "La guía distingue los dos ámbitos", "La guía trata lo descubierto al trabajar como conocimiento", "La guía asigna una operación a cada tipo de descubrimiento" y "La guía trata los productos del proyecto como fuentes fijadas"
-- [ ] 4.2 "El agente recibe la guía del wiki" y "La guía llega por el adaptador del arranque": el núcleo devuelve la guía; el hook `SessionStart` la añade como `additionalContext`, y el plugin de OpenCode, en el hook `context`, con la nota para OpenCode
-- [ ] 4.3 "El agente recibe el recordatorio con cada mensaje": `.agents/wiki/reminder.md` con marcadores, el hook `UserPromptSubmit` nuevo (registrado en `.claude/settings.json`) y el recordatorio en el hook `context` de OpenCode, antes del último mensaje del usuario
-- [ ] 4.4 "Un fallo del recordatorio no bloquea el mensaje" en los dos agentes
+- [x] 4.2 "El agente recibe la guía del wiki" y "La guía llega por el adaptador del arranque": el núcleo devuelve la guía; el hook `SessionStart` la añade como `additionalContext`, y el plugin de OpenCode, en el hook `context`, con la nota para OpenCode
+- [x] 4.3 "El agente recibe el recordatorio con cada mensaje": `.agents/wiki/reminder.md` con marcadores, el hook `UserPromptSubmit` nuevo (registrado en `.claude/settings.json`) y el recordatorio en el hook `context` de OpenCode, antes del último mensaje del usuario
+- [x] 4.4 "Un fallo del recordatorio no bloquea el mensaje" en los dos agentes
 
 ## 5. Ámbitos, `.wiki/` y desactivación (zona de código): por escenario, rojo → implementar → verde → commit
 

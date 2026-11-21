@@ -214,8 +214,46 @@ main() {
   install_dependencies
 }
 
+# wiki_text MODO AGENTE DIRECTORIO: la guía o el recordatorio para el agente
+# (design D2, D3). Con el wiki desactivado, sin engine.json o si no se puede
+# generar, no imprime nada.
+wiki_text() {
+  local mode="$1" agent="$2" dir="${3:-}"
+  if [ -z "$dir" ] || ! cd "$dir" 2>/dev/null; then return; fi
+  wiki_disabled && return
+  [ -f "$ENGINE_JSON" ] || return
+  case "$agent" in claude-code | opencode) ;; *) return ;; esac
+  local text
+  if [ "$mode" = "guide" ]; then
+    # Sin los identificadores de sección, que solo sirven para revisarla
+    text="$(sed '/^<!-- wiki-guide:[a-z0-9-]* -->$/d' "$WIKI_DIR/guide.md" 2>/dev/null)" || return
+    [ -n "$text" ] || return
+    if [ "$agent" = "opencode" ]; then
+      local note
+      note="$(cat "$WIKI_DIR/opencode-note.md" 2>/dev/null)" && [ -n "$note" ] && text="$note"$'\n\n'"$text"
+    fi
+  else
+    text="$(cat "$WIKI_DIR/reminder.md" 2>/dev/null)" || return
+    local ll ingest
+    if [ "$agent" = "claude-code" ]; then
+      ll='`/wiki:ll --local`'
+      ingest='`/wiki:ingest <url> --local`'
+    else
+      ll='pide registrar las lecciones aprendidas'
+      ingest='ingiere la fuente'
+    fi
+    text="${text//'{{ll}}'/$ll}"
+    text="${text//'{{ingest}}'/$ingest}"
+    # Un recordatorio vacío, con marcadores desconocidos o demasiado largo no se entrega
+    [ -n "$text" ] || return
+    [[ "$text" == *'{{'*'}}'* ]] && return
+    [ "$(printf '%s' "$text" | wc -m)" -le "$REMINDER_MAX" ] || return
+  fi
+  printf '%s\n' "$text"
+}
+
 case "${1:-}" in
-  guide | reminder) ;;
+  guide | reminder) wiki_text "$@" ;;
   *) main "$@" ;;
 esac
 exit 0

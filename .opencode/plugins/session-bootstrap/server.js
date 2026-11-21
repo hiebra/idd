@@ -6,6 +6,11 @@
 // - Antes de cada comando de shell, espera al núcleo, pone el openspec del
 //   proyecto por delante en el PATH del comando y exporta CLAUDE_PLUGIN_ROOT
 //   con el motor del wiki, para que sus skills encuentren su helper.
+// - Entrega la guía del wiki y el recordatorio por mensaje que prepara el
+//   núcleo, con el hook "context" de la sesión, que se ejecuta antes de cada
+//   petición al modelo y no guarda lo que añade: la guía va al system y el
+//   recordatorio, como mensaje del usuario, justo antes del último mensaje del
+//   usuario, como hace el modo Plan de OpenCode. Así nunca se acumulan.
 // - Los avisos llegan a la TUI (tui.js) por el RPC del plugin: el método
 //   warnings() devuelve los acumulados y el evento "warning" trae los nuevos.
 // - Nunca lanza una excepción hacia OpenCode: un fallo se convierte en aviso.
@@ -57,6 +62,37 @@ const RPC = {
 };
 
 const log = (...args) => console.error(`[${ID}]`, ...args);
+
+// Ejecuta el núcleo en un modo del wiki (guide o reminder) y resuelve con su
+// texto, o con "" si no hay o falla; nunca rechaza
+function wikiText(directory, mode) {
+  return new Promise((resolve) => {
+    let stdout = "";
+    try {
+      const child = spawn("bash", [path.join(directory, CORE), mode, "opencode", directory], {
+        cwd: directory,
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      child.stdout.on("data", (chunk) => (stdout += chunk));
+      child.on("error", () => resolve(""));
+      child.on("close", (code) => resolve(code === 0 ? stdout.trim() : ""));
+    } catch (error) {
+      log(`wiki ${mode}:`, error);
+      resolve("");
+    }
+  });
+}
+
+// Añade la guía y el recordatorio a una petición al modelo. Lanza si la
+// petición no se deja cambiar; quien la llama lo captura
+function addWikiContext(input, guide, reminder) {
+  if (guide) input.system.push({ type: "text", text: guide });
+  if (reminder) {
+    const messages = input.messages;
+    const at = messages.at(-1)?.role === "user" ? messages.length - 1 : messages.length;
+    messages.splice(at, 0, { role: "user", content: [{ type: "text", text: reminder }] });
+  }
+}
 
 // Ejecuta el núcleo y resuelve con { bin, engine, warnings }; nunca rechaza
 function runCore(directory) {
@@ -114,6 +150,25 @@ export default {
       });
     } catch (error) {
       log("rpc register:", error);
+    }
+
+    // La guía y el recordatorio: una excepción en el hook "context" haría
+    // fallar la petición al modelo, así que todo va dentro de try/catch
+    try {
+      const directory = ctx.location.directory;
+      const wiki = Promise.all([wikiText(directory, "guide"), wikiText(directory, "reminder")]);
+      Promise.resolve(
+        ctx.session.hook("context", async (input) => {
+          try {
+            const [guide, reminder] = await wiki;
+            addWikiContext(input, guide, reminder);
+          } catch (error) {
+            log("context:", error);
+          }
+        })
+      ).catch((error) => log("session.hook:", error));
+    } catch (error) {
+      log("session.hook:", error);
     }
 
     try {

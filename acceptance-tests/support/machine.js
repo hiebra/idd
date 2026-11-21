@@ -30,7 +30,7 @@ const NPM_FAILURE_LINE = 'npm-simulado: "comillas" \\barras\\ tab\tfin \\n liter
 // System tools the hook needs besides node and npm
 const HOOK_TOOLS = [
   'bash', 'cat', 'dirname', 'git', 'grep', 'head', 'ln', 'mkdir', 'mktemp', 'mv', 'readlink', 'rm', 'sed',
-  'sha256sum', 'sort', 'tail', 'timeout',
+  'sha256sum', 'sort', 'tail', 'timeout', 'wc',
 ];
 
 function which(command, searchPath = process.env.PATH || '') {
