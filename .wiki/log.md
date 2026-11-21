@@ -43,3 +43,5 @@
 ## [2026-11-21] compile | 1 source → 0 new articles, 1 updated (origen-de-openspec-git-discipline)
 
 ## [2026-11-21] lint | local command + agentic checks: 0 critical, 4 warnings, 2 suggestions, 0 candidates, 4 fixed (1 suggestion left by decision until add-openspec-autopilot is archived)
+
+## [2026-11-21] inventory | added task compilar-lecciones-de-add-openspec-autopilot-al-archivarlo

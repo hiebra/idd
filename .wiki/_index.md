@@ -8,7 +8,7 @@ Last updated: 2026-11-21
 
 - Sources: 9 raw documents
 - Articles: 8 compiled wiki articles
-- Inventory records: 2 tracked items
+- Inventory records: 3 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
 - Last compiled: 2026-11-21
@@ -29,6 +29,8 @@ Last updated: 2026-11-21
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-21: Tarea en el inventario para compilar las lecciones de add-openspec-autopilot al archivarlo
 
 - 2026-11-21: Lint con 4 arreglos; ADR-0007 incorporado al artículo del origen de openspec-git-discipline
 
