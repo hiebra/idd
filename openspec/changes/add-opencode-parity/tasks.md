@@ -57,7 +57,7 @@
 
 ## 5. Skills (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 5.1 Añadir al soporte las reglas de descubrimiento de skills de proyecto de cada agente (D6):
+- [x] 5.1 Añadir al soporte las reglas de descubrimiento de skills de proyecto de cada agente (D6):
   - Claude Code: `.claude/skills/<id>/SKILL.md`, siguiendo symlinks;
   - OpenCode 2: `.claude/skills`, `.agents/skills` y `.opencode/skills` por precedencia, sin duplicar IDs.
 
