@@ -7,7 +7,9 @@
 // fake server context and the TUI part's setup with a fake TUI context, wired
 // together by an in-memory plugin RPC. Then it opens a shell the way OpenCode
 // does before every command: it runs the create.before hooks on the command's
-// environment.
+// environment. Like a real session, which stays open, it reports only once
+// the processes the plugin started in the background have finished and their
+// warnings have reached the TUI.
 //
 // Usage: node opencode-host.mjs <project dir> <options JSON> <result file>
 // Options: { shell, frozenEnv }
@@ -15,7 +17,9 @@
 //   hook() throws); frozenEnv: the command's environment cannot be changed
 // Result (JSON): { error, setupMs, env, toasts, logs }
 
+import childProcess from 'node:child_process';
 import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -35,6 +39,27 @@ const fail = (where, error) => {
 // What escapes the plugin's promises or timers would crash OpenCode's process
 process.on('uncaughtException', (error) => fail('uncaught exception', error));
 process.on('unhandledRejection', (error) => fail('unhandled rejection', error));
+
+// --- Background processes ----------------------------------------------------
+
+// The plugin starts the session-bootstrap core with spawn() and does not wait
+// for it when nothing else does (no shell hook to run). A real session stays
+// open meanwhile, so the host waits for every process the plugin started
+// before reporting. syncBuiltinESMExports() makes the plugin's
+// `import { spawn } from "node:child_process"` see the wrapper.
+const running = new Set();
+const originalSpawn = childProcess.spawn;
+childProcess.spawn = function spawn(...args) {
+  const child = originalSpawn.apply(this, args);
+  const closed = new Promise((resolve) => {
+    child.on('close', resolve);
+    child.on('error', resolve);
+  });
+  running.add(closed);
+  closed.finally(() => running.delete(closed));
+  return child;
+};
+syncBuiltinESMExports();
 
 // --- In-memory plugin RPC ------------------------------------------------------
 
@@ -184,8 +209,14 @@ try {
   fail('shell create.before hook', error);
 }
 
-// Deliveries to the TUI still in flight
-while (pending.size > 0) await Promise.all([...pending]);
-await new Promise((resolve) => setTimeout(resolve, 50));
+// Background processes and deliveries to the TUI still in flight; a process
+// that ends may queue new deliveries, so wait until both are done
+const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+do {
+  while (running.size > 0) await Promise.all([...running]);
+  await settle();
+  while (pending.size > 0) await Promise.all([...pending]);
+  await settle();
+} while (running.size > 0 || pending.size > 0);
 log(`shell hooks: ${shellHooks.length}`);
 done();
