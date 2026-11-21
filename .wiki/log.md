@@ -51,3 +51,5 @@
 ## [2026-11-21] ingest-collection | idd via git (manifest-only, b48392d, fix-wiki-flow-operations): 16 new, 0 skipped, 16 total candidates
 
 ## [2026-11-21] refresh | 4 articles checked, 0 new raw revisions (sources pinned in raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md), 3 updated, 0 verified, 0 flagged, 0 retracted
+
+## [2026-11-21] librarian | scanned 8 articles, 0 stale, 0 low-quality
