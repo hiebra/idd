@@ -34,7 +34,7 @@
 ## 2. Suite: World con un adaptador por agente (zona de código)
 
 - [x] 2.1 Separar en `acceptance-tests/support/` la apertura de sesión en adaptadores de agente con una interfaz común: código de salida o excepción, llamadas a npm, cómo ejecutar un comando en la sesión y avisos mostrados al usuario (D6). Pasar la de Claude Code a ese adaptador sin cambiar su comportamiento y comprobar que la suite sigue en verde
-- [ ] 2.2 Cambiar el adaptador de Claude Code para que los avisos mostrados sean el `systemMessage` del stdout y para que falle si el stdout no está vacío o no es un único JSON válido. Comprobar que "La sesión no permite ajustar el PATH", "Máquina sin npm", "Versión de Node.js inferior a la requerida" y "Sin acceso al registro de paquetes" pasan a rojo, porque el hook actual avisa por stderr
+- [x] 2.2 Cambiar el adaptador de Claude Code para que los avisos mostrados sean el `systemMessage` del stdout y para que falle si el stdout no está vacío o no es un único JSON válido. Comprobar que "La sesión no permite ajustar el PATH", "Máquina sin npm", "Versión de Node.js inferior a la requerida" y "Sin acceso al registro de paquetes" pasan a rojo, porque el hook actual avisa por stderr
 - [ ] 2.3 Ejecutar la suite con los deltas del change y comprobar que los escenarios nuevos de `session-bootstrap` y `agent-skills` salen con pasos sin definir o en rojo
 
 ## 3. Núcleo neutral y adaptador de Claude Code (zona de código): por escenario, rojo → implementar → verde → commit
