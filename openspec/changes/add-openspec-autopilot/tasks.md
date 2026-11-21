@@ -106,13 +106,13 @@ Las comprobaciones con OpenCode real usan el banco de la lección 9 de `.wiki/ra
 
 ## 11. Documentación (zona de código)
 
-- [ ] 11.1 Actualizar `README.md`:
+- [x] 11.1 Actualizar `README.md`:
   - el ciclo de una rama y una fusión, y `x-main`;
   - qué hace el plugin en OpenCode y que en Claude Code los workflows se lanzan a mano (ADR-0006);
   - cómo activar el modo auto en la configuración del usuario;
   - cómo desactivar el plugin en local;
   - que sin TUI no actúa.
-- [ ] 11.2 Actualizar `acceptance-tests/README.md`: el host de OpenCode con varias sesiones, el modelo guionizado y los repositorios git de prueba
+- [x] 11.2 Actualizar `acceptance-tests/README.md`: el host de OpenCode con varias sesiones, el modelo guionizado y los repositorios git de prueba
 
 ## 12. Cierre
 

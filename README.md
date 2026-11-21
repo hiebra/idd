@@ -15,6 +15,7 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 - **Skills del schema** en `.agents/skills/`, su única copia: `acceptance-test-authoring`, `architectural-decision-records`, `c4-diagrams`, `gherkin-authoring`, `glossary`, `grill-me`, `openspec-git-discipline` y `spec-as-source`. Claude Code las ve a través de sus enlaces en `.claude/skills/` y OpenCode 2 las lee directamente de `.agents/skills/` ([ADR-0003](adr/0003-single-source-for-schema-skills.md)).
 - **LLM wiki**: una base de conocimiento del proyecto que el agente consulta antes de responder y amplía con lo que descubre, con el motor [nvk/llm-wiki](https://github.com/nvk/llm-wiki) instalado en los dos agentes (ver abajo).
 - **Arranque de sesión** que prepara el proyecto en los dos agentes (ver abajo).
+- **El ciclo de un change en una rama y una sola fusión**, igual en los dos agentes, y en OpenCode 2 un plugin que lo automatiza con una sesión por paso (ver abajo).
 
 ## Requisitos
 
@@ -119,6 +120,62 @@ Cambia `ref` en `.agents/wiki/engine.json`; desde la siguiente sesión, los dos 
 - su licencia y su changelog.
 
 Después, pasa la suite de aceptación.
+
+## El ciclo de un change
+
+Cada change se hace entero en **una rama temporal**: propuesta, implementación, archive y resincronización del wiki, y llega a la rama de origen en **una sola fusión** ([ADR-0007](adr/0007-single-branch-change-lifecycle.md)). El archive se hace en la rama temporal, antes de esa fusión. Los commits y la fusión los hace siempre el usuario; los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki.
+
+- **Ramas permanentes:** la lista `x-main` de `openspec/config.yaml`, o `main` si no está. La última es la rama de origen, de la que salen las temporales. Cualquier otra rama local es temporal; con HEAD separado no hay ninguna.
+
+  ```yaml
+  x-main: [main, develop]
+  ```
+
+  Solo se entiende una lista de nombres de rama, en flujo (`[main, develop]`) o en bloque (`- main`); con otra forma se usa `main` y se avisa.
+- **El change de la rama** se lee de git, sin apuntarlo en ningún sitio: es el que ha cambiado en `openspec/changes/` desde el merge-base de la rama con la rama de origen, con commit o sin él. Lo calcula `.agents/openspec/branch-change.mjs`, el mismo para los dos agentes:
+
+  ```bash
+  node .agents/openspec/branch-change.mjs --json
+  ```
+
+- **Las puertas** (proponer, apply, archive) las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive> [<change>]`, que la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es una copia del origen reescrita a propósito: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
+
+## Automatizar el ciclo en OpenCode
+
+En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` encadena los pasos del change de la rama, cada uno en una sesión nueva con el workflow y el agente que tocan, y archiva la anterior ([ADR-0008](adr/0008-openspec-autopilot-plugin.md)):
+
+- Solo actúa con la TUI, en una rama temporal con un change o sin ninguno. Sin TUI (`opencode run`, OpenCode Desktop), en una rama permanente o con HEAD separado, no hace nada. Con varios changes en la rama, avisa y tampoco.
+- Al abrir una sesión: si la rama no tiene change, la sesión toma el control y arranca `openspec-new-change` con tu primer mensaje; si tiene un change sin sesión dueña, la sesión toma el control y sigue por el paso de `openspec status`; si la dueña está trabajando, la nueva queda libre; si está parada, el plugin pregunta si ir a ella o archivarla y seguir en la nueva.
+- Cada paso termina cuando el modelo llama a la tool `openspec_handoff`. En el modo normal, tras cada artefacto, cada task y el verify hay una sesión de revisión guiada por el modelo, y el cierre de la revisión lo confirmas tú en la TUI. Una revisión no satisfactoria lleva a `openspec-update-change` y a una revisión del plan.
+- Antes de empezar un paso, el árbol de trabajo tiene que estar limpio: si no, la sesión espera a que hagas el commit.
+- Las lecciones candidatas de cada sesión quedan en su metadata, nunca en el repositorio, y llegan a la resincronización del wiki tras el archive, que solo registra las que confirmes.
+- El estado (qué sesión tiene el control y qué paso hizo cada una) vive solo en la metadata de las sesiones de OpenCode.
+
+En Claude Code no hay plugin: los mismos workflows se lanzan a mano (`/openspec-new-change`, `/openspec-continue-change`, `/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`), con el mismo ciclo y el mismo resultado versionado ([ADR-0006](adr/0006-agent-asymmetry-policy.md)).
+
+### Modo auto
+
+El modo auto quita las sesiones de revisión: el ciclo solo se para cuando un workflow pregunta algo, en cada cambio entre la zona de specs y la de código (para tu commit) y si el verify encuentra problemas críticos. Es una preferencia de cada usuario: el proyecto no la fija. Actívalo en tu configuración global de OpenCode, `~/.config/opencode/opencode.json`, con la ruta del plugin en tu clon:
+
+```json
+{
+  "plugins": [{ "package": "/ruta/a/tu/clon/.opencode/plugins/openspec-autopilot", "options": { "auto": true } }]
+}
+```
+
+OpenCode recarga el plugin al cambiar la opción, y el modo nuevo vale desde el paso siguiente.
+
+### Desactivar el plugin en local
+
+Quítalo en tu configuración global de OpenCode, como el arranque de sesión:
+
+```json
+{
+  "plugins": ["-openspec-autopilot"]
+}
+```
+
+Así no se carga la parte de servidor, que es la que orquesta; la de TUI se sigue cargando, pero sin servidor no hace nada. Las sesiones que ya tenían el control siguen siendo sesiones normales.
 
 ## Ejecutar la suite de aceptación
 

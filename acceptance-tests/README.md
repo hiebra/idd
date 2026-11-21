@@ -85,3 +85,26 @@ Los escenarios de `llm-wiki`, `wiki-first-knowledge` y los del motor en `session
 - **Indicaciones de archivado** (`support/openspec.js`). Se crea en la copia un change listo para archivar y se ejecuta `openspec instructions archive --change <change> --json` con el CLI del proyecto. Cada paso de la tabla se busca en `operationGuidance` por la operación del motor que lo hace, en orden.
 
 El contrato de `context` de OpenCode y la entrega del `additionalContext` en Claude Code se comprobaron con OpenCode 2.3.2 y Claude Code 2.1.330 reales (tareas 1.1 y 1.2 del change `add-llm-wiki-support`).
+
+## Escenarios de `openspec-change-lifecycle`
+
+Tampoco arrancan los agentes. Cada escenario monta el estado de git que necesita sobre la copia del proyecto, que ya es un repositorio con la rama `main` (`support/branches.js`): `x-main` con o sin valor, ramas temporales con changes en curso o archivados, con commit o sin él, HEAD separado, un `tasks.md` con tasks marcadas o no, y el `openspec status` real de la copia, con el CLI del proyecto. Antes, la copia se deja con `openspec/changes/` solo con el archivo, como en `main`.
+
+El change de la rama sale de `.agents/openspec/branch-change.mjs` de la copia, ejecutado como lo ejecutan los workflows, y las puertas del ciclo, de su subcomando `check`. La suite no puede ejecutar el modelo de los workflows, así que comprueba la puerta y que la skill `openspec-git-discipline` la usa, por sus identificadores de sección (`<!-- lifecycle:<id> -->`). Los casos que no están en las specs (otras formas de `x-main`, la rama de origen solo en `origin/`) están en `core-tests/branch-change.test.js`.
+
+## Escenarios de `openspec-autopilot`
+
+El plugin `.opencode/plugins/openspec-autopilot/` se prueba en un OpenCode simulado con varias sesiones (`support/agents/opencode-sim.mjs`). Es un proceso hijo de larga duración, como el de OpenCode, que el World maneja por IPC operación a operación (`support/agents/opencode-sim.js`). Reiniciar OpenCode es un proceso nuevo sobre el mismo almacén de sesiones, un archivo JSON. Simula lo que usa el plugin, con el contrato comprobado con OpenCode 2.3.2 real (tareas 1.1 a 1.5 de `add-openspec-autopilot` y la nota de lecciones de esas pruebas en `.wiki/raw/notes/`):
+
+- **Sesiones:** `create`, `get`, `list` (con las archivadas, salvo que se filtre) y `update`. La metadata se sustituye entera, y el `ctx.session` del servidor ignora `archived`: solo archiva el cliente de la TUI.
+- **Ejecución:** `prompt` y `command` arrancan un turno en segundo plano. Antes de cada petición al modelo se ejecutan los hooks `context`, y si uno lanza una excepción la petición falla. Si el modelo llama a una tool, se ejecuta y se le vuelve a preguntar; cuando responde con texto, la sesión queda parada y se ejecutan los hooks `experimental.idle`, salvo tras una interrupción. `time.busy` y `time.idle` dicen si una sesión trabaja, `context({ sessionID })` da los mensajes de cualquier sesión y la compactación ejecuta su hook.
+- **Tools:** solo llegan al modelo las declaradas con `options.codemode === false`.
+- **TUI:** `ui.router.navigate`, `ui.dialog.select` con respuestas guionizadas, toasts y `client.session.update`. Un diálogo puede quedarse abierto hasta que el paso siguiente del escenario lo responda. Sin TUI no se carga `tui.js`, y una TUI que no contesta se simula sin entregarle los eventos.
+- **Recargas:** vuelven a ejecutar `setup`. El servidor solo conserva los hooks, tools y manejadores RPC de la última generación, y los escuchadores de eventos de la TUI anteriores siguen vivos.
+- **Fallos:** se inyectan por operación (por ejemplo, `session.create`).
+
+El modelo es un guion por escenario: reglas por sesión, cada una con una cola de respuestas (texto o una llamada a tool con sus argumentos). Lo que haría un workflow en el proyecto (escribir un artefacto, marcar una task, archivar) lo hace el paso antes de que el modelo llame a `openspec_handoff`. De cada petición se registra lo que recibe el modelo (system, mensajes, skills y tools), y los pasos comprueban sobre eso las instrucciones que inyecta el plugin.
+
+Los casos que no están en las specs están en `core-tests/autopilot-next-step.test.js` (la lógica pura del paso siguiente) y `core-tests/autopilot-plugin.test.js`: recargas sin duplicados, sin TUI, dos sesiones que toman el control a la vez, la tool llamada antes de terminar el paso, el árbol comprobado otra vez en el mensaje siguiente, ninguna excepción hacia OpenCode, esperas con límite y `openspec_session`.
+
+El banco con OpenCode real con el que se comprobó el contrato está descrito en la lección 9 de esa nota y no forma parte del repositorio. Al subir de versión OpenCode, hay que repetir las pruebas con él y actualizar el simulador si algo cambia (inventario del wiki: `volver-a-comprobar-apis-de-sesion-al-subir-opencode`).
