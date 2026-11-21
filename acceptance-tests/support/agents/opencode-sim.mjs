@@ -9,7 +9,8 @@
 // .wiki/raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md):
 //
 // - Sessions in a store that survives a restart (a JSON file): create, get,
-//   list (archived included unless filtered), update. `update({ metadata })`
+//   list (archived included unless filtered; { data, cursor } by pages, with
+//   small pages here so that paging is exercised), update. `update({ metadata })`
 //   replaces the metadata whole; `archived` is ignored by the server's
 //   ctx.session and applied by the TUI's client (lesson 1).
 // - Execution: prompt and command start a turn in the background; each model
@@ -226,11 +227,16 @@ export class Host {
           return host.info(host.store.sessions[id]);
         }),
         get: op('session.get', ({ sessionID }) => host.info(host.session(sessionID))),
-        list: op('session.list', ({ archived } = {}) =>
-          Object.values(host.store.sessions)
+        // { data, cursor } by pages, newest first, as OpenCode 2.3.2 (task 12.2)
+        list: op('session.list', ({ archived, limit = 5, cursor } = {}) => {
+          const all = Object.values(host.store.sessions)
             .filter((s) => archived === undefined || Boolean(s.time.archived) === archived)
-            .map((s) => host.info(s))
-        ),
+            .sort((a, b) => b.time.created - a.time.created || b.id.localeCompare(a.id));
+          const start = cursor ? Number(cursor) : 0;
+          const size = Math.min(limit, 5);
+          const data = all.slice(start, start + size).map((s) => host.info(s));
+          return { data, cursor: start + size < all.length ? { next: String(start + size) } : {} };
+        }),
         update: op('session.update', ({ sessionID, title, metadata }) => {
           // The server's ctx.session ignores `archived` (lesson 1)
           const session = host.session(sessionID);

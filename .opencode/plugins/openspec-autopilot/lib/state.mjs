@@ -44,10 +44,25 @@ export async function writeMeta(api, sessionID, patch) {
   return written;
 }
 
+// Todas las sesiones, archivadas incluidas: list() devuelve { data, cursor }
+// por páginas (comprobado con OpenCode 2.3.2, task 12.2)
+export async function allSessions(api, { pageSize = 100, maxPages = 50 } = {}) {
+  const all = [];
+  let cursor;
+  for (let page = 0; page < maxPages; page++) {
+    const result = await api.list({ limit: pageSize, ...(cursor ? { cursor } : {}) });
+    const data = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
+    all.push(...data);
+    cursor = result?.cursor?.next;
+    if (!cursor || data.length === 0) break;
+  }
+  return all;
+}
+
 // Las sesiones de un worktree y una rama, archivadas incluidas
 export async function branchSessions(api, { worktree, branch }) {
-  const all = await api.list({});
-  return (Array.isArray(all) ? all : []).filter((s) => {
+  const all = await allSessions(api);
+  return all.filter((s) => {
     const m = meta(s);
     return m && m.worktree === worktree && m.branch === branch;
   });
