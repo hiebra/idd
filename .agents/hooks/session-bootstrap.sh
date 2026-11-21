@@ -20,12 +20,19 @@
 #       Por stdout, la guía del wiki o el recordatorio por mensaje, ya
 #       preparados para el agente (claude-code u opencode), o nada si el wiki
 #       está desactivado o no se puede generar.
+#   session-bootstrap.sh comments-rule <agente> <directorio del proyecto>
+#   session-bootstrap.sh comments-reminder <agente> <directorio del proyecto>
+#       Por stdout, la regla de comentarios, o su recordatorio si el mensaje
+#       del usuario, que se lee por stdin, la activa (es un comentario o
+#       contiene "ya" o "reformula"); nada si la regla está desactivada, el
+#       mensaje no la activa o el texto no se puede generar.
 #
 # En todos los modos, avisos por stderr, uno por línea, con el prefijo
 # "session-start:", y termina siempre con 0: nunca bloquea la sesión.
 #
 # El wiki se desactiva en local con PROJECT_WIKI=off: no se instala el motor,
 # se retiran sus symlinks y la guía y el recordatorio quedan vacíos.
+# La regla de comentarios se desactiva en local con PROJECT_COMMENTS=off.
 #
 # Cada agente tiene su adaptador, que lanza este script, ajusta el entorno de
 # su sesión, entrega la guía y el recordatorio y muestra los avisos.
@@ -46,6 +53,7 @@ ENGINE_LINKS=(
   ".opencode/skills/wiki-query|../../$ENGINE_DIR/plugins/llm-wiki-opencode/skills/wiki-query"
 )
 REMINDER_MAX=600
+COMMENTS_DIR=".agents/comments"
 
 warn() {
   echo "session-start: $*" >&2
@@ -300,8 +308,46 @@ fill_markers() {
   printf '%s' "$text"
 }
 
+comments_disabled() {
+  [ "${PROJECT_COMMENTS:-}" = "off" ]
+}
+
+# activates_comments MENSAJE: éxito si el mensaje activa la regla de comentarios
+# (design D2 de add-quote-comment-rule). Es un comentario si, sin los espacios
+# iniciales, empieza por una cadena no vacía entre comillas simples; si no lo
+# es, la activa "ya" o "reformula" como palabra completa, sin distinguir
+# mayúsculas. Dentro de un comentario las palabras de cierre no cambian nada:
+# el mensaje ya la activa.
+activates_comments() {
+  local message="$1"
+  message="${message#"${message%%[![:space:]]*}"}"
+  [[ "$message" =~ ^\'[^\']+\' ]] && return 0
+  printf '%s\n' "$message" | LC_ALL=C.UTF-8 grep -qiwE '(ya|reformula)' 2>/dev/null
+}
+
+# comments_text MODO AGENTE DIRECTORIO: la regla (rule) o su recordatorio
+# (reminder, según el mensaje de stdin). Si no corresponde, no imprime nada.
+comments_text() {
+  local mode="$1" agent="$2" dir="${3:-}" text
+  if [ -z "$dir" ] || ! cd "$dir" 2>/dev/null; then return; fi
+  comments_disabled && return
+  case "$agent" in claude-code | opencode) ;; *) return ;; esac
+  if [ "$mode" = "rule" ]; then
+    # Sin los identificadores de sección, que solo sirven para revisarla
+    text="$(sed '/^<!-- comments-rule:[a-z0-9-]* -->$/d' "$COMMENTS_DIR/rule.md" 2>/dev/null)" || return
+  else
+    activates_comments "$(cat)" || return
+    text="$(cat "$COMMENTS_DIR/reminder.md" 2>/dev/null)" || return
+    [ "$(printf '%s' "$text" | wc -m)" -le "$REMINDER_MAX" ] || return
+  fi
+  [ -n "$text" ] || return
+  printf '%s\n' "$text"
+}
+
 case "${1:-}" in
   guide | reminder) wiki_text "$@" ;;
+  comments-rule) shift; comments_text rule "$@" ;;
+  comments-reminder) shift; comments_text reminder "$@" ;;
   *) main "$@" ;;
 esac
 exit 0

@@ -4,10 +4,10 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 1. Núcleo: fuente de la regla, modos y detección (D1, D2, D5)
 
-- [ ] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core`)
-- [ ] 1.2 Añadir a `acceptance-tests/core-tests/` una prueba del núcleo para `comments-reminder`: con los mensajes de los dos Scenario Outline del recordatorio imprime el recordatorio o nada según corresponda; también con espacios iniciales, mayúsculas, acentos y "ya" dentro de la cadena inicial entre comillas (`'ya está bien' sobra` es un comentario, pero `'ya'` no cuenta como palabra de cierre); con `PROJECT_COMMENTS=off`, nada; y sale siempre con 0. Rojo sin el modo
-- [ ] 1.3 Crear `.agents/comments/rule.md`, con secciones `<!-- comments-rule:<id> -->`, y `.agents/comments/reminder.md`, con la frase fija literal y por debajo de 600 caracteres
-- [ ] 1.4 Añadir al núcleo los modos `comments-rule` y `comments-reminder` y la función de detección de D2, con `PROJECT_COMMENTS=off`, y documentarlos en la cabecera del script → verde la prueba de 1.2 → commit
+- [x] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core`)
+- [x] 1.2 Añadir a `acceptance-tests/core-tests/` una prueba del núcleo para `comments-reminder`: con los mensajes de los dos Scenario Outline del recordatorio imprime el recordatorio o nada según corresponda; también con espacios iniciales, mayúsculas, acentos y "ya" dentro de la cadena inicial entre comillas (`'ya está bien' sobra` es un comentario, pero `'ya'` no cuenta como palabra de cierre); con `PROJECT_COMMENTS=off`, nada; y sale siempre con 0. Rojo sin el modo
+- [x] 1.3 Crear `.agents/comments/rule.md`, con secciones `<!-- comments-rule:<id> -->`, y `.agents/comments/reminder.md`, con la frase fija literal y por debajo de 600 caracteres
+- [x] 1.4 Añadir al núcleo los modos `comments-rule` y `comments-reminder` y la función de detección de D2, con `PROJECT_COMMENTS=off`, y documentarlos en la cabecera del script → verde la prueba de 1.2 → commit
 
 ## 2. Entrega al empezar la sesión (D3, D4): uno por paso pendiente; en cada uno, rojo por la causa correcta → implementar → verde → commit
 
