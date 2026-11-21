@@ -1,6 +1,9 @@
-# response-comments
+# response-comments Specification
 
-## ADDED Requirements
+## Purpose
+El usuario puede comentar partes de una intervención del agente sin que cada comentario dispare una respuesta, y decidir después si el agente los responde todos o reformula su intervención. La regla llega a cada agente soportado (Claude Code y OpenCode 2 o superior) por el arranque de sesión, desde una única fuente, y cada usuario puede desactivarla en local.
+
+## Requirements
 
 ### Requirement: Regla de comentarios en cada agente soportado, desde una única fuente
 El proyecto DEBE tener una única regla de comentarios, y el adaptador del arranque de sesión de cada agente soportado DEBE entregarla en el contexto de cada sesión, sin configurar nada tras clonar. El proyecto NO DEBE entregar la regla por archivos de instrucciones que el agente cargue siempre y el usuario no pueda desactivar.
