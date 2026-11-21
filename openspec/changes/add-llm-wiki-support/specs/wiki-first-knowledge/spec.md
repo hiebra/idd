@@ -101,22 +101,37 @@ Then asigna estas operaciones del motor:
   | encontrado en internet        | ingesta de la fuente      |
 ```
 
-### Requirement: Actualizar el wiki al archivar un change
-Las indicaciones de archivado de OpenSpec del proyecto DEBEN incluir la actualización del wiki del proyecto con las operaciones del motor: recoger lo aprendido y lo escrito en el change, revisar qué artículos ha podido dejar obsoletos, escribir solo lo que confirme el usuario y hacerlo en un commit posterior al del archivado. El wiki NO DEBE duplicar lo que ya recogen las specs y los ADRs.
+### Requirement: Los productos del proyecto son fuentes del wiki
+La guía DEBE indicar que las specs, los ADRs y el código del proyecto entran en el wiki del proyecto como fuentes fijadas a un commit, por ruta e identificador de versión y sin copiar su contenido, y que los artículos citan la versión exacta de la que sale cada conocimiento. Al crear el wiki del proyecto DEBE hacerse una ingesta inicial del repositorio que excluya lo generado y lo que no aporta conocimiento.
 
-#### Scenario: Las indicaciones de archivado incluyen la actualización del wiki
+#### Scenario: La guía trata los productos del proyecto como fuentes fijadas
+
+```gherkin
+Given la guía del wiki del proyecto
+When se revisa qué indica sobre las specs, los ADRs y el código del proyecto
+Then indica incorporarlos como fuentes fijadas a un commit sin copiar su contenido
+And indica que los artículos citan la versión exacta de la fuente
+And indica hacer una ingesta inicial del repositorio al crear el wiki del proyecto
+And indica excluir de esa ingesta lo generado y lo que no aporta conocimiento
+```
+
+### Requirement: Resincronizar el wiki al archivar un change
+Las indicaciones de archivado de OpenSpec del proyecto DEBEN incluir la resincronización del wiki del proyecto con lo que tocó el change, mediante las operaciones del motor, escribiendo solo lo que confirme el usuario, dejando el wiki sin errores de lint y en un commit posterior al del archivado.
+
+#### Scenario: Las indicaciones de archivado incluyen la resincronización del wiki
 
 ```gherkin
 Given un change del proyecto listo para archivar
 When se consultan las indicaciones de archivado de OpenSpec para ese change
-Then incluyen actualizar el wiki del proyecto con estos pasos:
-  | paso                                                                     |
-  | extraer las lecciones aprendidas sin escribir                            |
-  | incorporar y compilar el change archivado como fuente, si procede        |
-  | revisar con el librarian, sin modificar, los artículos afectados         |
-  | presentarlo al usuario y escribir solo lo que confirme                   |
-  | hacerlo en un commit posterior al del archivado                          |
-And indican no duplicar lo que ya recogen las specs y los ADRs
+Then incluyen resincronizar el wiki del proyecto con estos pasos, en este orden:
+  | paso                                                                                 |
+  | fijar como fuentes, en el commit del archivado, el código, specs y ADRs que tocó     |
+  | refrescar los artículos cuyas fuentes cambiaron y compilar las fuentes nuevas        |
+  | revisar con el librarian, sin modificar, lo que quedó obsoleto o contradicho         |
+  | extraer las lecciones aprendidas sin escribir                                        |
+  | presentarlo al usuario y escribir solo lo que confirme                               |
+  | pasar el lint del wiki hasta dejarlo sin errores                                     |
+  | hacer el commit del wiki después del commit del archivado                            |
 ```
 
 ### Requirement: Recordatorio del flujo en cada mensaje

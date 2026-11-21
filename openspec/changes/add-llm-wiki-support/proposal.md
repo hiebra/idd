@@ -13,7 +13,15 @@ Los proyectos creados desde esta plantilla acumulan conocimiento que no cabe en 
 - **Registro en el ámbito correcto**, preguntando cuando no está claro cuál toca.
 - **Lo descubierto al trabajar es conocimiento.** Lo que el agente comprueba empíricamente (ejecutando, midiendo, leyendo código) y lo que encuentra en internet, también cuando busca por su cuenta en medio de una tarea, se registra cuando servirá en otra ocasión y no solo para la tarea en curso. El agente discierne cuándo procede y lo propone en lugar de registrarlo sin más: lo comprobado, con las lecciones aprendidas del motor; lo encontrado en internet, ingiriendo la fuente.
 - **Recordatorio en cada mensaje.** Cada agente recibe en cada mensaje del usuario un recordatorio breve de este flujo (consultar primero, preguntar ante un hueco, proponer registrar lo que servirá en otra ocasión con la operación que corresponde), para que no dependa de que el modelo recuerde una instrucción del principio de la sesión.
-- **Actualización del wiki al archivar un change**, mediante las indicaciones de archivado de OpenSpec del proyecto (`operations.archive.guidance` en `openspec/config.yaml`) y con las operaciones del motor: lecciones aprendidas sin escribir, incorporación y compilación del change archivado si procede, y revisión del librarian, sin modificar, de lo que el change pudo dejar obsoleto. El usuario confirma qué se escribe, y se hace en un commit posterior al del archivado. El wiki no duplica specs ni ADRs.
+- **Los productos del proyecto son fuentes del wiki.** Specs, ADRs y código entran en el wiki del proyecto como fuentes fijadas a un commit (ruta e identificador de versión, sin copiar su contenido), y los artículos son el conocimiento extraído de ellas, con la cita exacta de la versión de la que sale. Al crear el wiki del proyecto se hace una ingesta inicial del repositorio, excluyendo lo generado y lo que no aporta conocimiento.
+- **Resincronización del wiki al archivar un change**, mediante las indicaciones de archivado de OpenSpec del proyecto (`operations.archive.guidance` en `openspec/config.yaml`) y con las operaciones del motor, sobre lo que tocó el change:
+  1. fijar como fuentes, en el commit del archivado, el código, las specs y los ADRs que tocó el change;
+  2. refrescar los artículos cuyas fuentes cambiaron y compilar las nuevas;
+  3. revisar con el librarian, sin modificar, lo que quedó obsoleto o contradicho;
+  4. extraer las lecciones aprendidas sin escribir;
+  5. escribir solo lo que confirme el usuario;
+  6. pasar el lint del wiki hasta dejarlo limpio;
+  7. hacer el commit del wiki después del commit del archivado.
 - **Motor disponible en los dos agentes nada más clonar**, en una versión fijada por el proyecto (hoy nvk/llm-wiki v1.0.0):
   - **Claude Code:** el arranque de sesión instala el plugin si falta o no es la versión fijada.
   - **OpenCode 2:** el diseño decide entre la vía canónica del motor (`instructions` con la URL del tag fijado) y una skill instalada por el arranque.
@@ -26,6 +34,7 @@ Fuera de alcance:
 - Comandos `/wiki:*` en OpenCode.
 - La captura automática de sesiones del motor (`.sessions/`).
 - Vendorizar o modificar el motor.
+- Un control continuo del wiki en CI (lint determinista del motor): solo se pasa al archivar.
 
 ## Capabilities
 
