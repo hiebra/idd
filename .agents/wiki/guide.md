@@ -44,6 +44,15 @@ Si no está claro qué ámbito corresponde, pregunta.
 <!-- wiki-guide:hub-a-proyecto -->
 El conocimiento del hub llega al proyecto incorporándolo directamente al wiki del proyecto o mediante un checkpoint del hub; nunca copies artículos a mano.
 
+## Modificar el wiki
+
+<!-- wiki-guide:modificar-wiki -->
+Registrar lecciones, ingerir fuentes, compilar o corregir artículos modifica el wiki: se hace con la skill `wiki-manager` o sus comandos `/wiki:*`.
+<!-- wiki-guide:modificar-con-confirmacion -->
+Hazlo solo cuando el usuario confirma lo que le propones.
+<!-- wiki-guide:modificar-no-consultar -->
+No uses `wiki-manager` para consultar.
+
 ## Lo que descubres al trabajar
 
 <!-- wiki-guide:descubrimientos -->

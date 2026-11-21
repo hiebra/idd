@@ -317,6 +317,9 @@ const GUIDE_SECTIONS = {
   'indica que los artículos citan la versión exacta de la fuente': 'citar-version',
   'indica hacer una ingesta inicial del repositorio al crear el wiki del proyecto': 'ingesta-inicial',
   'indica excluir de esa ingesta lo generado y lo que no aporta conocimiento': 'ingesta-inicial-exclusiones',
+  'indica modificarlo con la operación del motor que lo modifica': 'modificar-wiki',
+  'indica hacerlo solo cuando el usuario confirma lo que el agente propone': 'modificar-con-confirmacion',
+  'indica no usar esa operación para consultar': 'modificar-no-consultar',
 };
 const GAP_OPTIONS = {
   'responder con conocimiento interno, indicando su origen': 'hueco-conocimiento-interno',
