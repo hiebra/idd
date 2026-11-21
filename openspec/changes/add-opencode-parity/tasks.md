@@ -52,7 +52,7 @@
 - [x] 4.3 "La máquina tiene otra versión de OpenSpec instalada globalmente en OpenCode"
 - [x] 4.4 "Cambiar de agente no reinstala"
 - [x] 4.5 "Máquina sin npm en OpenCode": crear `tui.js` y el transporte de avisos de D4 (o su alternativa si así lo decidió 1.3), con los avisos pendientes recogidos al cargar
-- [ ] 4.6 "Sin acceso al registro de paquetes en OpenCode"
+- [x] 4.6 "Sin acceso al registro de paquetes en OpenCode"
 - [ ] 4.7 "La sesión no permite ajustar el PATH en OpenCode": contexto de servidor sin `shell`. Comprobar también que una excepción dentro del plugin no sale de `setup` ni del hook
 
 ## 5. Skills (zona de código): por escenario, rojo → implementar → verde → commit
