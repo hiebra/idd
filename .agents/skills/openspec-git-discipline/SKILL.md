@@ -2,60 +2,62 @@
 name: openspec-git-discipline
 description: Use when running OpenSpec propose, continue, apply, verify, archive, or worktree workflows where proposal artifacts, branches, merges, or archive timing affect git history.
 license: MIT
-compatibility: Requires git and OpenSpec workflow artifacts.
+compatibility: Requires git, Node.js and OpenSpec workflow artifacts.
 ---
 
 # OpenSpec Git Discipline
 
-## Core Rule
+<!-- Copia del origen (intent-driven-dev/intent-driven-template) reescrita a propósito con el ciclo de este proyecto: ADR-0007. No la sobrescribas al actualizar desde el origen sin revisarlo. -->
 
-Every OpenSpec state change must cross `main` before the next lifecycle phase depends on it.
+## Regla central
 
-- Propose/continue artifacts may be drafted on a branch, but must be committed and merged to `main` before apply starts.
-- Apply may run on `main`, a branch, or a worktree only if that exact proposal change is already available on `main`.
-- Archive may run only from `main` after implementation is merged back.
+<!-- lifecycle:core -->
+Un change se hace entero en **una rama temporal**, que llega a la rama de origen en **una sola fusión**: propuesta, implementación, archive y resincronización del wiki van en esa rama, y el archive se hace en ella, antes de la fusión.
 
-Never create commits, branches, or merges unless the user explicitly asks.
+- Las ramas permanentes son las de `x-main` en `openspec/config.yaml` (por defecto, `main`); la última es la rama de origen, de la que salen las temporales. Cualquier otra rama local es temporal.
+- El change de la rama no se apunta en ningún sitio: se lee de git. Lo calcula, igual para los dos agentes, `node .agents/openspec/branch-change.mjs --json`.
+- Las puertas las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive> [<change>]`: imprime `{ ok, message }` y sale con 0 si se puede seguir y con 1 si no. Ejecútalo y obedécelo; no lo sustituyas por tu propia lectura de git.
 
-## Gates
+## Puertas
 
-| Moment | Gate |
-| --- | --- |
-| Before propose | Prefer `main`; if not, warn and ask whether to continue intentionally. |
-| During continue | Before creating the next artifact, ask the user to commit completed artifact changes or explicitly continue without that checkpoint. |
-| After propose | Ask the user to commit proposal artifacts; offer to create a PR branch for review. |
-| Before apply | Confirm the proposal change is committed on `main`; then apply may run from `main`, a branch, or a worktree. |
-| Before archive | Stop unless implementation is merged back to `main` and archive is running from `main`. |
-| After archive | Ask the user to commit archive/spec sync changes. |
+<!-- lifecycle:propose -->
+### Antes de proponer (`openspec-new-change`)
 
-## Required Checks
+Ejecuta `node .agents/openspec/branch-change.mjs check propose`. Si no sale con 0, avisa al usuario con su `message` (por ejemplo, que el clon está en una rama permanente y el change se hace en una rama temporal) y pregúntale cómo seguir. No crees la rama tú: díselo y espera.
 
-Before apply:
+<!-- lifecycle:apply -->
+### Antes del apply (`openspec-apply-change`)
 
-1. Run `git status --short`.
-2. Verify `openspec/changes/<change>/` has no uncommitted proposal files.
-3. Verify the proposal change exists on `main` before applying from any branch/worktree.
+Ejecuta `node .agents/openspec/branch-change.mjs check apply <change>`. Si sale con 0, sigue: basta con que el change sea el de la rama temporal, tenga o no su propuesta en la rama de origen. Si no sale con 0, detente y explica al usuario su `message`.
 
-Use this language if the proposal has not reached `main`:
+El apply puede hacerse en la rama temporal del change o en un worktree de esa rama; en un worktree, ejecuta el comando dentro del worktree.
 
-> I should not apply this yet because the proposal change has not reached `main`. A proposal can be drafted on a branch, but apply must start only after that proposal state is available on `main`. Please merge or commit the proposal to `main` first, then I can apply from `main`, a branch, or a worktree.
+<!-- lifecycle:archive -->
+### Antes del archive (`openspec-archive-change`)
 
-Before archive:
+Ejecuta `node .agents/openspec/branch-change.mjs check archive <change>`. Si no sale con 0, detente: no archives, y explica al usuario su `message`. El archive se hace en la rama temporal del change, antes de su única fusión con la rama de origen; nunca en una rama permanente ni después de fusionar.
 
-1. Run `git branch --show-current` and `git status --short`.
-2. Stop if not on `main`.
-3. Stop if implementation work has not been merged back to `main`.
+Tras el archive, la resincronización del wiki de las indicaciones de archivado de `openspec/config.yaml` también se hace en la rama temporal, después del commit del archive.
 
-Use this language:
+<!-- lifecycle:commits -->
+## Commits
 
-> I should not archive this yet because archive must run from `main` after implementation is merged back. Verify makes a change eligible to merge; it does not replace the merge.
+Nunca hagas commits, ramas ni fusiones por tu cuenta: los hace siempre el usuario. Pide al usuario el commit en estos momentos, y espera a que lo haga o te diga que sigas sin él:
 
-## Red Flags
+- tras cada artefacto del plan (proposal, specs, design, adr, tasks);
+- tras cada task implementada;
+- tras el archive;
+- tras la resincronización del wiki, en un commit aparte y posterior al del archive.
 
-- Applying a proposal that exists only on the current branch/worktree.
-- Treating worktree visibility as proof that the proposal reached `main`.
-- Creating the next continue artifact without asking about committing the previous one.
-- Archiving from a feature branch or before implementation is merged to `main`.
-- Auto-committing, branching, or merging without explicit user approval.
+Un commit no mezcla `openspec/` con el resto del repositorio, salvo el `tasks.md` del change (zonas de `spec-as-source`).
 
-All of these mean: pause, explain the boundary, and ask the user to make the git state explicit.
+<!-- lifecycle:red-flags -->
+## Señales de alarma
+
+- Exigir que la propuesta esté en la rama de origen antes del apply.
+- Archivar en una rama permanente o después de fusionar la rama temporal.
+- Decidir una puerta leyendo git a mano en lugar de con `branch-change.mjs check`.
+- Más de un change en la misma rama.
+- Hacer commits, ramas o fusiones sin que el usuario lo pida.
+
+Ante cualquiera de ellas: detente, explica el límite y pide al usuario que deje explícito el estado de git.
