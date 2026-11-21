@@ -21,4 +21,4 @@ ADR-0001 está sustituido por ADR-0002 y solo se ha leído como contexto histór
 
 ## New Durable ADRs Created
 
-- [ADR-0009: Se consulta el wiki con su operación de lectura y lo comprobado se registra en un punto de cierre](../../../adr/0009-wiki-read-and-write-operations.md)
+- [ADR-0009: Se consulta el wiki con su operación de lectura y lo comprobado se registra en un punto de cierre](../../../../adr/0009-wiki-read-and-write-operations.md)
