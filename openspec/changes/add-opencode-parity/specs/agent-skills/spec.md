@@ -20,18 +20,13 @@ Examples:
   | OpenCode    |
 ```
 
-#### Scenario Outline: Una skill del schema sin enlazar en un agente
+#### Scenario: Una skill del schema sin enlazar en Claude Code
 
 ```gherkin
-Given un clon del proyecto con una skill en `.agents/skills/` que <agente> no encuentra
+Given un clon del proyecto con una skill en `.agents/skills/` que Claude Code no encuentra
 When se comprueba la disponibilidad de las skills del proyecto
 Then la comprobación falla
 And indica qué skill falta y en qué agente
-
-Examples:
-  | agente      |
-  | Claude Code |
-  | OpenCode    |
 ```
 
 ### Requirement: Workflows de OpenSpec disponibles en cada agente soportado

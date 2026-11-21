@@ -149,7 +149,7 @@ Se actualizan estas secciones:
 - [Una sesión de Claude Code y otra de OpenCode abiertas a la vez en el mismo clon lanzan dos `npm install`] -> Ahora es más probable que con un solo agente. Se mantiene la mitigación actual: si una instalación falla, su sello no se escribe y la siguiente sesión reintenta. Si se ve en la práctica, se añade un cerrojo en el núcleo.
 - [Escapar el JSON en bash] -> El adaptador tiene escenarios con avisos que llevan comillas y saltos de línea (el extracto del log de npm), y la suite comprueba que el stdout es JSON válido.
 - [La simulación de OpenCode puede alejarse del OpenCode real cuando cambie su API] -> La suite verifica el contrato documentado de OpenCode 2. Antes de cerrar el change se prueba a mano una vez en OpenCode 2 real, y el README declara la versión con la que se probó.
-- [El escenario "una skill del schema sin enlazar" no se puede reproducir para OpenCode] -> OpenCode lee `.agents/skills` directamente, así que una skill de ahí no puede faltarle por no estar enlazada. Ver Open Questions.
+- [Una skill de `.agents/skills/` sin enlazar solo puede faltarle a Claude Code] -> OpenCode la lee directamente de `.agents/skills`, así que el escenario de la skill sin enlazar es solo de Claude Code. La garantía para OpenCode la da "El agente encuentra las skills del schema".
 - [Mover el núcleo cambia el hash del sello] -> La primera sesión tras el cambio reinstala una vez en cada clon. Es aceptable.
 
 ## Migration Plan
@@ -164,5 +164,4 @@ Se actualizan estas secciones:
 ## Open Questions
 
 - **ADR-0001 deja de estar en vigor en su decisión.** Dice que el arranque es un hook `SessionStart` de Claude Code. El paso de ADR la sustituye con un ADR-0002: núcleo neutral más un adaptador por agente, avisos visibles en la interfaz. Por separado, un ADR-0003 deja escrito que `.agents/skills/` es la única fuente de las skills del schema y que cada agente la ve por sus propias rutas.
-- **El caso de OpenCode en "Una skill del schema sin enlazar en un agente" (`agent-skills`).** Por D5 no se puede construir con un clon realista. Propuesta: actualizar la delta spec para que ese escenario sea solo de Claude Code. La garantía para OpenCode ya la da "El agente encuentra las skills del schema".
 - **Cómo muestra el aviso Claude Code** (D2) y **cómo pasa el aviso a la TUI en OpenCode** (D4): las dos dependen de las comprobaciones con las que empieza la implementación.
