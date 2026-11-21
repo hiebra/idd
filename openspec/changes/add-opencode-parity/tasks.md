@@ -11,7 +11,7 @@
   **Resultado (Claude Code 2.1.330, 2026-11-21): D2 se confirma.** `claude` arrancó aquí con credenciales, así que no hizo falta el script.
   - A: el evento `hook_response` de `SessionStart` trae el JSON en `stdout`, pero eso es la salida cruda del hook y no prueba que se muestre.
   - B: en la TUI, tras aceptar la confianza en la carpeta, la pantalla muestra `⎿  SessionStart:startup says: prueba`. Con el mismo hook escribiendo `aviso-stderr` por stderr y terminando con 0, ese texto no aparece en la pantalla.
-- [ ] 1.2 Instalar OpenCode 2 (`@opencode/cli`) en un proyecto desechable y comprobar con un plugin local de `.opencode/plugins/`, sin `package.json` ni `node_modules`, tres cosas:
+- [x] 1.2 Instalar OpenCode 2 (`@opencode/cli`) en un proyecto desechable y comprobar con un plugin local de `.opencode/plugins/`, sin `package.json` ni `node_modules`, tres cosas:
   - que se carga un `server.js` que exporta un objeto literal `{ id, setup }`;
   - que su `ctx.shell.hook("create.before")` cambia el `PATH` de un comando;
   - que puede importar `@opencode/plugin/rpc`, y que un `tui.js` puede recibir su evento y mostrar un toast.
@@ -19,7 +19,17 @@
   El toast se comprueba con la TUI de OpenCode en una sesión de `tmux` y `tmux capture-pane`, buscando su texto. Comprobar primero si la TUI y los plugins cargan sin configurar un proveedor de modelo.
 
   Anotar los resultados y la versión de OpenCode en este archivo
-- [ ] 1.3 Si 1.1 o 1.2 descartan lo previsto en D2 o D4, cambiar `design.md` a la alternativa que ya documenta (código de salida 2 o archivo de avisos) en un commit propio de `openspec/`, antes de seguir
+
+  **Resultado (OpenCode 2.3.2, `@opencode/cli` y `@opencode/plugin` 2.3.2, 2026-11-21): D3 y D4 se confirman.** Se probó con `opencode --standalone <dir>` en una sesión de `tmux`, con un plugin `.opencode/plugins/probe/` con `server.js` y `tui.js`, sin `package.json` ni `node_modules`:
+  - La TUI y los plugins cargan sin configurar ningún proveedor de modelo.
+  - `server.js` con `export default { id, setup }` se carga. `ctx.location.directory` es el directorio del proyecto, `ctx.shell` es un objeto y `ctx.rpc` es una función con `register`.
+  - `ctx.shell.hook("create.before", cb)`, con un `cb` asíncrono que espera 200 ms, cambia el `PATH`: `!probecmd` en la TUI ejecuta un binario que solo está en el directorio antepuesto y muestra su salida.
+  - `import("@opencode/plugin/rpc")` funciona desde los dos archivos sin instalar nada. `ctx.rpc.register(def, { warnings })` y `registration.events.emit("warning", ...)` funcionan, y en `tui.js` tanto `context.client.rpc(def).warnings({})` al cargar como `.events.on("warning", ...)` reciben lo enviado.
+  - `context.ui.toast.show({ message, variant: "warning" })` aparece en `tmux capture-pane`, tanto para el aviso recogido al cargar como para el que llega después por evento.
+  - `Rpc.define` (de `@opencode/schema/rpc`) solo comprueba que ningún error empiece por `rpc.` y devuelve la definición tal cual, igual que `Plugin.define`.
+- [x] 1.3 Si 1.1 o 1.2 descartan lo previsto en D2 o D4, cambiar `design.md` a la alternativa que ya documenta (código de salida 2 o archivo de avisos) en un commit propio de `openspec/`, antes de seguir
+
+  **Resultado:** ni 1.1 ni 1.2 descartan D2 o D4, así que `design.md` no cambia.
 
 ## 2. Suite: World con un adaptador por agente (zona de código)
 
