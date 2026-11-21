@@ -2,6 +2,7 @@
 title: "El hook context de OpenCode"
 category: concept
 sources:
+  - raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md
   - raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md
   - raw/repos/2026-11-21-idd-1cf0792.md
 created: 2026-11-21
@@ -9,26 +10,26 @@ updated: 2026-11-21
 tags: [opencode, plugins, context, session-bootstrap]
 confidence: high
 volatility: warm
-summary: "Contrato del hook context de OpenCode 2.3.2: se ejecuta antes de cada petición al modelo, permite cambiar system y messages sin guardarlo, y una excepción sin capturar hace fallar la petición."
+summary: "Contrato del hook context de OpenCode 2.3.2, comprobado capturando los cuerpos de las peticiones: cambia system y messages sin guardarlo, no se acumula, y una excepción sin capturar impide la petición."
 ---
 
 # El hook context de OpenCode
 
-> Un plugin de OpenCode 2 registra `ctx.session.hook("context", cb)`. El callback se ejecuta antes de **cada** petición al modelo y puede cambiar lo que el modelo recibe, sin que el cambio quede guardado en la sesión. Comprobado con OpenCode 2.3.2 el 2026-11-21 ([lecciones](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md), lección 3).
+> Un plugin de OpenCode 2 registra `ctx.session.hook("context", cb)` para cambiar lo que recibe el modelo en cada petición. Lo comprobado se vio en los cuerpos de las peticiones, capturados con un [proveedor falso](proveedor-falso-para-verificar-contexto.md) (OpenCode 2.3.2, 2026-11-21; lección 3 de [la nota revisada](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md), tarea 1.2 en `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`).
 
 ## Contrato
 
-- **Entrada:** `input.system` (partes `{type: "text", text}`) e `input.messages` (mensajes con `role` y `content`), que se pueden cambiar en el sitio. También trae `agent`, `model`, `options` y `tools`.
-- **Efímero:** lo que se añade no se guarda. Con varios mensajes en la misma sesión (`opencode run -c`), cada petición lleva una sola copia de lo añadido: no se acumula.
-- **Objetos planos:** un plugin sin dependencias puede insertar `{role: "user", content: [{type: "text", text}]}` sin importar `@opencode/ai`.
-- **Fallo:** si el callback lanza una excepción sin capturar, la petición falla. `opencode run` termina con 1 y el modelo no recibe nada.
-- **No todas las peticiones pasan por él.** La de generar el título de la sesión no; la compactación y `generate` tienen sus propios hooks.
+- **[comprobado]** `input.system` (partes `{type: "text", text}`) e `input.messages` se pueden cambiar en el sitio, y el modelo recibe el cambio. Valen los objetos planos: `{role: "user", content: [{type: "text", text}]}`, sin importar `@opencode/ai`.
+- **[comprobado]** Lo añadido no se acumula: con `opencode run -c` en el segundo y el tercer mensaje, cada petición lleva una sola copia.
+- **[comprobado]** Si el callback lanza una excepción sin capturar, `opencode run` termina con 1 y no se hace la petición del agente. Si la captura, la petición sale sin lo añadido y el modelo responde.
+- **[comprobado]** La petición del título de la sesión no pasa por este hook.
+- **[lectura de código]** Según los tipos `SessionHooks` de `@opencode/plugin` 2.3.2, la compactación y `generate` tienen sus propios hooks. No se ha comprobado si pasan también por `context`.
 
 ## Cómo lo usa la plantilla
 
-El plugin `session-bootstrap` (`idd@1cf0792:.opencode/plugins/session-bootstrap/server.js`) añade la guía del wiki a `system` e inserta el recordatorio como mensaje `user` justo antes del último mensaje del usuario, como hace el modo Plan de OpenCode. Todo el callback va en `try/catch`: si el recordatorio no se puede generar o los mensajes no se dejan cambiar, la petición sale sin él y el mensaje del usuario llega igual.
+El plugin `session-bootstrap` (`idd@1cf0792:.opencode/plugins/session-bootstrap/server.js`) añade la guía del wiki a `system` e inserta el recordatorio como mensaje `user` justo antes del último mensaje del usuario. **[lectura de código]** El modo Plan de OpenCode hace lo mismo, según su código en el binario de `@opencode/cli` 2.3.2. Todo el callback va en `try/catch`.
 
-Alternativas descartadas en el design del change: el hook `prompt`, que cambiaría el texto guardado del mensaje, e `instructions.entry.put`, una API experimental marcada para retirarse.
+**[heredado]** El design del change descartó el hook `prompt`, que cambiaría el texto guardado del mensaje, e `instructions.entry.put`, una API experimental marcada para retirarse (`idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/design.md`, D3).
 
 ## Riesgo
 
@@ -41,5 +42,6 @@ Es una API de plugins de una versión concreta. La suite la simula (`idd@1cf0792
 
 ## Sources
 
-- [Lessons Learned: motor del wiki, guía y recordatorio en Claude Code y OpenCode 2](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md): lección 3.
-- [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `idd@1cf0792:.opencode/plugins/session-bootstrap/server.js`, `idd@1cf0792:acceptance-tests/support/agents/opencode-host.mjs`.
+- [Lessons Learned (revisada)](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lección 3.
+- [Lessons Learned (sustituida)](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md): solo como linaje.
+- [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `server.js`, `opencode-host.mjs`, y `tasks.md` y `design.md` del change archivado.

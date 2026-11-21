@@ -8,7 +8,7 @@ updated: 2026-11-21
 last_checked: 2026-11-21
 next_action: "Al subir de versión OpenCode, repetir con la versión nueva las comprobaciones de la tarea 1.2 de add-llm-wiki-support y, si algo cambia, actualizar el plugin y opencode-host.mjs."
 sources:
-  - raw/notes/2026-11-21-ll-wiki-en-dos-agentes.md
+  - raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md
   - raw/repos/2026-11-21-idd-1cf0792.md
 tags: [opencode, watch, session-bootstrap, llm-wiki]
 confidence: high
