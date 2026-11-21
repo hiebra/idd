@@ -196,3 +196,33 @@ Then('se avisa de que el PATH no se ha podido ajustar', function () {
 Then('el aviso indica que el CLI del proyecto se ejecuta con `npx openspec`', function () {
   assert.match(shownWarnings(this), /npx openspec/);
 });
+
+// --- La parte de TUI de OpenCode libera su suscripción (fix-tui-subscription-cleanup) ---
+
+const NEW_WARNING = { index: 1000, message: 'session-start: aviso nuevo de la suite', variant: 'warning' };
+
+// The simulated host always closes the TUI as one that runs its own server (--standalone)
+Given(/^una sesión de OpenCode abierta en la TUI(?: con su propio servidor,)? en el proyecto$/, function () {
+  this.openSetupSession('OpenCode');
+  this.tuiRun = {};
+});
+
+Given('OpenCode ha recargado el plugin del arranque dos veces', function () {
+  this.tuiRun.tuiReloads = 2;
+});
+
+When('la parte de servidor del arranque emite un aviso nuevo', function () {
+  this.tuiRun.emit = { event: 'warning', data: NEW_WARNING };
+  this.tuiResult = this.session.replay(this.tuiRun);
+});
+
+Then('el aviso se muestra una sola vez en la TUI', function () {
+  const shown = this.tuiResult.toasts.filter((toast) => toast.message === NEW_WARNING.message);
+  assert.equal(shown.length, 1, `the new warning was shown ${shown.length} times:\n${this.tuiResult.log}`);
+});
+
+Then('el terminal no muestra ningún error del arranque de sesión', function () {
+  assert.equal(this.tuiResult.error, null, this.tuiResult.log);
+  assert.deepEqual(this.tuiResult.terminal, [], `traces in the terminal:\n${this.tuiResult.terminal.join('\n')}`);
+  assert.equal(this.tuiResult.toasts.some((toast) => /cleanup failed/.test(toast.message)), false, this.tuiResult.log);
+});

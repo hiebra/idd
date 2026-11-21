@@ -89,6 +89,12 @@ class OpenCodeAgent {
       run(command) {
         return spawnSync('bash', ['-c', command], { cwd: project.dir, env, encoding: 'utf8' });
       },
+      // Opens the same session again with more host options: reloads of the
+      // TUI part, an event of the plugin's RPC and closing the TUI
+      // (fix-tui-subscription-cleanup)
+      replay(extra) {
+        return self.#open({ machine, project, workDir }, { ...options, ...extra });
+      },
       // When the reminder cannot be generated, it is also simulated with a
       // request whose messages cannot be changed, so that the plugin's
       // context hook fails inside

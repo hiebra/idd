@@ -681,8 +681,11 @@ Then('solo la última carga de la parte de TUI del plugin recibe sus eventos', f
   assert.deepEqual(loads, [tuiLoad], `TUI loads still subscribed: ${JSON.stringify(subscriptions)}`);
 });
 
+// Shared with session-bootstrap: there the simulated host runs the session
+// again, with its reloads and its event, and closes it
 When('el usuario cierra la TUI', async function () {
-  await this.opencodeCall('close');
+  if (this.sim) await this.opencodeCall('close');
+  else this.tuiResult = this.session.replay({ ...this.tuiRun, close: true });
 });
 
 Then('el terminal no muestra ningún error del plugin', function () {
