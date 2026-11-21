@@ -55,3 +55,5 @@
 ## [2026-11-21] librarian | scanned 8 articles, 0 stale, 0 low-quality
 
 ## [2026-11-21] ll | "archivado de fix-wiki-flow-operations" → raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md (2 lessons, 2 articles updated)
+
+## [2026-11-21] lint | local command: 0 critical, 0 warnings, 1 suggestion (left by decision until add-openspec-autopilot is archived), 0 auto-fixed
