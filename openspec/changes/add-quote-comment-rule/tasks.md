@@ -32,7 +32,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 5. Desactivación (D5): rojo → implementar → verde → commit
 
-- [ ] 5.1 `response-comments: Un usuario desactiva la regla de comentarios`: paso `el usuario ha desactivado la regla de comentarios para sí mismo en <agente>` (`PROJECT_COMMENTS=off` en `.claude/settings.local.json` en Claude Code y en el entorno en OpenCode, como el paso equivalente del wiki), y los pasos `el agente no recibe la regla de comentarios` y `el agente no recibe el recordatorio de la regla de comentarios con los mensajes`. Reusa `ningún archivo versionado del proyecto ha cambiado`. Verde si el núcleo ya respeta la variable; si no, corregirlo → commit
+- [x] 5.1 `response-comments: Un usuario desactiva la regla de comentarios`: paso `el usuario ha desactivado la regla de comentarios para sí mismo en <agente>` (`PROJECT_COMMENTS=off` en `.claude/settings.local.json` en Claude Code y en el entorno en OpenCode, como el paso equivalente del wiki), y los pasos `el agente no recibe la regla de comentarios` y `el agente no recibe el recordatorio de la regla de comentarios con los mensajes`. Reusa `ningún archivo versionado del proyecto ha cambiado`. Verde si el núcleo ya respeta la variable; si no, corregirlo → commit. Hecho: verde a la primera, porque el núcleo ya la respetaba desde 1.4; se comprobó que falla si el núcleo la ignora
 
 ## 6. Documentación y cierre
 

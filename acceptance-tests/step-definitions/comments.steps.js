@@ -112,4 +112,25 @@ Then('el agente recibe el mensaje sin el recordatorio de la regla de comentarios
   assert.ok(!sent.reminders.some((text) => text.includes(commentsReminder(this))), `unexpected comments reminder:\n${sent.log}`);
 });
 
+// --- Desactivación en local --------------------------------------------------
+
+// Claude Code: in .claude/settings.local.json, the user's own and not
+// versioned; OpenCode: in the environment it is launched from (design D5)
+Given(new RegExp(`^el usuario ha desactivado la regla de comentarios para sí mismo en ${AGENT}$`), function (agent) {
+  this.ensureProject();
+  if (agent === 'Claude Code') this.project.writeClaudeLocalSettings({ env: { PROJECT_COMMENTS: 'off' } });
+  else this.machine.commentsDisabled = true;
+});
+
+Then('el agente no recibe la regla de comentarios', function () {
+  const rule = ruleAsDelivered(this);
+  assert.ok(!this.session.context.some((text) => text.includes(rule)), `${this.session.agent}:\n${this.session.log}`);
+});
+
+Then('el agente no recibe el recordatorio de la regla de comentarios con los mensajes', function () {
+  const sent = this.sentMessage.result;
+  assert.equal(sent.delivered, true, sent.log);
+  assert.ok(!sent.reminders.some((text) => text.includes(commentsReminder(this))), `unexpected comments reminder:\n${sent.log}`);
+});
+
 module.exports = { ruleAsDelivered, FIXED_REPLY };
