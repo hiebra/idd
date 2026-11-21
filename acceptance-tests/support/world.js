@@ -1,21 +1,26 @@
 'use strict';
 
-// World for session-bootstrap: opens Claude Code sessions on a disposable
-// project copy, on a simulated machine, the way Claude Code runs the
-// SessionStart hook (design D9). Step definitions only call these
-// intent-level methods and assert on their results.
+// World for session-bootstrap: opens agent sessions on a disposable project
+// copy, on a simulated machine. How a session opens depends on the agent, so
+// the World delegates it to an agent adapter (support/agents/, design D6);
+// every adapter returns the same session shape. Step definitions only call
+// these intent-level methods and assert on their results.
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
 const { setWorldConstructor, setDefaultTimeout, World } = require('@cucumber/cucumber');
 const { Machine } = require('./machine');
 const { Project } = require('./project');
+const { ClaudeCodeAgent } = require('./agents/claude-code');
 
 // Steps run real `npm install`s
 setDefaultTimeout(5 * 60 * 1000);
 
-const HOOK = path.join('.claude', 'hooks', 'session-start.sh');
+const AGENTS = {
+  'Claude Code': new ClaudeCodeAgent(),
+};
+// Scenarios that do not name an agent open a Claude Code session
+const DEFAULT_AGENT = 'Claude Code';
 
 class SessionWorld extends World {
   constructor(options) {
@@ -31,27 +36,14 @@ class SessionWorld extends World {
     return this.project;
   }
 
-  // Opens a session: runs the hook, then records what the session sees
-  openSession() {
+  // Opens a session of the given agent, then records what the session sees
+  openSession(agentName = DEFAULT_AGENT) {
+    const agent = AGENTS[agentName];
+    if (!agent) throw new Error(`no adapter for agent '${agentName}'`);
     const project = this.ensureProject();
     this.machine.resetNpmCalls();
-    const envFile = this.machine.supportsEnvFile ? path.join(this.workDir, `session-${Date.now()}.env`) : null;
-    if (envFile) fs.writeFileSync(envFile, '');
-    const extra = { CLAUDE_PROJECT_DIR: project.dir };
-    if (envFile) extra.CLAUDE_ENV_FILE = envFile;
-
-    const result = spawnSync('bash', [project.path(HOOK)], {
-      cwd: project.dir,
-      env: this.machine.env(extra),
-      encoding: 'utf8',
-    });
-    this.session = {
-      exitCode: result.status,
-      stdout: result.stdout,
-      stderr: result.stderr,
-      envFile,
-      npmCalls: this.machine.npmCalls(),
-    };
+    const session = agent.open({ machine: this.machine, project, workDir: this.workDir });
+    this.session = { ...session, agent: agent.name, npmCalls: this.machine.npmCalls() };
     return this.session;
   }
 
@@ -62,22 +54,16 @@ class SessionWorld extends World {
     const session = this.openSession();
     Object.assign(this.machine, saved);
     if (session.exitCode !== 0 || !this.project.hasStamp()) {
-      throw new Error(`could not install the project for this scenario:\n${session.stderr}`);
+      throw new Error(`could not install the project for this scenario:\n${session.log}`);
     }
     if (this.project.hasAcceptanceProject() && !this.project.hasStamp(this.project.acceptanceDir)) {
-      throw new Error(`could not install acceptance-tests/ for this scenario:\n${session.stderr}`);
+      throw new Error(`could not install acceptance-tests/ for this scenario:\n${session.log}`);
     }
   }
 
   // `openspec --version` as a command in the opened session sees it
   openspecVersionInSession() {
-    const source = this.session.envFile ? `source '${this.session.envFile}'; ` : '';
-    const result = spawnSync('bash', ['-c', `${source}openspec --version`], {
-      cwd: this.project.dir,
-      env: this.machine.env(),
-      encoding: 'utf8',
-    });
-    return (result.stdout || '').trim();
+    return (this.session.run('openspec --version').stdout || '').trim();
   }
 
   installsIn(dir) {

@@ -3,6 +3,11 @@
 const assert = require('node:assert/strict');
 const { Given, When, Then } = require('@cucumber/cucumber');
 
+// Messages the opened session showed the user, as one text
+function shownWarnings(world) {
+  return world.session.warnings.join('\n');
+}
+
 function atLeast(version, minimum) {
   const a = version.split('.').map(Number);
   const b = minimum.split('.').map(Number);
@@ -60,7 +65,7 @@ Given('la última instalación de dependencias falló', function () {
   this.machine.offline = true;
   const session = this.openSession();
   this.machine.offline = false;
-  assert.equal(this.project.hasStamp(), false, `the setup install did not fail:\n${session.stderr}`);
+  assert.equal(this.project.hasStamp(), false, `the setup install did not fail:\n${session.log}`);
 });
 
 Given('ninguna de sus dependencias está instalada', function () {
@@ -149,26 +154,27 @@ Then('las dependencias de la raíz no se instalan de nuevo', function () {
 });
 
 Then('la sesión arranca con normalidad', function () {
+  assert.equal(this.session.error, null, `${this.session.agent} failed to open the session: ${this.session.error}`);
   assert.equal(this.session.exitCode, 0);
-  assert.equal(this.session.stdout, '');
+  assert.deepEqual(this.session.startProblems, []);
 });
 
 Then('se avisa de que hace falta Node.js con npm', function () {
-  assert.match(this.session.stderr, /session-start: hace falta Node\.js con npm/);
+  assert.match(shownWarnings(this), /hace falta Node\.js con npm/);
 });
 
 Then('el aviso indica la versión requerida y la versión encontrada', function () {
-  assert.match(this.session.stderr, /session-start: .*>=22\.12.*20\.11\.0/);
+  assert.match(shownWarnings(this), />=22\.12.*20\.11\.0/);
 });
 
 Then('se avisa de que la instalación de dependencias falló', function () {
-  assert.match(this.session.stderr, /session-start: falló la instalación de dependencias/);
+  assert.match(shownWarnings(this), /falló la instalación de dependencias/);
 });
 
 Then('se avisa de que el PATH no se ha podido ajustar', function () {
-  assert.match(this.session.stderr, /session-start: .*no se ha podido ajustar el PATH/);
+  assert.match(shownWarnings(this), /no se ha podido ajustar el PATH/);
 });
 
 Then('el aviso indica que el CLI del proyecto se ejecuta con `npx openspec`', function () {
-  assert.match(this.session.stderr, /npx openspec/);
+  assert.match(shownWarnings(this), /npx openspec/);
 });
