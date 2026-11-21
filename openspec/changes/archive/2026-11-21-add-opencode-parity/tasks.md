@@ -95,4 +95,4 @@
 
   **Resultado (OpenSpec 1.17.0):** ningún `[ERROR]`. Quedan 26 `[WARNING]`, y todos son de los dos tipos que ya da `openspec validate --specs --strict` sobre `session-bootstrap`: "should contain SHALL or MUST", porque los requisitos usan "DEBE", y "missing a WHEN/GIVEN step and a THEN step", porque los pasos van en bloques `gherkin`. Con `--strict` los avisos hacen que los dos comandos terminen con 1.
 - [x] 7.4 Commit y push de la zona de código pendiente, sin archivos de `openspec/`
-- [ ] 7.5 Archivar con `openspec archive add-opencode-parity` y, en ese mismo commit propio sin archivos de la zona de código, cambiar el `Purpose` de `openspec/specs/session-bootstrap/spec.md` para que hable de los agentes soportados. Push
+- [x] 7.5 Archivar con `openspec archive add-opencode-parity` y, en ese mismo commit propio sin archivos de la zona de código, cambiar el `Purpose` de `openspec/specs/session-bootstrap/spec.md` para que hable de los agentes soportados. Push
