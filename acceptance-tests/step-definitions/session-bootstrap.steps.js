@@ -102,8 +102,8 @@ Given('la máquina vuelve a tener acceso al registro de paquetes', function () {
   this.machine.offline = false;
 });
 
-Given('una versión de Claude Code que no permite ajustar el PATH de la sesión', function () {
-  this.machine.supportsEnvFile = false;
+Given(/^una versión de (?:Claude Code|OpenCode) que no permite ajustar el PATH de la sesión$/, function () {
+  this.machine.sessionPathAdjustable = false;
 });
 
 Given('una máquina con Node.js 22.12 o superior y npm', function () {
@@ -123,7 +123,7 @@ When('se abre una sesión en el proyecto', function () {
 });
 
 Then('`openspec --version` en la sesión muestra la versión fijada por el proyecto', function () {
-  assert.equal(this.openspecVersionInSession(), this.project.pinnedOpenspecVersion());
+  assert.equal(this.openspecVersionInSession(), this.project.pinnedOpenspecVersion(), `session:\n${this.session.log}`);
 });
 
 Then('todas las dependencias declaradas por el proyecto quedan instaladas', function () {

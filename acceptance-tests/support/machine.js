@@ -62,12 +62,16 @@ class Machine {
     this.nodeVersion = null; // null: the real node
     this.globalOpenspec = false;
     this.offline = false;
-    this.supportsEnvFile = true;
+    // false: the agent offers no way to adjust the session's PATH
+    this.sessionPathAdjustable = true;
 
     const realNpm = which('npm');
     if (!realNpm) throw new Error('the acceptance suite needs npm on the machine that runs it');
     this.realNpm = realNpm;
-    this.basePath = [...new Set([path.dirname(REAL_NODE), path.dirname(realNpm), '/usr/bin', '/bin'])];
+    // Only node, npm and npx from the directory that holds them: it may also
+    // hold global packages, such as a real global openspec
+    this.nodeDir = path.join(workDir, 'bin', 'node');
+    this.basePath = [this.nodeDir, '/usr/bin', '/bin'];
     this.spyLog = path.join(workDir, 'npm-calls.log');
     this.#buildBins();
   }
@@ -103,6 +107,12 @@ class Machine {
 
     this.globalOpenspecDir = bin('global-openspec');
     writeExecutable(path.join(this.globalOpenspecDir, 'openspec'), `#!/bin/bash\necho ${GLOBAL_OPENSPEC_VERSION}\n`);
+
+    bin('node');
+    fs.symlinkSync(REAL_NODE, path.join(this.nodeDir, 'node'));
+    fs.symlinkSync(this.realNpm, path.join(this.nodeDir, 'npm'));
+    const realNpx = which('npx');
+    if (realNpx) fs.symlinkSync(realNpx, path.join(this.nodeDir, 'npx'));
 
     this.noNpmDir = bin('no-npm');
     for (const tool of HOOK_TOOLS) {

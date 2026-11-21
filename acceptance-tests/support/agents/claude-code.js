@@ -46,7 +46,7 @@ class ClaudeCodeAgent {
   }
 
   open({ machine, project, workDir }) {
-    const envFile = machine.supportsEnvFile ? path.join(workDir, `session-${Date.now()}.env`) : null;
+    const envFile = machine.sessionPathAdjustable ? path.join(workDir, `session-${Date.now()}.env`) : null;
     if (envFile) fs.writeFileSync(envFile, '');
     const extra = { CLAUDE_PROJECT_DIR: project.dir };
     if (envFile) extra.CLAUDE_ENV_FILE = envFile;

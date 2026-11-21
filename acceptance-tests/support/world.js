@@ -12,12 +12,14 @@ const { setWorldConstructor, setDefaultTimeout, World } = require('@cucumber/cuc
 const { Machine } = require('./machine');
 const { Project } = require('./project');
 const { ClaudeCodeAgent } = require('./agents/claude-code');
+const { OpenCodeAgent } = require('./agents/opencode');
 
 // Steps run real `npm install`s
 setDefaultTimeout(5 * 60 * 1000);
 
 const AGENTS = {
   'Claude Code': new ClaudeCodeAgent(),
+  OpenCode: new OpenCodeAgent(),
 };
 // Scenarios that do not name an agent open a Claude Code session
 const DEFAULT_AGENT = 'Claude Code';
@@ -50,7 +52,7 @@ class SessionWorld extends World {
   // Leaves the project installed by a previous session on an ordinary machine
   installProject() {
     const saved = { ...this.machine };
-    Object.assign(this.machine, { hasNpm: true, nodeVersion: null, globalOpenspec: false, offline: false, supportsEnvFile: true });
+    Object.assign(this.machine, { hasNpm: true, nodeVersion: null, globalOpenspec: false, offline: false, sessionPathAdjustable: true });
     const session = this.openSession();
     Object.assign(this.machine, saved);
     if (session.exitCode !== 0 || !this.project.hasStamp()) {
