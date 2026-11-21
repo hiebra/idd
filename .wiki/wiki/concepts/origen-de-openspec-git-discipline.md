@@ -7,6 +7,7 @@ sources:
   - raw/repos/2026-11-21-idd-2e89fa3-git-discipline.md
   - raw/repos/2026-11-21-idd-c59392a-adr-0007.md
   - raw/articles/2026-11-21-issue-11-git-discipline-main-protegida.md
+  - raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md
 created: 2026-11-21
 updated: 2026-11-21
 verified: 2026-11-21
@@ -47,6 +48,7 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 - **ADR-0007 lo decide** (`idd@c59392a:adr/0007-single-branch-change-lifecycle.md`, aceptado):
   - Un change, una rama temporal y una sola fusión: propuesta, implementación, archive y resincronización del wiki se hacen en la rama, y el archive nunca en una rama permanente.
   - Las ramas permanentes se configuran con `x-main` en `openspec/config.yaml` (por defecto `["main"]`), y el change de cada rama temporal se lee de git desde su merge-base.
+  - En la práctica, la rama del archivado de `fix-wiki-flow-operations` llevaba también `add-openspec-autopilot`: leer el change desde el merge-base solo basta con un change por rama ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 2).
   - Los commits y las fusiones los sigue haciendo el usuario.
   - Descarta mantener las puertas heredadas, añadir una skill propia junto a la heredada, retirarla sin sustituto y registrar el change de cada rama en un archivo.
   - Asume el riesgo de que la propuesta ya no se revise ni se fusione por separado, y deja abierta la vuelta de la fusión intermedia.
@@ -64,6 +66,7 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 
 ## Sources
 
+- [Lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md): una rama con dos changes.
 - [Collection: openspec-git-discipline en su origen (intent-driven-template@a8b8231)](../../raw/repos/2026-11-21-intent-driven-template-a8b8231-git-discipline.md): `.agents/skills/openspec-git-discipline/SKILL.md`, `AGENTS.md`.
 - [Collection: openspec-git-discipline copiada a intent-driven-dev/skills@04cd70e](../../raw/repos/2026-11-21-skills-04cd70e-git-discipline.md): `.agents/skills/openspec-git-discipline/SKILL.md`.
 - [Collection: openspec-git-discipline en este proyecto (idd@2e89fa3)](../../raw/repos/2026-11-21-idd-2e89fa3-git-discipline.md): `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/changes/add-openspec-autopilot/proposal.md`.

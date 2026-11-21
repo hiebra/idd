@@ -5,13 +5,14 @@ sources:
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-f2be907-readme.md
   - raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md
+  - raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md
 created: 2026-11-21
 updated: 2026-11-21
 verified: 2026-11-21
 tags: [llm-wiki, wiki-first, adr, spec]
 confidence: high
 volatility: warm
-summary: "Por qué la plantilla guarda su conocimiento en un wiki que el agente consulta primero, con dos ámbitos, los productos del proyecto como fuentes fijadas y la resincronización al archivar. Sintetizado de ADR-0004, ADR-0005, ADR-0009, las specs llm-wiki y wiki-first-knowledge, la guía y las indicaciones de archivado."
+summary: "Por qué la plantilla guarda su conocimiento en un wiki que el agente consulta primero, con dos ámbitos, la consulta en solo lectura separada de la escritura con confirmación, las lecciones propuestas en un punto de cierre, los productos del proyecto como fuentes fijadas y la resincronización al archivar. Sintetizado de ADR-0004, ADR-0005, ADR-0009, las specs llm-wiki y wiki-first-knowledge, la guía y las indicaciones de archivado."
 ---
 
 # El flujo wiki-first
@@ -61,6 +62,9 @@ Las indicaciones de archivado (`idd@1cf0792:openspec/config.yaml`, `operations.a
 
 Lo que cambia fuera de un change no lo recoge este paso.
 
+- **Antes de mover el change**, revisa los enlaces relativos de sus artefactos que salen del change: el archive lo baja un nivel y necesitan un `../` más. Citar por la ruta desde la raíz del repositorio lo evita ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 1).
+- **Las rutas que tocó el change** salen de sus propios commits si la rama lleva más de un change; el diff de la rama contra `main` mezcla los de ambos ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 2).
+
 ## El motor
 
 `idd@1cf0792:adr/0005-wiki-engine-through-session-bootstrap.md`:
@@ -79,5 +83,6 @@ Lo que cambia fuera de un change no lo recoge este paso.
 ## Sources
 
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `adr/0004-wiki-first-project-knowledge.md`, `adr/0005-wiki-engine-through-session-bootstrap.md`, `openspec/specs/llm-wiki/spec.md`, `openspec/specs/wiki-first-knowledge/spec.md`, `.agents/wiki/guide.md`, `.agents/wiki/reminder.md`, `openspec/config.yaml`, `acceptance-tests/step-definitions/wiki.steps.js`, `openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`.
+- [Lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md): enlaces relativos al archivar y rutas que tocó un change.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `adr/0009-wiki-read-and-write-operations.md`, `openspec/specs/wiki-first-knowledge/spec.md`, `.agents/wiki/guide.md`, `.agents/wiki/reminder.md`.

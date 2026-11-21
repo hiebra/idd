@@ -53,3 +53,5 @@
 ## [2026-11-21] refresh | 4 articles checked, 0 new raw revisions (sources pinned in raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md), 3 updated, 0 verified, 0 flagged, 0 retracted
 
 ## [2026-11-21] librarian | scanned 8 articles, 0 stale, 0 low-quality
+
+## [2026-11-21] ll | "archivado de fix-wiki-flow-operations" → raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md (2 lessons, 2 articles updated)
