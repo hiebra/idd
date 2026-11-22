@@ -108,6 +108,8 @@ import { fileURLToPath } from 'node:url';
 const CONFIG = path.join('openspec', 'config.yaml');
 const CHANGES = 'openspec/changes/';
 const DEFAULT_PERMANENT = ['main'];
+// La gramática con la que OpenSpec nombra los changes y `start` las ramas
+const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function git(dir, ...args) {
   const result = spawnSync('git', args, { cwd: dir, encoding: 'utf8', timeout: 10000 });
@@ -420,6 +422,16 @@ export function checkCommit(dir, env = process.env) {
   return { ok: true, message: `Se puede hacer commit en la rama de la sesión '${branch}'; después, el push: git push -u origin ${branch}`, state };
 }
 
+// El título de la fusión con una rama permanente (design D1 a D3 de
+// name-change-in-merge-title): nombra los changes de la rama, en curso o
+// archivados, sin repetir y en el orden de `changes`; sin ninguno, la rama.
+// Solo nombra los changes con nombre kebab-case, porque el título va dentro
+// de una orden de shell y el nombre de un directorio puede traer cualquier cosa.
+export function mergeTitle(state, target) {
+  const names = [...new Set(state.changes.map((c) => c.name))].filter((name) => KEBAB.test(name));
+  return `Merge ${names.length > 0 ? names.join(', ') : state.branch} into ${target}`;
+}
+
 // La puerta merge (design D4 de allow-user-requested-merges): las fusiones
 // del ciclo. `target` es la rama de destino; `source`, la rama permanente que
 // se trae a la rama actual (por defecto, la rama de origen). No fusiona: da
@@ -474,7 +486,7 @@ export function checkMerge(dir, target, source, env = process.env) {
     }
     return allow(
       `Se puede llevar la rama temporal '${branch}' a '${target}' sin cambiar de rama, con el commit que daría \`git merge --no-ff\` desde '${target}': ` +
-        `\`commit=$(git commit-tree HEAD^{tree} -p origin/${target} -p HEAD -m "Merge ${branch} into ${target}")\` y \`git push origin "$commit":refs/heads/${target}\`; ` +
+        `\`commit=$(git commit-tree HEAD^{tree} -p origin/${target} -p HEAD -m "${mergeTitle(state, target)}")\` y \`git push origin "$commit":refs/heads/${target}\`; ` +
         `después, \`git fetch origin ${target}\`. Si el push se deniega, da al usuario la orden exacta, con el commit ya creado, y detente; ` +
         `si el remoto lo rechaza por no ser un avance rápido, trae otra vez \`origin/${target}\` y repite la puerta.`
     );
@@ -659,7 +671,7 @@ export function startBranch(dir, name, env = process.env) {
   if (isEphemeral(env)) return { ok: false, message: `No se crea la rama '${name ?? ''}'. ${SESSION_ONLY}` };
   const { permanent } = readPermanent(dir);
   const origin = permanent.at(-1);
-  if (!name || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return { ok: false, message: `El nombre del change tiene que ser kebab-case ('${name ?? ''}').` };
+  if (!name || !KEBAB.test(name)) return { ok: false, message: `El nombre del change tiene que ser kebab-case ('${name ?? ''}').` };
   if (permanent.includes(name)) return { ok: false, message: `'${name}' es una rama permanente.` };
   if (dirty(dir)) return { ok: false, message: `No se crea la rama '${name}': ${COMMIT_FIRST}.` };
   if (git(dir, 'rev-parse', '--verify', '-q', `refs/heads/${name}`).ok) return { ok: false, message: `La rama '${name}' ya existe: cambia a ella con 'switch ${name}'.` };
