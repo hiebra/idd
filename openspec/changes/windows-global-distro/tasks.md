@@ -2,8 +2,8 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 1. Punto de partida
 
-- [ ] 1.1 Comprobar que la suite está en verde antes de tocar nada (`npm test`, `npm run test:core`, `npm run lint:specs`), salvo los escenarios de este change
-- [ ] 1.2 Añadir al perfil por defecto de `cucumber.cjs` la exclusión de `@windows` y un perfil `windows` que solo los ejecuta → suite en verde → commit
+- [x] 1.1 Comprobar que la suite está en verde antes de tocar nada (`npm test`, `npm run test:core`, `npm run lint:specs`), salvo los escenarios de este change
+- [x] 1.2 Añadir al perfil por defecto de `cucumber.cjs` la exclusión de `@windows` y un perfil `windows` que solo los ejecuta → suite en verde → commit
 
 ## 2. Núcleo del arranque en Node (D1, ADR-0023)
 

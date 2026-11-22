@@ -6,6 +6,7 @@
   "scripts": {
     "test": "cucumber-js",
     "test:specs": "cucumber-js -p specs",
+    "test:windows": "cucumber-js -p windows",
     "lint:specs": "node extract-gherkin.cjs && gplint .extracted",
     "test:core": "node --test \"core-tests/*.test.js\""
   },
