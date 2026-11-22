@@ -36,7 +36,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
   - el aviso de bloque desfasado respecto a su fuente con el wiki encendido.
 
   Documentarlo en la cabecera del script → verde la prueba de 3.1 → commit
-- [ ] 3.4 Añadir a `core-tests/` una prueba de que el aviso de bloque desfasado sale solo con el wiki encendido y el bloque distinto de la fuente, y de que el arranque no reescribe `config.yaml` → commit
+- [x] 3.4 Añadir a `core-tests/` una prueba de que el aviso de bloque desfasado sale solo con el wiki encendido y el bloque distinto de la fuente, y de que el arranque no reescribe `config.yaml` → commit
 
 ## 4. Suite: el estado del wiki es del clon (D7)
 

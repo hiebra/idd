@@ -258,3 +258,49 @@ test('the texts that travel with the distribution are read next to the core, not
   const result = spawnSync('bash', [path.join(dist, 'hooks', 'session-bootstrap.sh'), 'guide', 'claude-code', path.join(workDir, 'project')], { encoding: 'utf8', env });
   assert.equal(result.stdout, 'GUIA-DE-LA-DISTRIBUCION\n', result.stderr);
 });
+
+// The session start of the core, on a machine without npm: only git and the
+// wiki matter here
+const machines = new Map();
+function sessionStart(dir) {
+  if (!machines.has(dir)) {
+    const machine = new Machine(fs.mkdtempSync(path.join(path.dirname(dir), 'machine-')));
+    machine.hasNpm = false;
+    machines.set(dir, machine);
+  }
+  const machine = machines.get(dir);
+  const result = spawnSync('bash', [CORE, dir], { encoding: 'utf8', env: machine.env() });
+  return { status: result.status, stderr: result.stderr };
+}
+
+const STALE = /no coinciden con su fuente/;
+
+test('the session start warns of an out-of-date block only with the wiki enabled, and never rewrites config.yaml', (t) => {
+  // Enabled, block equal to its source: no warning
+  const { dir } = setUp(t);
+  wiki(dir, 'on');
+  const fresh = read(dir, CONFIG);
+  let start = sessionStart(dir);
+  assert.equal(start.status, 0, start.stderr);
+  assert.doesNotMatch(start.stderr, STALE, start.stderr);
+  assert.equal(read(dir, CONFIG), fresh);
+
+  // Enabled, block edited by hand: warning, file untouched
+  const stale = fresh.replace('5. Presenta al usuario', '5. Enséñale al usuario');
+  assert.notEqual(stale, fresh);
+  fs.writeFileSync(path.join(dir, CONFIG), stale);
+  start = sessionStart(dir);
+  assert.match(start.stderr, /^session-start: .*no coinciden con su fuente.*\/toggle-wiki dos veces/m, start.stderr);
+  assert.equal(read(dir, CONFIG), stale);
+
+  // Disabled, same edited block: no warning
+  set(dir, false);
+  start = sessionStart(dir);
+  assert.doesNotMatch(start.stderr, STALE, start.stderr);
+  assert.equal(read(dir, CONFIG), stale);
+});
+
+function set(dir, enabled) {
+  const config = JSON.parse(read(dir, ENGINE_JSON));
+  fs.writeFileSync(path.join(dir, ENGINE_JSON), JSON.stringify({ ...config, enabled }, null, 2) + '\n');
+}

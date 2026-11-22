@@ -33,7 +33,7 @@ const GLOBAL_OPENSPEC_VERSION = '0.9.0';
 const NPM_FAILURE_LINE = 'npm-simulado: "comillas" \\barras\\ tab\tfin \\n literal y control \u0001 fin';
 // System tools the hook needs besides node and npm
 const HOOK_TOOLS = [
-  'bash', 'cat', 'dirname', 'git', 'grep', 'head', 'ln', 'mkdir', 'mktemp', 'mv', 'readlink', 'rm', 'sed',
+  'awk', 'bash', 'cat', 'dirname', 'git', 'grep', 'head', 'ln', 'mkdir', 'mktemp', 'mv', 'readlink', 'rm', 'sed',
   'sha256sum', 'sort', 'tail', 'timeout', 'wc',
 ];
 
