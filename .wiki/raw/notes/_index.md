@@ -9,6 +9,7 @@ Last updated: 2026-11-22
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
 | [2026-11-22-ll-allow-user-requested-merges.md](2026-11-22-ll-allow-user-requested-merges.md) | 3 lecciones de allow-user-requested-merges: la copia del proyecto sale del disco, las rutas de cucumber-js se suman a las del perfil y una prueba de core intermitente | lessons-learned, acceptance-tests, cucumber, node-test | 2026-11-22 |
+| [2026-11-22-ll-worktrees-opencode-desde-main.md](2026-11-22-ll-worktrees-opencode-desde-main.md) | 3 lecciones: OpenCode crea worktrees con --detach sobre HEAD, commands.start va en la base de datos y rama --no-track desde origin/main publicable | lessons-learned, opencode, worktree, git | 2026-11-22 |
 | [2026-11-22-ll-update-comment-phrase-and-opencode-marker.md](2026-11-22-ll-update-comment-phrase-and-opencode-marker.md) | Lecciones de update-comment-phrase-and-opencode-marker: cita de la web de OpenCode, validate --strict y una prueba intermitente | lessons-learned, opencode, response-comments, openspec, acceptance-tests | 2026-11-22 |
 | [2026-11-22-ll-update-comment-closing-and-quotes.md](2026-11-22-ll-update-comment-closing-and-quotes.md) | 3 lecciones de update-comment-closing-and-quotes: citas de la app de Claude, H1 en delta specs y escenarios renombrados | lessons-learned, claude-code, response-comments, openspec | 2026-11-22 |
 | [2026-11-22-ll-fusion-no-ff-y-trazabilidad.md](2026-11-22-ll-fusion-no-ff-y-trazabilidad.md) | 3 lecciones: la regla de una zona no afecta a la fusión, --no-ff mantiene en main los commits citados y el título de la fusión debe nombrar el change | lessons-learned, git, no-ff, trazabilidad | 2026-11-22 |
@@ -29,6 +30,8 @@ Last updated: 2026-11-22
 ## Recent Changes
 
 - 2026-11-22: Lecciones de allow-user-requested-merges
+
+- 2026-11-22: 3 lecciones de worktrees de OpenCode desde origin/main
 
 - 2026-11-22: Lecciones de la fusión con --no-ff y la trazabilidad
 - 2026-11-22: Lecciones sobre la guidance de archivado y archivar sin sincronizar

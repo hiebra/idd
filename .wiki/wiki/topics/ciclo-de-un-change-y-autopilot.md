@@ -109,6 +109,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](suite-de-aceptacion-y-spec-as-source.md))
 - [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md))
 - [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](flujo-wiki-first.md))
+- [[worktrees-de-opencode|Cómo crea OpenCode 2 los worktrees]] ([Cómo crea OpenCode 2 los worktrees](../concepts/worktrees-de-opencode.md))
 
 ## Sources
 
