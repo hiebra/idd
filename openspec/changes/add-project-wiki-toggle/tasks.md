@@ -19,7 +19,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 3. Núcleo: el ajuste y el modo `wiki` (D1, D2, D3, D5, D6, D8)
 
-- [ ] 3.1 Añadir a `core-tests/` pruebas del modo `wiki` del núcleo:
+- [x] 3.1 Añadir a `core-tests/` pruebas del modo `wiki` del núcleo:
   - `status` informa del ajuste, de si existe `.wiki/` y de qué entraría y qué se excluiría en la ingesta inicial;
   - `on` y `off` cambian `enabled`, insertan o quitan el bloque entre marcas, conservan byte a byte el resto de `config.yaml` (comentarios incluidos), crean o quitan `operations.archive.guidance` si hace falta, pasan al stage `engine.json` y `config.yaml` y no hacen commit;
   - con un par de marcas mal formado o repetido no tocan `config.yaml` y avisan;
