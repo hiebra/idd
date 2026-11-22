@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md
@@ -19,12 +20,12 @@ verified: 2026-11-22
 tags: [openspec, git, opencode, plugins, openspec-autopilot, adr, spec]
 confidence: high
 volatility: warm
-summary: "Un change se hace, de forma recomendada, en una rama temporal con una sola fusión con --no-ff, o en la forma canónica de intent-driven; la rama temporal la puede crear el modelo con el módulo neutral branch-change.mjs, y el change de la rama se lee de git. En OpenCode 2, el plugin openspec-autopilot mantiene una sesión operativa por rama, decide lo producido en cada paso con el CLI de OpenSpec y cierra las revisiones con git, con la lógica en el servidor para cualquier cliente; en Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006, ADR-0013, ADR-0014, ADR-0015, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
+summary: "Un change se hace, de forma recomendada, en una rama temporal con una sola fusión con --no-ff, o en la forma canónica de intent-driven; la rama temporal la puede crear el modelo con el módulo neutral branch-change.mjs, y el change de la rama se lee de git. En OpenCode 2, el plugin openspec-autopilot mantiene una sesión operativa por rama, decide lo producido en cada paso con el CLI de OpenSpec y cierra las revisiones con git, con la lógica en el servidor para cualquier cliente; todas sus sesiones nacen con el agente build, pasar la sesión operativa a plan es explorar el paso con openspec-explore, y lo que se modifica en plan se avisa antes de seguir; en Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006, ADR-0013, ADR-0014, ADR-0015, ADR-0019, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
 ---
 
 # El ciclo de un change y su automatización en OpenCode
 
-> El ciclo de un change es el mismo en los dos agentes y se decide con un módulo neutral que lee git; OpenCode 2 lo automatiza además con un plugin que da una sesión a cada paso. Lo del ciclo sale de los archivos fijados en `idd@5d7f5b0` (el archivado de `manage-git-discipline`); lo del plugin, de `idd@772d0f0` (el de `add-openspec-autopilot`) y de las pruebas con OpenCode 2.3.2 de la [nota de lecciones](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md).
+> El ciclo de un change es el mismo en los dos agentes y se decide con un módulo neutral que lee git; OpenCode 2 lo automatiza además con un plugin que da una sesión a cada paso. Lo del ciclo sale de los archivos fijados en `idd@5d7f5b0` (el archivado de `manage-git-discipline`); lo del plugin, de `idd@772d0f0` (el de `add-openspec-autopilot`), de `idd@6d6e79c` (el de `autopilot-sesion-operativa`), de `idd@9eae630` (el de `autopilot-plan-explore`) y de las pruebas con OpenCode 2.3.2 de la [nota de lecciones](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md).
 
 ## El ciclo, igual en los dos agentes
 
@@ -64,7 +65,22 @@ Lo común al ciclo va en una pieza neutral, y por eso `branch-change.mjs` está 
 - **La revisión la cierra git**: cuando el usuario envía un prompt, el hook `prompt` compara git con el inicio de la revisión: HEAD avanzado y nada en el stage es ok (commit); HEAD igual, nada en el stage y cambios en el árbol es ko, y lo sacado del stage y el prompt (como conclusiones) van a `openspec-update-change` (`lib/git.mjs`). Desaparece el diálogo de confirmación. La revisión del verify, que empieza con el árbol limpio, acepta un commit vacío.
 - **Esperas de commit**: tras el archive y la resincronización del wiki, y en el modo auto en cada cambio de zona, siempre que el árbol esté sucio. `update-change` empieza con el árbol sucio a propósito.
 - **La lógica vive en el servidor y funciona con cualquier cliente**; la TUI solo pone modal, foco, navegación y archivado. Sin TUI (UI web, Desktop, `opencode run`): aviso en el contexto de las sesiones ajenas, archivado diferido (`archivePending`) hasta que llega una TUI, y arranque solo con el mensaje `autopilot`.
-- **Lo que se mantiene**: una sesión por paso con su workflow y su agente, el estado solo en la metadata, el índice de sesiones para `update-change`, las lecciones candidatas en la metadata, el aviso tras compactar, los dos modos y nada en Claude Code (ADR-0006).
+- **Lo que se mantiene**: una sesión por paso con su workflow, el estado solo en la metadata, el índice de sesiones para `update-change`, las lecciones candidatas en la metadata, el aviso tras compactar, los dos modos y nada en Claude Code (ADR-0006).
+
+### El agente plan: explorar, y avisar de lo que se modifica
+
+Desde `autopilot-plan-explore` (`idd@9eae630:adr/0019-autopilot-plan-agent-explores-and-warns.md`, `idd@9eae630:openspec/specs/openspec-autopilot/spec.md`, `idd@9eae630:README.md`):
+
+- **Todas las sesiones nacen con el agente build**, también las de revisión, que antes nacían con plan para que el modelo no editara (D6 de `add-openspec-autopilot`). La revisión se protege ahora con su instrucción y con su cierre por git, y Shift+Tab tiene un solo significado en toda la sesión operativa.
+- **En la sesión operativa, pasar a plan es explorar.** Lo que se inyecta se decide por turno, comparando el agente del turno con el del anterior (`idd@9eae630:.opencode/plugins/openspec-autopilot/lib/agent-turn.mjs`):
+  - de build a plan, la instrucción de seguir `openspec-explore` sobre el paso o la revisión en curso, sin el recordatorio del paso;
+  - de plan a plan, solo un recordatorio de la exploración;
+  - de plan a build, solo el recordatorio del paso previo, que dice que se vuelve de explorar.
+
+  Nada de eso queda en el historial. En las sesiones ajenas, el agente no cambia lo que se inyecta.
+- **La clave del turno** es el último `messageID` que guarda el hook `prompt` (`turnMessage`), y se toma solo cuando algún mensaje de la petición lleva ese `id`; si no, sigue la anterior. Así, un mensaje que entra a mitad de turno cambia la clave en la primera petición que lo lleva. La primera versión sacaba la clave de los mensajes de la petición, y la invalidó el recordatorio de plan que añade OpenCode (`idd@9eae630:openspec/changes/archive/2026-11-22-autopilot-plan-explore/tasks.md`, tasks 1.4 y 4.2).
+- **El aviso de lo modificado en plan**: al empezar un turno en plan se guarda el estado de git (HEAD, stage y árbol, `planTurn`); al quedar en reposo, si cambió, el plugin avisa. En la TUI, con un modal de un botón "Entendido" que retiene la cadena hasta que se cierra (Enter o Esc) y entonces encadena como lo habría hecho; sin TUI, la cadena no espera y el aviso va al principio del mensaje con el que arranca la sesión siguiente, o en el contexto de la siguiente petición si no hubo producto. Un aviso pendiente (fase `plan-notice`) se vuelve a pedir a una TUI con otro PID, no tras una recarga, y un prompt del usuario en la sesión cuenta como acuse. El acuse se identifica por la sesión, no por una petición pendiente en memoria (task 5.2).
+- **Se probó con OpenCode 2.3.2 real** con el banco de siempre, incluido el Shift+Tab a mitad de un turno en build: la petición con el mensaje nuevo ya va con plan y recibe la exploración completa (task 7.2, punto 9). Sin TUI se probó con `opencode run`, que para el plugin es lo mismo que la UI web: un cliente sin TUI.
 
 ## Las restricciones de OpenCode 2.3.2 que lo moldean
 
@@ -73,6 +89,12 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - **Archivar solo desde la TUI**: el `ctx.session.update` del servidor ignora `archived` sin dar error. Por eso `tui.js` archiva con `context.client.session.update`, pedido por RPC (lección 1).
 - **La metadata se sustituye entera**: se escribe siempre leyendo, combinando y volviendo a escribir (lección 2).
 - **Las tools solo llegan al modelo con `options: { codemode: false }`** (lección 3). Una sesión con el agente plan también las ve y las llama (task 1.2 del change).
+- **El agente se cambia con Shift+Tab** (`ESC [ Z` en el terminal), no con Tab. La entrada del hook `context` trae `agent` (`"build"` o `"plan"`), que cambia de un mensaje al siguiente y es el mismo en todas las peticiones de un turno (`idd@9eae630:openspec/changes/archive/2026-11-22-autopilot-plan-explore/tasks.md`, tasks 1.1 y 7.2).
+- **En plan, OpenCode añade su recordatorio como mensaje `user`** (`<system-reminder> You are in Plan mode…`), y al volver a build otro (`You are NO LONGER in Plan mode`). Su posición dentro de la petición no es estable entre pruebas (task 1.1 frente a 7.2), así que nada debe depender de ella.
+- **En plan, `write` solo escribe en el directorio de planes** (`~/.opencode/plan`) y lo rechaza fuera, pero `shell` modifica el proyecto sin pedir permiso. Por eso el aviso mira git y no la tool (task 7.2).
+- **El hook `prompt` llega una sola vez por mensaje, al entrar**, con `{ sessionID, messageID, prompt, metadata, delivery }`; `delivery` es siempre `"steer"`. Un mensaje enviado con el turno en curso no espera detrás: entra en el mismo bucle, como último mensaje `user` de la petición siguiente, sin `experimental.idle` entre medias. En `context`, cada mensaje guardado lleva su `id` (el `messageID` del hook `prompt`) y los resultados de tool no (task 1.4).
+- **`opencode run -s <sesión>` es otro proceso** con otra instancia del plugin sobre la misma sesión y la misma metadata, a la vez que la TUI (task 1.4).
+- **El `emit` del servidor a la TUI no espera respuesta**, y la TUI puede tener un `dialog.select` abierto mientras tanto. Una recarga en caliente con el modal abierto deja ese modal en pantalla: al cerrarlo, la carga anterior responde al servidor nuevo, que no conocía la petición (task 1.3).
 - **Recargas en caliente**: también se recarga al cambiar `options`, sin reiniciar (lección 4). OpenCode ejecuta antes de cada recarga, y al cerrar, la función que devolvió el `setup` de cada parte, de servidor y de TUI; `events.on(nombre, manejador, { signal })` deja de entregar eventos al abortarse el `signal`. Los escuchadores RPC de la TUI anterior solo seguían vivos (lección 5) porque el plugin no los liberaba ([lecciones 1 y 2 de la limpieza](../../raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md)): con la limpieza, tras dos recargas solo recibe eventos la carga nueva, comprobado con OpenCode 2.3.2 real (`idd@99bdccd:openspec/changes/archive/2026-11-22-fix-tui-subscription-cleanup/tasks.md`, task 5.2). El identificador, la generación y la respuesta única de D13 se mantienen como defensa ante carreras durante una recarga (ADR-0011). Los hooks del servidor anterior no sobreviven (task 1.4).
 - **Cerrar con `--standalone` corta las suscripciones vivas**: cada `events.on` de la TUI es una suscripción a `/api/event`, y si el servidor propio de la TUI se apaga con ella viva, el cliente imprime una traza `ClientError: Transport … ECONNRESET`. Sin `--standalone` no ocurre, porque el servidor sigue vivo (`idd@99bdccd:openspec/changes/archive/2026-11-22-fix-tui-subscription-cleanup/design.md`, Context).
 - **Encadenar desde `experimental.idle`**: crear la sesión, `prompt`, navegar y archivar la anterior tarda menos de 200 ms. Tras una interrupción o una compactación no se ejecuta `idle` (lección 6).
@@ -88,11 +110,13 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## Cómo se verifica
 
-- **La suite** prueba el plugin en un OpenCode simulado con varias sesiones (`idd@772d0f0:acceptance-tests/support/agents/opencode-sim.mjs`). Es un proceso hijo que el World maneja por IPC, con un modelo guionizado por escenario y fallos inyectables. Lo que no está en las specs va en `core-tests/autopilot-next-step.test.js` y `core-tests/autopilot-plugin.test.js` (`idd@772d0f0:acceptance-tests/README.md`). El simulador ejecuta en cada recarga, y al cerrar, la limpieza que devuelve cada `setup`, respeta el `signal` de `events.on` y deja una traza en el terminal por cada suscripción viva al cerrar (`idd@99bdccd:acceptance-tests/support/agents/opencode-sim.mjs`).
+- **La suite** prueba el plugin en un OpenCode simulado con varias sesiones (`idd@772d0f0:acceptance-tests/support/agents/opencode-sim.mjs`). Es un proceso hijo que el World maneja por IPC, con un modelo guionizado por escenario y fallos inyectables. Lo que no está en las specs va en `core-tests/autopilot-next-step.test.js` y `core-tests/autopilot-plugin.test.js` (`idd@772d0f0:acceptance-tests/README.md`). El simulador ejecuta en cada recarga, y al cerrar, la limpieza que devuelve cada `setup`, respeta el `signal` de `events.on` y deja una traza en el terminal por cada suscripción viva al cerrar (`idd@99bdccd:acceptance-tests/support/agents/opencode-sim.mjs`). Desde `autopilot-plan-explore` reproduce además el recordatorio de plan, el `messageID` del hook `prompt` y los `id` de los mensajes, el mensaje que entra a mitad de turno y una entrega RPC que no espera al modal; lo comprueba con un plugin sonda `core-tests/opencode-sim.test.js` (`idd@9eae630:acceptance-tests/README.md`).
 - **El simulador no detecta un cambio real de OpenCode**: al subir de versión hay que repetir las pruebas en el banco de la lección 9, fuera del repositorio (ver [el registro de vigilancia](../../inventory/candidates/volver-a-comprobar-apis-de-sesion-al-subir-opencode.md)).
 
 ## Lo que no se sabe
 
+- **El puente con una TUI cerrada**: si la TUI que el plugin tiene como destino ya no está, `notice`, `navigate` y `archive` esperan a que venzan (unos 5 s cada uno) antes de degradarse. Quedó para un change aparte (ver [el inventario](../../inventory/candidates/puente-del-autopilot-sigue-con-una-tui-cerrada.md)).
+- **Dos sesiones que toman el control a la vez**: con dos sesiones que dicen `autopilot` a la vez, pueden quedar las dos como operativas. Es una carrera anterior a `autopilot-plan-explore`, que aparece a veces en `core-tests` (ver [el inventario](../../inventory/candidates/dos-sesiones-que-toman-el-control-a-la-vez.md)).
 - **Su uso prolongado**: si el coste de revisar y hacer un commit por producto en el modo normal compensa. No hay experiencia de uso registrada más allá de las pruebas end-to-end de `autopilot-sesion-operativa`.
 - **El ok de una revisión desde la UI web**: el ko se comprobó en la web; el ok usa la misma lógica, pero quedó como verificación manual pendiente (`idd@6d6e79c:openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/tasks.md`, task 8.4).
 
@@ -105,6 +129,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## Sources
 
+- [Collection: archivado de autopilot-plan-explore (idd@9eae630)](../../raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md): `adr/0019-autopilot-plan-agent-explores-and-warns.md`, `openspec/specs/openspec-autopilot/spec.md`, `.opencode/plugins/openspec-autopilot/lib/agent-turn.mjs`, `README.md`, `acceptance-tests/README.md`, `openspec/changes/archive/2026-11-22-autopilot-plan-explore/tasks.md`.
 - [Lessons Learned: el cierre de la revisión pasa de la confirmación en la TUI a git (ADR-0014)](../../raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md): lección 1.
 - [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0013-model-creates-change-branches-plugin-stages.md`, `adr/0014-autopilot-verifies-product-and-closes-reviews-with-git.md`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.opencode/plugins/openspec-autopilot/`, `.agents/openspec/branch-change.mjs`, `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md` y `tasks.md`.
 - [Lessons Learned: el lint de las specs con gplint](../../raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md): lección 5.

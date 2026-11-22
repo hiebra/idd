@@ -154,3 +154,7 @@
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ingest-collection | idd via git (manifest-only, autopilot-plan-explore@9eae630): 1 manifest, 22 paths pinned, 0 skipped, 22 total candidates
+
+## [2026-11-22] refresh | ciclo-de-un-change-y-autopilot, suite-de-aceptacion-y-spec-as-source y hook-context-opencode contra idd@9eae630 (autopilot-plan-explore)
+
+## [2026-11-22] compile | raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md → 3 artículos actualizados (agente build en todas las sesiones, exploración en plan, aviso de lo modificado en plan, contrato de OpenCode 2.3.2 de las tasks 1.1 a 1.4 y 7.2, simulador), 0 nuevos
