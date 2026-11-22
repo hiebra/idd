@@ -116,13 +116,18 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 ## 7. Cierre
 
 - [ ] 7.1 Ejecutar la suite completa con los deltas del change, `npm run lint:specs` y `npm run test:core`: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado.
-- [ ] 7.2 Probar con OpenCode 2.3.2 real, fuera del repositorio, en una copia de la rama con una rama temporal y un change con solo la proposal. Comprobar:
-  - las sesiones del ciclo, también la revisión, nacen en build;
-  - Tab a plan carga `openspec-explore`, seguir en plan lo recuerda y volver a build recuerda el paso, viendo los cuerpos de las peticiones con el proveedor falso;
-  - pedir en plan que escriba el artefacto muestra el modal, la cadena espera y sigue al cerrarlo;
-  - en la UI web, el aviso aparece en el mensaje de arranque de la sesión siguiente.
+- [ ] 7.2 Probar con OpenCode 2.3.2 real, fuera del repositorio, con el banco de las tasks 1.1 a 1.4 (proveedor falso, TUI `--standalone` en un pseudoterminal de Python; si hay que montarlo de nuevo, la lección 9 de `.wiki/raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md` y lo anotado en la sección 1), en una copia de esta rama con una rama temporal y un change con la proposal y las specs. Con el proveedor falso se ven los cuerpos de las peticiones. Comprobar, con su criterio:
+  1. **Las sesiones nacen en build**: la del artefacto y la de su revisión (modo normal) llevan `agent: "build"` en la primera petición.
+  2. **Tab a plan**: en la sesión operativa del artefacto `design`, Tab a plan y un mensaje. La primera petición lleva un mensaje `user` del plugin que empieza por `[openspec-autopilot] El usuario ha pasado al agente plan` y nombra `openspec-explore`, y no lleva el recordatorio del paso. Si el turno usa una tool, la petición siguiente lleva la misma instrucción completa, aunque el recordatorio de plan de OpenCode quede al final.
+  3. **Seguir en plan y volver**: otro mensaje en plan lleva `Recordatorio: estás explorando`; Tab a build y un mensaje lleva `Vuelves de explorar`. Ningún texto del plugin queda en el historial de la sesión (`session.messages`, o la sesión exportada).
+  4. **El aviso con producto**: en plan, pedir que escriba `design.md`. Al quedar en reposo sale el modal de un botón "Entendido" con el texto `con el agente plan se han hecho modificaciones`, y no se crea ninguna sesión. Al cerrarlo (Enter y, en otra prueba, Esc), se crea la revisión del `design` con el artefacto en el stage.
+  5. **El aviso tras una recarga**: con el modal del punto 4 abierto, recargar el plugin editando `tui.js`. No sale un segundo modal. Al cerrar el que sigue en pantalla, se crea la revisión una sola vez, y la sesión no queda ocupada (otro mensaje se ejecuta).
+  6. **El aviso tras reiniciar la TUI**: con el modal abierto, cerrar la TUI y abrirla de nuevo. El modal vuelve a salir, y al cerrarlo sigue la cadena.
+  7. **Sin producto**: en plan, pedir que cambie el README. Sale el modal y la sesión sigue siendo la del artefacto `design`.
+  8. **En la UI web** (`opencode serve` o `opencode pair`, sin TUI): repetir el punto 4. No hay modal, la revisión se crea enseguida y su primer mensaje empieza con el aviso.
+  9. **El Tab a mitad de turno** (la Open Question del design): con el turno en build en curso (el proveedor falso tarda), Tab a plan y un mensaje. Anotar qué agente lleva la petición que incluye ese mensaje y qué inyecta el plugin en ella. Si lleva `build`, el design ya lo recoge como riesgo y no hay que cambiar nada; anotarlo igualmente.
 
-  Anotar aquí el resultado.
+  Anotar aquí el resultado de cada punto. Si alguno no se cumple, anotar qué se ve en su lugar y no marcar la task.
 - [ ] 7.3 Ejecutar `openspec validate autopilot-plan-explore --type change --strict`: ningún error. Los avisos que queden son los mismos tipos que ya da `openspec validate --specs --strict`.
 - [ ] 7.4 Commit de la zona de código pendiente, sin archivos de `openspec/`.
 - [ ] 7.5 Archivar `autopilot-plan-explore` en su rama, en un commit propio sin archivos de la zona de código, y resincronizar el wiki en un commit aparte. Proponer al usuario actualizar `ciclo-de-un-change-y-autopilot.md` (las revisiones en build, la exploración en plan y el aviso), añadir al registro de vigilancia `volver-a-comprobar-apis-de-sesion-al-subir-opencode` las comprobaciones de 1.1 a 1.3, y las lecciones candidatas de la sesión.
