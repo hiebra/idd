@@ -8,9 +8,9 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 2. Regla y recordatorio (D3, D4)
 
-- [ ] 2.1 Actualizar `comments.steps.js`: la `FIXED_REPLY` nueva y las secciones `es-comentario-cita`, `idioma`, `procesar-responde-todos` y `procesar-incluye-comentario`. Rojo
-- [ ] 2.2 Reescribir `.agents/comments/rule.md` y `reminder.md` (menos de 600 caracteres) con la marca de cita, la frase nueva, el idioma y las palabras de cierre nuevas → verde → commit
-- [ ] 2.3 Comprobar los escenarios del recordatorio con los mensajes nuevos en los dos agentes
+- [x] 2.1 Actualizar `comments.steps.js`: la `FIXED_REPLY` nueva y las secciones `es-comentario-cita`, `idioma`, `procesar-responde-todos` y `procesar-incluye-comentario`. Rojo
+- [x] 2.2 Reescribir `.agents/comments/rule.md` y `reminder.md` (menos de 600 caracteres) con la marca de cita, la frase nueva, el idioma y las palabras de cierre nuevas → verde → commit
+- [x] 2.3 Comprobar los escenarios del recordatorio con los mensajes nuevos en los dos agentes
 
 ## 3. Documentación y cierre
 
