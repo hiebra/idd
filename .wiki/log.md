@@ -256,3 +256,7 @@
 ## [2026-11-22] lint | local command: 1 suggestion fixed (lección de apply-guidance-timeout en las fuentes del artículo de la suite), 0 left
 
 ## [2026-11-22] merge | origin/main en claude/gifted-hawking-ve5fxk: índices y fuentes unidos, contadores recontados (57 fuentes, 13 artículos, 6 de inventario), soporte-de-windows con ADR-0006 → ADR-0025
+
+## [2026-11-22] ll | "el archivo de rerun de cucumber-js no acota la pasada" → raw/notes/2026-11-22-ll-cucumber-rerun.md (1 lesson, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed

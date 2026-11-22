@@ -6,7 +6,7 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 57 raw documents
+- Sources: 58 raw documents
 - Articles: 13 compiled wiki articles
 - Inventory records: 6 tracked items
 - Datasets: 0 manifests
@@ -29,6 +29,8 @@ Last updated: 2026-11-22
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: 1 lección sobre el archivo de rerun de cucumber-js; suite-de-aceptacion-y-spec-as-source actualizado
 
 - 2026-11-22: Resincronizado con el archivado de apply-one-task-per-session-in-normal-mode: manifiesto en idd@f9f014c, ADR-0025 y el bloque de apply del autopilot en el artículo del ciclo, y 1 cita a ADR-0006 matizada
 

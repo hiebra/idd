@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-cucumber-rerun.md](2026-11-22-ll-cucumber-rerun.md) | 1 lección: --format rerun lista los fallos, pero @rerun.txt se suma a las rutas del perfil y no acota; se repiten con --name | lessons-learned, acceptance-tests, cucumber-js | 2026-11-22 |
 | [2026-11-22-ll-apply-guidance-timeout.md](2026-11-22-ll-apply-guidance-timeout.md) | 1 lección: un temporizador con unref() no mantiene vivo node --test, y un test cancelado no cuenta como fail | lessons-learned, core-tests, node-test, openspec-autopilot | 2026-11-22 |
 | [2026-11-22-ll-reorder-wiki-resync.md](2026-11-22-ll-reorder-wiki-resync.md) | 1 lección de reorder-wiki-resync: en la nube, windows-readiness falla por falta de pwsh y el modo automático deniega descargarlo | lessons-learned, acceptance-tests, windows-readiness, cloud-session | 2026-11-22 |
 | [2026-11-22-ll-lint-fix-y-librarian-1-0-0.md](2026-11-22-ll-lint-fix-y-librarian-1-0-0.md) | 2 lecciones del motor 1.0.0: lint --fix aparca la fuente sin artículo y pasa; librarian scan solo puntúa antigüedad y forma | lessons-learned, llm-wiki, lint, librarian | 2026-11-22 |

@@ -2,6 +2,7 @@
 title: "La suite de aceptación y spec-as-source"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-cucumber-rerun.md
   - raw/notes/2026-11-22-ll-apply-guidance-timeout.md
   - raw/notes/2026-11-22-ll-reorder-wiki-resync.md
   - raw/notes/2026-11-22-ll-archive-windows-support.md
@@ -76,7 +77,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - **Máquinas Windows simuladas**: `support/windows-readiness.js` parte de los hechos de una máquina con todo lo necesario (OpenCode 2.3.2, Node.js 22.12 con npm, git, Python 3.12, el motor y las dependencias de los lockfiles reales), y cada `But` cambia un hecho. Así se prueba toda la evaluación fuera de Windows; la recogida de hechos solo se puede comprobar a mano en Windows real (`idd@3d2d8fe:acceptance-tests/support/windows-readiness.js`, `idd@3d2d8fe:acceptance-tests/README.md`; ver [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](soporte-de-windows.md))).
 - **Simular Git for Windows**: `step-definitions/line-endings.steps.js` vuelve a extraer la copia del proyecto de su propio repositorio con `core.autocrlf=true` y abre una sesión de OpenCode (`idd@3d2d8fe:acceptance-tests/README.md`).
 - **La copia del proyecto sale del disco en cada escenario:** con la suite en marcha no se edita nada de lo que se copia (todo salvo `.git`, `acceptance-tests/` y `.wiki/`), y los cambios en los pasos no cuentan hasta la siguiente pasada ([lecciones de allow-user-requested-merges](../../raw/notes/2026-11-22-ll-allow-user-requested-merges.md), lección 1).
-- **Acotar una pasada:** las rutas que se pasan a `cucumber-js` se suman a las del perfil (`effectivePaths()`); solo `--name` o los tags acotan ([lecciones de allow-user-requested-merges](../../raw/notes/2026-11-22-ll-allow-user-requested-merges.md), lección 2; [lecciones de git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md), lección 5). Pasar un `.feature` como argumento ejecuta la suite completa, porque `cucumber.cjs` fija `paths` en el perfil por defecto ([lecciones de windows-support](../../raw/notes/2026-11-22-ll-windows-support.md), lección 6).
+- **Acotar una pasada:** las rutas que se pasan a `cucumber-js` se suman a las del perfil (`effectivePaths()`); solo `--name` o los tags acotan ([lecciones de allow-user-requested-merges](../../raw/notes/2026-11-22-ll-allow-user-requested-merges.md), lección 2; [lecciones de git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md), lección 5). Pasar un `.feature` como argumento ejecuta la suite completa, porque `cucumber.cjs` fija `paths` en el perfil por defecto ([lecciones de windows-support](../../raw/notes/2026-11-22-ll-windows-support.md), lección 6). Tampoco acota `@<archivo>` con un archivo de rerun, porque sus líneas son rutas: `--format rerun:<archivo>` sirve para listar los escenarios que fallan, y se repiten con `--name` ([lecciones de cucumber-rerun](../../raw/notes/2026-11-22-ll-cucumber-rerun.md), lección 1).
 - **Delta specs sin H1**: `extract-gherkin.cjs` exige que toda `spec.md`, también las de un change activo, empiece por `# <capability>`; sin ella falla la carga de `cucumber.cjs` y no se ejecuta ningún escenario, aunque `openspec validate` dé el change por válido ([lecciones de update-comment-closing-and-quotes](../../raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md), lección 2).
 - **Escenarios renombrados en una delta**: un MODIFIED sustituye el requisito entero y no puede perder escenarios de la spec principal, así que cambiar el nombre de un escenario exige REMOVED del requisito viejo (con Reason y Migration) y ADDED del nuevo, no RENAMED + MODIFIED (lección 3 de la misma nota).
 
@@ -98,6 +99,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 
 ## Sources
 
+- [Lessons Learned: el archivo de rerun de cucumber-js no acota la pasada](../../raw/notes/2026-11-22-ll-cucumber-rerun.md): lección 1.
 - [Lessons Learned: límite de tiempo de syncGuidance (apply-one-task-per-session-in-normal-mode)](../../raw/notes/2026-11-22-ll-apply-guidance-timeout.md): lección 1.
 - [Lessons Learned: reorder-wiki-resync](../../raw/notes/2026-11-22-ll-reorder-wiki-resync.md): lección 1.
 - [Lessons Learned: git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md): lección 5.
