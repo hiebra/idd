@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // El change de la rama (openspec-change-lifecycle, design D1 de
-// add-openspec-autopilot): un módulo neutral, común a los dos agentes, que
-// lee de git qué change tiene la rama actual. Lo importa el plugin de
-// OpenCode y lo ejecutan los workflows de OpenSpec desde la skill
-// openspec-git-discipline.
+// add-openspec-autopilot y D1 a D6 de manage-git-discipline): un módulo
+// neutral, común a los dos agentes, que lee de git qué change tiene la rama
+// actual y decide las puertas del ciclo. Lo importa el plugin de OpenCode y lo
+// ejecutan los workflows de OpenSpec desde la skill openspec-git-discipline.
 //
 // - Ramas permanentes: la lista `x-main` de openspec/config.yaml, o ["main"].
 //   Su último elemento es la rama de origen. Solo se entiende una lista de
@@ -11,20 +11,50 @@
 //   cualquier otra forma la clave se trata como ausente y se avisa.
 // - Rama temporal: cualquier rama local fuera de la lista; con HEAD separado
 //   no hay ninguna.
+// - Referencia de origen (`originRef`): la más avanzada de refs/heads/<origen>
+//   y refs/remotes/origin/<origen>, cuando una contiene a la otra; si han
+//   divergido, la local, con un aviso. No hace `git fetch`.
 // - Changes de la rama: lo que hay hoy en openspec/changes/ y ha cambiado
-//   entre el merge-base de HEAD con la rama de origen y el árbol de trabajo,
-//   con commit o sin él. openspec/changes/<nombre>/ es un change en curso y
-//   openspec/changes/archive/<fecha>-<nombre>/, uno archivado.
+//   entre el merge-base de HEAD con `originRef` y el árbol de trabajo, con
+//   commit o sin él. openspec/changes/<nombre>/ es un change en curso y
+//   openspec/changes/archive/<fecha>-<nombre>/, uno archivado. No cuenta un
+//   change cuyo directorio está igual en `originRef` y en HEAD, sin cambios
+//   sin commit: ya llegó a la rama de origen (por ejemplo, tras un squash).
 //
-// Resultado: { kind, branch, origin, permanent, changes, change, warnings }
+// Resultado: { kind, branch, origin, originRef, permanent, changes, change, warnings }
 //   kind: "permanent" (rama permanente o HEAD separado), "unknown" (no se
 //   encuentra la rama de origen), "none", "active", "archived" o "several".
+//   originRef es null en una rama permanente o si no hay rama de origen.
+//
+// Puertas (check):
+// - propose: en una rama temporal sin change. En una rama permanente también
+//   deja seguir (forma canónica), avisando de que lo recomendado es una rama
+//   temporal; con HEAD separado, no.
+// - apply <change>: en la rama temporal del change. Forma canónica: también
+//   en una rama temporal sin change propio si <change> está en curso en
+//   `originRef`, y en una rama permanente si está en curso en el árbol de
+//   trabajo, con aviso.
+// - archive <change>: en la rama temporal del change. Forma canónica: también
+//   en una rama permanente si <change> está en curso en el árbol de trabajo y
+//   su tasks.md no tiene ninguna `- [ ]`. En los dos casos no deja seguir si
+//   un ADR nuevo de la rama repite el número de otro de `originRef`, o si dos
+//   ADRs del árbol de trabajo tienen el mismo número.
+// - commit: los commits y el push del agente. Solo deja seguir en un
+//   contenedor efímero (CLAUDE_CODE_CONTAINER_ID no vacía y
+//   CLAUDE_CODE_REMOTE=true), en la rama de la sesión guardada en
+//   `git config idd.sessionBranch`, si es temporal y los cambios pendientes
+//   son de una sola zona de spec-as-source (tasks.md es neutro; el resto de
+//   openspec/, specs; todo lo demás, código). No hace commit ni push: los
+//   autoriza, y su mensaje trae la orden de push.
+// Todo rechazo dice cómo seguir.
 //
 // CLI:
 //   node .agents/openspec/branch-change.mjs --json
-//   node .agents/openspec/branch-change.mjs check <propose|apply|archive> [<change>]
+//   node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit> [<change>]
+//   node .agents/openspec/branch-change.mjs env
 // `check` imprime { ok, message } en JSON y sale con 0 si la puerta se abre y
-// con 1 si no.
+// con 1 si no. `env` imprime, para el arranque de sesión, `ephemeral=true` o
+// `ephemeral=false` y `permanent=<ramas separadas por espacios>`.
 //
 // Sin dependencias: solo módulos node:.
 
@@ -217,7 +247,8 @@ function adrClash(dir, state) {
   } catch {
     return null;
   }
-  const renumber = 'renumera los ADRs nuevos de la rama con el siguiente número libre (mira `adr/` en todas las ramas de origin tras un `git fetch`), actualiza sus referencias y vuelve a ejecutar la puerta';
+  const renumber = (number) =>
+    `renumera ${number} en los ADRs nuevos de la rama con el siguiente número libre (el más alto de \`adr/\` en todas las ramas de origin, tras un \`git fetch\`), actualiza sus referencias y vuelve a ejecutar la puerta`;
   if (state.originRef) {
     const mergeBase = git(dir, 'merge-base', 'HEAD', state.originRef);
     if (mergeBase.ok) {
@@ -229,7 +260,7 @@ function adrClash(dir, state) {
       for (const file of added) {
         const other = inOrigin.find((o) => o !== file && adrNumber(o) === adrNumber(file));
         if (other) {
-          return `El ADR nuevo '${file}' usa el número ${adrNumber(file)}, que ya tiene '${other}' en la rama de origen '${state.origin}': ${renumber}.`;
+          return `El ADR nuevo '${file}' usa el número ${adrNumber(file)}, que ya tiene '${other}' en la rama de origen '${state.origin}': ${renumber(adrNumber(file))}.`;
         }
       }
     }
@@ -237,7 +268,7 @@ function adrClash(dir, state) {
   const seen = new Map();
   for (const file of files.filter(adrNumber)) {
     const number = adrNumber(file);
-    if (seen.has(number)) return `Hay dos ADRs con el número ${number} ('${seen.get(number)}' y '${file}'): ${renumber}.`;
+    if (seen.has(number)) return `Hay dos ADRs con el número ${number} ('${seen.get(number)}' y '${file}'): ${renumber(number)}.`;
     seen.set(number, file);
   }
   return null;
@@ -362,6 +393,10 @@ export function check(dir, gate, name, { env = process.env } = {}) {
 
 function main(argv) {
   const dir = process.cwd();
+  if (argv[0] === 'env') {
+    process.stdout.write(`ephemeral=${isEphemeral()}\npermanent=${readPermanent(dir).permanent.join(' ')}\n`);
+    return 0;
+  }
   if (argv[0] === 'check') {
     const result = check(dir, argv[1], argv[2]);
     process.stdout.write(`${JSON.stringify({ ok: result.ok, message: result.message })}\n`);

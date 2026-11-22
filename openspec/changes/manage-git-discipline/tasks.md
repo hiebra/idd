@@ -45,11 +45,11 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
   Rojo. Implementar el archive canónico de D3 → verde → commit
 - [ ] 3.7 `Números de ADR sin choques entre ramas`: el Scenario Outline `El archive comprueba los números de los ADRs nuevos`, con los pasos `la rama temporal añade el ADR …`, `la rama de origen tiene hasta …` / `la rama de origen tiene \`adr/{int}-…\`` y `la puerta no deja seguir e indica renumerar \`{int}\``. Rojo. Implementar en `check archive` la comprobación de D6, que también rechaza dos números iguales en el árbol de trabajo → verde → commit
-- [ ] 3.8 Documentar en la cabecera de `branch-change.mjs` la puerta `commit`, las excepciones de la forma canónica y `originRef` → commit
+- [x] 3.8 Documentar en la cabecera de `branch-change.mjs` la puerta `commit`, las excepciones de la forma canónica y `originRef` → commit
 
 ## 4. El arranque de sesión (D5): rojo → implementar → verde → commit
 
-- [ ] 4.1 Añadir a `core-tests/` una prueba de `prepare_git` del núcleo, con repos de prueba:
+- [x] 4.1 Añadir a `core-tests/` una prueba de `prepare_git` del núcleo, con repos de prueba:
   - un clon superficial queda completo;
   - `main` atrasada y no extraída se pone al día con `update-ref`, y la extraída no se toca;
   - una rama divergida avisa;
@@ -58,15 +58,15 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
   - fuera de un contenedor efímero no se guarda nada.
 
   Rojo sin la función
-- [ ] 4.2 Implementar `prepare_git` en `session-bootstrap.sh` antes de instalar dependencias, con `timeout` y `git fetch` solo en un contenedor efímero o para completar un clon superficial, y documentarla en la cabecera → verde la prueba de 4.1 → commit
-- [ ] 4.3 `session-bootstrap: Clon completo y ramas permanentes al día al abrir sesión`. Pasos:
+- [x] 4.2 Implementar `prepare_git` en `session-bootstrap.sh` antes de instalar dependencias, con `timeout` y `git fetch` solo en un contenedor efímero o para completar un clon superficial, y documentarla en la cabecera → verde la prueba de 4.1 → commit
+- [x] 4.3 `session-bootstrap: Clon completo y ramas permanentes al día al abrir sesión`. Pasos:
   - `un clon superficial del proyecto` / `… sin acceso a su remoto`;
   - `el clon deja de ser superficial`, `se avisa de que no se pudo completar el clon` y `la sesión arranca`;
   - el Scenario Outline `Qué hace el arranque con la rama permanente local`;
   - `La rama en la que está el clon no se toca`, con `un clon del proyecto en la rama permanente \`main\``, `\`main\` está atrasada respecto a \`origin/main\``, `\`main\` no cambia` y `el árbol de trabajo no cambia`.
 
   Se abre la sesión con los dos agentes simulados → verde → commit
-- [ ] 4.4 `Rama de la sesión guardada en un contenedor efímero`: el Scenario Outline `Qué rama de la sesión queda guardada`, con los pasos `un clon del proyecto en la rama \`claude/exportar\``, `la sesión está en un contenedor efímero sin rama guardada / con \`claude/inicial\` guardada`, `la rama de la sesión guardada es …` y `no hay rama de la sesión guardada` → verde → commit
+- [x] 4.4 `Rama de la sesión guardada en un contenedor efímero`: el Scenario Outline `Qué rama de la sesión queda guardada`, con los pasos `un clon del proyecto en la rama \`claude/exportar\``, `la sesión está en un contenedor efímero sin rama guardada / con \`claude/inicial\` guardada`, `la rama de la sesión guardada es …` y `no hay rama de la sesión guardada` → verde → commit
 
 ## 5. Textos de la skill, de config.yaml y de la guía del wiki (D6, D7, D8, D9): uno por escenario; rojo → escribir → verde → commit
 

@@ -364,8 +364,8 @@ Given('un clon en la rama temporal `claude\\/exportar` con cambios pendientes en
 });
 
 Given(
-  /^la sesión está en un contenedor efímero (sin rama(?: de la sesión)? guardada|con `([^`]+)` guardada(?: como rama de la sesión)?)$/,
-  function (_, saved) {
+  /^la sesión está en un contenedor efímero (?:sin rama(?: de la sesión)? guardada|con `([^`]+)` guardada(?: como rama de la sesión)?)$/,
+  function (saved) {
     setEphemeral(this, true, saved ?? null);
   }
 );
