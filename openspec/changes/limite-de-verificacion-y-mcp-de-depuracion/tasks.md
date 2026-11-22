@@ -22,7 +22,7 @@ archivos.forEach((archivo, i) => {
 ## 1. El límite de verificación (`task-verification-limit`)
 
 - [x] 1.1 <!-- task-verification-limit: Las reglas del artefacto tasks llevan el límite de verificación --> <!-- task-verification-limit: Las reglas del artefacto tasks piden la estimación de cada task --> (zona de código) Definir en `acceptance-tests/step-definitions/task-verification-limit.steps.js` el paso que consulta las instrucciones del artefacto `tasks` con el CLI real, como el del artefacto `adr` de `change-lifecycle.steps.js`, y los cinco pasos sobre sus reglas. Verlos en rojo: la regla aún no está. (verificación: ~9 min)
-- [ ] 1.2 (zona de specs, en un commit aparte) Añadir a `rules.tasks` de `openspec/config.yaml` la regla literal del design D1. Los dos escenarios de 1.1 pasan, y los de «El ajuste de config.yaml no toca nada más» y `core-tests/apply-guidance.test.js` siguen en verde con el archivo nuevo. (verificación: ~4 min)
+- [x] 1.2 (zona de specs, en un commit aparte) Añadir a `rules.tasks` de `openspec/config.yaml` la regla literal del design D1. Los dos escenarios de 1.1 pasan, y los de «El ajuste de config.yaml no toca nada más» y `core-tests/apply-guidance.test.js` siguen en verde con el archivo nuevo. (verificación: ~4 min)
 
 ## 2. El contrato del MCP de depuración (`debug-mcp-contract`), zona de código
 

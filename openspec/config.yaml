@@ -29,6 +29,7 @@ rules:
     - Must use spec-as-source skill
   tasks:
     - Must use spec-as-source skill
+    - "Dimensiona cada task para quien la verifica: leer su diff, recorrer y ejecutar los escenarios de aceptación que la cubren y, si quiere, depurarla no debe llevar a una persona más de 15 minutos. Para estimarlo, cuenta 1 minuto por cada 8 líneas de diff que haya que leer, con los tests y sin los archivos generados, y 2 minutos por cada escenario que haya que recorrer. Escribe la estimación al final de la línea de cada task, como «(verificación: ~10 min)». Si la estimación de una task pasa del límite, divídela en tasks que se puedan verificar por separado."
   adr:
     - "Haz `git fetch` antes de numerar un ADR nuevo, para ver los ADRs de las ramas concurrentes."
     - "Su número es uno más que el número más alto de `adr/` en `origin/<rama de origen>` y en todas las ramas remotas (`origin/*`), y en la rama de trabajo; léelo con `git ls-tree --name-only <ref> adr/` en cada una. La rama de origen es la última de x-main, o main."
