@@ -381,16 +381,48 @@ export function checkCommit(dir, env = process.env) {
   return { ok: true, message: `Se puede hacer commit en la rama de la sesión '${branch}'; después, el push: git push -u origin ${branch}`, state };
 }
 
+// La puerta merge (design D4 de allow-user-requested-merges): las fusiones
+// del ciclo. `target` es la rama de destino; `source`, la rama permanente que
+// se trae a la rama actual (por defecto, la rama de origen). No fusiona: da
+// la orden.
+export function checkMerge(dir, target, source, env = process.env) {
+  const state = branchChange(dir);
+  const deny = (message) => ({ ok: false, message, state });
+  const allow = (message) => ({ ok: true, message, state });
+  const branch = state.branch;
+  if (!target) return deny('Falta la rama de destino: check merge <rama de destino> [<rama permanente>].');
+  const remote = (name) => git(dir, 'rev-parse', '-q', '--verify', `refs/remotes/origin/${name}`).ok;
+  const contains = (ancestor) => git(dir, 'merge-base', '--is-ancestor', ancestor, 'HEAD').ok;
+
+  // Traer una rama permanente a la rama temporal actual
+  if (target === branch && !state.permanent.includes(branch)) {
+    const from = source ?? state.origin;
+    if (!state.permanent.includes(from)) return deny(`'${from}' no es una rama permanente: check merge solo trae a la rama temporal una rama de x-main.`);
+    if (!remote(from)) return deny(`No existe 'origin/${from}': trae la rama con \`git fetch origin ${from}\` y vuelve a ejecutar la puerta.`);
+    if (contains(`refs/remotes/origin/${from}`)) {
+      return allow(`La rama '${branch}' ya contiene \`origin/${from}\`: no hay nada que traer.`);
+    }
+    return allow(
+      `Se puede traer \`origin/${from}\` a la rama temporal '${branch}': \`git fetch origin ${from}\` y \`git merge --no-edit origin/${from}\`. ` +
+        'Si hay conflictos, resuélvelos y presenta al usuario cada decisión de la resolución; sin su ok no hagas el commit de fusión. ' +
+        'En un contenedor efímero, el commit pasa por `check commit`; fuera de él, el commit (`git commit --no-edit`) lo hace el usuario.'
+    );
+  }
+  return deny(`check merge no admite el destino '${target}' desde ${branch ? `la rama '${branch}'` : 'un HEAD separado'}.`);
+}
+
 // Las puertas del ciclo (design D2 de add-openspec-autopilot, D3 de
-// manage-git-discipline): propose, apply, archive y commit
-export function check(dir, gate, name, { env = process.env } = {}) {
+// manage-git-discipline, D4 de allow-user-requested-merges): propose, apply,
+// archive, commit y merge
+export function check(dir, gate, name, { env = process.env, source = null } = {}) {
   if (gate === 'commit') return checkCommit(dir, env);
+  if (gate === 'merge') return checkMerge(dir, name, source ?? undefined, env);
   const state = branchChange(dir);
   const newBranch = `crea una rama temporal desde la rama de origen ('git switch -c <rama> ${state.origin}') y sigue en ella`;
   const named = state.changes.map((c) => c.name).join(', ');
   const deny = (message) => ({ ok: false, message, state });
   const allow = (message) => ({ ok: true, message, state });
-  if (!['propose', 'apply', 'archive'].includes(gate)) return deny(`puerta desconocida '${gate}': usa propose, apply, archive o commit.`);
+  if (!['propose', 'apply', 'archive'].includes(gate)) return deny(`puerta desconocida '${gate}': usa propose, apply, archive, commit o merge.`);
   if (gate !== 'propose' && !name) return deny(`Falta el nombre del change para la puerta '${gate}': check ${gate} <change>.`);
 
   if (state.kind === 'permanent') {
@@ -540,7 +572,7 @@ function main(argv) {
     return 0;
   }
   if (argv[0] === 'check') {
-    const result = check(dir, argv[1], argv[2]);
+    const result = check(dir, argv[1], argv[2], { source: argv[3] ?? null });
     process.stdout.write(`${JSON.stringify({ ok: result.ok, message: result.message })}\n`);
     return result.ok ? 0 : 1;
   }
