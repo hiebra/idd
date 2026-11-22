@@ -14,7 +14,7 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 - **Workflows de OpenSpec como skills** (sin comandos), en `.claude/skills/`: `openspec-explore`, `openspec-new-change`, `openspec-continue-change`, `openspec-apply-change`, `openspec-update-change`, `openspec-verify-change`, `openspec-sync-specs` y `openspec-archive-change`. Claude Code los ofrece como `/openspec-explore`, etc., y OpenCode 2 los lee de la misma carpeta.
 - **Skills del schema** en `.agents/skills/`, su única copia: `acceptance-test-authoring`, `architectural-decision-records`, `c4-diagrams`, `gherkin-authoring`, `glossary`, `grill-me`, `openspec-git-discipline` y `spec-as-source`. Claude Code las ve a través de sus enlaces en `.claude/skills/` y OpenCode 2 las lee directamente de `.agents/skills/` ([ADR-0003](adr/0003-single-source-for-schema-skills.md)).
 - **LLM wiki**: una base de conocimiento del proyecto que el agente consulta antes de responder y amplía con lo que descubre, con el motor [nvk/llm-wiki](https://github.com/nvk/llm-wiki) instalado en los dos agentes (ver abajo).
-- **Regla de comentarios**: comentas partes de una respuesta del agente sin que conteste a cada comentario, y luego le pides que los responda todos o que reformule la respuesta (ver abajo).
+- **Regla de comentarios**: comentas partes de una respuesta del agente sin que conteste a cada comentario, y luego le pides que los procese todos (`p`) o que reformule la respuesta (`r`) (ver abajo).
 - **Arranque de sesión** que prepara el proyecto en los dos agentes (ver abajo).
 - **El ciclo de un change en una rama y una sola fusión con `--no-ff`** como forma recomendada, con la forma canónica de intent-driven también admitida, igual en los dos agentes, y en OpenCode 2 un plugin que lo automatiza con una sesión por paso (ver abajo).
 
@@ -127,13 +127,13 @@ Después, pasa la suite de aceptación.
 
 Cuando una respuesta del agente tiene varias partes que quieres comentar, contestar a cada una por separado genera otra respuesta larga por comentario. La **regla de comentarios** (`.agents/comments/rule.md`) lo evita:
 
-- **Un comentario** es un mensaje que empieza por una cadena entre comillas simples, por ejemplo `'el segundo punto' no lo entiendo`. El agente no lo responde: contesta solo con una frase fija que te recuerda las opciones, y lo guarda.
-- **"ya"** en un mensaje hace que responda en un solo mensaje a todos los comentarios guardados desde su última respuesta completa.
-- **"reformula"** hace que rehaga su respuesta entera con tus comentarios incorporados. Da por hecho que solo has leído lo que citaste, así que la nueva versión se entiende por sí sola.
+- **Un comentario** es un mensaje que empieza por una cadena entre comillas simples dobladas, por ejemplo `''el segundo punto'' no lo entiendo`, o por una cita de Markdown (`> el segundo punto`). La cita de Markdown es lo que genera la app de Claude al citar un fragmento de la respuesta. Las comillas dobladas sirven donde no se puede citar, como la TUI de OpenCode, y evitan que un mensaje normal que empieza por `'algo'` se tome por un comentario. También es un comentario un mensaje con una cita de la web de OpenCode, que llega al agente como el texto `The user quoted the following from …:` seguido de las líneas citadas. El agente no responde a un comentario: contesta solo, en el idioma del comentario, con la frase fija "Añade más comentarios o pídeme que los procese (p) o reformule (r) en base a ellos", y lo guarda.
+- **"p"** (o "procesa", "procesar") en un mensaje hace que responda en un solo mensaje a todos los comentarios guardados desde su última respuesta completa.
+- **"r"** (o "reformula", "reformular") hace que rehaga su respuesta entera con tus comentarios incorporados. Da por hecho que solo has leído lo que citaste, así que la nueva versión se entiende por sí sola.
 
-"ya" y "reformula" cuentan como palabras completas, sin distinguir mayúsculas y fuera de la cadena entre comillas del comentario: `mayo` o `¿lo reformulamos?` no cuentan.
+Las palabras de cierre cuentan como palabras completas, sin distinguir mayúsculas y fuera de la marca del comentario: `pr` o `¿lo reformulamos?` no cuentan, pero una "p" o una "r" sueltas sí (por ejemplo, en "p. ej."), y entonces el agente recibe un recordatorio de más.
 
-La regla la entrega el arranque de sesión al empezar. Además, cuando un mensaje es un comentario o contiene "ya" o "reformula", el arranque añade a ese mensaje un recordatorio breve (`.agents/comments/reminder.md`), para que el agente la aplique aunque la sesión sea larga. Qué mensajes la activan lo decide el núcleo del arranque, igual en los dos agentes. El comportamiento exacto está en la spec `response-comments`.
+La regla llega al empezar la sesión. Además, cuando un mensaje es un comentario o contiene una palabra de cierre, se añade a ese mensaje un recordatorio breve (`.agents/comments/reminder.md`), para que el agente la aplique aunque la sesión sea larga. En Claude Code los entregan los hooks del arranque de sesión. En OpenCode los entrega su propio plugin local, `.opencode/plugins/response-comments/`, separado del arranque ([ADR-0018](adr/0018-opencode-optional-instructions-own-plugin.md)). Qué mensajes la activan lo decide el núcleo del arranque, igual en los dos agentes. El comportamiento exacto está en la spec `response-comments`.
 
 ### Desactivar la regla de comentarios en local
 

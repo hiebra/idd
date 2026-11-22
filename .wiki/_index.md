@@ -6,9 +6,9 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 19 raw documents
-- Articles: 10 compiled wiki articles
-- Inventory records: 3 tracked items
+- Sources: 37 raw documents
+- Articles: 11 compiled wiki articles
+- Inventory records: 5 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
 - Last compiled: 2026-11-22
@@ -29,6 +29,12 @@ Last updated: 2026-11-22
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: Compilado el concepto worktrees-de-opencode (2 fuentes)
+
+- 2026-11-22: Worktrees de OpenCode 2.3.2 (fuente) y 3 lecciones sobre crearlos desde origin/main
+
+- 2026-11-22: 3 páginas de la documentación de OpenSpec (archive y sync) y 2 lecciones sobre la guidance de archivado; flujo-wiki-first actualizado
 
 - 2026-11-22: Fusionado main (add-quote-comment-rule); el ADR de limpieza de los plugins pasa a ADR-0011, con su manifiesto en idd@002f043
 

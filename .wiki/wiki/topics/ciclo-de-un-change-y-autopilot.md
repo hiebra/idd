@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-fusion-no-ff-y-trazabilidad.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md
@@ -39,6 +40,7 @@ Desde `manage-git-discipline`, el ciclo lo fija ADR-0015 (`idd@5d7f5b0:adr/0013-
 - **Números de ADR sin choques**: `rules.adr` de `idd@5d7f5b0:openspec/config.yaml` manda hacer `git fetch` y tomar el número más alto de `adr/` en todas las ramas remotas, y `check archive` detiene el archive si un ADR nuevo de la rama repite un número de la rama de origen. Ocurrió en el propio archive de `manage-git-discipline`: entre tanto habían llegado a `main` un ADR-0011 y un ADR-0012 de otras ramas, y el ADR del change se renumeró de 0011 a 0013 (`idd@5d7f5b0:openspec/changes/archive/2026-11-22-manage-git-discipline/adr.md`).
 - **Probar el módulo en otra rama, con un worktree**: `branch-change.mjs` está versionado, así que al cambiar de rama se ejecuta la versión de esa rama, y la suite copia el árbol que haya en ese momento. Para ver cómo responde el módulo nuevo en `main`, se crea un worktree de `main` y se ejecuta allí el módulo de la rama de trabajo ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 3).
 - **Antes de proponer, busca las decisiones previas**: el schema solo pide leer los ADRs en el paso `design`, pero una propuesta puede chocar con un ADR en vigor sobre el mismo mecanismo. En `add-quote-comment-rule`, la primera propuesta usaba `AGENTS.md`, que ADR-0005 ya había descartado, y hubo que rehacerla al escribir las specs ([lecciones de add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md), lección 3).
+- **Qué aporta la fusión con `--no-ff`**: la regla de una sola zona se aplica a cada commit, no a la fusión, que junta el plan y el código. `--no-ff` mantiene en `main` los commits que cita el wiki, y `git log --first-parent` da un change por entrada. La intención sigue en los artefactos archivados. El título de la fusión de una PR debe nombrar el change; el que pone GitHub por defecto no lo nombra ([lecciones de la fusión con --no-ff](../../raw/notes/2026-11-22-ll-fusion-no-ff-y-trazabilidad.md)).
 
 ## La asimetría entre agentes
 
@@ -102,6 +104,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](suite-de-aceptacion-y-spec-as-source.md))
 - [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md))
 - [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](flujo-wiki-first.md))
+- [[worktrees-de-opencode|Cómo crea OpenCode 2 los worktrees]] ([Cómo crea OpenCode 2 los worktrees](../concepts/worktrees-de-opencode.md))
 
 ## Sources
 

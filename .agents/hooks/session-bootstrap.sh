@@ -33,7 +33,8 @@
 #   session-bootstrap.sh comments-reminder <agente> <directorio del proyecto>
 #       Por stdout, la regla de comentarios, o su recordatorio si el mensaje
 #       del usuario, que se lee por stdin, la activa (es un comentario o
-#       contiene "ya" o "reformula"); nada si la regla está desactivada, el
+#       contiene una palabra de cierre: "p", "procesa", "procesar", "r",
+#       "reformula" o "reformular"); nada si la regla está desactivada, el
 #       mensaje no la activa o el texto no se puede generar.
 #
 # En todos los modos, avisos por stderr, uno por línea, con el prefijo
@@ -380,16 +381,33 @@ comments_disabled() {
 }
 
 # activates_comments MENSAJE: éxito si el mensaje activa la regla de comentarios
-# (design D2 de add-quote-comment-rule). Es un comentario si, sin los espacios
-# iniciales, empieza por una cadena no vacía entre comillas simples; si no lo
-# es, la activa "ya" o "reformula" como palabra completa, sin distinguir
-# mayúsculas. Dentro de un comentario las palabras de cierre no cambian nada:
-# el mensaje ya la activa.
+# (design D2 de add-quote-comment-rule; D1 y D2 de
+# update-comment-closing-and-quotes; D1 y D1b de
+# update-comment-phrase-and-opencode-marker). Es un comentario si, sin los
+# espacios ni los comentarios HTML iniciales (la app de Claude antepone
+# `<!-- attach -->` a las citas), empieza por una cadena no vacía entre
+# comillas simples dobladas (''así'') o por una cita de Markdown (`>`), o si
+# incluye una cita de la web de OpenCode. Si no lo es, la activa una palabra de cierre ("p",
+# "procesa", "procesar", "r", "reformula" o "reformular") como palabra
+# completa, sin distinguir mayúsculas. Dentro de un comentario las palabras de
+# cierre no cambian nada: el mensaje ya la activa.
 activates_comments() {
   local message="$1"
-  message="${message#"${message%%[![:space:]]*}"}"
-  [[ "$message" =~ ^\'[^\']+\' ]] && return 0
-  printf '%s\n' "$message" | LC_ALL=C.UTF-8 grep -qiwE '(ya|reformula)' 2>/dev/null
+  while :; do
+    message="${message#"${message%%[![:space:]]*}"}"
+    [[ "$message" == '<!--'*'-->'* ]] || break
+    message="${message#*-->}"
+  done
+  [[ "$message" =~ ^\'\'[^\']+\'\' ]] && return 0
+  [[ "$message" == '>'* ]] && return 0
+  # La cita de la web de OpenCode llega como texto en cualquier punto del
+  # mensaje: una línea "The user quoted the following from <origen>:" seguida
+  # de una línea que empieza por "> "
+  printf '%s\n' "$message" | awk '
+    quoted && /^> / { found = 1; exit }
+    { quoted = /^The user quoted the following from .+:$/ }
+    END { exit !found }' && return 0
+  printf '%s\n' "$message" | LC_ALL=C.UTF-8 grep -qiwE '(p|procesa|procesar|r|reformula|reformular)' 2>/dev/null
 }
 
 # comments_text MODO AGENTE DIRECTORIO: la regla (rule) o su recordatorio
