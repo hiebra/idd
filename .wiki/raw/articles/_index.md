@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-smartbear-buenas-practicas-revision-de-codigo.md](2026-11-22-smartbear-buenas-practicas-revision-de-codigo.md) | SmartBear: revisar 200-400 líneas de una vez, a menos de 500 por hora y menos de 60 minutos | revision-de-codigo, smartbear, verificacion | 2026-11-22 |
 | [2026-11-22-mcp-2026-07-28-key-changes.md](2026-11-22-mcp-2026-07-28-key-changes.md) | MCP 2026-07-28: protocolo sin estado, server/discover, Roots obsoletas y estado en identificadores explícitos | mcp, especificacion, stateless | 2026-11-22 |
 | [2026-11-22-mcp-2026-07-28-tools.md](2026-11-22-mcp-2026-07-28-tools.md) | MCP 2026-07-28: definición de una tool, nombres, anotaciones, salida estructurada y errores | mcp, tools, json-schema | 2026-11-22 |
 | [2026-11-22-vscode-cli-y-urls.md](2026-11-22-vscode-cli-y-urls.md) | VS Code: el CLI code (--goto, --reuse-window) y las URLs vscode://, sin opción para iniciar la depuración | vscode, cli, url-handler | 2026-11-22 |
@@ -30,6 +31,8 @@ Last updated: 2026-11-22
 ## Categories
 
 ## Recent Changes
+
+- 2026-11-22: Buenas prácticas de revisión de código de SmartBear (base del límite de verificación)
 
 - 2026-11-22: 12 fuentes para el MCP de depuración: MCP 2026-07-28, depuración de VS Code, Liberty, Vite, servidores MCP en OpenCode y DebugMCP
 

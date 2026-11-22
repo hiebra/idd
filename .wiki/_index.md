@@ -6,9 +6,9 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 73 raw documents
+- Sources: 75 raw documents
 - Articles: 13 compiled wiki articles
-- Inventory records: 6 tracked items
+- Inventory records: 8 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
 - Last compiled: 2026-11-22
@@ -29,6 +29,8 @@ Last updated: 2026-11-22
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: Fuente de SmartBear y 5 lecciones de la planificación de limite-de-verificacion-y-mcp-de-depuracion; sin compilar todavía
 
 - 2026-11-22: 1 lección sobre el archivo de rerun de cucumber-js; suite-de-aceptacion-y-spec-as-source actualizado
 

@@ -319,3 +319,7 @@
 ## [2026-11-22] ingest | OpenCode: servidores MCP (configuración, nombres de las tools, Code Mode y versión del protocolo) (raw/articles/2026-11-22-opencode-mcp-servers.md)
 
 ## [2026-11-22] ingest | DebugMCP (Microsoft): un servidor MCP que da a un agente el control del depurador de VS Code (raw/articles/2026-11-22-microsoft-debugmcp.md)
+
+## [2026-11-22] ingest | SmartBear: buenas prácticas de revisión de código (raw/articles/2026-11-22-smartbear-buenas-practicas-revision-de-codigo.md)
+
+## [2026-11-22] ll | "planificación de limite-de-verificacion-y-mcp-de-depuracion" → raw/notes/2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion.md (5 lessons, 0 articles updated)
