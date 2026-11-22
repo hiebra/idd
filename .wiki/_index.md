@@ -6,7 +6,7 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 40 raw documents
+- Sources: 41 raw documents
 - Articles: 11 compiled wiki articles
 - Inventory records: 5 tracked items
 - Datasets: 0 manifests
@@ -29,6 +29,8 @@ Last updated: 2026-11-22
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: 1 lección de apply-one-task-per-session-in-normal-mode (unref() y node --test); suite-de-aceptacion-y-spec-as-source actualizado
 
 - 2026-11-22: Compilado el concepto worktrees-de-opencode (2 fuentes)
 

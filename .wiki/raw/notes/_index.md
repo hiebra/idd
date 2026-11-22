@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-apply-guidance-timeout.md](2026-11-22-ll-apply-guidance-timeout.md) | 1 lección: un temporizador con unref() no mantiene vivo node --test, y un test cancelado no cuenta como fail | lessons-learned, core-tests, node-test, openspec-autopilot | 2026-11-22 |
 | [2026-11-22-ll-allow-user-requested-merges-2.md](2026-11-22-ll-allow-user-requested-merges-2.md) | 2 correcciones de allow-user-requested-merges: la suite tardó 6-7 minutos y la prueba intermitente falla también en la pasada de core | lessons-learned, acceptance-tests, node-test | 2026-11-22 |
 | [2026-11-22-ll-allow-user-requested-merges.md](2026-11-22-ll-allow-user-requested-merges.md) | 3 lecciones de allow-user-requested-merges: la copia del proyecto sale del disco, las rutas de cucumber-js se suman a las del perfil y una prueba de core intermitente | lessons-learned, acceptance-tests, cucumber, node-test | 2026-11-22 |
 | [2026-11-22-ll-worktrees-opencode-desde-main.md](2026-11-22-ll-worktrees-opencode-desde-main.md) | 3 lecciones: OpenCode crea worktrees con --detach sobre HEAD, commands.start va en la base de datos y rama --no-track desde origin/main publicable | lessons-learned, opencode, worktree, git | 2026-11-22 |
