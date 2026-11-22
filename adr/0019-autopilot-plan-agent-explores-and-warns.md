@@ -11,13 +11,13 @@ ADR-0014 fija que cada paso del autopilot va en una sesión nueva "con el workfl
 - las revisiones nacían con el agente plan, para que el modelo no pudiera editar (D6 de su design);
 - el agente plan y `openspec-explore` quedaban fuera de alcance, por ser acciones explícitas del usuario, y cambiar de agente no inyectaba nada (su proposal y D7).
 
-En el uso, el usuario pasa a plan (Tab) en la sesión operativa para pensar el paso antes de seguir. Ahí el modelo solo recibía el recordatorio del paso, no el flujo de exploración, y al volver a build no sabía que había habido un desvío. Además, a petición del usuario, el modelo a veces modifica archivos en plan, y si eso deja producto, el plugin encadena la sesión siguiente sin que el usuario sepa que el producto salió de plan. Con las revisiones en plan, Tab tenía además dos significados según el paso.
+En el uso, el usuario pasa a plan (Shift+Tab) en la sesión operativa para pensar el paso antes de seguir. Ahí el modelo solo recibía el recordatorio del paso, no el flujo de exploración, y al volver a build no sabía que había habido un desvío. Además, a petición del usuario, el modelo a veces modifica archivos en plan, y si eso deja producto, el plugin encadena la sesión siguiente sin que el usuario sepa que el producto salió de plan. Con las revisiones en plan, Shift+Tab tenía además dos significados según el paso.
 
 Alternativas consideradas:
 
 - **Mantener la decisión anterior.** Deja sin resolver los dos problemas.
 - **Impedir que el modelo modifique archivos en plan.** El plugin no controla los permisos del agente, y el usuario a veces quiere esas modificaciones: lo que necesita es saberlo.
-- **Dejar las revisiones en plan y no explorar en ellas.** Mantiene los dos significados de Tab y no deja explorar dentro de una revisión.
+- **Dejar las revisiones en plan y no explorar en ellas.** Mantiene los dos significados de Shift+Tab y no deja explorar dentro de una revisión.
 
 ## Decision
 
@@ -31,7 +31,7 @@ Alternativas consideradas:
 
 ## Consequences
 
-- Tab tiene un solo significado en toda la sesión operativa, y el modelo recibe el flujo adecuado en cada agente sin que el usuario lo pida.
+- Shift+Tab tiene un solo significado en toda la sesión operativa, y el modelo recibe el flujo adecuado en cada agente sin que el usuario lo pida.
 - El usuario sabe siempre cuándo algo del ciclo salió de plan antes de que el plugin lo dé por producto y siga.
 - El modelo de una revisión, ahora en build, puede editar si desobedece. Lo mitigan la instrucción y git: una edición inesperada se ve en el árbol antes del commit del usuario.
 - El plugin depende de que el hook `context` de OpenCode le diga el agente de cada petición. Si deja de hacerlo, el plugin se comporta como antes de este ADR, y eso hay que comprobarlo al subir de versión de OpenCode, como las demás APIs del plugin.

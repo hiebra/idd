@@ -128,7 +128,7 @@ export function explorePrompt({ step, change }) {
     `${MARK} El usuario ha pasado al agente plan para explorar ${WHERE(step, change)}. ` +
     'Usa la skill `openspec-explore`: sé su compañero de pensamiento, investiga, compara alternativas y aclara dudas sobre el change y este paso, sin implementar nada y sin escribir artefactos ni código. ' +
     `No llames a \`${HANDOFF_TOOL}\`: explorar no cierra el paso. ` +
-    'Si el usuario te pide expresamente modificar archivos, recuérdale que eso es del agente build (Tab) y que, si lo haces aquí, el plugin le avisará antes de seguir con el ciclo.'
+    'Si el usuario te pide expresamente modificar archivos, recuérdale que eso es del agente build (Shift+Tab) y que, si lo haces aquí, el plugin le avisará antes de seguir con el ciclo.'
   );
 }
 

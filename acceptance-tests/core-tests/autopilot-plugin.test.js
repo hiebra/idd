@@ -398,7 +398,7 @@ test('in a plan turn with several tools, every request carries the full explorat
   assert.deepEqual(w.opencode.crashes, []);
 });
 
-test('a message sent mid-turn after a Tab to plan gets the exploration from the first request that carries it', async (t) => {
+test('a message sent mid-turn after a Shift+Tab to plan gets the exploration from the first request that carries it', async (t) => {
   const w = world(t);
   await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
   await w.startOpenCode();
