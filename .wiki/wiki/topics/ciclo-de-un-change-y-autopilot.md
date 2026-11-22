@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
   - raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md
   - raw/notes/2026-11-22-ll-add-quote-comment-rule.md
@@ -11,22 +12,23 @@ verified: 2026-11-21
 tags: [openspec, git, opencode, plugins, openspec-autopilot, adr, spec]
 confidence: high
 volatility: warm
-summary: "Un change se hace en una rama temporal con una sola fusión, y el change de la rama se lee de git con un módulo neutral. En OpenCode 2, el plugin openspec-autopilot encadena una sesión por paso con el estado en la metadata de las sesiones, revisiones confirmadas en la TUI y un modo auto opcional; en Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006 a ADR-0008, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
+summary: "Un change se hace, de forma recomendada, en una rama temporal con una sola fusión con --no-ff, o en la forma canónica de intent-driven; el change de la rama se lee de git con un módulo neutral. En OpenCode 2, el plugin openspec-autopilot encadena una sesión por paso con el estado en la metadata de las sesiones, revisiones confirmadas en la TUI y un modo auto opcional; en Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006, ADR-0008, ADR-0013, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
 ---
 
 # El ciclo de un change y su automatización en OpenCode
 
-> El ciclo de un change es el mismo en los dos agentes y se decide con un módulo neutral que lee git; OpenCode 2 lo automatiza además con un plugin que da una sesión a cada paso. Todo lo de esta página sale de los archivos fijados en `idd@772d0f0` (el commit del archivado de `add-openspec-autopilot`) y de las pruebas con OpenCode 2.3.2 de la [nota de lecciones](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md).
+> El ciclo de un change es el mismo en los dos agentes y se decide con un módulo neutral que lee git; OpenCode 2 lo automatiza además con un plugin que da una sesión a cada paso. Lo del ciclo sale de los archivos fijados en `idd@5d7f5b0` (el archivado de `manage-git-discipline`); lo del plugin, de `idd@772d0f0` (el de `add-openspec-autopilot`) y de las pruebas con OpenCode 2.3.2 de la [nota de lecciones](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md).
 
 ## El ciclo, igual en los dos agentes
 
-`idd@772d0f0:adr/0007-single-branch-change-lifecycle.md`, `idd@772d0f0:openspec/specs/openspec-change-lifecycle/spec.md`, `idd@772d0f0:README.md`:
+Desde `manage-git-discipline`, el ciclo lo fija `idd@5d7f5b0:adr/0013-git-discipline-two-forms-and-ephemeral-commits.md`, que sustituye a ADR-0007 (`idd@5d7f5b0:openspec/specs/openspec-change-lifecycle/spec.md`, `idd@5d7f5b0:README.md`):
 
-- **Una rama temporal y una sola fusión**: propuesta, implementación, archive y resincronización del wiki van en la rama, y el archive se hace en ella, antes de fusionar. Nunca en una rama permanente.
+- **Dos formas, las dos admitidas.** La recomendada hace todo el change en una rama temporal (propuesta, implementación, archive y resincronización del wiki), archiva en ella y la lleva a la rama de origen en una sola fusión con `--no-ff`; con `git log --first-parent`, cada change es una entrada. La forma canónica de intent-driven fusiona la propuesta antes del apply y archiva en la rama de origen tras fusionar la implementación, con todas las tasks hechas. Conviene para revisar el plan aparte o reservar pronto los números de ADR, a cambio de tres fusiones. El squash también se admite.
 - **Ramas permanentes**: la lista `x-main` de `openspec/config.yaml`, o `main` si no está. La última es la rama de origen. Cualquier otra rama local es temporal, y con HEAD separado no hay ninguna. Una `x-main` con otra forma se trata como ausente y avisa. OpenSpec 1.17.0 acepta claves `x-*` sin avisos ([lecciones](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md), lección 8).
-- **El change de la rama se lee de git**: es el que ha cambiado en `openspec/changes/` desde el merge-base con la rama de origen, con commit o sin él. No se apunta en ningún sitio. Lo calcula `idd@772d0f0:.agents/openspec/branch-change.mjs` (`--json`), sin dependencias y el mismo para los dos agentes (D1 del design).
-- **Las puertas** (proponer, apply, archive) las decide `branch-change.mjs check <propose|apply|archive> [<change>]`, que imprime `{ ok, message }` y sale con 0 o 1. La skill `openspec-git-discipline` manda ejecutarlo y obedecerlo (ver [su origen](../concepts/origen-de-openspec-git-discipline.md)).
-- **Los commits y las fusiones los hace el usuario**: los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki.
+- **El change de la rama se lee de git**: es el que ha cambiado en `openspec/changes/` desde el merge-base con la rama de origen, con commit o sin él. No se apunta en ningún sitio. Lo calcula `idd@5d7f5b0:.agents/openspec/branch-change.mjs` (`--json`), sin dependencias y el mismo para los dos agentes. El merge-base se calcula contra la más avanzada de la rama de origen local y `origin/<rama>` (`originRef`; si han divergido, la local, con aviso), y no cuenta un change cuyo directorio ya está igual en la rama de origen, como pasa tras un squash.
+- **Las puertas** (`check propose|apply|archive|commit`) imprimen `{ ok, message }`, salen con 0 o 1 y admiten las dos formas: proponer o aplicar en la rama de origen deja seguir con un aviso, y archivar allí solo si no quedan tasks. Todo rechazo dice cómo seguir. La skill `openspec-git-discipline` manda ejecutarlas y obedecerlas (ver [su origen](../concepts/origen-de-openspec-git-discipline.md)).
+- **Quién hace los commits**: fuera de la nube, el usuario; los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki. En un contenedor efímero (`CLAUDE_CODE_CONTAINER_ID` y `CLAUDE_CODE_REMOTE=true`), el agente hace commit y push sin preguntar en la rama de la sesión que guardó el arranque (`git config idd.sessionBranch`), con commits provisionales si hace falta y después de que `check commit` lo autorice. Nunca fusiona ni toca otras ramas. Ningún commit mezcla la zona de specs con la de código.
+- **Números de ADR sin choques**: `rules.adr` de `idd@5d7f5b0:openspec/config.yaml` manda hacer `git fetch` y tomar el número más alto de `adr/` en todas las ramas remotas, y `check archive` detiene el archive si un ADR nuevo de la rama repite un número de la rama de origen. Ocurrió en el propio archive de `manage-git-discipline`: entre tanto habían llegado a `main` un ADR-0011 y un ADR-0012 de otras ramas, y el ADR del change se renumeró de 0011 a 0013 (`idd@5d7f5b0:openspec/changes/archive/2026-11-22-manage-git-discipline/adr.md`).
 - **Antes de proponer, busca las decisiones previas**: el schema solo pide leer los ADRs en el paso `design`, pero una propuesta puede chocar con un ADR en vigor sobre el mismo mecanismo. En `add-quote-comment-rule`, la primera propuesta usaba `AGENTS.md`, que ADR-0005 ya había descartado, y hubo que rehacerla al escribir las specs ([lecciones de add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md), lección 3).
 
 ## La asimetría entre agentes
@@ -89,3 +91,4 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `adr/0006-agent-asymmetry-policy.md`, `adr/0007-single-branch-change-lifecycle.md`, `adr/0008-openspec-autopilot-plugin.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `openspec/specs/openspec-autopilot/spec.md`, `.agents/openspec/branch-change.mjs`, `.opencode/plugins/openspec-autopilot/`, `README.md`, `acceptance-tests/README.md`, `openspec/changes/archive/2026-11-21-add-openspec-autopilot/tasks.md`.
 - [Lessons Learned: APIs de sesión de OpenCode 2.3.2 para orquestar un change](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md): lecciones 1 a 10.
 - [Lessons Learned: add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md): lección 3.
+- [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `adr/0013-git-discipline-two-forms-and-ephemeral-commits.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.agents/openspec/branch-change.mjs`, `openspec/config.yaml`, `README.md`, `openspec/changes/archive/2026-11-22-manage-git-discipline/adr.md`.

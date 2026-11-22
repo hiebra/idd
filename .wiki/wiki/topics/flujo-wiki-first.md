@@ -2,13 +2,14 @@
 title: "El flujo wiki-first"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-f2be907-readme.md
   - raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md
   - raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md
   - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 verified: 2026-11-21
 tags: [llm-wiki, wiki-first, adr, spec]
 confidence: high
@@ -45,7 +46,7 @@ Lo fija la spec `wiki-first-knowledge` y lo entrega `idd@b48392d:.agents/wiki/gu
 4. **Registrar en el ámbito correcto**, y preguntar si no está claro cuál toca.
 5. **Modificar el wiki solo con su operación de escritura**: `wiki-manager` o `/wiki:*`, solo cuando el usuario confirma lo que el agente propone, y nunca para consultar.
 6. **Proponer registrar lo descubierto** que servirá en otra ocasión. Lo comprobado se apunta en la conversación como lección candidata, sin escribir nada, y se propone registrar una sola vez, en dry-run, en un punto de cierre: el final de una tarea, antes de un commit, cuando el usuario da la sesión por terminada o el archive de un change. Lo encontrado en internet se propone ingerir en el momento, para conservar su procedencia.
-7. **Los productos del proyecto son fuentes**: specs, ADRs y código, fijados a un commit sin copiar su contenido. Los artículos citan la versión exacta, y al crear el wiki se hace una ingesta inicial sin lo generado.
+7. **Los productos del proyecto son fuentes**: specs, ADRs y código, fijados a un commit sin copiar su contenido. Los artículos citan la versión exacta, y al crear el wiki se hace una ingesta inicial sin lo generado. Si el commit de una cita no está en el clon o en la rama de origen (por ejemplo, tras un squash), se toma el blob de esa ruta en el manifiesto citado y se resuelve con `git cat-file -p <blob>` o `git log --all --find-object=<blob>`; la cita no está rota (`idd@5d7f5b0:.agents/wiki/guide.md`).
 
 La plantilla garantiza que el agente **recibe** el flujo, no que lo siga (ADR-0004): una guía por sesión, breve porque ocupa contexto, y un recordatorio por mensaje de 600 caracteres como máximo (`idd@1cf0792:openspec/specs/wiki-first-knowledge/spec.md`). El recordatorio nombra la consulta de solo lectura y la ingesta como se invocan en cada agente y recuerda apuntar las lecciones candidatas, pero no nombra las lecciones aprendidas, que se proponen en un punto de cierre (`idd@b48392d:.agents/wiki/reminder.md`). El arranque rellena los marcadores de operación de la guía y del recordatorio según el agente. La suite exige además que la guía entregada tenga menos de 6.000 caracteres (`idd@1cf0792:acceptance-tests/step-definitions/wiki.steps.js`). Los entrega el arranque de sesión (ver [El arranque de sesión](arranque-de-sesion.md)).
 
@@ -65,8 +66,8 @@ Lo que cambia fuera de un change no lo recoge este paso.
 
 Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 
-- la resincronización se hace en la rama temporal del change, después del commit del archivado y antes de fusionarla (ADR-0007);
-- las rutas que tocó el change salen del diff entre el merge-base de la rama con la rama de origen y el commit del archivado, más sus specs y sus ADRs;
+- la resincronización se hace en la rama donde se archiva, después del commit del archivado: en la forma recomendada, la rama temporal del change, antes de fusionarla; en la forma canónica, la rama de origen (ADR-0013, que sustituye a ADR-0007; `idd@5d7f5b0:openspec/config.yaml`);
+- las rutas que tocó el change salen del diff entre el merge-base de la rama con la rama de origen y el commit del archivado, más sus specs y sus ADRs; si se archiva en la rama de origen, del diff desde el primer padre del commit que trajo su `proposal.md` a esa rama hasta el commit del archivado;
 - las lecciones del paso 4 parten de las lecciones candidatas que haya recibido la sesión de las sesiones del change (en OpenCode, de su metadata) y, si no hay, de la sesión en curso.
 
 - **Antes de mover el change**, revisa los enlaces relativos de sus artefactos que salen del change: el archive lo baja un nivel y necesitan un `../` más. Citar por la ruta desde la raíz del repositorio lo evita ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 1).
@@ -95,3 +96,4 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `openspec/config.yaml`.
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `adr/0009-wiki-read-and-write-operations.md`, `openspec/specs/wiki-first-knowledge/spec.md`, `.agents/wiki/guide.md`, `.agents/wiki/reminder.md`.
+- [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `.agents/wiki/guide.md`, `openspec/config.yaml`, `openspec/specs/wiki-first-knowledge/spec.md`.

@@ -2,6 +2,7 @@
 title: "openspec-git-discipline: una regla heredada sin justificación registrada"
 category: concept
 sources:
+  - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-21-intent-driven-template-a8b8231-git-discipline.md
   - raw/repos/2026-11-21-skills-04cd70e-git-discipline.md
   - raw/repos/2026-11-21-idd-2e89fa3-git-discipline.md
@@ -10,7 +11,7 @@ sources:
   - raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md
   - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 verified: 2026-11-21
 tags: [openspec, openspec-git-discipline, git, procedencia, skills]
 confidence: high
@@ -55,6 +56,8 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
   - Asume el riesgo de que la propuesta ya no se revise ni se fusione por separado, y deja abierta la vuelta de la fusión intermedia.
 - **La copia de la skill está reescrita** con esas puertas, con el mismo nombre y la misma descripción de activación, divergiendo del origen a propósito (`idd@772d0f0:.agents/skills/openspec-git-discipline/SKILL.md`, blob `6cd1ad0`, ya distinto del `835e065` del origen). Las puertas ya no las decide el modelo leyendo git: la skill manda ejecutar `node .agents/openspec/branch-change.mjs check <propose|apply|archive>` y obedecer su salida, y enumera como señales de alarma exigir la propuesta en la rama de origen antes del apply y archivar en una rama permanente. Un comentario al principio avisa de que no se sobrescriba al actualizar desde `intent-driven-template` sin revisarla (ADR-0007). Ver [El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md).
 
+- **ADR-0013 sustituye a ADR-0007** (`idd@5d7f5b0:adr/0013-git-discipline-two-forms-and-ephemeral-commits.md`, en `manage-git-discipline`): la forma de una rama pasa a ser la recomendada, con `--no-ff`, y la forma canónica heredada vuelve a admitirse junto a ella, sin tratarla como una infracción. El motivo registrado es práctico: el agente conocía la canónica y cuestionaba la del proyecto. Sigue sin constar por qué el origen exige sus dos cruces de `main`.
+
 ## Lo que no se sabe
 
 - **El motivo original.** Puede que exista fuera de los repositorios (conversaciones, otra documentación), pero no consta en ninguna fuente revisada.
@@ -74,3 +77,4 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 - [Collection: openspec-git-discipline en este proyecto (idd@2e89fa3)](../../raw/repos/2026-11-21-idd-2e89fa3-git-discipline.md): `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/changes/add-openspec-autopilot/proposal.md`.
 - [Collection: ADR-0007, el ciclo de un change en una rama (idd@c59392a)](../../raw/repos/2026-11-21-idd-c59392a-adr-0007.md): `adr/0007-single-branch-change-lifecycle.md`.
 - [openspec-git-discipline behaves poorly when developing with a protected main branch](../../raw/articles/2026-11-21-issue-11-git-discipline-main-protegida.md): intent-driven-dev/intent-driven-template#11.
+- [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `adr/0013-git-discipline-two-forms-and-ephemeral-commits.md`, `.agents/skills/openspec-git-discipline/SKILL.md`.
