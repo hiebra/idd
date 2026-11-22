@@ -20,10 +20,15 @@ Examples:
   | el verify   |
 ```
 
-#### Scenario: La revisión de un artefacto del plan no ejecuta tests ni código
+#### Scenario Outline: Las revisiones del plan no ejecutan tests ni código
 
 ```gherkin
 Given una rama temporal con el change en curso `exportar-datos`, en modo normal
-When el plugin abre la revisión del artefacto `design`
+When el plugin abre la revisión <de lo revisado>
 Then la instrucción de la revisión no pide ejecutar los tests de aceptación ni el código
+
+Examples:
+  | de lo revisado            |
+  | del artefacto `design`    |
+  | de los cambios en el plan |
 ```
