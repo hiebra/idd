@@ -46,7 +46,7 @@ La regla va en `openspec/config.yaml`, después de la de `spec-as-source`:
 rules:
   tasks:
     - Must use spec-as-source skill
-    - "Dimensiona cada task para quien la verifica: leer su diff, recorrer y ejecutar los escenarios de aceptación que la cubren y, si quiere, depurarla no debe llevar a una persona más de 15 minutos. Para estimarlo, cuenta 1 minuto por cada 8 líneas de diff previstas, tests incluidos, y 2 minutos por cada escenario que haya que recorrer y ejecutar. Escribe la estimación al final de la línea de cada task, como «(verificación: ~10 min)». Si la estimación de una task pasa del límite, divídela en tasks que se puedan verificar por separado."
+    - "Dimensiona cada task para quien la verifica: leer su diff, recorrer y ejecutar los escenarios de aceptación que la cubren y, si quiere, depurarla no debe llevar a una persona más de 15 minutos. Para estimarlo, cuenta 1 minuto por cada 8 líneas de diff que haya que leer, con los tests y sin los archivos generados, y 2 minutos por cada escenario que haya que recorrer. Escribe la estimación al final de la línea de cada task, como «(verificación: ~10 min)». Si la estimación de una task pasa del límite, divídela en tasks que se puedan verificar por separado."
 ```
 
 Las reglas de un artefacto llegan al modelo con `openspec instructions tasks --json`, en los dos agentes y también cuando `openspec-update-change` rehace las tasks. Comprobado: con el change recién creado, ese comando ya devuelve `rules: ["Must use spec-as-source skill"]`.
@@ -59,8 +59,8 @@ Las reglas de un artefacto llegan al modelo con `openspec instructions tasks --j
 
 El usuario eligió minutos de verificación como unidad. Los minutos no se pueden medir al planificar, así que la regla da una referencia que hace comparables las estimaciones:
 
-- **8 líneas de diff por minuto.** Son unas 500 líneas por hora, el ritmo que SmartBear recomienda no superar al revisar código (`https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/`, consultada el 2026-11-22; es material del fabricante y aún no está registrada en el wiki).
-- **2 minutos por escenario** que haya que recorrer y ejecutar. Es un supuesto de partida, sin fuente.
+- **8 líneas de diff por minuto.** Solo cuentan las líneas que hay que leer: no los archivos generados ni una copia literal que se comprueba con una orden. Son unas 500 líneas por hora, el ritmo que SmartBear recomienda no superar al revisar código (`https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/`, consultada el 2026-11-22; es material del fabricante y aún no está registrada en el wiki).
+- **2 minutos por escenario** que haya que recorrer. Es un supuesto de partida, sin fuente.
 
 Con esa referencia, 15 minutos son unas 100 líneas y uno o dos escenarios. En este repositorio, el 74 % de los commits de código no pasa de 100 líneas: el límite obliga a dividir más o menos la cuarta parte de lo que hasta ahora ha ido junto.
 
@@ -245,7 +245,7 @@ Tres apartados nuevos: el límite de verificación y cómo se cambia; el contrat
 - **[`code --goto` puede abrir el archivo en otra ventana]** → La documentación no dice en qué ventana abre. Es un detalle del ejemplo, no del contrato.
 - **[Las estimaciones fallan]** → Son estimaciones, y la referencia de D2 son supuestos. La estimación queda escrita, así que el desvío se ve y se corrige en la regla.
 - **[Más tasks, más revisiones]** → Un límite bajo multiplica las sesiones de revisión, cuyo coste fijo no se ha medido. El valor se cambia en una línea.
-- **[La regla alarga las instrucciones de `tasks`]** → Unas 90 palabras más en cada planificación.
+- **[La regla alarga las instrucciones de `tasks`]** → Unas 100 palabras más en cada planificación.
 - **[Ramas sin fusionar]** → `windows-global-distro`, `autopilot-rama-por-sesion` y `add-project-wiki-toggle` tocan `prompts.mjs` fuera del bloque de verificación (comprobado en sus diffs contra `main`), y la última saca de `config.yaml` las indicaciones del wiki, en otra zona del archivo. Puede haber conflictos de contexto al fusionar, no de contenido. `apply-one-task-per-session-in-normal-mode` y `autopilot-plan-explore` ya están en `main` y en esta rama (`ed2f488`), sin más conflicto que los índices del wiki.
 
 ## Migration Plan
