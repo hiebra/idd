@@ -1,7 +1,5 @@
 # wiki-first-knowledge
 
-Con la fusión con squash, el commit que citan los artículos puede no llegar nunca a la rama de origen. Los manifiestos del motor fijan cada archivo por su blob, así que la cita sigue siendo resoluble.
-
 ## ADDED Requirements
 
 ### Requirement: Citas cuyo commit no está en la rama de origen

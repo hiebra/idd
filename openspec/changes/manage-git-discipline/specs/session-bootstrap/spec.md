@@ -1,7 +1,5 @@
 # session-bootstrap
 
-El arranque de sesión deja el clon listo para el ciclo de git del proyecto: completo, con las ramas permanentes locales al día y, en un contenedor efímero, con la rama de la sesión guardada.
-
 ## ADDED Requirements
 
 ### Requirement: Clon completo y ramas permanentes al día al abrir sesión

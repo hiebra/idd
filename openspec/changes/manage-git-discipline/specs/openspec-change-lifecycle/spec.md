@@ -1,7 +1,5 @@
 # openspec-change-lifecycle
 
-El ciclo de una rama y una sola fusión (ADR-0007) pasa a ser la forma recomendada, y se admite también la forma canónica de intent-driven. Además se adapta a clones con la rama de origen local atrasada, a sesiones en contenedores efímeros, donde el agente hace commit y push en la rama de la sesión, al squash y a ramas concurrentes que crean ADRs.
-
 ## MODIFIED Requirements
 
 ### Requirement: El change de una rama temporal se lee de git
@@ -151,13 +149,27 @@ And indica hacer el commit del wiki después del commit del archive
 ## ADDED Requirements
 
 ### Requirement: En un contenedor efímero, el agente hace commit y push en la rama de la sesión
-Un contenedor efímero es una sesión con `CLAUDE_CODE_CONTAINER_ID` no vacía y `CLAUDE_CODE_REMOTE=true`. En un contenedor efímero, el agente DEBE hacer commit y push en la rama de la sesión sin preguntar. Lo hace en los momentos de commit del ciclo y cada vez que el entorno avisa al final de un turno de que hay cambios pendientes. Antes de cada commit DEBE ejecutar `node .agents/openspec/branch-change.mjs check commit`, que imprime `{ ok, message }` y sale con 0 solo si:
+Un contenedor efímero es una sesión con `CLAUDE_CODE_CONTAINER_ID` no vacía y `CLAUDE_CODE_REMOTE=true`. En un contenedor efímero, el agente DEBE hacer commit y push en la rama de la sesión sin preguntar, en los momentos de commit del ciclo y cada vez que el entorno avisa al final de un turno de que hay cambios pendientes. El push DEBE ir solo a `origin/<rama de la sesión>`. El agente NO DEBE fusionar, cambiar de rama, crear ramas ni hacer push a ninguna otra.
+
+#### Scenario: La skill indica cuándo hace el agente commit y push
+
+```gherkin
+Given la skill de disciplina de git del proyecto
+When se revisa qué indica sobre los commits en un contenedor efímero
+Then indica ejecutar la puerta `check commit` antes de cada commit
+And indica hacer commit y push en los momentos de commit y cuando avisa el final de un turno
+And indica hacer el push solo a la rama de la sesión
+And indica no fusionar, no cambiar de rama y no hacer push a otras ramas
+```
+
+### Requirement: La puerta check commit autoriza cada commit del agente
+Antes de cada commit en un contenedor efímero, el agente DEBE ejecutar `node .agents/openspec/branch-change.mjs check commit`, que imprime `{ ok, message }` y sale con 0 solo si:
 - la sesión está en un contenedor efímero;
 - hay una rama de la sesión guardada en `git config idd.sessionBranch` y el clon está en ella;
 - esa rama es temporal;
 - los cambios pendientes son de una sola zona de `spec-as-source`.
 
-Si no sale con 0, el agente NO DEBE hacer el commit. El push DEBE ir solo a `origin/<rama de la sesión>`. El agente NO DEBE fusionar, cambiar de rama, crear ramas ni hacer push a ninguna otra.
+Si no sale con 0, el agente NO DEBE hacer el commit.
 
 #### Scenario Outline: Cuándo deja hacer commit la puerta check commit
 
@@ -192,17 +204,6 @@ Given una sesión que no está en un contenedor efímero
 When se ejecuta la puerta `check commit`
 Then la puerta no deja seguir
 And se indica que los commits los hace el usuario
-```
-
-#### Scenario: La skill indica cuándo hace el agente commit y push
-
-```gherkin
-Given la skill de disciplina de git del proyecto
-When se revisa qué indica sobre los commits en un contenedor efímero
-Then indica ejecutar la puerta `check commit` antes de cada commit
-And indica hacer commit y push en los momentos de commit y cuando avisa el final de un turno
-And indica hacer el push solo a la rama de la sesión
-And indica no fusionar, no cambiar de rama y no hacer push a otras ramas
 ```
 
 ### Requirement: Commits provisionales de una sola zona
@@ -265,7 +266,7 @@ Examples:
 ```
 
 ### Requirement: Cuándo conviene cada forma del ciclo, donde se archiva
-La skill de disciplina de git y las indicaciones de archivado de `openspec/config.yaml` DEBEN explicar las dos formas del ciclo y cuándo conviene cada una. La forma recomendada, con el archive en la rama temporal y una fusión con `--no-ff`, hace que el plan, el código, el archive y el wiki lleguen en una sola fusión, y que la rama permanente no reciba commits directos. La forma canónica de intent-driven permite revisar el plan aparte y reserva pronto los números de ADR, a cambio de tres fusiones y de commits del archive y del wiki en la rama permanente. Las dos DEBEN presentar la forma canónica como admitida, no como una infracción.
+La skill de disciplina de git y las indicaciones de archivado de `openspec/config.yaml` DEBEN explicar cuándo conviene cada forma del ciclo y presentar la canónica como admitida, no como una infracción. La recomendada conviene porque el change llega en una sola fusión, sin commits directos en la rama permanente. La canónica conviene para revisar el plan aparte y reservar pronto los números de ADR, a cambio de tres fusiones y de commits en la rama permanente.
 
 #### Scenario: Las dos formas del ciclo están en la skill y en las indicaciones de archivado
 

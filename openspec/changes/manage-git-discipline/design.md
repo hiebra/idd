@@ -11,6 +11,11 @@ Lo que ha fallado en la práctica (ver la propuesta):
 - **Con ramas concurrentes, los ADRs repiten número.** El schema numera con el más alto de `adr/` en la rama de trabajo.
 - **El agente conoce la forma canónica de intent-driven** y cuestiona la del proyecto, que la sustituyó en vez de admitirla.
 
+Qué cambia en cada capability:
+- **`openspec-change-lifecycle`:** el ciclo de una rama y una sola fusión pasa a ser la forma recomendada, y se admite también la forma canónica de intent-driven. Además se adapta a clones con la rama de origen local atrasada, a sesiones en contenedores efímeros (donde el agente hace commit y push en la rama de la sesión), al squash y a ramas concurrentes que crean ADRs.
+- **`session-bootstrap`:** el arranque deja el clon listo para el ciclo de git: completo, con las ramas permanentes locales al día y, en un contenedor efímero, con la rama de la sesión guardada.
+- **`wiki-first-knowledge`:** con el squash, el commit que citan los artículos puede no llegar nunca a la rama de origen; como los manifiestos del motor fijan cada archivo por su blob, la cita sigue siendo resoluble.
+
 Restricciones:
 - No se toca nada externo: el schema `intent-driven`, las skills que vienen de él (incluida `spec-as-source`), los workflows de OpenSpec ni el motor del wiki.
 - La forma del resultado de `branchChange` la consume el autopilot y no debe romperse.
