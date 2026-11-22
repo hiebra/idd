@@ -356,7 +356,7 @@ En Windows solo se soporta OpenCode 2 o superior; Claude Code en Windows no est�
 
 ### Qué le falta a la máquina
 
-El diagnóstico `scripts/windows/Test-OfflineInstall.ps1` dice qué le falta a una máquina Windows para el proyecto, también sin internet: Node.js con npm, git, Python 3, los finales de línea del clon, el motor del wiki, las dependencias npm de la raíz y de `acceptance-tests/` para la plataforma de la máquina, y OpenCode 2. No instala nada, no cambia ningún archivo y no usa la red. Funciona con Windows PowerShell 5.1, el que trae Windows 11, y con PowerShell 7:
+El diagnóstico `scripts/windows/Test-OfflineInstall.ps1` dice qué le falta a una máquina Windows para el proyecto, también sin internet: Node.js con npm, git, Python 3, los finales de línea del clon, el motor del wiki, las dependencias npm de la raíz y de `acceptance-tests/` para la plataforma de la máquina, y OpenCode 2. En un proyecto de la variante adelgazada, que no lleva su propio schema, comprueba además la instalación global de `<data>` y `<config>`: su versión, el schema, el motor, las skills y los plugins. Si falta algo, remite al `.bat` de la release. No instala nada, no cambia ningún archivo y no usa la red. Funciona con Windows PowerShell 5.1, el que trae Windows 11, y con PowerShell 7:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\windows\Test-OfflineInstall.ps1

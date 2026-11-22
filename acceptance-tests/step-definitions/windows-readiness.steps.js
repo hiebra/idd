@@ -5,7 +5,7 @@
 
 const assert = require('node:assert/strict');
 const { Given, When, Then } = require('@cucumber/cucumber');
-const { WindowsMachine, matches } = require('../support/windows-readiness');
+const { WindowsMachine, matches, noGlobalInstall, globalInstall } = require('../support/windows-readiness');
 const { git } = require('../support/engine');
 
 // The components of the report, by the name the steps give them
@@ -17,6 +17,7 @@ const COMPONENTS = {
   'las dependencias npm de `acceptance-tests`': 'npm-acceptance-tests',
   'los finales de línea del clon': 'line-endings',
   'el agente': 'agent',
+  'la instalación global': 'global-install',
 };
 const NAMES = Object.keys(COMPONENTS)
   .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
@@ -115,6 +116,39 @@ Given('el único agente de la máquina es OpenCode 1', function () {
 // --- Diagnóstico ------------------------------------------------------------------
 
 // The text report gives the exit code; the same facts as JSON give the components
+// --- La instalación global (windows-global-distro, design D8) ----------------------
+
+Given('el proyecto es de la variante adelgazada', function () {
+  const facts = windows(this).facts;
+  // Without its own schema, skills or plugins, nor .agents/wiki/engine.json
+  facts.project = { ownSchema: false };
+  facts.engine = { configured: false };
+});
+
+Given(/^la máquina tiene la instalación global completa de la versión `([^`]+)`$/, function (version) {
+  windows(this).facts.global = globalInstall(version);
+});
+
+Given('la máquina no tiene la instalación global', function () {
+  windows(this).facts.global = noGlobalInstall();
+});
+
+Given(/^la máquina tiene la instalación global sin el plugin `([^`]+)`$/, function (plugin) {
+  const install = globalInstall('0.1.0');
+  const item = install.items.find((i) => i.name === `plugin ${plugin}`);
+  assert.ok(item, `no plugin '${plugin}' in the global install`);
+  item.present = false;
+  windows(this).facts.global = install;
+});
+
+Then(/^el detalle de la instalación global nombra (?:la versión|el plugin) `([^`]+)`$/, function (text) {
+  assert.ok(component(this, 'global-install').Detalle.includes(text), detail(this));
+});
+
+Then('el informe da el `.bat` de la release como alternativa global', function () {
+  assert.match(component(this, 'global-install').Global, /\.bat/, detail(this));
+});
+
 When('se ejecuta el diagnóstico en el proyecto', function () {
   const machine = windows(this);
   machine.ensureProject();

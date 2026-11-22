@@ -7,7 +7,9 @@
   Comprueba cada binario, dato y ajuste que necesita el proyecto (Node.js y
   npm, git, Python 3, los finales de línea del clon, el motor del wiki, las
   dependencias npm de la raíz y de acceptance-tests/ y el agente, OpenCode 2)
-  y, para lo que falta, dice:
+  y, en un proyecto de la variante adelgazada, la instalación global de
+  <data> y <config> (design D8 de windows-global-distro). Para lo que falta,
+  dice:
 
     - Repo:    qué habría que incorporar al repositorio (bajo vendor\windows\,
                por defecto) para no depender de la máquina.
@@ -264,6 +266,32 @@ function Get-ReadinessFacts {
     if ($null -ne $packages) { $npmProjects += [ordered]@{ label = $proj[0]; rel = $proj[1]; packages = @($packages) } }
   }
 
+  # La instalación global (windows-global-distro, design D8): <data> y
+  # <config> como los calcula el .bat, y lo que instala
+  $ownSchema = Test-Path (Join-Path $ProjectDir 'openspec\schemas\intent-driven\schema.yaml')
+  $gData = $env:XDG_DATA_HOME; if (-not $gData) { $gData = $env:LOCALAPPDATA }
+  $gConfig = $env:XDG_CONFIG_HOME; if (-not $gConfig -and $env:USERPROFILE) { $gConfig = Join-Path $env:USERPROFILE '.config' }
+  $gVersion = $null
+  if ($gData) {
+    $vf = Join-Path $gData 'idd\version'
+    if (Test-Path $vf) { $gVersion = ([IO.File]::ReadAllText($vf)).Trim() }
+  }
+  $gItems = @()
+  foreach ($i in @(
+      @('schema intent-driven', 'data', @('openspec\schemas\intent-driven\schema.yaml')),
+      @('motor del wiki', 'data', @('idd\wiki-engine\claude-plugin')),
+      @('skill openspec-git-discipline', 'config', @('opencode\skills\openspec-git-discipline\SKILL.md', 'opencode\skills\openspec-git-discipline\scripts\branch-change.mjs')),
+      @('skill wiki-query', 'config', @('opencode\skills\wiki-query\SKILL.md')),
+      @('skill wiki-manager', 'config', @('opencode\skills\wiki-manager\SKILL.md')),
+      @('plugin openspec-autopilot', 'config', @('opencode\plugins\openspec-autopilot\server.js')),
+      @('plugin session-bootstrap', 'config', @('opencode\plugins\session-bootstrap\server.js')),
+      @('plugin response-comments', 'config', @('opencode\plugins\response-comments\server.js')))) {
+    $root = $gConfig; if ($i[1] -eq 'data') { $root = $gData }
+    $present = [bool]$root
+    foreach ($rel in $i[2]) { if ($present -and -not (Test-Path (Join-Path $root $rel))) { $present = $false } }
+    $gItems += [ordered]@{ name = $i[0]; present = $present }
+  }
+
   # Agentes
   $agents = [ordered]@{ opencode = @(); claude = @() }
   $opencodes = @()
@@ -286,6 +314,8 @@ function Get-ReadinessFacts {
     engine      = $engine
     npmProjects = $npmProjects
     agents      = $agents
+    project     = [ordered]@{ ownSchema = $ownSchema }
+    global      = [ordered]@{ data = $gData; config = $gConfig; version = $gVersion; items = $gItems }
   }
 }
 
@@ -399,9 +429,38 @@ function Get-ReadinessReport {
     }
   }
 
+  # --- Instalación global (windows-global-distro, design D8) ---
+  # Solo cuenta en un proyecto sin su propio schema (la variante adelgazada);
+  # sin el hecho project, de un diagnóstico anterior, es la plantilla completa
+  $proj = P $Facts 'project'
+  $glob = P $Facts 'global'
+  $slim = ($null -ne $proj) -and -not (P $proj 'ownSchema')
+  $gData = P $glob 'data'; $gConfig = P $glob 'config'
+  $gMissing = @()
+  foreach ($it in @(P $glob 'items')) { if ($null -ne $it -and -not (P $it 'present')) { $gMissing += (P $it 'name') } }
+  $gRepo = 'Pasar el proyecto a la plantilla completa: restaurar openspec\schemas\, .agents\, .opencode\ y .claude\ desde la plantilla de la misma versión.'
+  $gGlobal = 'Ejecutar el instalador de la release, idd-<versión>.bat, de la misma versión que la variante adelgazada del proyecto. Instala en <data> y <config>, sustituye una instalación anterior y se puede volver a ejecutar.'
+  $gGet = 'En la página de releases de la plantilla, idd-<versión>.bat. Al ejecutarse descarga idd-global-<versión>.zip de la misma release, así que necesita internet en ese momento.'
+  if (-not $slim) {
+    $results.Add((New-Result 'global-install' 'Instalación global' 'datos' 'OK' 'El proyecto lleva su propio schema, sus skills y sus plugins (plantilla completa): no necesita la instalación global'))
+  } elseif (-not (P $glob 'version')) {
+    $results.Add((New-Result 'global-install' 'Instalación global' 'datos' 'FALTA' "El proyecto es de la variante adelgazada y no hay instalación global en $gData\idd (falta $gData\idd\version)" $gRepo $gGlobal $gGet))
+  } elseif ($gMissing.Count -gt 0) {
+    $results.Add((New-Result 'global-install' "Instalación global ($(P $glob 'version'))" 'datos' 'FALTA' "La versión $(P $glob 'version') de la instalación global está incompleta en $gData y $gConfig\opencode: falta $($gMissing -join ', ')" $gRepo $gGlobal $gGet))
+  } else {
+    $results.Add((New-Result 'global-install' "Instalación global ($(P $glob 'version'))" 'datos' 'OK' "Versión $(P $glob 'version') en $gData y $gConfig\opencode"))
+  }
+
   # --- Motor del wiki ---
   $eng = P $Facts 'engine'
-  if (-not (P $eng 'configured')) {
+  if ($slim -and -not (P $eng 'configured')) {
+    # El de la instalación global: el proyecto adelgazado no tiene engine.json
+    if ((P $glob 'version') -and ($gMissing -notcontains 'motor del wiki')) {
+      $results.Add((New-Result 'wiki-engine' 'Motor del wiki' 'datos' 'OK' "De la instalación global, en $gData\idd\wiki-engine"))
+    } else {
+      $results.Add((New-Result 'wiki-engine' 'Motor del wiki' 'datos' 'FALTA' "El proyecto es de la variante adelgazada y la instalación global no tiene el motor en $gData\idd\wiki-engine" $gRepo $gGlobal $gGet))
+    }
+  } elseif (-not (P $eng 'configured')) {
     $results.Add((New-Result 'wiki-engine' 'Motor del wiki' 'datos' 'OK' 'No hay .agents\wiki\engine.json: el proyecto no usa el motor'))
   } else {
     $repo = P $eng 'repo'; $ref = P $eng 'ref'

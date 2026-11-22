@@ -78,7 +78,31 @@ function fullFacts() {
       : { configured: false },
     npmProjects: projects.map(({ label, rel, lock }) => ({ label, rel, packages: lockPackages(lock) })),
     agents: { opencode: [{ path: 'C:\\Users\\usuario\\.opencode\\bin\\opencode.exe', version: '2.3.2' }], claude: [] },
+    // The project carries its own schema (the full template), and the machine
+    // has no global install (windows-global-distro, design D8)
+    project: { ownSchema: true },
+    global: noGlobalInstall(),
   };
+}
+
+// What the global install is made of, as Get-ReadinessFacts checks it
+const GLOBAL_ITEMS = [
+  'schema intent-driven',
+  'motor del wiki',
+  'skill openspec-git-discipline',
+  'skill wiki-query',
+  'skill wiki-manager',
+  'plugin openspec-autopilot',
+  'plugin session-bootstrap',
+  'plugin response-comments',
+];
+
+function noGlobalInstall() {
+  return { data: 'C:\\Users\\usuario\\AppData\\Local', config: 'C:\\Users\\usuario\\.config', version: null, items: GLOBAL_ITEMS.map((name) => ({ name, present: false })) };
+}
+
+function globalInstall(version) {
+  return { ...noGlobalInstall(), version, items: GLOBAL_ITEMS.map((name) => ({ name, present: true })) };
 }
 
 class WindowsMachine {
@@ -132,4 +156,4 @@ class WindowsMachine {
   }
 }
 
-module.exports = { WindowsMachine, matches };
+module.exports = { WindowsMachine, matches, noGlobalInstall, globalInstall };
