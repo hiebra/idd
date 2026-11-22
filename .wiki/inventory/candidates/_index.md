@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [la-task-del-archive-no-es-un-checkbox.md](la-task-del-archive-no-es-un-checkbox.md) | task | active | p3 | Decidir si rules.tasks prohíbe una task final para el archive o pide marcarla en el commit del archivado. | 2026-11-22 |
 | [puente-del-autopilot-sigue-con-una-tui-cerrada.md](puente-del-autopilot-sigue-con-una-tui-cerrada.md) | task · active · p3 — el autopilot espera a que venzan las peticiones a una TUI cerrada antes de degradarse | opencode, task | 2026-11-22 |
 | [dos-sesiones-que-toman-el-control-a-la-vez.md](dos-sesiones-que-toman-el-control-a-la-vez.md) | task · active · p3 — dos sesiones que dicen `autopilot` a la vez pueden quedar las dos como operativas | opencode, task | 2026-11-22 |
 | [declarar-skip-specs-al-proponer-un-change-sin-specs.md](declarar-skip-specs-al-proponer-un-change-sin-specs.md) | question · active · p3 — ¿pedir skip_specs: true al proponer un change sin cambios de comportamiento? | openspec, question | 2026-11-22 |

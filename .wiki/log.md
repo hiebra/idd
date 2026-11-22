@@ -162,3 +162,11 @@
 ## [2026-11-22] librarian | scanned 10 articles, 0 stale, 0 low-quality; 1 contradicción tras autopilot-plan-explore
 
 ## [2026-11-22] ll | "el archivado de autopilot-plan-explore y su banco con OpenCode real" → raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md (4 lessons, 0 articles updated)
+
+## [2026-11-22] update | ciclo-de-un-change-y-autopilot: fundidos los dos puntos del hook prompt (corrige la contradicción con la task 1.4 de autopilot-plan-explore)
+
+## [2026-11-22] update | proveedor-falso-para-verificar-contexto y flujo-wiki-first: reglas de las lecciones 2 y 1 de raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md
+
+## [2026-11-22] inventory | updated watch volver-a-comprobar-apis-de-sesion-al-subir-opencode (contrato de autopilot-plan-explore, tasks 1.1 a 1.4 y 7.2); added task la-task-del-archive-no-es-un-checkbox
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
