@@ -22,9 +22,10 @@
 //   - ephemeral container: the variables of the cloud environment
 //     (CLAUDE_CODE_CONTAINER_ID, CLAUDE_CODE_REMOTE), set only when the
 //     scenario asks for them, whatever the machine that runs the suite is
-//   - wiki disabled for the user: PROJECT_WIKI=off in the environment the
-//     agent is launched from (design D4); Claude Code reads it from
-//     .claude/settings.local.json instead, see its adapter
+//   - user environment: variables the user has in the environment the agent
+//     is launched from (userEnv); whether the wiki is enabled is not a
+//     property of the machine but of the clone (design D7 of
+//     add-project-wiki-toggle)
 
 const fs = require('node:fs');
 const os = require('node:os');
@@ -41,7 +42,7 @@ const GLOBAL_OPENSPEC_VERSION = '0.9.0';
 const NPM_FAILURE_LINE = 'npm-simulado: "comillas" \\barras\\ tab\tfin \\n literal y control \u0001 fin';
 // System tools the hook needs besides node and npm
 const HOOK_TOOLS = [
-  'bash', 'cat', 'dirname', 'git', 'grep', 'head', 'ln', 'mkdir', 'mktemp', 'mv', 'readlink', 'rm', 'sed',
+  'awk', 'bash', 'cat', 'dirname', 'git', 'grep', 'head', 'ln', 'mkdir', 'mktemp', 'mv', 'readlink', 'rm', 'sed',
   'sha256sum', 'sort', 'tail', 'timeout', 'wc',
 ];
 
@@ -94,8 +95,8 @@ class Machine {
     this.sessionPathAdjustable = true;
     // false: HOME is an empty directory, with no user hub
     this.hasUserHub = true;
-    // true: the user disabled the wiki in the environment the agent starts from
-    this.wikiDisabled = false;
+    // Variables of the environment the agent is launched from
+    this.userEnv = {};
     this.commentsDisabled = false;
     // The global install of the release on this machine (support/global.js), or
     // null; with it, XDG_DATA_HOME and XDG_CONFIG_HOME point at its <data>
@@ -245,7 +246,7 @@ class Machine {
       delete env.XDG_DATA_HOME;
     }
     if (this.globalInstall) Object.assign(env, { XDG_DATA_HOME: this.globalInstall.data, XDG_CONFIG_HOME: this.globalInstall.config });
-    if (this.wikiDisabled) env.PROJECT_WIKI = 'off';
+    Object.assign(env, this.userEnv);
     if (this.commentsDisabled) env.PROJECT_COMMENTS = 'off';
     if (this.ephemeral) Object.assign(env, EPHEMERAL_ENV);
     if (this.offline) {

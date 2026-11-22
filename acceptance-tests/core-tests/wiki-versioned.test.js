@@ -23,6 +23,7 @@ test('.wiki/ ignored by another rule: .gitignore is kept and the user is warned'
   machine.nodeWithoutNpm = true;
   const engine = new FakeEngine(workDir);
   const project = new Project(path.join(workDir, 'project'), { engineUrl: engine.url });
+  project.setWikiEnabled(true);
   fs.mkdirSync(project.path('.wiki'), { recursive: true });
   fs.writeFileSync(project.path('.wiki', 'index.md'), '# Wiki\n');
   fs.appendFileSync(project.path('.gitignore'), '.wiki/*.md\n');

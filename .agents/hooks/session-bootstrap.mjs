@@ -14,10 +14,13 @@
 //         git config idd.sessionBranch, si no hay una guardada. No toca el
 //         árbol de trabajo. Fuera de un contenedor efímero solo usa la red para
 //         completar un clon superficial.
-//       - Instala el motor del wiki en la versión fijada en
-//         .agents/wiki/engine.json, en .agents/wiki-engine/ (ignorado por git),
-//         y lo expone a cada agente con symlinks (en Windows, con junctions,
-//         que no piden permisos).
+//       - Con el wiki del proyecto habilitado, instala el motor del wiki en la
+//         versión fijada en .agents/wiki/engine.json, en .agents/wiki-engine/
+//         (ignorado por git), y lo expone a cada agente con symlinks (en
+//         Windows, con junctions, que no piden permisos); con el wiki
+//         deshabilitado, retira esos symlinks. Con el wiki habilitado, avisa si
+//         los pasos del wiki de openspec/config.yaml no coinciden con su
+//         fuente; nunca reescribe config.yaml.
 //       - Instala todas las dependencias del proyecto (npm install) en la raíz
 //         y en acceptance-tests/ cuando faltan o han cambiado package.json,
 //         package-lock.json o este script.
@@ -30,7 +33,27 @@
 //   node session-bootstrap.mjs reminder <agente> <directorio del proyecto>
 //       Por stdout, la guía del wiki o el recordatorio por mensaje, ya
 //       preparados para el agente (claude-code u opencode), o nada si el wiki
-//       está desactivado o no se puede generar.
+//       está deshabilitado o no se puede generar.
+//   node session-bootstrap.mjs wiki <status|on|off> <directorio del proyecto>
+//       La parte determinista de /toggle-wiki (design D3 de
+//       add-project-wiki-toggle). Por stdout, líneas "clave=valor":
+//       - status: enabled=true|false, wiki-dir=true|false (si existe .wiki/) y,
+//         para la ingesta inicial, source=<ruta> por cada archivo versionado
+//         que entraría y excluded=<ruta>|<motivo> por cada uno que no (lo
+//         generado, informes, lockfiles, la copia del motor, enlaces, archivos
+//         vacíos o de configuración trivial).
+//       - on: pone "enabled": true, inserta los pasos del wiki de
+//         archive-guidance.yaml en operations.archive.guidance de
+//         openspec/config.yaml, entre "# wiki:archive-guidance:begin" y
+//         "# wiki:archive-guidance:end" (crea las claves que falten, dentro de
+//         las marcas), instala y expone el motor como el arranque y pasa al
+//         stage engine.json y config.yaml. Imprime staged= y enabled=.
+//       - off: pone "enabled": false, quita lo que hay entre las marcas, marcas
+//         incluidas (y guidance, si se queda vacía), retira los symlinks del
+//         motor y pasa al stage los mismos dos archivos. No toca .wiki/.
+//       Ni on ni off hacen commit. Con las marcas mal formadas o repetidas no
+//       cambian nada y avisan. La edición de config.yaml es de texto, línea a
+//       línea: conserva byte a byte el resto del archivo.
 //   node session-bootstrap.mjs comments-rule <agente> <directorio del proyecto>
 //   node session-bootstrap.mjs comments-reminder <agente> <directorio del proyecto>
 //       Por stdout, la regla de comentarios, o su recordatorio si el mensaje
@@ -42,8 +65,14 @@
 // En todos los modos, avisos por stderr, uno por línea, con el prefijo
 // "session-start:", y termina siempre con 0: nunca bloquea la sesión.
 //
-// El wiki se desactiva en local con PROJECT_WIKI=off: no se instala el motor,
-// se retiran sus symlinks y la guía y el recordatorio quedan vacíos.
+// El wiki del proyecto está habilitado solo si .agents/wiki/engine.json dice
+// literalmente "enabled": true (design D1 de add-project-wiki-toggle, ADR-0021);
+// vale para todo el proyecto y ninguna variable local lo cambia. Deshabilitado,
+// no se instala el motor, se retiran sus symlinks y la guía y el recordatorio
+// quedan vacíos. Del proyecto solo se leen engine.json, openspec/config.yaml y
+// .wiki/; la guía, el recordatorio, opencode-note.md y archive-guidance.yaml se
+// buscan en ../wiki/ respecto a este script (design D8), o en wiki/ junto a él
+// en la instalación global.
 // La regla de comentarios se desactiva en local con PROJECT_COMMENTS=off.
 //
 // Modo global (design D2 de windows-global-distro): con --global delante del
@@ -55,8 +84,10 @@
 //   <data>/idd/wiki-engine, donde <data> es XDG_DATA_HOME o, si no está
 //   definida, LOCALAPPDATA (en otros sistemas, ~/.local/share), y expone su
 //   ruta igual que en el proyecto;
-// - toma la guía, el recordatorio y la regla de comentarios de su propio
-//   directorio (wiki/ y comments/ junto a este script);
+// - toma la guía, el recordatorio, opencode-note.md, archive-guidance.yaml y la
+//   regla de comentarios de su propio directorio (wiki/ y comments/ junto a
+//   este script); el ajuste del wiki es el del proyecto, como en la plantilla
+//   completa;
 // - prepara git, instala las dependencias del proyecto y pone su openspec en
 //   el PATH igual que en el proyecto.
 //
@@ -99,8 +130,14 @@ const BRANCH_CHANGE = path.join('.agents', 'skills', 'openspec-git-discipline', 
 // <config>/opencode/skills/… respecto a <config>/opencode/plugins/session-bootstrap/
 const GLOBAL_BRANCH_CHANGE = path.resolve(path.dirname(SELF), '..', '..', 'skills', 'openspec-git-discipline', 'scripts', 'branch-change.mjs');
 
-// Dónde están los textos: en el proyecto, o junto a este script en la instalación global
-const wikiDir = () => (GLOBAL ? path.join(path.dirname(SELF), 'wiki') : WIKI_DIR);
+const CONFIG_YAML = path.join('openspec', 'config.yaml');
+const BLOCK_BEGIN = '# wiki:archive-guidance:begin';
+const BLOCK_END = '# wiki:archive-guidance:end';
+
+// Dónde están los textos que viajan con la distribución (design D8 de
+// add-project-wiki-toggle): ../wiki/ respecto a este script, no en el proyecto
+// (en este repositorio coinciden); junto a él, en wiki/, en la instalación global
+const wikiDir = () => (GLOBAL ? path.join(path.dirname(SELF), 'wiki') : path.resolve(path.dirname(SELF), '..', 'wiki'));
 const commentsDir = () => (GLOBAL ? path.join(path.dirname(SELF), 'comments') : COMMENTS_DIR);
 
 // <data> de la instalación global, como lo calculan OpenSpec y el instalador
@@ -133,7 +170,10 @@ function lastLines(text, count) {
   return lines.slice(-count);
 }
 
-const wikiDisabled = () => process.env.PROJECT_WIKI === 'off';
+// El wiki está habilitado solo si engine.json dice literalmente "enabled": true.
+// Un archivo que falta, un error o cualquier otro valor lo dejan deshabilitado
+const wikiEnabled = () => /"enabled"[ \t\r\f\v]*:[ \t\r\f\v]*true(?:[^A-Za-z0-9_."]|$)/m.test(readText(ENGINE_JSON) ?? '');
+const wikiDisabled = () => !wikiEnabled();
 const commentsDisabled = () => process.env.PROJECT_COMMENTS === 'off';
 
 // --- Utilidades -----------------------------------------------------------------
@@ -240,8 +280,15 @@ function prepareGit() {
   }
   const head = git(['symbolic-ref', '--short', '-q', 'HEAD']);
   const current = head.ok ? head.out : '';
+  // Las ramas sacadas en cualquier directorio del clon (el principal o un
+  // worktree): update-ref movería la referencia sin su árbol ni su índice
+  // (design D11 de autopilot-rama-por-sesion)
+  const checkedOut = new Set([current]);
+  for (const line of git(['worktree', 'list', '--porcelain']).out.split('\n')) {
+    if (line.startsWith('branch refs/heads/')) checkedOut.add(line.slice('branch refs/heads/'.length).trim());
+  }
   for (const name of permanent) {
-    if (name === current) continue;
+    if (checkedOut.has(name)) continue;
     const old = git(['rev-parse', '--verify', '-q', `refs/heads/${name}`]);
     if (!old.ok) continue;
     const next = git(['rev-parse', '--verify', '-q', `refs/remotes/origin/${name}`]);
@@ -336,14 +383,74 @@ function processAlive(pid) {
 // El motor de la instalación global, sin instalar nada (design D2 de
 // windows-global-distro)
 function globalWikiEngine() {
-  if (wikiDisabled()) return null;
   const dir = path.join(dataDir(), 'idd', 'wiki-engine', 'claude-plugin');
   return isDir(dir) ? dir : null;
 }
 
+// fetchEngine REPO REF: descarga el motor del wiki en ENGINE_DIR, o avisa. Es la
+// única función que sabe de dónde sale el motor (design D8 de
+// add-project-wiki-toggle), para que una instalación global pueda cambiarlo sin
+// tocar el resto
+function fetchEngine(repo, ref) {
+  const url = engineUrl(repo);
+  const want = `${ref} ${repo}`;
+  const dir = toPosix(ENGINE_DIR);
+  const manual = `rm -rf ${dir} && git clone --depth 1 --branch ${ref} ${url} ${dir} && echo '${want}' > ${toPosix(ENGINE_STAMP)}`;
+  if (!which('git')) {
+    warn(`falló la instalación del motor del wiki (${repo} ${ref}): hace falta git; se reintentará en la siguiente sesión. Para instalarlo a mano: ${manual}`);
+  } else {
+    // Se descarga aparte y se sustituye al final, para no dejar nunca una copia a medias
+    const tmp = `${ENGINE_DIR}.tmp.${process.pid}`;
+    const old = `${ENGINE_DIR}.old.${process.pid}`;
+    // Restos de un arranque que se interrumpió (su proceso ya no existe)
+    const parent = path.dirname(ENGINE_DIR);
+    const base = path.basename(ENGINE_DIR);
+    for (const name of fs.existsSync(parent) ? fs.readdirSync(parent) : []) {
+      const match = name.match(new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.(?:tmp|old)\\.(\\d+)$`));
+      if (match && !processAlive(Number(match[1]))) fs.rmSync(path.join(parent, name), { recursive: true, force: true });
+    }
+    fs.rmSync(tmp, { recursive: true, force: true });
+    const clone = git(['-c', 'advice.detachedHead=false', 'clone', '--quiet', '--depth', '1', '--branch', ref, url, tmp], {
+      timeout: GIT_TIMEOUT_MS,
+      env: networkEnv(),
+    });
+    let cloned = clone.ok;
+    if (cloned) {
+      try {
+        fs.rmSync(path.join(tmp, '.git'), { recursive: true, force: true });
+        fs.writeFileSync(path.join(tmp, '.wiki-engine-ref'), `${want}\n`);
+      } catch {
+        cloned = false;
+      }
+    }
+    if (cloned) {
+      let moved = false;
+      try {
+        if (exists(ENGINE_DIR)) fs.renameSync(ENGINE_DIR, old);
+        fs.renameSync(tmp, ENGINE_DIR);
+        moved = true;
+      } catch {
+        if (exists(old) && !exists(ENGINE_DIR)) {
+          try {
+            fs.renameSync(old, ENGINE_DIR);
+          } catch {
+            // queda como esté
+          }
+        }
+        warn(`no se ha podido sustituir ${dir} por el motor del wiki ${ref}; se reintentará en la siguiente sesión`);
+      }
+      if (moved) fs.rmSync(old, { recursive: true, force: true });
+    } else {
+      warn(`falló la instalación del motor del wiki (${repo} ${ref}, git clone); se reintentará en la siguiente sesión. Para instalarlo a mano: ${manual}`);
+      warnTail(clone.log, 3);
+    }
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 // Instala el motor del wiki en la versión fijada, si falta o es otra (design D1)
 function installWikiEngine() {
-  if (GLOBAL) return globalWikiEngine();
+  if (GLOBAL) return wikiEnabled() ? globalWikiEngine() : null;
   if (!fs.existsSync(ENGINE_JSON)) return null;
   if (wikiDisabled()) {
     removeEngineLinks();
@@ -355,62 +462,8 @@ function installWikiEngine() {
     warn(`${toPosix(ENGINE_JSON)} no declara "repo" y "ref"; no se instala el motor del wiki`);
     return null;
   }
-  const url = engineUrl(repo);
   const want = `${ref} ${repo}`;
-  if (chomp(readText(ENGINE_STAMP) ?? '') !== want) {
-    const dir = toPosix(ENGINE_DIR);
-    const manual = `rm -rf ${dir} && git clone --depth 1 --branch ${ref} ${url} ${dir} && echo '${want}' > ${toPosix(ENGINE_STAMP)}`;
-    if (!which('git')) {
-      warn(`falló la instalación del motor del wiki (${repo} ${ref}): hace falta git; se reintentará en la siguiente sesión. Para instalarlo a mano: ${manual}`);
-    } else {
-      // Se descarga aparte y se sustituye al final, para no dejar nunca una copia a medias
-      const tmp = `${ENGINE_DIR}.tmp.${process.pid}`;
-      const old = `${ENGINE_DIR}.old.${process.pid}`;
-      // Restos de un arranque que se interrumpió (su proceso ya no existe)
-      const parent = path.dirname(ENGINE_DIR);
-      const base = path.basename(ENGINE_DIR);
-      for (const name of fs.existsSync(parent) ? fs.readdirSync(parent) : []) {
-        const match = name.match(new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.(?:tmp|old)\\.(\\d+)$`));
-        if (match && !processAlive(Number(match[1]))) fs.rmSync(path.join(parent, name), { recursive: true, force: true });
-      }
-      fs.rmSync(tmp, { recursive: true, force: true });
-      const clone = git(['-c', 'advice.detachedHead=false', 'clone', '--quiet', '--depth', '1', '--branch', ref, url, tmp], {
-        timeout: GIT_TIMEOUT_MS,
-        env: networkEnv(),
-      });
-      let cloned = clone.ok;
-      if (cloned) {
-        try {
-          fs.rmSync(path.join(tmp, '.git'), { recursive: true, force: true });
-          fs.writeFileSync(path.join(tmp, '.wiki-engine-ref'), `${want}\n`);
-        } catch {
-          cloned = false;
-        }
-      }
-      if (cloned) {
-        let moved = false;
-        try {
-          if (exists(ENGINE_DIR)) fs.renameSync(ENGINE_DIR, old);
-          fs.renameSync(tmp, ENGINE_DIR);
-          moved = true;
-        } catch {
-          if (exists(old) && !exists(ENGINE_DIR)) {
-            try {
-              fs.renameSync(old, ENGINE_DIR);
-            } catch {
-              // queda como esté
-            }
-          }
-          warn(`no se ha podido sustituir ${dir} por el motor del wiki ${ref}; se reintentará en la siguiente sesión`);
-        }
-        if (moved) fs.rmSync(old, { recursive: true, force: true });
-      } else {
-        warn(`falló la instalación del motor del wiki (${repo} ${ref}, git clone); se reintentará en la siguiente sesión. Para instalarlo a mano: ${manual}`);
-        warnTail(clone.log, 3);
-      }
-      fs.rmSync(tmp, { recursive: true, force: true });
-    }
-  }
+  if (chomp(readText(ENGINE_STAMP) ?? '') !== want) fetchEngine(repo, ref);
   if (!isDir(path.join(ENGINE_DIR, 'claude-plugin'))) return null;
   linkEngine();
   return path.join(PROJECT, ENGINE_DIR, 'claude-plugin');
@@ -448,6 +501,373 @@ function wikiIgnored() {
   if (git(['check-ignore', '-q', '.wiki']).ok) return true;
   const ignored = git(['ls-files', '--others', '--ignored', '--exclude-standard', '--', '.wiki', ':(exclude).wiki/.obsidian']);
   return ignored.out !== '';
+}
+
+// --- El ajuste del wiki y /toggle-wiki (design D1-D3 de add-project-wiki-toggle) -----------
+
+// setEnabled VALUE: cambia "enabled" en engine.json sin reescribir el resto
+function setEnabled(value) {
+  const text = readText(ENGINE_JSON);
+  if (text === null || !text.includes('"')) {
+    fs.mkdirSync(WIKI_DIR, { recursive: true });
+    fs.writeFileSync(ENGINE_JSON, `{\n  "enabled": ${value}\n}\n`);
+    return;
+  }
+  let out;
+  if (/"enabled"[ \t\r\f\v]*:/.test(text)) {
+    const re = /("enabled"[ \t\r\f\v]*:[ \t\r\f\v]*)("[^"]*"|[A-Za-z0-9_.+-]+)/;
+    out = text.split('\n').map((line) => line.replace(re, (_, head) => `${head}${value}`)).join('\n');
+  } else {
+    const lines = text.split('\n');
+    if (lines.at(-1) === '') lines.pop();
+    const alone = lines.findIndex((line) => /^[ \t\r\f\v]*\{[ \t\r\f\v]*$/.test(line));
+    if (alone >= 0) lines.splice(alone + 1, 0, `  "enabled": ${value},`);
+    else {
+      const first = lines.findIndex((line) => line.includes('{'));
+      if (first >= 0) lines[first] = lines[first].replace('{', `{ "enabled": ${value},`);
+    }
+    out = `${lines.join('\n')}\n`;
+  }
+  fs.writeFileSync(ENGINE_JSON, out);
+}
+
+// Edición de texto, línea a línea, del bloque de pasos del wiki en
+// operations.archive.guidance de config.yaml (design D2). No reescribe el YAML:
+// conserva comentarios, orden y formato del resto. Modos de blockEdit:
+//   check   'none', 'one' o 'bad' según las marcas
+//   remove  config.yaml sin el bloque (marcas incluidas); si guidance queda
+//           vacía, también sin ella
+//   insert  config.yaml con el bloque al final de guidance; crea guidance,
+//           archive u operations, dentro del bloque, si faltan
+//   extract las entradas que hay dentro del bloque, sin sangría
+// Devuelve { code, lines }: 0 bien; 2 marcas mal formadas; 3 no hay dónde
+// ponerlo (por ejemplo, "guidance: []"); 4 quitarlo dejaría líneas huérfanas.
+// Las líneas se numeran desde 1, como en el awk de la primera versión
+const indOf = (s) => s.match(/^ */)[0].length;
+const blankish = (s) => /^[ \t]*$/.test(s) || /^[ \t]*#/.test(s);
+const keyOnly = (s) => /^ *[A-Za-z_][A-Za-z0-9_-]*:[ \t]*(#.*)?$/.test(s);
+const keyName = (s) => s.replace(/^ */, '').replace(/:.*/, '');
+const isMarker = (s, marker) => s.replace(/^[ \t]+/, '').replace(/[ \t]+$/, '') === marker;
+const spaces = (k) => ' '.repeat(Math.max(k, 0));
+const ITEM = /^ *-( |$)/;
+
+function blockEdit(mode, text, source = []) {
+  const lines = text.split('\n');
+  if (lines.at(-1) === '') lines.pop();
+  const L = ['', ...lines];
+  const n = lines.length;
+  // Última línea que pertenece a la clave de la línea k, sin las finales en blanco o de comentario
+  const extent = (k) => {
+    const ki = indOf(L[k]);
+    let last = k;
+    for (let i = k + 1; i <= n; i += 1) {
+      if (blankish(L[i])) continue;
+      if (indOf(L[i]) > ki || (indOf(L[i]) === ki && ITEM.test(L[i]))) {
+        last = i;
+        continue;
+      }
+      break;
+    }
+    return last;
+  };
+  // La sangría de los hijos de la clave de la línea k, o -1 si no tiene
+  const childInd = (k) => {
+    const e = extent(k);
+    for (let i = k + 1; i <= e; i += 1) if (!blankish(L[i])) return indOf(L[i]);
+    return -1;
+  };
+  // La línea de la clave hija NAME de la línea k (0 si no está, -1 si tiene un valor en línea)
+  const child = (k, name) => {
+    const e = extent(k);
+    const ci = childInd(k);
+    for (let i = k + 1; i <= e; i += 1) {
+      if (blankish(L[i]) || indOf(L[i]) !== ci) continue;
+      if (keyName(L[i]) === name && /^ *[A-Za-z_][A-Za-z0-9_-]*:/.test(L[i])) return keyOnly(L[i]) ? i : -1;
+    }
+    return 0;
+  };
+  const range = (from, to) => (to < from ? [] : L.slice(from, to + 1));
+
+  let nb = 0;
+  let ne = 0;
+  let b = 0;
+  let e = 0;
+  let bad = false;
+  for (let i = 1; i <= n; i += 1) {
+    if (isMarker(L[i], BLOCK_BEGIN)) {
+      nb += 1;
+      if (!b) b = i;
+      if (e) bad = true;
+    }
+    if (isMarker(L[i], BLOCK_END)) {
+      ne += 1;
+      if (!e) e = i;
+      if (!b) bad = true;
+    }
+  }
+  const state = nb > 1 || ne > 1 || nb !== ne || bad || (b && e < b) ? 'bad' : nb ? 'one' : 'none';
+  if (mode === 'check') return { code: 0, state };
+  if (state === 'bad') return { code: 2 };
+  if (mode === 'extract') {
+    if (state !== 'one') return { code: 0, lines: [] };
+    let first = 0;
+    for (let i = b + 1; i < e; i += 1) {
+      if (ITEM.test(L[i])) {
+        first = i;
+        break;
+      }
+    }
+    if (!first) return { code: 0, lines: [] };
+    const d = indOf(L[first]);
+    return { code: 0, lines: range(first, e - 1).map((line) => line.slice(d)) };
+  }
+  if (mode === 'remove') {
+    if (state === 'none') return { code: 0, lines };
+    // Lo que va después del bloque no puede colgar de una clave que se quita con él
+    let top = -1;
+    for (let i = b + 1; i < e; i += 1) {
+      if (keyOnly(L[i])) {
+        top = indOf(L[i]);
+        break;
+      }
+    }
+    if (top >= 0) {
+      for (let i = e + 1; i <= n; i += 1) {
+        if (blankish(L[i])) continue;
+        if (indOf(L[i]) > top) return { code: 4 };
+        break;
+      }
+    }
+    // La clave de la que cuelga el bloque, y si se queda sin hijos
+    let owner = 0;
+    for (let i = b - 1; i >= 1; i -= 1) {
+      if (keyOnly(L[i]) && indOf(L[i]) <= indOf(L[b])) {
+        owner = i;
+        break;
+      }
+    }
+    let drop = 0;
+    if (owner && keyName(L[owner]) === 'guidance') {
+      let empty = true;
+      for (let i = owner + 1; i <= n; i += 1) {
+        if (i >= b && i <= e) continue;
+        if (blankish(L[i])) continue;
+        if (indOf(L[i]) > indOf(L[owner]) || (indOf(L[i]) === indOf(L[owner]) && ITEM.test(L[i]))) empty = false;
+        break;
+      }
+      if (empty) drop = owner;
+    }
+    return { code: 0, lines: lines.filter((_, k) => (k + 1 < b || k + 1 > e) && k + 1 !== drop) };
+  }
+  // insert
+  if (state === 'one') return { code: 2 };
+  // De la fuente, sin los comentarios y líneas en blanco iniciales
+  const S = [...source];
+  while (S.length && (/^#/.test(S[0]) || /^[ \t]*$/.test(S[0]))) S.shift();
+  let o = 0;
+  for (let i = 1; i <= n; i += 1) {
+    if (/^operations:/.test(L[i])) {
+      if (!keyOnly(L[i])) return { code: 3 };
+      o = i;
+      break;
+    }
+  }
+  let at;
+  let pre;
+  let d;
+  let mi;
+  if (!o) {
+    at = n;
+    pre = ['operations:', '  archive:', '    guidance:'];
+    d = 6;
+    mi = 0;
+  } else {
+    let ci = childInd(o);
+    if (ci < 0) ci = 2;
+    const a = child(o, 'archive');
+    if (a < 0) return { code: 3 };
+    if (!a) {
+      at = extent(o);
+      pre = [`${spaces(ci)}archive:`, `${spaces(ci + 2)}guidance:`];
+      d = ci + 4;
+      mi = ci;
+    } else {
+      let ai = childInd(a);
+      if (ai < 0) ai = indOf(L[a]) + 2;
+      const g = child(a, 'guidance');
+      if (g < 0) return { code: 3 };
+      if (!g) {
+        at = extent(a);
+        pre = [`${spaces(ai)}guidance:`];
+        d = ai + 2;
+        mi = ai;
+      } else {
+        at = extent(g);
+        pre = [];
+        const gi = childInd(g);
+        d = gi < 0 ? indOf(L[g]) + 2 : gi;
+        mi = d;
+      }
+    }
+  }
+  // Las claves que se crean van dentro del bloque, para que quitarlo las quite
+  return {
+    code: 0,
+    lines: [
+      ...range(1, at),
+      `${spaces(mi)}${BLOCK_BEGIN}`,
+      ...pre,
+      ...S.map((line) => (line === '' ? '' : `${spaces(d)}${line}`)),
+      `${spaces(mi)}${BLOCK_END}`,
+      ...range(at + 1, n),
+    ],
+  };
+}
+
+const withNewline = (lines) => (lines.length ? `${lines.join('\n')}\n` : '');
+
+// Las líneas de archive-guidance.yaml que van al bloque, o null si falta
+function guidanceSource() {
+  const text = readText(path.join(wikiDir(), 'archive-guidance.yaml'));
+  if (text === null) return null;
+  const lines = text.split('\n');
+  if (lines.at(-1) === '') lines.pop();
+  return lines;
+}
+
+// editBlock insert|remove: aplica el cambio a config.yaml, o avisa y no lo toca
+function editBlock(action) {
+  if (!fs.existsSync(CONFIG_YAML)) {
+    warn(`no existe ${toPosix(CONFIG_YAML)}; no se cambian las indicaciones de archivado`);
+    return true;
+  }
+  let text = fs.readFileSync(CONFIG_YAML, 'utf8');
+  if (blockEdit('check', text).state === 'bad') {
+    warn(`las marcas '${BLOCK_BEGIN}' y '${BLOCK_END}' de ${toPosix(CONFIG_YAML)} están mal formadas o repetidas; no se toca el archivo. Deja como mucho un par, con la de inicio antes que la de fin, y vuelve a ejecutar /toggle-wiki`);
+    return false;
+  }
+  const source = guidanceSource();
+  if (action === 'insert' && source === null) {
+    warn(`no se encuentra ${toPosix(path.join(wikiDir(), 'archive-guidance.yaml'))}, la fuente de los pasos del wiki; no se toca ${toPosix(CONFIG_YAML)}`);
+    return false;
+  }
+  let result;
+  if (action === 'insert' && blockEdit('check', text).state === 'one') {
+    // Se sustituye: primero se quita el bloque que hay
+    result = blockEdit('remove', text);
+    if (result.code === 0) result = blockEdit('insert', withNewline(result.lines), source);
+  } else {
+    result = blockEdit(action, text, source ?? []);
+  }
+  switch (result.code) {
+    case 0:
+      fs.writeFileSync(CONFIG_YAML, withNewline(result.lines));
+      return true;
+    case 3:
+      warn(`no se sabe dónde poner los pasos del wiki en ${toPosix(CONFIG_YAML)} (operations, archive o guidance tienen un valor en la misma línea); no se toca el archivo`);
+      return false;
+    case 4:
+      warn(`quitar los pasos del wiki de ${toPosix(CONFIG_YAML)} dejaría líneas sin la clave de la que cuelgan; no se toca el archivo`);
+      return false;
+    default:
+      warn(`no se ha podido editar ${toPosix(CONFIG_YAML)}; no se toca el archivo`);
+      return false;
+  }
+}
+
+// Con el wiki habilitado, avisa si los pasos de config.yaml no coinciden con su fuente (design D2)
+function warnStaleBlock() {
+  if (!wikiEnabled()) return;
+  const config = readText(CONFIG_YAML);
+  const source = guidanceSource();
+  if (config === null || source === null) return;
+  if (blockEdit('check', config).state !== 'one') return;
+  const current = chomp(blockEdit('extract', config).lines.join('\n'));
+  const wanted = chomp(source.join('\n').replace(/^(?:(?:#[^\n]*|[ \t]*)\n)+/, ''));
+  if (current === wanted) return;
+  warn(`los pasos del wiki de ${toPosix(CONFIG_YAML)} no coinciden con su fuente (${toPosix(path.join(wikiDir(), 'archive-guidance.yaml'))}); para ponerlos al día, ejecuta /toggle-wiki dos veces y haz el commit`);
+}
+
+// Por qué la ruta no entra en la ingesta inicial, o null (la lista de
+// exclusiones de la guía del wiki)
+function ingestExclusion(file, mode) {
+  const slashed = `/${file}`;
+  const engine = toPosix(ENGINE_DIR);
+  if (file.startsWith('.wiki/')) return 'el propio wiki';
+  if (file.startsWith(`${engine}/`) || file.startsWith(`${engine}.`)) return 'la copia del motor';
+  if (slashed.includes('/node_modules/') || slashed.includes('/.extracted/')) return 'generado';
+  if (slashed.includes('/reports/')) return 'informe';
+  const base = file.slice(file.lastIndexOf('/') + 1);
+  if (['package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb'].includes(base) || base.endsWith('.lock')) return 'lockfile';
+  if (['.gitignore', '.gitattributes', '.editorconfig', '.npmrc', '.nvmrc', '.node-version', '.prettierignore'].includes(base)) return 'configuración trivial';
+  if (mode === '120000') return 'enlace';
+  try {
+    if (fs.statSync(file).size === 0) return 'vacío';
+  } catch {
+    return 'vacío';
+  }
+  return null;
+}
+
+// El ajuste, si existe .wiki/ y qué entraría en la ingesta inicial
+function wikiStatus() {
+  const out = [`enabled=${wikiEnabled()}`, `wiki-dir=${isDir('.wiki')}`];
+  if (git(['rev-parse', '--is-inside-work-tree']).ok) {
+    // Solo lo versionado; los symlinks son otra vía a lo que ya entra (ADR-0003)
+    const listing = spawnSync('git', ['ls-files', '-s', '-z'], { encoding: 'utf8', maxBuffer: 1 << 28, windowsHide: true });
+    for (const entry of (listing.stdout ?? '').split('\0')) {
+      const tab = entry.indexOf('\t');
+      if (tab < 0) continue;
+      const file = entry.slice(tab + 1);
+      const reason = ingestExclusion(file, entry.slice(0, entry.indexOf(' ')));
+      out.push(reason ? `excluded=${file}|${reason}` : `source=${file}`);
+    }
+  }
+  return out;
+}
+
+// wikiToggle on|off: la parte determinista de /toggle-wiki (design D3)
+function wikiToggle(action) {
+  const out = [];
+  if (action === 'on') {
+    if (!editBlock('insert')) return out;
+    try {
+      setEnabled(true);
+    } catch {
+      warn(`no se ha podido cambiar "enabled" en ${toPosix(ENGINE_JSON)}`);
+    }
+    guard('motor del wiki', installWikiEngine);
+    guard('wiki versionado', keepWikiVersioned);
+  } else {
+    if (!editBlock('remove')) return out;
+    try {
+      setEnabled(false);
+    } catch {
+      warn(`no se ha podido cambiar "enabled" en ${toPosix(ENGINE_JSON)}`);
+    }
+    removeEngineLinks();
+  }
+  if (git(['rev-parse', '--is-inside-work-tree']).ok) {
+    const files = [toPosix(ENGINE_JSON), ...(fs.existsSync(CONFIG_YAML) ? [toPosix(CONFIG_YAML)] : [])];
+    if (!git(['add', '--', ...files]).ok) warn(`no se han podido pasar al stage ${files.join(' ')}`);
+    out.push(`staged=${files.join(' ')}`);
+  }
+  out.push(`enabled=${wikiEnabled()}`);
+  return out;
+}
+
+// wikiMode status|on|off DIRECTORIO
+function wikiMode(action, dir) {
+  if (!['status', 'on', 'off'].includes(action)) {
+    warn('uso: session-bootstrap.mjs wiki <status|on|off> <directorio del proyecto>');
+    return;
+  }
+  if (!enter(dir)) {
+    if (!GLOBAL || !PROJECT) warn(`no se puede entrar en el directorio del proyecto ('${dir ?? ''}')`);
+    return;
+  }
+  const out = action === 'status' ? wikiStatus() : wikiToggle(action);
+  for (const line of out) process.stdout.write(`${line}\n`);
 }
 
 // --- Dependencias ------------------------------------------------------------------
@@ -591,7 +1011,8 @@ function prepare(dir) {
   guard('git', prepareGit);
   // El motor no depende de npm, así que va antes y se instala aunque falte
   const engine = guard('motor del wiki', installWikiEngine);
-  if (!wikiDisabled()) guard('wiki versionado', keepWikiVersioned);
+  if (wikiEnabled()) guard('wiki versionado', keepWikiVersioned);
+  guard('pasos del wiki', warnStaleBlock);
   const bin = guard('dependencias', installDependencies);
   if (bin) out.push(`bin=${bin}`);
   if (engine) out.push(`wiki-engine=${engine}`);
@@ -627,9 +1048,8 @@ const charCount = (text) => [...text].length;
 // puede generar, nada
 function wikiText(mode, agent, dir) {
   if (!enter(dir)) return '';
+  // El wiki del proyecto lo declara su engine.json, también con la instalación global
   if (wikiDisabled()) return '';
-  // En la plantilla completa, el wiki del proyecto lo declara su engine.json
-  if (!GLOBAL && !fs.existsSync(ENGINE_JSON)) return '';
   if (!(agent in MARKERS)) return '';
   let text;
   if (mode === 'guide') {
@@ -737,6 +1157,9 @@ function main(argv) {
     case 'guide':
     case 'reminder':
       process.stdout.write(wikiText(mode, rest[0], rest[1]));
+      break;
+    case 'wiki':
+      wikiMode(rest[0], rest[1]);
       break;
     case 'comments-rule':
       process.stdout.write(commentsText('rule', rest[0], rest[1]));

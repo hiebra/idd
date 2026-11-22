@@ -3,7 +3,8 @@
 // Core tests of prepareGit in .agents/hooks/session-bootstrap.mjs (task 4.1
 // of manage-git-discipline, design D5), on test repositories: a shallow clone
 // is completed, a permanent branch that is behind and not checked out is
-// moved forward with update-ref, the checked-out one is left alone, a
+// moved forward with update-ref, the checked-out one (here or in another
+// worktree of the clone) is left alone, a
 // diverged one is warned about, without a remote it warns and exits with 0,
 // and only an ephemeral container saves idd.sessionBranch, keeping one that
 // is already saved.
@@ -66,7 +67,7 @@ function rev(dir, ref) {
   return git(dir, 'rev-parse', ref).trim();
 }
 
-function run(s, { ephemeral = false } = {}) {
+function run(s, { ephemeral = false, dir = s.project } = {}) {
   const env = sessionEnv({ ephemeral });
   for (const key of Object.keys(env)) if (/^GIT_/.test(key)) delete env[key];
   env.PATH = [s.bin, '/usr/bin', '/bin'].join(path.delimiter);
@@ -104,6 +105,20 @@ test('a permanent branch behind origin and not checked out moves forward; the ch
   run(c);
   assert.equal(rev(c.project, 'main'), before);
   assert.equal(git(c.project, 'status', '--porcelain'), status);
+});
+
+test('a permanent branch checked out in another directory of the clone is left alone (autopilot-rama-por-sesion D11)', (t) => {
+  const s = setup(t);
+  const worktree = path.join(s.dir, 'worktree');
+  git(s.project, 'worktree', 'add', '-q', '-b', 'claude/x', worktree, 'main');
+  advanceRemote(s);
+  const before = rev(s.project, 'main');
+  const status = git(s.project, 'status', '--porcelain');
+  const result = run(s, { dir: worktree });
+  assert.equal(result.status, 0);
+  assert.equal(rev(s.project, 'main'), before, result.warnings);
+  assert.equal(git(s.project, 'status', '--porcelain'), status);
+  assert.equal(git(s.project, 'diff', '--cached', '--name-only'), '');
 });
 
 test('a diverged permanent branch is warned about and left alone', (t) => {

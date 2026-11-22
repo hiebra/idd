@@ -12,8 +12,9 @@
 //                                          wiki-manager); openspec-git-discipline
 //                                          sin su SKILL.md, que escribe el .bat
 //     config/opencode/plugins/<plugin>/    openspec-autopilot, session-bootstrap
-//                                          (con el núcleo, wiki/ y comments/) y
-//                                          response-comments
+//                                          (con el núcleo, wiki/ -guía, recordatorio,
+//                                          opencode-note.md y archive-guidance.yaml-
+//                                          y comments/) y response-comments
 //     pieces/openspec-git-discipline/      el SKILL.md de esa skill en dos piezas,
 //                                          SKILL.head.md y SKILL.tail.md: lo que
 //                                          va antes y después de la línea
@@ -56,6 +57,7 @@ const SESSION_BOOTSTRAP_FILES = {
   'wiki/guide.md': '.agents/wiki/guide.md',
   'wiki/reminder.md': '.agents/wiki/reminder.md',
   'wiki/opencode-note.md': '.agents/wiki/opencode-note.md',
+  'wiki/archive-guidance.yaml': '.agents/wiki/archive-guidance.yaml',
   'comments/rule.md': '.agents/comments/rule.md',
   'comments/reminder.md': '.agents/comments/reminder.md',
 };

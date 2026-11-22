@@ -2,6 +2,7 @@
 title: "Cómo crea OpenCode 2 los worktrees y cómo hacer que nazcan desde origin/main"
 category: concept
 sources:
+  - raw/repos/2026-11-22-idd-812f22d-autopilot-rama-por-sesion.md
   - raw/articles/2026-11-22-opencode-2-worktrees.md
   - raw/notes/2026-11-22-ll-worktrees-opencode-desde-main.md
 created: 2026-11-22
@@ -48,6 +49,10 @@ El startup script del proyecto, `commands.start`, se ejecuta con `bash -lc` dent
 - Se ejecuta después del `--detach` sobre `HEAD`, así que no evita el error de `HEAD` inválido.
 - Si falla, el worktree ya existe y queda registrado en HEAD separado.
 
+## En el plugin del proyecto
+
+Desde `autopilot-rama-por-sesion` (ADR-0022), el plugin `openspec-autopilot` registra esa estrategia en `idd@812f22d:.opencode/plugins/openspec-autopilot/lib/worktree.mjs`: el worktree nace en una rama con su mismo nombre, que sale de la rama de origen del remoto tras un `git fetch`, sin seguirla y con push hacia `origin/<rama>`; si la rama ya existe, el worktree se abre en ella, y al quitarlo la rama se conserva (`idd@812f22d:openspec/specs/openspec-autopilot/spec.md`, «Los worktrees de OpenCode nacen en una rama»). Ver [[ciclo-de-un-change-y-autopilot|el ciclo de un change]] ([el ciclo de un change](../topics/ciclo-de-un-change-y-autopilot.md)).
+
 ## See Also
 
 - [[ciclo-de-un-change-y-autopilot|El ciclo de un change y su automatización en OpenCode]] ([El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md))
@@ -55,5 +60,6 @@ El startup script del proyecto, `commands.start`, se ejecuta con `bash -lc` dent
 
 ## Sources
 
+- [Collection: archivado de autopilot-rama-por-sesion (idd@812f22d)](../../raw/repos/2026-11-22-idd-812f22d-autopilot-rama-por-sesion.md): `.opencode/plugins/openspec-autopilot/lib/worktree.mjs`, `openspec/specs/openspec-autopilot/spec.md`.
 - [OpenCode 2.3.2: worktrees](../../raw/articles/2026-11-22-opencode-2-worktrees.md): `services/site/src/docs/content/build/plugins/server.mdx` y código del tag `v2.3.2` (`anomalyco/opencode@c0ad18b`).
 - [Lecciones: worktrees de OpenCode desde origin/main](../../raw/notes/2026-11-22-ll-worktrees-opencode-desde-main.md): lecciones 1-3.

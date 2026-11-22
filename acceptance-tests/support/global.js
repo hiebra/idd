@@ -8,6 +8,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { REPO_ROOT } = require('./project');
 const { git } = require('./engine');
 
@@ -18,6 +19,7 @@ const SESSION_BOOTSTRAP_FILES = {
   'wiki/guide.md': ['.agents', 'wiki', 'guide.md'],
   'wiki/reminder.md': ['.agents', 'wiki', 'reminder.md'],
   'wiki/opencode-note.md': ['.agents', 'wiki', 'opencode-note.md'],
+  'wiki/archive-guidance.yaml': ['.agents', 'wiki', 'archive-guidance.yaml'],
   'comments/rule.md': ['.agents', 'comments', 'rule.md'],
   'comments/reminder.md': ['.agents', 'comments', 'reminder.md'],
 };
@@ -121,6 +123,22 @@ class GlobalInstall {
     fs.writeFileSync(path.join(home, 'version'), `${version}\n`);
     fs.rmSync(unpacked, { recursive: true, force: true });
     return this;
+  }
+
+  get bootstrapCore() {
+    return path.join(this.pluginsDir, 'session-bootstrap', 'session-bootstrap.mjs');
+  }
+
+  // /toggle-wiki in a project, with the installed core in global mode: it sets
+  // "enabled" in the project's .agents/wiki/engine.json (it creates it when the
+  // project has none, as the slim variant) and the wiki steps in config.yaml
+  // between their markers. It does not download the engine
+  toggleWiki(project, on) {
+    const env = { ...process.env };
+    delete env.PROJECT_WIKI;
+    const result = spawnSync(process.execPath, [this.bootstrapCore, '--global', 'wiki', on ? 'on' : 'off', project.dir], { encoding: 'utf8', env });
+    if (result.status !== 0) throw new Error(`could not toggle the wiki of the project:\n${result.stdout}\n${result.stderr}`);
+    return result.stdout;
   }
 
   get schemaDir() {

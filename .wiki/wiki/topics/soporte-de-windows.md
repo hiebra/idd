@@ -29,7 +29,7 @@ Hasta `windows-support`, el proyecto solo funcionaba en Linux y macOS. En Window
 
 ## Las decisiones (ADR-0017)
 
-- **Solo OpenCode 2 o superior.** Claude Code en Windows no se soporta. No es una capacidad de un solo agente en el sentido de ADR-0006: en Linux y macOS los dos agentes siguen soportados igual. Se descartó soportar los dos agentes porque habría que adaptar y verificar Claude Code en Windows sin una necesidad que lo pida.
+- **Solo OpenCode 2 o superior.** Claude Code en Windows no se soporta. No es una capacidad de un solo agente en el sentido de ADR-0006 (hoy ADR-0025): en Linux y macOS los dos agentes siguen soportados igual. Se descartó soportar los dos agentes porque habría que adaptar y verificar Claude Code en Windows sin una necesidad que lo pida.
 - **LF en todos los archivos de texto**, con `* text=auto eol=lf` en `.gitattributes`. Se descartó fijarlo solo en los scripts y los textos del arranque: cada texto nuevo obligaría a acordarse de añadirlo, y el fallo solo se vería en Windows.
 - **Un único script PowerShell** para el diagnóstico, compatible con Windows PowerShell 5.1 y PowerShell 7, que separa la recogida de hechos de su evaluación. Se descartó un lanzador PowerShell con el diagnóstico en bash: seguiría habiendo PowerShell sin probar y la lógica quedaría en dos lenguajes.
 - **La suite prueba la evaluación con `pwsh`** sobre máquinas simuladas, así que `pwsh` es requisito de la suite. La recogida de hechos se comprueba a mano en Windows real.

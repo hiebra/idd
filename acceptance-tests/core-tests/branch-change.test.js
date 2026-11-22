@@ -158,6 +158,35 @@ test('list: the temporary branches with their change; switch: only to an existin
   assert.equal(listBranches(dir).find((b) => b.current).branch, 'exportar-datos');
 });
 
+test('origin: back to the origin branch (the last of x-main) with the tree clean, and to no other permanent branch', async (t) => {
+  const { originBranch } = await import(MODULE);
+  const dir = repo(t, 'schema: intent-driven\nx-main: [main, develop]\n');
+  git(dir, 'checkout', '-q', '-b', 'develop');
+  git(dir, 'checkout', '-q', '-b', 'exportar-datos');
+  const back = originBranch(dir, {});
+  assert.equal(back.ok, true, back.message);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'develop');
+  assert.equal(originBranch(dir, {}).ok, true, 'already there');
+  git(dir, 'checkout', '-q', 'exportar-datos');
+  fs.writeFileSync(path.join(dir, 'sucio.txt'), 'x');
+  const dirty = originBranch(dir, {});
+  assert.equal(dirty.ok, false);
+  assert.match(dirty.message, /commit/);
+  assert.match(dirty.message, /stash/);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'exportar-datos');
+});
+
+test('origin: from origin/<branch> when the origin branch is only remote', async (t) => {
+  const { originBranch } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'checkout', '-q', '-b', 'temporal');
+  git(dir, 'branch', '-q', '-D', 'main');
+  const back = originBranch(dir, {});
+  assert.equal(back.ok, true, back.message);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'main');
+});
+
 // --- check commit with a merge in progress (allow-user-requested-merges, D3) ---
 
 const EPHEMERAL = { CLAUDE_CODE_CONTAINER_ID: 'container_suite', CLAUDE_CODE_REMOTE: 'true' };
@@ -312,15 +341,91 @@ test('merge-targets: bringFirst, a branch of x-main without origin, and none fro
   assert.deepEqual(mergeTargets(dir).targets, []);
 });
 
-test('start and switch refuse in an ephemeral container before anything else', async (t) => {
-  const { startBranch, switchBranch } = await import(MODULE);
+test('start, switch and origin refuse in an ephemeral container before anything else', async (t) => {
+  const { startBranch, switchBranch, originBranch } = await import(MODULE);
   const dir = repo(t);
   git(dir, 'branch', 'otra');
   fs.writeFileSync(path.join(dir, 'sucio.txt'), 'x');
-  for (const result of [startBranch(dir, 'exportar-datos', EPHEMERAL), startBranch(dir, 'main', EPHEMERAL), switchBranch(dir, 'otra', EPHEMERAL)]) {
+  for (const result of [startBranch(dir, 'exportar-datos', EPHEMERAL), startBranch(dir, 'main', EPHEMERAL), switchBranch(dir, 'otra', EPHEMERAL), originBranch(dir, EPHEMERAL)]) {
     assert.equal(result.ok, false);
     assert.match(result.message, /sigue en la rama de la sesión/);
     assert.doesNotMatch(result.message, /stash|permanente/);
   }
   assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'main');
+});
+
+// --- The title of the merge (name-change-in-merge-title, D1 to D3) ---
+
+// A temporary branch `feature/x` that contains origin/main, with a commit
+// that adds the given paths
+function branchWith(t, paths, config) {
+  const dir = repo(t, config);
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  for (const rel of paths) write(dir, rel, 'x\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'cambios de la rama');
+  return dir;
+}
+
+test('merge title: a directory of openspec/changes/ that is not kebab-case stays out of the title and of the order', async (t) => {
+  const { branchChange, checkMerge, mergeTitle } = await import(MODULE);
+  const odd = ['$(touch pwned)', 'con`acento', 'Notas Sueltas', 'con_guion_bajo'];
+  const dir = branchWith(t, ['exportar-datos', ...odd].map((name) => `openspec/changes/${name}/proposal.md`));
+  // The module still counts them as changes of the branch: only the title leaves them out
+  const state = branchChange(dir);
+  assert.deepEqual(state.changes.map((c) => c.name).sort(), ['exportar-datos', ...odd].sort(), JSON.stringify(state));
+  assert.equal(mergeTitle(state, 'main'), 'Merge exportar-datos into main');
+  const gate = checkMerge(dir, 'main', undefined, {});
+  assert.equal(gate.ok, true, gate.message);
+  assert.ok(gate.message.includes('-m "Merge exportar-datos into main"'), gate.message);
+  for (const name of odd) assert.ok(!gate.message.includes(name), `${name}: ${gate.message}`);
+  // Nor to the title of the PR, in an ephemeral container
+  git(dir, 'config', 'idd.sessionBranch', 'feature/x');
+  const pr = checkMerge(dir, 'main', undefined, EPHEMERAL);
+  assert.equal(pr.ok, true, pr.message);
+  assert.ok(pr.message.includes('con el título `Merge exportar-datos into main`'), pr.message);
+  for (const name of odd) assert.ok(!pr.message.includes(name), `${name}: ${pr.message}`);
+  // Without any kebab-case change left, the title names the branch, and the PR gets no title
+  fs.rmSync(path.join(dir, 'openspec', 'changes', 'exportar-datos'), { recursive: true });
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'sin exportar-datos');
+  assert.equal(mergeTitle(branchChange(dir), 'main'), 'Merge feature/x into main');
+  const untitled = checkMerge(dir, 'main', undefined, EPHEMERAL);
+  assert.equal(untitled.ok, true, untitled.message);
+  assert.doesNotMatch(untitled.message, /título/);
+  for (const name of odd) assert.ok(!untitled.message.includes(name), `${name}: ${untitled.message}`);
+});
+
+test('merge title: a change in progress and archived under the same name is named once', async (t) => {
+  const { checkMerge } = await import(MODULE);
+  const dir = branchWith(t, [
+    'openspec/changes/exportar-datos/proposal.md',
+    'openspec/changes/archive/2026-11-22-exportar-datos/proposal.md',
+    'openspec/changes/archive/2026-11-22-importar-datos/proposal.md',
+  ]);
+  const gate = checkMerge(dir, 'main', undefined, {});
+  assert.equal(gate.ok, true, gate.message);
+  assert.ok(gate.message.includes('-m "Merge exportar-datos, importar-datos into main"'), gate.message);
+});
+
+test('merge title: towards another permanent branch, the changes are still those against the origin branch', async (t) => {
+  const { checkMerge } = await import(MODULE);
+  const dir = repo(t, 'schema: intent-driven\nx-main: [main, develop]\n');
+  // develop, the origin branch, is ahead of main with a change of its own
+  git(dir, 'checkout', '-q', '-b', 'develop');
+  write(dir, 'openspec/changes/otro-change/proposal.md', 'x\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'otro-change en develop');
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'update-ref', 'refs/remotes/origin/develop', 'develop');
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  write(dir, 'openspec/changes/exportar-datos/proposal.md', 'x\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'exportar-datos');
+  for (const target of ['main', 'develop']) {
+    const gate = checkMerge(dir, target, undefined, {});
+    assert.equal(gate.ok, true, gate.message);
+    assert.ok(gate.message.includes(`-m "Merge exportar-datos into ${target}"`), gate.message);
+  }
 });

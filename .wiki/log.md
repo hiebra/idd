@@ -235,3 +235,87 @@
 ## [2026-11-22] lint | See Also completados: hook-context-opencode → ciclo-de-un-change-y-autopilot y regla-de-comentarios; flujo-wiki-first y suite-de-aceptacion-y-spec-as-source → regla-de-comentarios (0 one-way links left)
 
 ## [2026-11-22] ll | "contadores del wiki al resolver una fusión" → raw/notes/2026-11-22-ll-fusion-wiki-contadores.md (1 lesson, 1 article updated)
+
+## [2026-11-22] ll | "lint --fix y librarian scan del motor 1.0.0" → raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md (2 lessons, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, reorder-wiki-resync @fc31fe5): 1 manifest, 11 paths pinned, 0 skipped
+
+## [2026-11-22] refresh | flujo-wiki-first checked against raw/repos/2026-11-22-idd-fc31fe5-reorder-wiki-resync.md: 1 updated (the resync in three phases, without librarian); ciclo-de-un-change-y-autopilot and suite-de-aceptacion-y-spec-as-source unchanged
+
+## [2026-11-22] ll | "reorder-wiki-resync" → raw/notes/2026-11-22-ll-reorder-wiki-resync.md (1 lesson, 1 article updated)
+
+## [2026-11-22] compile | lección de reorder-wiki-resync en suite-de-aceptacion-y-spec-as-source; inventario sin cambios
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md (2 lessons, 1 articles updated)
+
+## [2026-11-22] ll | "pruebas de autopilot-rama-por-sesion en OpenCode 2.3.2 real" → raw/notes/2026-11-22-ll-pruebas-opencode-real-autopilot.md (7 lessons, 3 articles updated, 1 inventory record updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, autopilot-rama-por-sesion @812f22d): 1 new, 0 skipped, 38 total candidates
+
+## [2026-11-22] refresh | archivado de autopilot-rama-por-sesion (idd@812f22d): 3 artículos actualizados (ciclo-de-un-change-y-autopilot, arranque-de-sesion, suite-de-aceptacion-y-spec-as-source)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "archive de autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-archive-autopilot-rama-por-sesion.md (2 lessons, 1 articles updated)
+
+## [2026-11-22] ll | "fusión de main con autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md (2 lessons, 2 articles updated)
+## [2026-11-22] ll | "límite de tiempo de syncGuidance (apply-one-task-per-session-in-normal-mode)" → raw/notes/2026-11-22-ll-apply-guidance-timeout.md (1 lesson, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, apply-one-task-per-session-in-normal-mode @ f9f014c): 1 manifest, 15 paths pinned, 0 children, 15 total candidates
+
+## [2026-11-22] refresh | ciclo-de-un-change-y-autopilot (ADR-0025 y bloque de apply, idd@f9f014c), regla-de-comentarios (ADR-0006 → ADR-0025)
+
+## [2026-11-22] lint | local command: 1 suggestion fixed (lección de apply-guidance-timeout en las fuentes del artículo de la suite), 0 left
+
+## [2026-11-22] merge | origin/main en claude/gifted-hawking-ve5fxk: índices y fuentes unidos, contadores recontados (57 fuentes, 13 artículos, 6 de inventario), soporte-de-windows con ADR-0006 → ADR-0025
+
+## [2026-11-22] ll | "el archivo de rerun de cucumber-js no acota la pasada" → raw/notes/2026-11-22-ll-cucumber-rerun.md (1 lesson, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+
+## [2026-11-22] inventory | added task puente-del-autopilot-sigue-con-una-tui-cerrada (inventory/candidates/puente-del-autopilot-sigue-con-una-tui-cerrada.md)
+
+## [2026-11-22] inventory | added task dos-sesiones-que-toman-el-control-a-la-vez (inventory/candidates/dos-sesiones-que-toman-el-control-a-la-vez.md)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, autopilot-plan-explore@9eae630): 1 manifest, 22 paths pinned, 0 skipped, 22 total candidates
+
+## [2026-11-22] refresh | ciclo-de-un-change-y-autopilot, suite-de-aceptacion-y-spec-as-source y hook-context-opencode contra idd@9eae630 (autopilot-plan-explore)
+
+## [2026-11-22] compile | raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md → 3 artículos actualizados (agente build en todas las sesiones, exploración en plan, aviso de lo modificado en plan, contrato de OpenCode 2.3.2 de las tasks 1.1 a 1.4 y 7.2, simulador), 0 nuevos
+
+## [2026-11-22] librarian | scanned 10 articles, 0 stale, 0 low-quality; 1 contradicción tras autopilot-plan-explore
+
+## [2026-11-22] ll | "el archivado de autopilot-plan-explore y su banco con OpenCode real" → raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md (4 lessons, 0 articles updated)
+
+## [2026-11-22] update | ciclo-de-un-change-y-autopilot: fundidos los dos puntos del hook prompt (corrige la contradicción con la task 1.4 de autopilot-plan-explore)
+
+## [2026-11-22] update | proveedor-falso-para-verificar-contexto y flujo-wiki-first: reglas de las lecciones 2 y 1 de raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md
+
+## [2026-11-22] inventory | updated watch volver-a-comprobar-apis-de-sesion-al-subir-opencode (contrato de autopilot-plan-explore, tasks 1.1 a 1.4 y 7.2); added task la-task-del-archive-no-es-un-checkbox
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] merge | origin/main en la rama de autopilot-plan-explore: conflictos del wiki resueltos; la revisión guiada con tests ya no dice que corre con plan; dos-sesiones-que-toman-el-control-a-la-vez unido a corregir-prueba-intermitente-dos-sesiones-autopilot; contadores recontados (54 fuentes, 13 artículos, 8 registros, 7 activos)
+
+## [2026-11-22] librarian | scanned 13 articles, 0 stale, 0 low-quality
+
+## [2026-11-22] merge | origin/main (reorder-wiki-resync) en la rama de autopilot-plan-explore: conflictos del wiki unidos, sin lecciones equivalentes; contadores recontados (57 fuentes, 13 artículos, 8 registros, 7 activos)
+
+## [2026-11-22] merge | origin/main (apply-one-task-per-session-in-normal-mode) en la rama de autopilot-plan-explore: conflictos del wiki unidos; «Lo que se mantiene» cita ADR-0025 sin «y su agente»; contadores recontados (60 fuentes, 13 artículos, 8 registros, 7 activos)
+
+## [2026-11-22] ll | "lo que llega de main puede contradecir el change sin conflicto de git" → raw/notes/2026-11-22-ll-fusion-supuestos-invalidados.md (1 lesson, 1 article updated: flujo-wiki-first)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, idd@4b8d2b3, archivado de name-change-in-merge-title): 1 new, 0 skipped, 12 total candidates
+
+## [2026-11-22] refresh | 1 articles checked (ciclo-de-un-change-y-autopilot), 0 new raw revisions (la revisión es el manifiesto idd@4b8d2b3), 1 updated, 0 verified, 0 flagged, 0 retracted
+
+## [2026-11-22] inventory | archivado de name-change-in-merge-title: nombrar-el-change-en-el-titulo-de-la-fusion → archived; nuevo sanear-el-nombre-de-la-rama-en-las-ordenes-de-las-puertas; nuevo caso en la-task-del-archive-no-es-un-checkbox
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "main avanza mientras corre la suite de una fusión" → raw/notes/2026-11-22-ll-main-avanza-durante-la-suite.md (1 lesson, 1 article updated)

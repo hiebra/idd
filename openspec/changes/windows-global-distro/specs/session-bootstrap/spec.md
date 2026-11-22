@@ -52,6 +52,7 @@ Instalado de forma global, el arranque de sesión NO DEBE descargar el motor del
 ```gherkin
 Given una máquina Windows con la instalación global de una release
 And un proyecto creado desde la variante adelgazada de esa release
+And el wiki habilitado en el proyecto
 When se abre una sesión de OpenCode en el proyecto
 Then no se descarga ningún motor del wiki
 And las operaciones del wiki usan el motor de la instalación global

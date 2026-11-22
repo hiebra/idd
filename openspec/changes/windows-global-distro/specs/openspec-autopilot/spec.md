@@ -5,7 +5,7 @@ El plugin se puede instalar de forma global en OpenCode y encuentra `branch-chan
 ## ADDED Requirements
 
 ### Requirement: El plugin encuentra branch-change.mjs con la skill
-El plugin DEBE usar el `branch-change.mjs` de la skill `openspec-git-discipline` del proyecto si la tiene y, si no, el de la skill instalada de forma global. Los prompts que piden al modelo ejecutar el script DEBEN darle la ruta de ese mismo script.
+El plugin DEBE usar el `branch-change.mjs` de la skill `openspec-git-discipline` del proyecto si la tiene y, si no, el de la skill instalada de forma global. La estrategia de worktree DEBE leer la rama de origen con ese mismo script.
 
 #### Scenario Outline: Qué script usa el plugin
 
@@ -13,7 +13,7 @@ El plugin DEBE usar el `branch-change.mjs` de la skill `openspec-git-discipline`
 Given un proyecto <situación>
 When el plugin consulta el change de la rama
 Then usa el `branch-change.mjs` <script>
-And el prompt del paso de crear el change da la ruta de ese script
+And la estrategia de worktree lee la rama de origen con ese script
 
 Examples:
   | situación                                        | script                           |

@@ -1,6 +1,6 @@
-// Lo que el plugin lee del proyecto: el change de la rama (el módulo neutral
-// branch-change.mjs de la skill openspec-git-discipline, que busca
-// branch-script.mjs), `openspec status`, las tasks según el
+// Lo que el plugin lee del proyecto: el change de la rama y los cambios de
+// rama (el módulo neutral branch-change.mjs de la skill openspec-git-discipline,
+// que busca branch-script.mjs), `openspec status`, las tasks según el
 // CLI (`openspec instructions apply`, design D11 de autopilot-sesion-operativa),
 // los errores de `openspec validate` y si el árbol de trabajo está limpio.
 // Todas las esperas tienen límite.
@@ -15,9 +15,24 @@ import { run } from './run.mjs';
 export { run } from './run.mjs';
 export { treeClean } from './git.mjs';
 
+// El módulo neutral branch-change.mjs, donde lo encuentre branchScript()
+async function module(directory) {
+  return import(`${pathToFileURL(branchScript(directory).file).href}`);
+}
+
 export async function branchChange(directory) {
-  const module = await import(`${pathToFileURL(branchScript(directory).file).href}`);
-  return module.branchChange(directory);
+  return (await module(directory)).branchChange(directory);
+}
+
+// Los cambios de rama del plugin (design D3 y D7 de autopilot-rama-por-sesion),
+// con las reglas de branch-change.mjs: a una rama temporal con `switch`, a la
+// rama de origen con `origin`; ninguno con el árbol sucio. { ok, message }
+// Se llaman sin las variables del entorno: el rechazo en un contenedor
+// efímero (ADR-0016) protege la rama de la sesión del agente, y estos cambios
+// los pide el usuario al entrar en una sesión desde OpenCode, no el modelo.
+export async function switchTo(directory, branch, via = 'switch') {
+  const m = await module(directory);
+  return via === 'origin' ? m.originBranch(directory, {}) : m.switchBranch(directory, branch, {});
 }
 
 // El CLI de OpenSpec del proyecto, el mismo que el arranque pone en el PATH,
@@ -46,6 +61,16 @@ async function openspecJson(directory, args) {
     return JSON.parse(result.stdout);
   } catch {
     throw new Error(`openspec ${args.join(' ')} ha fallado: ${(result.stderr || result.stdout).trim().slice(0, 300)}`);
+  }
+}
+
+// El ajuste del wiki del proyecto (design D1 de add-project-wiki-toggle): solo
+// el literal true de "enabled" en .agents/wiki/engine.json lo habilita
+export function wikiEnabled(directory) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(directory, '.agents', 'wiki', 'engine.json'), 'utf8')).enabled === true;
+  } catch {
+    return false;
   }
 }
 

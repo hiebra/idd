@@ -16,6 +16,7 @@ const { pathToFileURL } = require('node:url');
 const { REPO_ROOT } = require('../support/project');
 
 const MODULE = pathToFileURL(path.join(REPO_ROOT, '.opencode', 'plugins', 'openspec-autopilot', 'lib', 'next-step.mjs')).href;
+const PROJECT_MODULE = pathToFileURL(path.join(REPO_ROOT, '.opencode', 'plugins', 'openspec-autopilot', 'lib', 'project.mjs')).href;
 
 const status = (ready, complete = false) => ({
   isPlanningComplete: complete,
@@ -71,9 +72,42 @@ test('auto mode: no reviews; the verify goes to the archive unless it has critic
 test('after the archive the wiki, and after the wiki the end of the cycle', async () => {
   const { next } = await import(MODULE);
   for (const mode of ['normal', 'auto']) {
-    assert.deepEqual(next({ mode, finished: { kind: 'archive' } }).step, { kind: 'wiki' });
+    assert.deepEqual(next({ mode, finished: { kind: 'archive' }, wikiEnabled: true }).step, { kind: 'wiki' });
     assert.deepEqual(next({ mode, finished: { kind: 'wiki' } }).step, { kind: 'end' });
     assert.deepEqual(next({ mode, finished: { kind: 'new' }, state: { change: 'x', status: status('proposal'), tasks: [] } }).step, { kind: 'artifact', id: 'proposal' });
+  }
+});
+
+test('with the project wiki disabled, the cycle ends at the archive (add-project-wiki-toggle D5)', async () => {
+  const { next, waitsForCommit } = await import(MODULE);
+  for (const mode of ['normal', 'auto']) {
+    for (const wikiEnabled of [false, undefined]) {
+      const { step, zoneChange } = next({ mode, finished: { kind: 'archive' }, lastZone: 'specs', wikiEnabled });
+      assert.deepEqual(step, { kind: 'end' }, `${mode}, wikiEnabled ${wikiEnabled}`);
+      assert.equal(zoneChange, false);
+    }
+    assert.deepEqual(next({ mode, finished: { kind: 'archive' }, wikiEnabled: true }).step, { kind: 'wiki' });
+    // With the wiki, the wiki step waits for the commit of the archive
+    assert.equal(waitsForCommit({ mode, finished: { kind: 'archive' }, step: next({ mode, finished: { kind: 'archive' }, wikiEnabled: true }).step }), true);
+  }
+});
+
+test('the project switch of the wiki is read from engine.json: only a literal true enables it', async () => {
+  const { wikiEnabled } = await import(PROJECT_MODULE);
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autopilot-wiki-'));
+  try {
+    assert.equal(wikiEnabled(dir), false, 'no engine.json');
+    fs.mkdirSync(path.join(dir, '.agents', 'wiki'), { recursive: true });
+    const file = path.join(dir, '.agents', 'wiki', 'engine.json');
+    for (const [text, expected] of [['{ "enabled": true }', true], ['{ "enabled": false }', false], ['{ "enabled": "true" }', false], ['{}', false], ['{ roto', false]]) {
+      fs.writeFileSync(file, text);
+      assert.equal(wikiEnabled(dir), expected, text);
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
@@ -93,7 +127,7 @@ test('zone changes: from the plan to the tasks, from the tasks to the archive an
   assert.equal(next({ mode: 'auto', finished: { kind: 'task', id: '2' }, state: planned([{ id: '2', done: true }]), lastZone: 'code' }).zoneChange, false);
   assert.equal(next({ mode: 'auto', finished: { kind: 'verify' }, result: 'clean', lastZone: 'code' }).zoneChange, true);
   // From the archive to the wiki
-  assert.equal(next({ mode: 'auto', finished: { kind: 'archive' }, lastZone: 'specs' }).zoneChange, true);
+  assert.equal(next({ mode: 'auto', finished: { kind: 'archive' }, lastZone: 'specs', wikiEnabled: true }).zoneChange, true);
 });
 
 test('waits for the user\'s commit: after the archive and the wiki, and in auto mode at a zone change', async () => {

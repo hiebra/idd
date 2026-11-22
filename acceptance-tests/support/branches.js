@@ -392,6 +392,7 @@ module.exports = {
   EPHEMERAL_ENV,
   sessionEnv,
   addRemote,
+  remoteDir,
   remoteCommit,
   revParse,
   squashMerge,

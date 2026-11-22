@@ -90,6 +90,14 @@ Given('un proyecto creado desde la variante adelgazada de esa release', function
   this.ensureProject().slim();
 });
 
+// The slim variant has no .agents/wiki/engine.json: the setting is created by
+// /toggle-wiki and committed with the project
+Given('el wiki habilitado en el proyecto', function () {
+  this.global.toggleWiki(this.project, true);
+  this.branches.commitAll(this.project, 'habilitar el wiki');
+  assert.equal(this.project.wikiEnabled(), true);
+});
+
 Then('no se descarga ningún motor del wiki', function () {
   assert.deepEqual(this.engineClones(), [], this.session.log);
   assert.equal(this.project.hasEngineInstall(), false, this.session.log);

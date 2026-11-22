@@ -24,6 +24,7 @@ function setUp() {
   machine.nodeWithoutNpm = true;
   const engine = new FakeEngine(workDir);
   const project = new Project(path.join(workDir, 'project'), { engineUrl: engine.url });
+  project.setWikiEnabled(true);
   return { workDir, machine, project };
 }
 
