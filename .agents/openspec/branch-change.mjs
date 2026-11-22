@@ -391,6 +391,15 @@ export function checkMerge(dir, target, source, env = process.env) {
   const allow = (message) => ({ ok: true, message, state });
   const branch = state.branch;
   if (!target) return deny('Falta la rama de destino: check merge <rama de destino> [<rama permanente>].');
+  if (dirty(dir)) return deny(`No se fusiona: ${COMMIT_FIRST}.`);
+  if (isEphemeral(env)) {
+    const saved = git(dir, 'config', '--get', 'idd.sessionBranch');
+    if (!saved.ok || !saved.out || branch !== saved.out) {
+      const where = branch ? `la rama '${branch}'` : 'un HEAD separado';
+      const session = saved.ok && saved.out ? `la rama de la sesión es '${saved.out}'` : 'no hay rama de la sesión guardada (git config idd.sessionBranch)';
+      return deny(`El clon está en ${where} y ${session}: en un contenedor efímero solo se fusiona en la rama de la sesión. No cambies de rama tú; pide al usuario cómo seguir.`);
+    }
+  }
   const remote = (name) => git(dir, 'rev-parse', '-q', '--verify', `refs/remotes/origin/${name}`).ok;
   const contains = (ancestor) => git(dir, 'merge-base', '--is-ancestor', ancestor, 'HEAD').ok;
 
