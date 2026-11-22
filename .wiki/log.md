@@ -145,6 +145,16 @@
 
 ## [2026-11-22] inventory | tema abierto: declarar skip_specs al proponer un change sin specs (inventory/candidates/declarar-skip-specs-al-proponer-un-change-sin-specs.md)
 
+## [2026-11-22] ll | "fusión con --no-ff y trazabilidad" → raw/notes/2026-11-22-ll-fusion-no-ff-y-trazabilidad.md (3 lessons, 1 article updated)
+
+## [2026-11-22] inventory | task nombrar-el-change-en-el-titulo-de-la-fusion (active, p3)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, update-comment-closing-and-quotes @ c4d6b27): 1 manifest, 13 files pinned
+
+## [2026-11-22] ll | "update-comment-closing-and-quotes" → raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md (3 lessons, 2 articles updated)
+
 ## [2026-11-22] ll | "allow-user-requested-merges" → raw/notes/2026-11-22-ll-allow-user-requested-merges.md (3 lessons, 1 article updated)
 
 ## [2026-11-22] ingest-collection | idd via git (manifest-only, allow-user-requested-merges @cac0041): 1 manifest, 16 paths pinned, 0 skipped

@@ -5,22 +5,26 @@ El usuario puede comentar partes de tu intervención anterior sin que cada comen
 ## Un comentario no se responde
 
 <!-- comments-rule:es-comentario -->
-Un mensaje del usuario que empieza por una cadena entre comillas simples (`'así'`) es un comentario sobre tu intervención anterior.
+Un mensaje del usuario es un comentario sobre tu intervención anterior si, sin los espacios ni los comentarios HTML (`<!-- … -->`) iniciales, empieza por una marca de comentario. Una marca es una cadena entre comillas simples (`'así'`).
+<!-- comments-rule:es-comentario-cita -->
+También es marca una cita de Markdown: líneas que empiezan por `>`, como las que crea la app de Claude al citar un fragmento (`<!-- attach -->`, la cita y, debajo, el texto del usuario).
 <!-- comments-rule:frase-fija -->
-No lo respondas. Contesta solo, literalmente: Puedes seguir comentando mi intervención, pedirme que conteste a todos tus comentarios introduciendo en el prompt la palabra "ya", o pedirme que reformule mi intervención introduciendo la palabra "reformula".
+No lo respondas. Contesta solo, literalmente: Puedes seguir añadiendo comentarios, pedirme que los procese (p) o que reformule (r) el mensaje en base a ellos
+<!-- comments-rule:idioma -->
+Da esa frase en el idioma en que está escrito el comentario, traducida si no es español.
 <!-- comments-rule:acumular -->
 Acumula el comentario sin tratarlo: no investigues ni modifiques nada a raíz de él.
 
 ## Palabras de cierre
 
-"ya" y "reformula" cuentan como palabras completas, sin distinguir mayúsculas, y fuera de la cadena inicial entre comillas simples. Los comentarios acumulados son los que el usuario ha hecho desde tu última respuesta completa.
+"p", "procesa" y "procesar" son las palabras de cierre para procesar, y "r", "reformula" y "reformular" para reformular. Cuentan como palabras completas, sin distinguir mayúsculas, y fuera de la marca de comentario inicial. Los comentarios acumulados son los que el usuario ha hecho desde tu última respuesta completa.
 
-<!-- comments-rule:ya-responde-todos -->
-- **"ya"**: responde en un solo mensaje a todos los comentarios acumulados.
-<!-- comments-rule:ya-incluye-comentario -->
+<!-- comments-rule:procesar-responde-todos -->
+- **Procesar** ("p"): responde en un solo mensaje a todos los comentarios acumulados.
+<!-- comments-rule:procesar-incluye-comentario -->
   Si el mensaje con la palabra de cierre es también un comentario, acumúlalo antes y trátalo con los demás.
 <!-- comments-rule:reformula-completa -->
-- **"reformula"**: repite tu intervención completa, reescrita para incorporar los comentarios acumulados.
+- **Reformular** ("r"): repite tu intervención completa, reescrita para incorporar los comentarios acumulados.
 <!-- comments-rule:reformula-solo-leido -->
   Asume que el usuario solo ha leído las partes que citó y que podría no haber procesado ninguna otra.
 <!-- comments-rule:reformula-autonoma -->

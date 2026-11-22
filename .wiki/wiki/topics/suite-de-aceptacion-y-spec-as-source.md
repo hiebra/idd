@@ -16,6 +16,7 @@ sources:
   - raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md
   - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
   - raw/notes/2026-11-22-ll-add-quote-comment-rule.md
+  - raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md
 created: 2026-11-21
 updated: 2026-11-22
 verified: 2026-11-22
@@ -61,6 +62,8 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - **La copia del proyecto sale del disco en cada escenario:** con la suite en marcha no se edita nada de lo que se copia (todo salvo `.git`, `acceptance-tests/` y `.wiki/`), y los cambios en los pasos no cuentan hasta la siguiente pasada ([lecciones de allow-user-requested-merges](../../raw/notes/2026-11-22-ll-allow-user-requested-merges.md), lección 1).
 - **Acotar una pasada:** las rutas que se pasan a `cucumber-js` se suman a las del perfil (`effectivePaths()`); solo `--name` o los tags acotan ([lecciones de allow-user-requested-merges](../../raw/notes/2026-11-22-ll-allow-user-requested-merges.md), lección 2).
 - **Prueba de core intermitente:** `two sessions taking control at once` falla con la máquina cargada. `test:core` no se ejecuta a la vez que cucumber, y si falla, se repite sola ([lecciones de allow-user-requested-merges](../../raw/notes/2026-11-22-ll-allow-user-requested-merges.md), lección 3).
+- **Delta specs sin H1**: `extract-gherkin.cjs` exige que toda `spec.md`, también las de un change activo, empiece por `# <capability>`; sin ella falla la carga de `cucumber.cjs` y no se ejecuta ningún escenario, aunque `openspec validate` dé el change por válido ([lecciones de update-comment-closing-and-quotes](../../raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md), lección 2).
+- **Escenarios renombrados en una delta**: un MODIFIED sustituye el requisito entero y no puede perder escenarios de la spec principal, así que cambiar el nombre de un escenario exige REMOVED del requisito viejo (con Reason y Migration) y ADDED del nuevo, no RENAMED + MODIFIED (lección 3 de la misma nota).
 
 ## Su límite
 
@@ -89,5 +92,6 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `acceptance-tests/README.md`, `acceptance-tests/support/branches.js`, `acceptance-tests/support/agents/opencode-sim.mjs`, `acceptance-tests/support/agents/opencode-sim.js`.
 - [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `acceptance-tests/support/branches.js`, `acceptance-tests/support/machine.js`, `acceptance-tests/core-tests/branches-support.test.js`.
 - [Lessons Learned: manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md): lecciones 1, 2 y 4.
+- [Lessons Learned: update-comment-closing-and-quotes](../../raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md): lecciones 2 y 3.
 - [Collection: archivado de replace-gherkin-lint-with-gplint (idd@d355c01)](../../raw/repos/2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md): `acceptance-tests/README.md`, `acceptance-tests/support/spec-lint.js`, `adr/0012-spec-lint-with-gplint.md`, el `design.md` del change archivado.
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `acceptance-tests/README.md`, `acceptance-tests/support/agents/opencode-host.mjs`.
