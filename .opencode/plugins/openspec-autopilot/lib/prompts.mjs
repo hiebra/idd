@@ -97,7 +97,7 @@ const WHAT = (step) =>
 // D2 de guiar-revision-con-tests). El plugin no ejecuta nada: lo hace el
 // modelo, y la depuración, el usuario.
 const ACCEPTANCE = (step, change) =>
-  `Guía la verificación con los escenarios de aceptación del change: en las specs de \`openspec/changes/${change}/specs/\`, localiza los que cubren ${step.of === 'verify' ? 'el change (en el verify, todos)' : WHAT(step)}, recórrelos con el usuario como guion de lo que hay que comprobar y ejecútalos con el runner de aceptación del proyecto (el que documente su suite), solo esos salvo en el verify; explica qué pasa y qué falla. ` +
+  `Guía la verificación con los escenarios de aceptación del change: en las specs de \`openspec/changes/${change}/specs/\`, ${step.of === 'verify' ? 'toma todos los del change' : `localiza los que cubren ${WHAT(step)}`}, recórrelos con el usuario como guion de lo que hay que comprobar y ejecútalos con el runner de aceptación del proyecto (el que documente su suite)${step.of === 'verify' ? '' : ', solo esos'}; explica qué pasa y qué falla. ` +
   'Haz que las ejecuciones no dejen en el árbol de trabajo archivos que git no ignore, porque la revisión la cierra git. ' +
   'Si lo revisado incluye código fuente que se puede ejecutar, ofrece al usuario ejecutarlo en modo depuración: dale la orden exacta para lanzarlo con el depurador del stack del proyecto (por ejemplo, el escenario de aceptación que lo ejercita, bajo `node --inspect-brk` en JavaScript o `python -m debugpy --wait-for-client` en Python) y dónde le conviene poner los puntos de ruptura. Esa orden la ejecuta el usuario en su terminal, no tú: se queda esperando al depurador.';
 
@@ -109,7 +109,7 @@ export function reviewPrompt({ step, change, review = null }) {
       ? 'Para darla por buena, el usuario hace un commit (vacío si no hay nada que cambiar: `git commit --allow-empty`); para rechazarla, deja cambios fuera del stage con sus conclusiones.'
       : 'Lo que hay que revisar está en el stage de git (`git diff --cached`). Para darla por buena, el usuario hace el commit; para rechazarla, lo saca del stage (`git restore --staged .`) y escribe sus conclusiones.';
   return (
-    `${MARK} Esta sesión es la revisión humana de ${WHAT(step)} de \`${change}\`. No modifiques ningún archivo, no hagas commits y no pidas commits.${errors}${verify}\n\n` +
+    `${MARK} Esta sesión es la revisión humana ${`de ${WHAT(step)}`.replace(/^de el /, 'del ')} de \`${change}\`. No modifiques ningún archivo, no hagas commits y no pidas commits.${errors}${verify}\n\n` +
     `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas.${step.of === 'task' || step.of === 'verify' ? ` ${ACCEPTANCE(step, change)}` : ''} ${staged} ` +
     `La revisión la cierra git cuando el usuario envía su siguiente mensaje, no tú. Si das tus conclusiones, pásalas con \`${HANDOFF_TOOL}\` en \`conclusions\`. ${LESSONS}`
   );
