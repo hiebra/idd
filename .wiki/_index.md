@@ -6,7 +6,7 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 19 raw documents
+- Sources: 23 raw documents
 - Articles: 10 compiled wiki articles
 - Inventory records: 3 tracked items
 - Datasets: 0 manifests
@@ -29,6 +29,8 @@ Last updated: 2026-11-22
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: 3 páginas de la documentación de OpenSpec (archive y sync) y 2 lecciones sobre la guidance de archivado; flujo-wiki-first actualizado
 
 - 2026-11-22: Fusionado main (add-quote-comment-rule); el ADR de limpieza de los plugins pasa a ADR-0011, con su manifiesto en idd@002f043
 
