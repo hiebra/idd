@@ -288,10 +288,14 @@ prepare_git() {
     fi
   fi
   rm -f "$log"
-  local current name old new
+  local current name old new checked
   current="$(git symbolic-ref --short -q HEAD 2>/dev/null)"
+  # Las ramas sacadas en cualquier directorio del clon (el principal o un
+  # worktree): update-ref movería la referencia sin su árbol ni su índice
+  # (design D11 de autopilot-rama-por-sesion)
+  checked=" $current $(git worktree list --porcelain 2>/dev/null | sed -n 's|^branch refs/heads/||p' | tr '\n' ' ')"
   for name in $permanent; do
-    [ "$name" = "$current" ] && continue
+    case "$checked" in *" $name "*) continue ;; esac
     old="$(git rev-parse --verify -q "refs/heads/$name" 2>/dev/null)" || continue
     new="$(git rev-parse --verify -q "refs/remotes/origin/$name" 2>/dev/null)" || continue
     [ "$old" = "$new" ] && continue
