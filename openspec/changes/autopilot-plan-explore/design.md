@@ -7,7 +7,8 @@ Lo que ya se sabe de OpenCode 2.3.2 y condiciona el diseño:
 - El hook `context` se ejecuta en **cada petición al modelo**, también en las que siguen a una tool dentro del mismo turno, y lo que añade no queda en el historial ni se acumula (`.wiki/wiki/concepts/hook-context-opencode.md`). Por eso lo que se inyecta se decide **por turno** (por mensaje del usuario), no por petición, como ya hace `session-bootstrap` con `lastUserText`.
 - La entrada del hook `context` trae el agente de la petición, `input.agent` (`"build"` o `"plan"`), junto a `sessionID`, `model`, `system`, `messages`, `options` y `tools`; cambia de un mensaje al siguiente, y todas las peticiones de un turno llevan el mismo (task 1.1, comprobado con OpenCode 2.3.2 real).
 - Con el agente plan, OpenCode añade su propio recordatorio (`<system-reminder> You are in Plan mode…`) como mensaje `user`: antes del mensaje del usuario en la primera petición del turno y al final, tras el resultado de la tool, en las siguientes (task 1.1). Ninguna clave sacada de la lista de mensajes de la petición es estable dentro del turno.
-- El hook de servidor `prompt` llega con cada mensaje que entra en una sesión, también el que envía el plugin con `session.prompt`, antes de la petición al modelo, con `{ sessionID, messageID, prompt, delivery }`; también llega cuando el mensaje queda pendiente detrás del turno en curso (design de `autopilot-sesion-operativa`, Context 3). Qué distingue ese caso está por comprobar (task 1.4).
+- El hook de servidor `prompt` llega una sola vez con cada mensaje que entra en una sesión, también el que envía el plugin con `session.prompt` (antes de que `prompt()` resuelva, con el mismo `messageID` que devuelve), antes de sus peticiones al modelo, con `{ sessionID, messageID, prompt, metadata, delivery }`. `delivery` es siempre `"steer"`. Un mensaje enviado mientras el turno sigue no espera a que termine: OpenCode lo mete en el mismo bucle, como último mensaje `user` de la petición siguiente (tras el resultado de la tool, si la hay), sin `experimental.idle` entre medias. En la entrada de `context`, cada mensaje guardado lleva su `id`, el `messageID` del hook `prompt` en los del usuario; el recordatorio del agente plan no pasa por el hook `prompt` (task 1.4).
+- `opencode run -s <sesión>` atiende la sesión en otro proceso, con otra instancia del plugin y a la vez que la TUI; las dos leen y escriben la misma metadata (task 1.4).
 - El agente plan carga la skill `openspec-explore` con la tool `skill` (task 1.2).
 - El `emit` del servidor vuelve sin esperar a la TUI, y la TUI puede tener un `dialog.select` abierto mientras el servidor espera. Una recarga en caliente recarga las dos partes y ejecuta la limpieza de la TUI, pero el modal de la carga anterior sigue abierto; al cerrarlo, la carga anterior responde y la respuesta llega al servidor nuevo, que no conoce la petición pendiente del anterior (task 1.3).
 - La metadata de la sesión se sustituye entera: se escribe leyendo, combinando y volviendo a escribir (`writeMeta`, lección 2 de `.wiki/raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md`).
@@ -41,7 +42,7 @@ Alternativa descartada: dejar las revisiones en plan y no inyectar `openspec-exp
 
 ### D2. El cambio de agente se decide por turno
 
-La clave del turno es el `messageID` del mensaje que lo abre, tal como llega al hook `prompt` de la sesión operativa. El hook la guarda en la metadata (`turnMessage`) antes de decidir nada más, también con los mensajes que llevan la marca del plugin (el mensaje con el que el plugin arranca cada paso abre el primer turno). En las peticiones del turno, el hook `context` lee esa clave de la metadata y no mira la lista de mensajes de la petición. Un mensaje que queda pendiente detrás del turno en curso no debe cambiar la clave del turno en curso: cómo distinguirlo lo decide la task 1.4 (si `delivery` u otro dato lo distingue, solo se guarda la clave de los mensajes que abren turno ya; si no, se guarda como clave pendiente y pasa a ser la del turno en la primera petición después de que la sesión quede en reposo). La metadata guarda `agentTurn: { key, agent, kind }`, donde `kind` es lo que se inyecta en todo el turno:
+La clave del turno es el `messageID` del mensaje del usuario que lo abre. El hook `prompt` de la sesión operativa guarda el último `messageID` que entra en `turnMessage`, antes de decidir nada más, también con los mensajes que llevan la marca del plugin (el mensaje con el que el plugin arranca cada paso abre el primer turno). En cada petición, el hook `context` toma `turnMessage` como clave solo si algún mensaje de `input.messages` lleva ese `id`; si no, sigue con la clave anterior (`agentTurn.key`). Así, un mensaje que entra a mitad de turno (task 1.4) cambia la clave justo en la primera petición que lo lleva, que es la primera en la que el modelo lo ve, y desde ella la inyección es la suya. Los `id` del recordatorio del agente plan no estorban, porque nunca pasan por el hook `prompt`. La metadata guarda `agentTurn: { key, agent, kind }`, donde `kind` es lo que se inyecta en todo el turno:
 
 | agente del turno anterior | agente de este turno | `kind`                      |
 | ------------------------- | -------------------- | --------------------------- |
@@ -58,7 +59,9 @@ Alternativas descartadas para la clave:
 
 - Sacarla de los mensajes de la petición (el último mensaje `user`, o los mensajes del modelo antes de él, con su texto). El recordatorio del agente plan, insertado como mensaje `user` al final de la petición tras una tool, la cambia dentro del turno (task 1.1).
 - Lo mismo saltando los mensajes que empiezan por `<system-reminder>`. Depende del formato de una inyección de OpenCode y no protege de las de otros plugins.
-- Contar los mensajes guardados de la sesión. Una lectura de la sesión por petición, y tiene el mismo problema con los mensajes pendientes.
+- Contar los mensajes guardados de la sesión. Una lectura de la sesión por petición, y tiene el mismo problema con los mensajes que entran a mitad de turno.
+- Tomar como clave `turnMessage` sin comprobar que la petición lleva ese mensaje. Un mensaje enviado durante una tool cambiaría la clave de las peticiones que todavía no lo llevan.
+- Distinguir el mensaje que entra a mitad de turno por `delivery` o esperar al reposo. `delivery` es siempre `"steer"` y no hay reposo entre los dos mensajes (task 1.4).
 
 ### D3. Los textos nuevos, en `lib/prompts.mjs`
 
@@ -86,7 +89,7 @@ Alternativa descartada: la directiva `notice` de `screen` que ya existe. No tien
 
 ### D6. El simulador
 
-`opencode-sim.mjs` ya tiene `switchAgent`, pasa `agent` en la entrada de `context`, deja modales abiertos hasta que el escenario los cierra y guioniza respuestas que escriben archivos. Le falta que una entrega RPC que espera un modal no cuente como trabajo pendiente (hecho en la task 2.1), reproducir el recordatorio del agente plan como mensaje `user` en las peticiones (task 2.3), y lo que diga la task 1.4 sobre el hook `prompt` con los mensajes pendientes.
+`opencode-sim.mjs` ya tiene `switchAgent`, pasa `agent` en la entrada de `context`, deja modales abiertos hasta que el escenario los cierra y guioniza respuestas que escriben archivos. Le falta que una entrega RPC que espera un modal no cuente como trabajo pendiente (hecho en la task 2.1), reproducir el recordatorio del agente plan como mensaje `user` en las peticiones (task 2.3), el `id` de cada mensaje en la entrada de `context` y un mensaje enviado mientras el turno sigue, que entra en el mismo bucle tras pasar por el hook `prompt` (task 2.4).
 
 ## Risks / Trade-offs
 
@@ -96,7 +99,8 @@ Alternativa descartada: la directiva `notice` de `screen` que ya existe. No tien
 - [Calcular el estado de git en el hook `context` retrasa la primera petición de un turno en plan] → Solo una vez por turno en plan, con el límite de tiempo de `lib/git.mjs`; un fallo se registra y el turno sigue sin `planTurn` (sin aviso), sin bloquear la petición.
 - [Una versión de OpenCode deja de pasar `input.agent` o el `messageID` del hook `prompt`] → Todo se trata como build, o como un solo turno, y el plugin se comporta como antes de este change; se vigila al subir de versión con las comprobaciones de la sección 1 de las tasks.
 - [La TUI se cierra con el modal abierto y la cadena queda en `plan-notice`] → Se vuelve a pedir al presentarse una TUI nueva, y un prompt del usuario la libera (D5).
-- [Un mensaje pendiente detrás del turno en curso cambia la clave del turno antes de tiempo] → El turno en curso repetiría la inyección del siguiente en sus peticiones restantes. Lo evita lo que decida la task 1.4.
+- [El usuario pulsa Tab y envía un mensaje mientras el turno sigue: no está comprobado qué agente lleva la petición que lo incluye] → La decisión usa el agente de esa petición (`input.agent`). Si OpenCode mantuviera el del turno en curso, la inyección sería la de ese agente hasta el mensaje siguiente; el estado de git del turno en plan (D4) y el aviso no dependen de eso.
+- [Dos procesos (la TUI y `opencode run -s`) atienden la misma sesión a la vez] → Las dos instancias del plugin escriben `turnMessage`, `agentTurn` y `planTurn` en la misma metadata, leyendo y combinando antes de escribir; puede ganar la última escritura. Se acepta, como en el resto del plugin: no es el uso de la sesión operativa que prevé el ciclo.
 
 ## Migration Plan
 
@@ -104,5 +108,5 @@ Sin migración de datos. Las sesiones operativas vivas al instalar la versión n
 
 ## Open Questions
 
-- **El hook `prompt` con un mensaje pendiente** (task 1.4): qué `messageID` y qué `delivery` trae un mensaje que entra mientras el turno anterior sigue, y si vuelve a pasar por el hook cuando empieza su turno. Decide cómo guarda D2 la clave.
+- **El agente tras un Tab a mitad de turno**: qué agente lleva la petición que incluye un mensaje enviado mientras el turno sigue, si el usuario ha pulsado Tab antes de enviarlo. No se pudo comprobar en la task 1.4 (el Tab enviado al pseudoterminal no cambió el agente). Ver Risks.
 - **Supersesión**: este change no contradice ningún ADR en vigor. El ADR del change debe registrar que el autopilot trata el agente plan como exploración y avisa de lo modificado en plan, y que las revisiones nacen en build, en lugar de D6 del design y del fuera de alcance de la proposal de `add-openspec-autopilot`, que no llegaron a un ADR.
