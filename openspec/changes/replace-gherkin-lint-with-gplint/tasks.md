@@ -4,8 +4,9 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 1. Herramienta (zona de código)
 
-- [ ] 1.1 En `acceptance-tests/`, `npm install -D gplint@^2.6.2` y crear `.gplintrc` desde `.gherkin-lintrc` según D2: mismas reglas, `"on"` → `"error"`, cabecera que nombra `gplint`. Mientras tanto, `gherkin-lint` y el script `lint:specs` se quedan como están.
-- [ ] 1.2 Ejecutar la suite con el delta del change: los escenarios de `spec-lint` salen con pasos sin definir y el resto pasa.
+- [x] 1.1 En `acceptance-tests/`, `npm install -D gplint@^2.6.2` y crear `.gplintrc` desde `.gherkin-lintrc` según D2: mismas reglas, `"on"` → `"error"`, cabecera que nombra `gplint`. Mientras tanto, `gherkin-lint` y el script `lint:specs` se quedan como están.
+- [x] 1.2 Ejecutar la suite con el delta del change: los escenarios de `spec-lint` salen con pasos sin definir y el resto pasa.
+  - Resultado: 141 escenarios, 137 pasan y 4 sin definir (los de `spec-lint`).
 
 ## 2. spec-lint (zona de código): por escenario, rojo → implementar → verde → commit
 

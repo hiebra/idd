@@ -13,6 +13,7 @@
     "@cucumber/cucumber": "^13.3.0",
     "cheerio": "^1.2.0",
     "gherkin-lint": "^4.2.4",
-    "glob": "^14.0.6"
+    "glob": "^14.0.6",
+    "gplint": "^2.6.2"
   }
 }
