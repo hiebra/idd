@@ -7,7 +7,7 @@
 //   without a TUI that says hello the server orchestrates nothing (D13);
 // - the TUI part's setup always returns a cleanup that releases its
 //   subscriptions and never throws, even when the RPC fails
-//   (fix-tui-subscription-cleanup, ADR-0010);
+//   (fix-tui-subscription-cleanup, ADR-0011);
 // - two sessions taking control at once: the oldest wins (D4);
 // - the tool called before the step did anything does not chain (D6);
 // - a session waiting for a commit checks the tree again on the next message (D11);
@@ -71,7 +71,7 @@ test('a hot reload does not duplicate navigations, dialogs or archivings', async
   await w.opencodeCall('reload');
   await w.opencodeCall('reload');
   assert.equal(w.opencode.generation, 3);
-  // The earlier loads of the TUI part released their subscriptions (ADR-0010)
+  // The earlier loads of the TUI part released their subscriptions (ADR-0011)
   assert.deepEqual([...new Set(w.opencode.subscriptions.map((s) => s.load))], [3], JSON.stringify(w.opencode.subscriptions));
   // A stopped owner: opening a session asks once, and archiving it happens once
   const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'specs' } });

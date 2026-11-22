@@ -1,4 +1,4 @@
-# ADR-0010: Los plugins de OpenCode del proyecto liberan al descargarse lo que registran
+# ADR-0011: Los plugins de OpenCode del proyecto liberan al descargarse lo que registran
 
 - Status: accepted
 - Date: 2026-11-22

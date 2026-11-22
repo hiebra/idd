@@ -14,7 +14,7 @@
 // fails the request: the message does not reach the model.
 //
 // After the message, it can reload the TUI part, emit an event of the
-// plugin's RPC and close the TUI (fix-tui-subscription-cleanup, ADR-0010). As
+// plugin's RPC and close the TUI (fix-tui-subscription-cleanup, ADR-0011). As
 // OpenCode 2.3.2, before each reload and at close it runs the cleanup that
 // each part's setup returned, if it returned a function, and events.on(name,
 // handler, { signal }) stops at the signal's abort. Unlike OpenCode, which

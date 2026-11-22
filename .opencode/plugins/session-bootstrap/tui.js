@@ -2,7 +2,7 @@
 // toast los avisos de la parte de servidor (server.js), que llegan por el RPC
 // del plugin. Al cargar recoge los que ya había y después escucha los nuevos.
 // Al descargarse (antes de cada recarga en caliente y al cerrar), se da de baja
-// con la función que devuelve setup (ADR-0010): sin ella, cada carga anterior
+// con la función que devuelve setup (ADR-0011): sin ella, cada carga anterior
 // seguiría mostrando los avisos nuevos y, con --standalone, dejaría una traza
 // ECONNRESET al cerrar.
 //

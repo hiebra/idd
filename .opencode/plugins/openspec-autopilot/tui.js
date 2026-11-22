@@ -7,7 +7,7 @@
 // Cada carga es una instancia con su identificador, y solo atiende las
 // peticiones dirigidas a ella (D13). Al descargarse (antes de cada recarga en
 // caliente y al cerrar), se da de baja de los eventos con la función que
-// devuelve setup (ADR-0010): sin ella seguiría escuchando tras la recarga y,
+// devuelve setup (ADR-0011): sin ella seguiría escuchando tras la recarga y,
 // con --standalone, dejaría trazas ECONNRESET al cerrar.
 //
 // Sin dependencias y sin lanzar nunca una excepción hacia OpenCode.
@@ -40,7 +40,7 @@ export default {
   id: RPC.id,
   async setup(context) {
     const instance = `tui-${process.pid}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-    // OpenCode ejecuta lo que devuelve setup antes de cada recarga y al cerrar (ADR-0010)
+    // OpenCode ejecuta lo que devuelve setup antes de cada recarga y al cerrar (ADR-0011)
     const subscriptions = new AbortController();
     const cleanup = () => subscriptions.abort();
     const { signal } = subscriptions;

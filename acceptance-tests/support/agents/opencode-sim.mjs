@@ -30,7 +30,7 @@
 //   function. The TUI's event listeners stay alive across reloads only if the
 //   plugin does not release them: events.on(name, handler, { signal }) stops
 //   at the signal's abort and returns a function that unsubscribes
-//   (fix-tui-subscription-cleanup, ADR-0010).
+//   (fix-tui-subscription-cleanup, ADR-0011).
 // - Closing a TUI that runs its own server (--standalone): runs the cleanups,
 //   then closes the server. Each subscription still alive leaves a trace in
 //   the terminal, as OpenCode's client prints its ECONNRESET, and so does
