@@ -15,14 +15,41 @@
 // - Nunca lanza una excepción hacia OpenCode, y setup devuelve su limpieza
 //   (ADR-0011): no registra nada que OpenCode no libere por sí mismo.
 //
+// - Instalado de forma global (<config>/opencode/plugins/response-comments/,
+//   windows-global-distro), pide la regla al núcleo del plugin
+//   session-bootstrap global, en ../session-bootstrap/, con --global, y solo
+//   actúa donde actúa ese arranque: en proyectos intent-driven sin su propio
+//   plugin response-comments. Si no actúa, no registra nada.
+//
 // Sin dependencias, como session-bootstrap: un objeto literal { id, setup } y
-// solo módulos node:.
+// solo módulos node:. Las reglas de dónde actúa son las de
+// session-bootstrap/place.mjs, repetidas aquí porque este plugin se puede
+// quitar sin el otro.
 
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ID = "response-comments";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+// Instalado en el proyecto: el abuelo de su directorio es .opencode
+const GLOBAL = path.basename(path.dirname(path.dirname(HERE))) !== ".opencode";
 const CORE = path.join(".agents", "hooks", "session-bootstrap.mjs");
+const core = (directory) =>
+  GLOBAL ? [path.join(HERE, "..", "session-bootstrap", "session-bootstrap.mjs"), "--global"] : [path.join(directory, CORE)];
+
+// Instalado de forma global, actúa en proyectos intent-driven sin su propio response-comments
+function globalActs(directory) {
+  if (!directory) return false;
+  if (fs.existsSync(path.join(directory, ".opencode", "plugins", ID, "server.js"))) return false;
+  try {
+    const text = fs.readFileSync(path.join(directory, "openspec", "config.yaml"), "utf8");
+    return /^schema\s*:\s*["']?intent-driven["']?\s*(#.*)?$/m.test(text);
+  } catch {
+    return false;
+  }
+}
 
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
@@ -33,7 +60,7 @@ function coreText(directory, mode, input = null) {
   return new Promise((resolve) => {
     let stdout = "";
     try {
-      const child = spawn("node", [path.join(directory, CORE), mode, "opencode", directory], {
+      const child = spawn("node", [...core(directory), mode, "opencode", directory], {
         cwd: directory,
         stdio: [input === null ? "ignore" : "pipe", "pipe", "ignore"],
         windowsHide: true,
@@ -67,6 +94,7 @@ function lastUserText(messages) {
 export default {
   id: ID,
   setup(ctx) {
+    if (GLOBAL && !globalActs(ctx?.location?.directory)) return () => {};
     try {
       const directory = ctx.location.directory;
       const rule = coreText(directory, "comments-rule");

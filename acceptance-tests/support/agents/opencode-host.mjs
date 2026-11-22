@@ -154,14 +154,16 @@ const contextHooks = [];
 // OpenCode's own system prompt, before any plugin edits it
 const BASE_SYSTEM = 'You are OpenCode (simulated system prompt).';
 
-function serverContext() {
+// owner: the directory of the plugin whose server part gets the context, so
+// that what each plugin adds to a request can be told apart
+function serverContext(owner = PLUGIN_DIR) {
   const ctx = {
     location: { directory: projectDir },
     options: {},
     rpc: serverRpc(),
     session: {
       async hook(name, callback) {
-        if (name === 'context') contextHooks.push(callback);
+        if (name === 'context') contextHooks.push(Object.assign(callback, { owner }));
         return { async dispose() {} };
       },
     },
@@ -253,7 +255,7 @@ try {
 const otherCleanups = [];
 for (const name of PLUGINS.slice(1)) {
   try {
-    for (const [part, context] of [['server', serverContext], ['tui', () => tuiContext(1)]]) {
+    for (const [part, context] of [['server', () => serverContext(pluginDir(name))], ['tui', () => tuiContext(1)]]) {
       const plugin = await loadPart(part, { required: part === 'server', dir: pluginDir(name) });
       if (!plugin) continue;
       const returned = await plugin.setup(context());
@@ -292,9 +294,13 @@ try {
     tools: {},
   };
   let error = null;
+  // The system parts each plugin adds, { owner, text }
+  const systemBy = [];
   for (const hook of contextHooks) {
     try {
+      const before = input.system.length;
       await hook(input);
+      for (const part of input.system.slice(before)) systemBy.push({ owner: hook.owner, text: part.text });
     } catch (e) {
       error = `context hook: ${e?.stack ?? e}`;
       break;
@@ -306,6 +312,7 @@ try {
     system: error ? [] : input.system.map((part) => part.text),
     messages: error ? [] : input.messages.map((m) => ({ role: m.role, text: textOf(m.content) })),
     contextHooks: contextHooks.length,
+    systemBy: error ? [] : systemBy,
   };
 } catch (error) {
   fail('sending a message', error);

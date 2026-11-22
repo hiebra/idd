@@ -8,7 +8,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { Given, Then } = require('@cucumber/cucumber');
+const { Given, When, Then } = require('@cucumber/cucumber');
 const { GlobalInstall } = require('../support/global');
 
 function globalInstall(world) {
@@ -101,4 +101,53 @@ Then('las operaciones del wiki usan el motor de la instalación global', functio
   }
   assert.equal(this.session.env.CLAUDE_PLUGIN_ROOT, path.join(this.global.engineDir, 'claude-plugin'), this.session.log);
   assert.equal(helperRef, this.engine.pinnedRef, `${helper?.stdout}\n${helper?.stderr}\n${this.session.log}`);
+});
+
+// --- La regla de comentarios global ---------------------------------------------------
+
+const COMMENT = "''el segundo punto'' no lo entiendo";
+
+
+Given('el plugin `response-comments` instalado de forma global', function () {
+  const global = globalInstall(this).installSession({ engine: this.engine });
+  this.globalRule = path.join(global.pluginsDir, 'session-bootstrap', 'comments', 'rule.md');
+});
+
+// "un proyecto sin `openspec/config.yaml`" is the step of the global bootstrap, above
+Given(/^un proyecto (creado desde la variante adelgazada|de la plantilla completa, con su propio `response-comments`)$/, function (situation) {
+  const project = this.ensureProject();
+  if (situation.startsWith('de la plantilla completa')) {
+    assert.ok(fs.existsSync(project.path('.opencode', 'plugins', 'response-comments', 'server.js')));
+    return;
+  }
+  project.slim();
+});
+
+When('se abre una sesión de OpenCode en el proyecto y el usuario envía un comentario', function () {
+  this.openSession('OpenCode');
+  this.sendMessage(COMMENT);
+});
+
+Then(/^la regla de comentarios (llega una vez, del plugin global|no llega|llega una vez, del plugin del proyecto)$/, function (delivery) {
+  const sent = this.sentMessage.result;
+  assert.ok(sent.request?.delivered, sent.log);
+  const rule = fs
+    .readFileSync(this.globalRule, 'utf8')
+    .replace(/<!-- comments-rule:[a-z0-9-]+ -->\n/g, '')
+    .trim();
+  const rules = sent.request.systemBy.filter((part) => part.text.includes(rule));
+  const reminder = fs.readFileSync(path.join(path.dirname(this.globalRule), 'reminder.md'), 'utf8').trim();
+  const reminders = sent.reminders.filter((text) => text.includes(reminder));
+  if (delivery === 'no llega') {
+    assert.deepEqual(rules, [], sent.log);
+    assert.deepEqual(reminders, [], sent.log);
+    return;
+  }
+  assert.equal(rules.length, 1, sent.log);
+  const expected = delivery.endsWith('global')
+    ? path.join(this.global.pluginsDir, 'response-comments')
+    : this.project.path('.opencode', 'plugins', 'response-comments');
+  assert.equal(rules[0].owner, expected, sent.log);
+  // The comment's reminder, once
+  assert.equal(reminders.length, 1, sent.log);
 });

@@ -137,6 +137,7 @@ class OpenCodeAgent {
         const first = requests[0];
         return {
           delivered,
+          request: first ?? null,
           messages: first ? first.messages.filter((m) => m.role === 'user').map((m) => m.text) : [],
           // Messages added before the user's last one
           reminders: first?.delivered ? first.messages.slice(0, -1).filter((m) => m.text !== text).map((m) => m.text) : [],
