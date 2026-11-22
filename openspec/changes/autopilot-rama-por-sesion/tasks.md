@@ -31,7 +31,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 3. Ramas (zona de código): `openspec-change-lifecycle`
 
-- [ ] 3.1 «Volver a la rama de origen con el árbol limpio» y «No se vuelve con el árbol sucio»: pasos rojos; implementar el subcomando `origin` en `.agents/openspec/branch-change.mjs` (D7); verde. Ampliar `core-tests/branch-change.test.js`.
+- [x] 3.1 «Volver a la rama de origen con el árbol limpio» y «No se vuelve con el árbol sucio»: pasos rojos; implementar el subcomando `origin` en `.agents/openspec/branch-change.mjs` (D7); verde. Ampliar `core-tests/branch-change.test.js`.
 
 ## 4. Servidor y TUI (zona de código): `openspec-autopilot`
 

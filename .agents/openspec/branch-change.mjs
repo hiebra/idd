@@ -54,13 +54,16 @@
 //   node .agents/openspec/branch-change.mjs list [--json]
 //   node .agents/openspec/branch-change.mjs start <change>
 //   node .agents/openspec/branch-change.mjs switch <rama>
+//   node .agents/openspec/branch-change.mjs origin
 //   node .agents/openspec/branch-change.mjs env
-// `check`, `start` y `switch` imprimen { ok, message } en JSON y salen con 0
-// si se puede seguir y con 1 si no. `list` da las ramas temporales con su
-// change; `start` crea la rama del change desde la referencia de origen
+// `check`, `start`, `switch` y `origin` imprimen { ok, message } en JSON y
+// salen con 0 si se puede seguir y con 1 si no. `list` da las ramas temporales
+// con su change; `start` crea la rama del change desde la referencia de origen
 // (`originRef`) y cambia a ella; `switch` cambia a una rama temporal (ADR-0013,
-// design D12 de autopilot-sesion-operativa). Ni `start` ni `switch` actúan con
-// el árbol sucio. En un contenedor efímero el agente no los usa: trabaja solo
+// design D12 de autopilot-sesion-operativa); `origin` vuelve a la rama de
+// origen (design D7 de autopilot-rama-por-sesion), la única rama permanente a
+// la que se cambia así. Ni `start`, ni `switch`, ni `origin` actúan con el
+// árbol sucio. En un contenedor efímero el agente no los usa: trabaja solo
 // en la rama de la sesión (ADR-0015). `env` imprime, para el arranque de
 // sesión, `ephemeral=true` o `ephemeral=false` y
 // `permanent=<ramas separadas por espacios>`.
@@ -474,14 +477,30 @@ export function switchBranch(dir, name) {
   return { ok: true, message: `El clon está en la rama temporal '${name}'.` };
 }
 
+// Vuelve a la rama de origen (la última de `x-main`) con el árbol limpio
+export function originBranch(dir) {
+  const { permanent } = readPermanent(dir);
+  const origin = permanent.at(-1);
+  const current = git(dir, 'symbolic-ref', '--short', '-q', 'HEAD').out;
+  if (current === origin) return { ok: true, message: `El clon ya está en la rama de origen '${origin}'.` };
+  if (dirty(dir)) return { ok: false, message: `No se vuelve a la rama de origen '${origin}': ${COMMIT_FIRST}.` };
+  const hasLocal = git(dir, 'rev-parse', '--verify', '-q', `refs/heads/${origin}`).ok;
+  const hasRemote = git(dir, 'rev-parse', '--verify', '-q', `refs/remotes/origin/${origin}`).ok;
+  if (!hasLocal && !hasRemote) return { ok: false, message: `No se encuentra la rama de origen '${origin}' (ni local ni en origin).` };
+  const args = hasLocal ? ['switch', '-q', origin] : ['switch', '-q', '-c', origin, `origin/${origin}`];
+  const switched = spawnSync('git', args, { cwd: dir, encoding: 'utf8', timeout: 10000 });
+  if (switched.status !== 0) return { ok: false, message: `git switch ha fallado: ${(switched.stderr ?? '').trim()}` };
+  return { ok: true, message: `El clon está en la rama de origen '${origin}'.` };
+}
+
 function main(argv) {
   const dir = process.cwd();
   if (argv[0] === 'env') {
     process.stdout.write(`ephemeral=${isEphemeral()}\npermanent=${readPermanent(dir).permanent.join(' ')}\n`);
     return 0;
   }
-  if (argv[0] === 'start' || argv[0] === 'switch') {
-    const result = argv[0] === 'start' ? startBranch(dir, argv[1]) : switchBranch(dir, argv[1]);
+  if (argv[0] === 'start' || argv[0] === 'switch' || argv[0] === 'origin') {
+    const result = argv[0] === 'start' ? startBranch(dir, argv[1]) : argv[0] === 'switch' ? switchBranch(dir, argv[1]) : originBranch(dir);
     process.stdout.write(`${JSON.stringify(result)}\n`);
     return result.ok ? 0 : 1;
   }
