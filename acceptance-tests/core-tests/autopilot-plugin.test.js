@@ -372,6 +372,161 @@ test("the user's description in the new step reaches the next steps", async (t) 
   assert.match(ap.instructionOf(w, next.id), /exportar los datos a CSV con una cabecera/);
 });
 
+// autopilot-plan-explore (D2): what the plugin injects with the plan agent
+const injectedIn = (request) => request.messages.filter((m) => m.role === 'user' && m.text.includes('[openspec-autopilot]')).map((m) => m.text);
+
+test('in a plan turn with several tools, every request carries the full exploration, also after the plan reminder', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  await w.opencodeCall('message', { sessionID: owner, text: 'Empieza.' });
+  await w.opencodeCall('switchAgent', { sessionID: owner, agent: 'plan' });
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ tool: { name: 'read', input: {} } }, { tool: { name: 'grep', input: {} } }, { text: 'Hay dos opciones.' }] }] });
+  await w.opencodeCall('message', { sessionID: owner, text: '¿Qué opciones hay?' });
+  const plan = ap.requestsOf(w, owner).filter((r) => r.agent === 'plan');
+  assert.equal(plan.length, 3, ap.describeSessions(w));
+  for (const request of plan) {
+    const texts = injectedIn(request);
+    assert.equal(texts.length, 1, JSON.stringify(texts));
+    assert.match(texts[0], /`openspec-explore`/);
+    assert.match(texts[0], /compañero de pensamiento/);
+  }
+  // The next message in plan only gets the reminder
+  await w.opencodeCall('message', { sessionID: owner, text: '¿Y la segunda?' });
+  assert.match(injectedIn(ap.requestsOf(w, owner).at(-1))[0], /Recordatorio: estás explorando/);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('a message sent mid-turn after a Shift+Tab to plan gets the exploration from the first request that carries it', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  // A build turn whose tool takes a while; the user switches to plan and writes meanwhile
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ tool: { name: 'read', input: {} }, delayMs: 400 }, { text: 'Visto.' }, { text: 'Opciones.' }] }] });
+  await w.opencodeCall('messageAsync', { sessionID: owner, text: 'Empieza.' });
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  await w.opencodeCall('switchAgent', { sessionID: owner, agent: 'plan' });
+  await w.opencodeCall('message', { sessionID: owner, text: '¿Qué opciones hay?' });
+  const requests = ap.requestsOf(w, owner);
+  const last = requests.at(-1);
+  assert.equal(last.agent, 'plan', ap.describeSessions(w));
+  assert.ok(last.messages.some((m) => m.text === '¿Qué opciones hay?'));
+  assert.match(injectedIn(last)[0], /compañero de pensamiento/);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('a failure writing the turn does not block the request nor throw', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  await w.opencodeCall('switchAgent', { sessionID: owner, agent: 'plan' });
+  await w.opencodeCall('fail', { failures: { 'session.update': 20 } });
+  await w.opencodeCall('message', { sessionID: owner, text: '¿Qué opciones hay?' });
+  const last = ap.requestsOf(w, owner).at(-1);
+  assert.equal(last.failed, null);
+  // Without the key written, the turn is decided as if the previous one were build
+  assert.match(injectedIn(last)[0], /`openspec-explore`/);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+// autopilot-plan-explore (D4, D5): the notice of what was modified with the plan agent
+const DESIGN_FILE = { 'openspec/changes/exportar-datos/design.md': '## Context\n\nEscrito en plan.\n' };
+const noticeDialogs = (w) => w.opencode.dialogs.filter((d) => /con el agente plan se han hecho modificaciones/i.test(d.title ?? ''));
+
+// An operational session doing `design`; its plan turn writes these files
+async function planWrites(w, files, { keepOpen = true } = {}) {
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  if (keepOpen) await w.opencodeCall('dialogWait', { on: true });
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' }, meta: { zone: 'specs' } });
+  await w.opencodeCall('switchAgent', { sessionID: owner, agent: 'plan' });
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ files, text: 'Hecho.' }] }] });
+  await w.opencodeCall('message', { sessionID: owner, text: 'Escríbelo.' });
+  return owner;
+}
+
+test('a plan turn keeps the git state of its start until the session goes idle', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  await w.opencodeCall('switchAgent', { sessionID: owner, agent: 'plan' });
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ tool: { name: 'read', input: {} }, delayMs: 400 }, { text: 'Visto.' }] }] });
+  await w.opencodeCall('messageAsync', { sessionID: owner, text: '¿Qué hay?' });
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  await ap.refresh(w);
+  const during = ap.metaOf(ap.session(w, owner)).planTurn;
+  assert.match(during?.git?.signature ?? '', /^[0-9a-f]{40}$/, ap.describeSessions(w));
+  await w.opencodeCall('settle');
+  assert.equal(ap.metaOf(ap.session(w, owner)).planTurn, null);
+  assert.equal(noticeDialogs(w).length, 0);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('a pending notice is asked again of a TUI with another PID, not after a hot reload nor on each screen', async (t) => {
+  const w = world(t);
+  const owner = await planWrites(w, DESIGN_FILE);
+  assert.equal(noticeDialogs(w).length, 1);
+  // The modal, read by the user, says whose notice it is
+  assert.match(noticeDialogs(w)[0].title, /^openspec-autopilot: con el agente plan/);
+  await w.opencodeCall('reload');
+  await w.opencodeCall('goto', { sessionID: owner });
+  await w.opencodeCall('focus');
+  assert.equal(noticeDialogs(w).length, 1, 'the modal of the previous load is still on screen');
+  assert.equal(ap.metaOf(ap.session(w, owner)).phase, 'plan-notice');
+  // A new TUI (another process): the notice again; this one is closed at once, and the chain goes on
+  w.opencode = await w.sim.restart();
+  await w.opencodeCall('settle');
+  assert.equal(noticeDialogs(w).length, 1, ap.describeSessions(w));
+  const review = ap.onlyOwner(w);
+  assert.notEqual(review.id, owner);
+  assert.equal(ap.metaOf(review).step.kind, 'review');
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('after a hot reload with the modal open, closing it chains once through the new server', async (t) => {
+  const w = world(t);
+  const owner = await planWrites(w, DESIGN_FILE);
+  await w.opencodeCall('reload');
+  await w.opencodeCall('answers', { answers: [{ key: 'esc' }], settle: true });
+  const review = ap.onlyOwner(w);
+  assert.notEqual(review.id, owner, ap.describeSessions(w));
+  assert.deepEqual(ap.metaOf(review).step, { kind: 'review', id: 'design', of: 'artifact' });
+  assert.equal(ap.sessions(w).length, 2);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('a prompt with the notice pending chains, with the notice in the next session, and a later ack is ignored', async (t) => {
+  const w = world(t);
+  const owner = await planWrites(w, DESIGN_FILE);
+  await w.opencodeCall('message', { sessionID: owner, text: 'Vale, sigue.' });
+  const review = ap.onlyOwner(w);
+  assert.notEqual(review.id, owner, ap.describeSessions(w));
+  assert.match(ap.instructionOf(w, review.id), /con el agente plan se han hecho modificaciones/i);
+  assert.doesNotMatch(ap.instructionOf(w, review.id), /\[openspec-autopilot\] openspec-autopilot:/);
+  // The modal, still open, is closed now: its ack finds no session waiting
+  await w.opencodeCall('answers', { answers: [{ key: 'enter' }], settle: true });
+  assert.equal(ap.onlyOwner(w).id, review.id);
+  assert.equal(ap.sessions(w).length, 2, ap.describeSessions(w));
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('a build turn gives no notice although git changes', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  await w.opencodeCall('dialogWait', { on: true });
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ files: { 'README.md': '# Cambiado en build\n' }, text: 'Hecho.' }] }] });
+  await w.opencodeCall('message', { sessionID: owner, text: 'Arregla el README.' });
+  assert.equal(noticeDialogs(w).length, 0);
+  assert.equal(ap.metaOf(ap.session(w, owner)).planNotice ?? null, null);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
 // apply-one-task-per-session-in-normal-mode, design D6: the plugin adjusting
 // openspec/config.yaml when it loads with another mode does not close the open
 // review as not satisfactory; a later commit still closes it as satisfactory
@@ -384,7 +539,7 @@ test('reloading with another mode does not close the open review of the verify',
   await w.startOpenCode();
   const review = await ap.seed(w, {
     title: 'revisión del verify de exportar-datos',
-    agent: 'plan',
+    agent: 'build',
     step: { kind: 'review', id: 'verify', of: 'verify' },
     meta: { phase: 'review', zone: 'code', review: { result: null, conclusions: '', report: 'Sin problemas.', git: { head: git.head, signature: git.signature } } },
   });

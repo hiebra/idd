@@ -8,6 +8,8 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [la-task-del-archive-no-es-un-checkbox.md](la-task-del-archive-no-es-un-checkbox.md) | task | active | p3 | Decidir si rules.tasks prohíbe una task final para el archive o pide marcarla en el commit del archivado. | 2026-11-22 |
+| [puente-del-autopilot-sigue-con-una-tui-cerrada.md](puente-del-autopilot-sigue-con-una-tui-cerrada.md) | task · active · p3 — el autopilot espera a que venzan las peticiones a una TUI cerrada antes de degradarse | opencode, task | 2026-11-22 |
 | [corregir-prueba-intermitente-dos-sesiones-autopilot.md](corregir-prueba-intermitente-dos-sesiones-autopilot.md) | task · active · p3 — la prueba «two sessions taking control at once» falla a veces, también sin windows-support | openspec-autopilot, task | 2026-11-22 |
 | [nombrar-el-change-en-el-titulo-de-la-fusion.md](nombrar-el-change-en-el-titulo-de-la-fusion.md) | task · active · p3 — que la skill recomiende nombrar el change en el título de la fusión | git, task | 2026-11-22 |
 | [declarar-skip-specs-al-proponer-un-change-sin-specs.md](declarar-skip-specs-al-proponer-un-change-sin-specs.md) | question · active · p3 — ¿pedir skip_specs: true al proponer un change sin cambios de comportamiento? | openspec, question | 2026-11-22 |
@@ -18,6 +20,8 @@ Last updated: 2026-11-22
 ## Categories
 
 ## Recent Changes
+
+- 2026-11-22: Dos temas abiertos del autopilot detectados en autopilot-plan-explore (TUI cerrada como destino y toma del control a la vez)
 
 - 2026-11-22: Tarea de corregir la prueba intermitente del autopilot
 - 2026-11-22: Tarea de nombrar el change en el título de la fusión

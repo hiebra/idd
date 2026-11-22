@@ -6,8 +6,9 @@ priority: p2
 created: 2026-11-21
 updated: 2026-11-22
 last_checked: 2026-11-22
-next_action: "Al subir de versión OpenCode, repetir con el banco de la lección 9 las pruebas de archivado desde el plugin, de tools con codemode, del contrato de limpieza de los plugins (la función que devuelve setup, ejecutada antes de cada recarga y al cerrar, y el signal de events.on), de que no salgan trazas ECONNRESET al cerrar con --standalone y de que tras dos recargas solo reciba eventos la carga nueva, y del contrato de sesión que simula la suite (list por páginas, context, prompt con skills), y, desde autopilot-sesion-operativa, del hook prompt con el texto mutable, de ui.router.current() y los eventos focus del renderer, de las llamadas RPC de la TUI con la ubicación y de que la web siga sin cargar la interfaz de los plugins; y actualizar el plugin y acceptance-tests/support/agents/opencode-sim.mjs si algo cambia."
+next_action: "Al subir de versión OpenCode, repetir con el banco de la lección 9 las pruebas de archivado desde el plugin, de tools con codemode, del contrato de limpieza de los plugins (la función que devuelve setup, ejecutada antes de cada recarga y al cerrar, y el signal de events.on), de que no salgan trazas ECONNRESET al cerrar con --standalone y de que tras dos recargas solo reciba eventos la carga nueva, y del contrato de sesión que simula la suite (list por páginas, context, prompt con skills), y, desde autopilot-sesion-operativa, del hook prompt con el texto mutable, de ui.router.current() y los eventos focus del renderer, de las llamadas RPC de la TUI con la ubicación y de que la web siga sin cargar la interfaz de los plugins, y, desde autopilot-plan-explore, del agent en la entrada del hook context, del recordatorio de plan como mensaje user, de que plan cargue openspec-explore con la tool skill, del emit del servidor sin esperar a la TUI y del modal que sobrevive a una recarga, y del hook prompt una vez por mensaje con messageID igual al id del mensaje en context; y actualizar el plugin y acceptance-tests/support/agents/opencode-sim.mjs si algo cambia."
 sources:
+  - raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md
   - raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md
   - raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md
   - raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md
@@ -37,11 +38,20 @@ Además, el plugin y el OpenCode simulado de la suite (`acceptance-tests/support
 
 Desde `autopilot-sesion-operativa` (ADR-0014, `idd@6d6e79c:openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md`), el plugin depende también de: el hook `prompt` con el texto mutable, `ui.router.current()` consultado cada 300 ms, los eventos `focus` del renderer, las llamadas RPC de la TUI con `{ location }`, y que la UI web no cargue la interfaz de los plugins de un proyecto.
 
+Desde `autopilot-plan-explore` (ADR-0019, `idd@9eae630:openspec/changes/archive/2026-11-22-autopilot-plan-explore/tasks.md`, tasks 1.1 a 1.4 y 7.2), el plugin depende además de:
+
+- la entrada del hook `context` trae `agent` (`"build"` o `"plan"`), que cambia con Shift+Tab y es el mismo en todas las peticiones de un turno; sin él, el plugin se comporta como antes de ADR-0019;
+- en plan, OpenCode añade su recordatorio como mensaje `user`, en una posición que no es estable, y el plugin no depende de ella;
+- una sesión con el agente plan carga `openspec-explore` con la tool `skill`;
+- el `emit` del servidor a la TUI vuelve sin esperarla, la TUI mantiene abierto un `dialog.select` mientras tanto, y tras una recarga en caliente el modal anterior sigue en pantalla y su respuesta llega al servidor nuevo;
+- el hook `prompt` llega una sola vez por mensaje, al entrar, con `delivery: "steer"` y un `messageID` igual al `id` de ese mensaje en `context`, y un mensaje enviado a mitad de turno entra en el mismo bucle, sin reposo entre medias;
+- en plan, `write` solo escribe en el directorio de planes y `shell` modifica el proyecto; el aviso mira git, así que no depende de esto, pero sí las pruebas.
+
 La suite simula OpenCode, así que no detectaría que cambien.
 
 ## Current State
 
-Comprobado el 2026-11-21 con OpenCode 2.3.2 y el proveedor falso, también con el plugin de add-openspec-autopilot en la TUI, en modo normal y en modo auto (task 12.2). El contrato de limpieza, el 2026-11-22 con OpenCode 2.3.2 y `alibaba/qwen3.8-flash` (task 5.2 de fix-tui-subscription-cleanup): 0 `ECONNRESET` al cerrar, sin recargas y tras dos, y tras dos recargas el `select` y el `navigate` atendidos solo por la última carga.
+Comprobado el 2026-11-21 con OpenCode 2.3.2 y el proveedor falso, también con el plugin de add-openspec-autopilot en la TUI, en modo normal y en modo auto (task 12.2). El contrato de limpieza, el 2026-11-22 con OpenCode 2.3.2 y `alibaba/qwen3.8-flash` (task 5.2 de fix-tui-subscription-cleanup): 0 `ECONNRESET` al cerrar, sin recargas y tras dos, y tras dos recargas el `select` y el `navigate` atendidos solo por la última carga. Lo de `autopilot-plan-explore`, el 2026-11-22 con OpenCode 2.3.2 y el proveedor falso (tasks 1.1 a 1.4 y 7.2).
 
 ## Next Action
 
