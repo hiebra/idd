@@ -142,3 +142,7 @@
 ## [2026-11-22] ll | "alcance de operations.archive.guidance y archivar sin sincronizar" → raw/notes/2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md (2 lessons, 1 article updated)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] inventory | tema abierto: declarar skip_specs al proponer un change sin specs (inventory/candidates/declarar-skip-specs-al-proponer-un-change-sin-specs.md)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
