@@ -117,6 +117,14 @@ Siguen el banco de la lección 9 (`.wiki/raw/notes/2026-11-21-ll-sesiones-openco
 
 Lo comprobado se registra como lecciones en el wiki y no deja el banco en el repositorio, como en los changes anteriores.
 
+### D10. Este repositorio también queda con el wiki apagado
+
+Este repositorio es a la vez la plantilla y un proyecto que usa su wiki. Se apaga también aquí, de modo que lo que se clona es exactamente lo que trae la plantilla, sin un paso aparte que cambie el valor al producir la release o crear un proyecto. `.wiki/` se conserva, y se vuelve a encender con `/toggle-wiki`, que lo encuentra y no propone ingesta.
+
+Consecuencia para este mismo change: si al archivarlo el wiki está apagado, sus indicaciones de archivado no tendrán la resincronización, y lo que haya cambiado no llegará al wiki. Para registrarlo, hay que encender el wiki con `/toggle-wiki` antes del archive. La tarea final lo recuerda.
+
+Alternativa descartada: mantenerlo encendido aquí y que la release del `.bat`, o la creación de un proyecto, lo deje en `false`. Obliga a un paso más, y la plantilla de este repositorio no sería la misma que se distribuye.
+
 ## Risks / Trade-offs
 
 - [El modo auto bloquea `npm install @opencode/cli` en la nube, como ya pasó] → La tarea del banco empieza pidiendo al usuario que apruebe la instalación, o añadiendo antes reglas `allow` estrechas para ese paquete. Si no se consigue, las pruebas con OpenCode real se hacen fuera de la nube y el change no se archiva sin ellas.
@@ -129,17 +137,13 @@ Lo comprobado se registra como lecciones en el wiki y no deja el banco en el rep
 
 ## Migration Plan
 
-1. Al implementar, `engine.json` lleva `enabled` y `config.yaml` lleva el bloque entre marcas, generado desde `archive-guidance.yaml`. Su valor depende de la pregunta abierta 1.
+1. Al implementar, `engine.json` lleva `"enabled": false` y `config.yaml` queda sin los pasos del wiki (D10).
 2. Un proyecto creado desde la plantilla anterior, con el wiki en uso y sin `enabled`, quedaría apagado al actualizar. Para seguir con él, ejecuta `/toggle-wiki`, que lo encuentra con `.wiki/` y lo enciende sin ingesta. El README lo indica.
 3. Quien tenga `PROJECT_WIKI=off` puede quitarlo; no tiene efecto.
 4. Marcha atrás: `/toggle-wiki` en el sentido contrario, más el commit. Para deshacer el change entero, se revierte su fusión. `.wiki/` no se pierde en ningún caso.
 
 ## Open Questions
 
-1. **El estado del wiki en este mismo repositorio.** Este repositorio es a la vez la plantilla y un proyecto que usa su wiki. La spec dice que la plantilla trae el wiki deshabilitado, pero si `engine.json` lleva `false` aquí, este repositorio deja de usar su propio wiki. Las opciones son:
-   - apagarlo aquí también;
-   - mantenerlo encendido aquí y que el paso que produce la plantilla distribuible (la release del `.bat` o la creación de un proyecto nuevo) lo deje en `false`;
-   - otra regla que decida el usuario.
-2. **ADR-0005 y ADR-0004.** ADR-0005 decide el apagado en local con `PROJECT_WIKI=off`, y ADR-0004 da por hecho que el wiki viene encendido. Hay que registrar en el paso `adr` un ADR nuevo que los sustituya en esa parte y conserve el resto (el motor y la guía por el arranque, una sola versión, `.wiki/` versionado, wiki-first).
-3. **La ruta de los comandos del proyecto en OpenCode 2.3.2** (`.opencode/command/` o `.opencode/commands/`) y si admiten argumentos. Se comprueba en la tarea 1.
-4. **Cómo encuentra el núcleo global el motor que instala el `.bat`** (D8). Lo decide el change del schema `intent-driven`. Este change solo deja la descarga aislada en una función.
+1. **ADR-0005 y ADR-0004.** ADR-0005 decide el apagado en local con `PROJECT_WIKI=off`, y ADR-0004 da por hecho que el wiki viene encendido. Hay que registrar en el paso `adr` un ADR nuevo que los sustituya en esa parte y conserve el resto (el motor y la guía por el arranque, una sola versión, `.wiki/` versionado, wiki-first).
+2. **La ruta de los comandos del proyecto en OpenCode 2.3.2** (`.opencode/command/` o `.opencode/commands/`) y si admiten argumentos. Se comprueba en la tarea 1.
+3. **Cómo encuentra el núcleo global el motor que instala el `.bat`** (D8). Lo decide el change del schema `intent-driven`. Este change solo deja la descarga aislada en una función.
