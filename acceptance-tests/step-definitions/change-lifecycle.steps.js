@@ -1050,6 +1050,15 @@ Then('indica no hacer el commit de fusión sin el ok del usuario', function () {
   assertIn(section(this, 'merge'), /Sin el ok del usuario no hagas el commit de fusión/, 'the merge section');
 });
 
+// The title of the merge in the skill (name-change-in-merge-title, D6)
+
+Then('indica que el título de la fusión es el que da la puerta `check merge`, que nombra el change de la rama', function () {
+  const merges = section(this, 'merge');
+  assertIn(merges, /El título de la fusión nombra el change/, 'the merge section');
+  assertIn(merges, /Es el que da la puerta, `Merge <change> into <destino>`/, 'the merge section');
+  assertIn(merges, /-m "Merge <change> into <destino>"/, 'the merge section');
+});
+
 When('se revisa qué dicen sobre lo que sigue al commit del wiki', function () {
   const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
   const guidance = (openspecSupport.archiveInstructions(this.project, name).operationGuidance ?? []).map(String);
