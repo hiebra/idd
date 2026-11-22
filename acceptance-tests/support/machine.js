@@ -15,6 +15,9 @@
 //   - git spy: a git wrapper first in PATH that logs every call, so scenarios
 //     can tell whether the wiki engine was cloned
 //   - no user hub: HOME points at an empty directory (npm keeps its cache)
+//   - ephemeral container: the variables of the cloud environment
+//     (CLAUDE_CODE_CONTAINER_ID, CLAUDE_CODE_REMOTE), set only when the
+//     scenario asks for them, whatever the machine that runs the suite is
 //   - wiki disabled for the user: PROJECT_WIKI=off in the environment the
 //     agent is launched from (design D4); Claude Code reads it from
 //     .claude/settings.local.json instead, see its adapter
@@ -22,6 +25,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { EPHEMERAL_VARS, EPHEMERAL_ENV } = require('./branches');
 
 const REAL_NODE = process.execPath;
 const OLD_NODE_VERSION = '20.11.0';
@@ -58,6 +62,7 @@ function cleanEnv() {
   const env = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (/^npm_/i.test(key) && !keep.test(key)) continue;
+    if (EPHEMERAL_VARS.includes(key)) continue;
     if (['CLAUDE_ENV_FILE', 'CLAUDE_PROJECT_DIR', 'CLAUDE_PLUGIN_ROOT', 'PROJECT_WIKI', 'PROJECT_COMMENTS'].includes(key)) continue;
     // Git settings of the machine that runs the suite would steer the hook's git calls
     if (/^GIT_/.test(key)) continue;
@@ -80,6 +85,8 @@ class Machine {
     // true: the user disabled the wiki in the environment the agent starts from
     this.wikiDisabled = false;
     this.commentsDisabled = false;
+    // true: the session runs in an ephemeral container (manage-git-discipline)
+    this.ephemeral = false;
 
     const realNpm = which('npm');
     if (!realNpm) throw new Error('the acceptance suite needs npm on the machine that runs it');
@@ -195,6 +202,7 @@ class Machine {
     }
     if (this.wikiDisabled) env.PROJECT_WIKI = 'off';
     if (this.commentsDisabled) env.PROJECT_COMMENTS = 'off';
+    if (this.ephemeral) Object.assign(env, EPHEMERAL_ENV);
     if (this.offline) {
       fs.rmSync(this.emptyCache, { recursive: true, force: true });
       Object.assign(env, {

@@ -8,6 +8,12 @@
 // tasks.md with tasks checked or not, and the real `openspec status` of the
 // copy. What the branch's change is comes from .agents/openspec/branch-change.mjs
 // of the copy, run as the workflows run it.
+//
+// For manage-git-discipline it also builds a bare remote for the copy (push
+// and fetch), remote branches ahead of the local one or diverged from it, a
+// squash merge, a shallow clone (`--depth 1` from file://) with or without
+// access to its remote, and the environment of an ephemeral container for
+// branch-change.mjs and the session bootstrap's core.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -123,14 +129,18 @@ function archiveChange(project, name, date = '2026-11-21') {
 
 // What .agents/openspec/branch-change.mjs of the copy says, as JSON
 function branchChange(project) {
-  const result = spawnSync(process.execPath, [BRANCH_CHANGE, '--json'], { cwd: project.dir, encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [BRANCH_CHANGE, '--json'], { cwd: project.dir, encoding: 'utf8', env: sessionEnv() });
   if (result.status !== 0) throw new Error(`branch-change failed (${result.status}):\n${result.stderr}`);
   return JSON.parse(result.stdout);
 }
 
 // A gate of the cycle, as the openspec-git-discipline skill runs it
-function checkGate(project, gate, name) {
-  const result = spawnSync(process.execPath, [BRANCH_CHANGE, 'check', gate, ...(name ? [name] : [])], { cwd: project.dir, encoding: 'utf8' });
+function checkGate(project, gate, name, { ephemeral = false } = {}) {
+  const result = spawnSync(process.execPath, [BRANCH_CHANGE, 'check', gate, ...(name ? [name] : [])], {
+    cwd: project.dir,
+    encoding: 'utf8',
+    env: sessionEnv({ ephemeral }),
+  });
   let json = null;
   try {
     json = JSON.parse(result.stdout);
@@ -139,6 +149,106 @@ function checkGate(project, gate, name) {
   }
   if (!json) throw new Error(`branch-change check failed (${result.status}):\n${result.stdout}\n${result.stderr}`);
   return { ...json, exitCode: result.status };
+}
+
+// --- Remote, shallow clones and ephemeral containers (manage-git-discipline) ---
+
+// The variables that make a session an ephemeral container (design D4)
+const EPHEMERAL_VARS = ['CLAUDE_CODE_CONTAINER_ID', 'CLAUDE_CODE_REMOTE'];
+const EPHEMERAL_ENV = { CLAUDE_CODE_CONTAINER_ID: 'container_suite', CLAUDE_CODE_REMOTE: 'true' };
+
+// The environment of a process, inside an ephemeral container or outside one,
+// whatever the machine that runs the suite is
+function sessionEnv({ ephemeral = false, base = process.env } = {}) {
+  const env = { ...base };
+  for (const name of EPHEMERAL_VARS) delete env[name];
+  return ephemeral ? { ...env, ...EPHEMERAL_ENV } : env;
+}
+
+function remoteDir(project) {
+  return path.join(path.dirname(project.dir), `${path.basename(project.dir)}-remote.git`);
+}
+
+// A bare repository as the copy's `origin`, with the given branches pushed
+function addRemote(project, { push = ['main'] } = {}) {
+  const remote = remoteDir(project);
+  if (!fs.existsSync(remote)) {
+    git(path.dirname(project.dir), 'init', '-q', '--bare', '-b', 'main', remote);
+    git(project.dir, 'remote', 'add', 'origin', `file://${remote}`);
+  }
+  for (const name of push) git(project.dir, 'push', '-q', 'origin', `${name}:refs/heads/${name}`);
+  git(project.dir, 'fetch', '-q', 'origin');
+  return remote;
+}
+
+// A commit on origin/<branch> made from another clone, then fetched: the
+// remote branch goes ahead of the local one. `files` maps paths to contents
+// (null removes the path).
+function remoteCommit(project, files, { branch: name = 'main', message = 'commit en el remoto' } = {}) {
+  const remote = fs.existsSync(remoteDir(project)) ? remoteDir(project) : addRemote(project);
+  const other = fs.mkdtempSync(path.join(path.dirname(project.dir), 'otro-clon-'));
+  try {
+    git(other, 'clone', '-q', '--branch', name, `file://${remote}`, '.');
+    for (const [rel, content] of Object.entries(files)) {
+      const file = path.join(other, rel);
+      if (content === null) fs.rmSync(file, { recursive: true, force: true });
+      else {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, content);
+      }
+    }
+    git(other, 'add', '-A');
+    git(other, 'commit', '-q', '--allow-empty', '-m', message);
+    git(other, 'push', '-q', 'origin', `HEAD:refs/heads/${name}`);
+  } finally {
+    fs.rmSync(other, { recursive: true, force: true });
+  }
+  git(project.dir, 'fetch', '-q', 'origin');
+  return revParse(project, `refs/remotes/origin/${name}`);
+}
+
+function revParse(project, ref) {
+  const result = spawnSync('git', ['rev-parse', '--verify', '-q', ref], { cwd: project.dir, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+// Merges a branch into another with --squash, as a hosting service does, and
+// goes back to the branch the clone was on
+function squashMerge(project, from, into = 'main') {
+  const back = currentBranch(project);
+  checkout(project, into);
+  git(project.dir, 'merge', '-q', '--squash', from);
+  git(project.dir, 'commit', '-q', '-m', `${from} (squash)`);
+  if (back) checkout(project, back);
+}
+
+function isShallow(project) {
+  return git(project.dir, 'rev-parse', '--is-shallow-repository').trim() === 'true';
+}
+
+// Turns the copy into a shallow clone (`--depth 1` from file://) of a remote
+// that holds its history; with `reachable: false`, the remote is then gone
+function makeShallow(project, { reachable = true } = {}) {
+  git(project.dir, 'commit', '-q', '--allow-empty', '-m', 'segundo commit');
+  const remote = addRemote(project);
+  const clone = fs.mkdtempSync(path.join(path.dirname(project.dir), 'clon-superficial-'));
+  git(clone, 'clone', '-q', '--depth', '1', `file://${remote}`, 'repo');
+  fs.rmSync(project.path('.git'), { recursive: true, force: true });
+  fs.renameSync(path.join(clone, 'repo', '.git'), project.path('.git'));
+  fs.rmSync(clone, { recursive: true, force: true });
+  if (!reachable) fs.renameSync(remote, `${remote}.inaccesible`);
+  if (!isShallow(project)) throw new Error('could not make the copy a shallow clone');
+}
+
+// The session branch saved in the clone's local git config, or null to remove it
+function setSessionBranch(project, name) {
+  if (name === null) spawnSync('git', ['config', '--unset', 'idd.sessionBranch'], { cwd: project.dir });
+  else git(project.dir, 'config', 'idd.sessionBranch', name);
+}
+
+function sessionBranch(project) {
+  const result = spawnSync('git', ['config', '--get', 'idd.sessionBranch'], { cwd: project.dir, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : null;
 }
 
 // The project's OpenSpec CLI on the copy
@@ -169,4 +279,15 @@ module.exports = {
   checkGate,
   openspec,
   openspecStatus,
+  EPHEMERAL_VARS,
+  EPHEMERAL_ENV,
+  sessionEnv,
+  addRemote,
+  remoteCommit,
+  revParse,
+  squashMerge,
+  isShallow,
+  makeShallow,
+  setSessionBranch,
+  sessionBranch,
 };

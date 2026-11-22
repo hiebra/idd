@@ -4,8 +4,8 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
 ## 1. Preparación
 
-- [ ] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core`)
-- [ ] 1.2 Ampliar `support/branches.js` con lo que necesitan los escenarios, con pruebas en `core-tests/`:
+- [x] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core`)
+- [x] 1.2 Ampliar `support/branches.js` con lo que necesitan los escenarios, con pruebas en `core-tests/`:
   - un remoto bare por proyecto, con push y fetch;
   - ramas remotas que van por delante de la local o han divergido de ella;
   - una fusión con squash;
