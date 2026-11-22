@@ -47,7 +47,7 @@ Lo fija la spec `wiki-first-knowledge` y lo entrega `idd@b48392d:.agents/wiki/gu
 6. **Proponer registrar lo descubierto** que servirá en otra ocasión. Lo comprobado se apunta en la conversación como lección candidata, sin escribir nada, y se propone registrar una sola vez, en dry-run, en un punto de cierre: el final de una tarea, antes de un commit, cuando el usuario da la sesión por terminada o el archive de un change. Lo encontrado en internet se propone ingerir en el momento, para conservar su procedencia.
 7. **Los productos del proyecto son fuentes**: specs, ADRs y código, fijados a un commit sin copiar su contenido. Los artículos citan la versión exacta, y al crear el wiki se hace una ingesta inicial sin lo generado.
 
-La plantilla garantiza que el agente **recibe** el flujo, no que lo siga (ADR-0004): una guía por sesión, breve porque ocupa contexto, y un recordatorio por mensaje de 600 caracteres como máximo (`idd@1cf0792:openspec/specs/wiki-first-knowledge/spec.md`). El recordatorio nombra la consulta de solo lectura y la ingesta como se invocan en cada agente y recuerda apuntar las lecciones candidatas, pero no nombra las lecciones aprendidas, que se proponen en un punto de cierre (`idd@b48392d:.agents/wiki/reminder.md`). El arranque rellena los marcadores de operación de la guía y del recordatorio según el agente. La suite exige además que la guía entregada tenga menos de 6.000 caracteres (`idd@1cf0792:acceptance-tests/step-definitions/wiki.steps.js`). Los entrega el arranque de sesión (ver [El arranque de sesión](arranque-de-sesion.md)).
+La plantilla garantiza que el agente **recibe** el flujo, no que lo siga (ADR-0004): una guía por sesión, breve porque ocupa contexto, y un recordatorio por mensaje de 600 caracteres como máximo (`idd@1cf0792:openspec/specs/wiki-first-knowledge/spec.md`). El recordatorio nombra la consulta de solo lectura y la ingesta como se invocan en cada agente y recuerda apuntar las lecciones candidatas, pero no nombra las lecciones aprendidas, que se proponen en un punto de cierre (`idd@b48392d:.agents/wiki/reminder.md`). El arranque rellena los marcadores de operación de la guía y del recordatorio según el agente. La suite exige además que la guía entregada tenga menos de 6.000 caracteres (`idd@1cf0792:acceptance-tests/step-definitions/wiki.steps.js`). Los entrega el arranque de sesión (ver [[arranque-de-sesion|El arranque de sesión]] ([El arranque de sesión](arranque-de-sesion.md))).
 
 ## Al archivar un change
 
@@ -83,10 +83,10 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 
 ## See Also
 
-- [El arranque de sesión](arranque-de-sesion.md)
-- [Qué carga cada agente y cuándo](carga-en-la-misma-sesion-por-agente.md)
-- [Una sola copia de las skills](../concepts/una-sola-copia-de-las-skills.md)
-- [El ciclo de un change y su automatización en OpenCode](ciclo-de-un-change-y-autopilot.md)
+- [[arranque-de-sesion|El arranque de sesión]] ([El arranque de sesión](arranque-de-sesion.md))
+- [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](carga-en-la-misma-sesion-por-agente.md))
+- [[una-sola-copia-de-las-skills|Una sola copia de las skills]] ([Una sola copia de las skills](../concepts/una-sola-copia-de-las-skills.md))
+- [[ciclo-de-un-change-y-autopilot|El ciclo de un change y su automatización en OpenCode]] ([El ciclo de un change y su automatización en OpenCode](ciclo-de-un-change-y-autopilot.md))
 
 ## Sources
 

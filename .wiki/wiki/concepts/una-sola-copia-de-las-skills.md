@@ -36,16 +36,16 @@ summary: "Las skills del schema viven solo en .agents/skills/ y los workflows de
 
 ## Riesgos que recoge el ADR
 
-- La disponibilidad en OpenCode depende de que siga leyendo `.claude/skills` y `.agents/skills` por compatibilidad, y de su precedencia. Esa precedencia la recogen ADR-0003 y `skills.js` como lectura del código de OpenCode; no se ha comprobado en ejecución con un ID repetido (ver [Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md)).
+- La disponibilidad en OpenCode depende de que siga leyendo `.claude/skills` y `.agents/skills` por compatibilidad, y de su precedencia. Esa precedencia la recogen ADR-0003 y `skills.js` como lectura del código de OpenCode; no se ha comprobado en ejecución con un ID repetido (ver [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md))).
 - Los symlinks no funcionan en entornos sin soporte de symlinks, como Windows sin modo desarrollador (ADR-0003).
 - Para subir de versión OpenSpec se regenera solo `.claude/skills/`, y se revisa su diff (`idd@f2be907:README.md`).
 
 ## See Also
 
-- [Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md)
-- [El arranque de sesión](../topics/arranque-de-sesion.md)
-- [El flujo wiki-first](../topics/flujo-wiki-first.md)
-- [openspec-git-discipline: una regla heredada sin justificación registrada](origen-de-openspec-git-discipline.md)
+- [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md))
+- [[arranque-de-sesion|El arranque de sesión]] ([El arranque de sesión](../topics/arranque-de-sesion.md))
+- [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](../topics/flujo-wiki-first.md))
+- [[origen-de-openspec-git-discipline|openspec-git-discipline: una regla heredada sin justificación registrada]] ([openspec-git-discipline: una regla heredada sin justificación registrada](origen-de-openspec-git-discipline.md))
 
 ## Sources
 

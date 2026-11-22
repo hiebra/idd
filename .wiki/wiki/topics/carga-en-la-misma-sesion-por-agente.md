@@ -32,7 +32,7 @@ La plantilla aplica las tres cosas. El núcleo enlaza `.claude/skills/wiki-manag
 - **Skills del proyecto en la misma sesión de la TUI: sí.** **[comprobado]** Con el motor instalado a mitad de sesión, el siguiente mensaje ya lista `wiki-manager` y `wiki-query`, una vez cada una (lección 5).
 - **Precedencia ante un ID repetido.** **[heredado]** OpenCode busca en `.claude/skills`, `.agents/skills` y `.opencode/skills`, y gana `.claude/skills`. Es la lectura del código fuente de OpenCode recogida en `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/design.md` y en `idd@1cf0792:acceptance-tests/support/skills.js`. No se ha comprobado en ejecución con un ID repetido.
 - **`opencode run` deja el arranque a medias.** **[comprobado]** Tras `opencode run`, en un clon recién creado, no quedaron symlinks del motor y sí un `.agents/wiki-engine.tmp.<pid>`. **[inferencia]** Lo más probable es que el núcleo, que el plugin lanza en segundo plano, muera cuando `opencode run` termina al responder el modelo. En la TUI, que sigue abierta, no ocurre **[comprobado]**. El núcleo clona ahora en un temporal, lo sustituye con un renombrado y borra los restos cuyo proceso ya no existe.
-- **Contexto: por el hook `context`**, no por `AGENTS.md` ni `instructions`, que el usuario no puede desactivar. Ver [El hook context de OpenCode](../concepts/hook-context-opencode.md).
+- **Contexto: por el hook `context`**, no por `AGENTS.md` ni `instructions`, que el usuario no puede desactivar. Ver [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md)).
 - **Plugins locales: se recargan en caliente.** **[comprobado]** Editar los archivos del plugin, o sus `options` en la configuración, vuelve a ejecutar `setup` sin reiniciar ([lección 4](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md)). Antes, OpenCode ejecuta la función que devolvió el `setup` anterior; si la parte de TUI no la usa para darse de baja de sus eventos, su escuchador sigue vivo tras la recarga ([lección 5](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md), corregida en la [lección 2 de la limpieza](../../raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md); `idd@002f043:adr/0011-opencode-plugins-release-what-they-register.md`). **[comprobado]**
 
 ## Consecuencias para la plantilla
@@ -42,11 +42,11 @@ La plantilla aplica las tres cosas. El núcleo enlaza `.claude/skills/wiki-manag
 
 ## See Also
 
-- [El hook context de OpenCode](../concepts/hook-context-opencode.md)
-- [Proveedor falso para verificar el contexto](../concepts/proveedor-falso-para-verificar-contexto.md)
-- [El arranque de sesión](arranque-de-sesion.md)
-- [Una sola copia de las skills](../concepts/una-sola-copia-de-las-skills.md)
-- [El flujo wiki-first](flujo-wiki-first.md)
+- [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md))
+- [[proveedor-falso-para-verificar-contexto|Proveedor falso para verificar el contexto]] ([Proveedor falso para verificar el contexto](../concepts/proveedor-falso-para-verificar-contexto.md))
+- [[arranque-de-sesion|El arranque de sesión]] ([El arranque de sesión](arranque-de-sesion.md))
+- [[una-sola-copia-de-las-skills|Una sola copia de las skills]] ([Una sola copia de las skills](../concepts/una-sola-copia-de-las-skills.md))
+- [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](flujo-wiki-first.md))
 
 ## Sources
 
