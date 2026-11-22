@@ -2,7 +2,7 @@
 
 ## 0. Antes del apply
 
-- [ ] 0.1 Traer `origin/main` a la rama del change si el usuario lo pide (lleva `guiar-revision-con-tests`, que no toca `config.yaml` ni `wiki-first-knowledge`), y pasar `check apply reorder-wiki-resync`
+- [x] 0.1 Traer `origin/main` a la rama del change si el usuario lo pide (lleva `guiar-revision-con-tests`, que no toca `config.yaml` ni `wiki-first-knowledge`), y pasar `check apply reorder-wiki-resync`
 
 ## 1. Pasos del escenario (D3): uno por paso; en cada uno, rojo por la causa correcta → implementar → verde → commit
 
