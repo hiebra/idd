@@ -2,6 +2,7 @@
 title: "Conflictos entre deltas de changes concurrentes"
 category: concept
 sources:
+  - raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md
   - raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md
   - raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md
 created: 2026-11-22
@@ -33,6 +34,7 @@ summary: "Dos changes en curso con deltas sobre la misma capability pueden choca
 - **La rama permanente no detecta mejor estos conflictos.** El usuario intuía que trabajar en `main` facilitaría detectarlos ([opinión del usuario](../../raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md), punto 7). Lo comprobado lo contradice: en la misma rama se detecta lo mismo que con ramas en los dos primeros casos, y nada en el tercero.
 - **Mitigación manual en la misma rama**: antes de archivar, comprobar si se archivó otro change que tocara la misma capability después de proponer el propio (`git log -- openspec/specs/<capability>/`), y refrescar el delta si es así.
 - **Los ADR van al revés.** Escribirlos en la rama de origen reserva su número, mientras que los ADR creados en ramas paralelas son los que chocan (lección 3, deducida de las reglas, no ejecutada). Ver [[ciclo-de-un-change-y-autopilot|el ciclo de un change]] ([el ciclo de un change](../topics/ciclo-de-un-change-y-autopilot.md)), «Números de ADR sin choques».
+- **`openspec validate` aplica la misma protección**: un MODIFIED que omite escenarios de la spec actual es un error ya al validar. Para quitar o reemplazar escenarios, el requisito va como REMOVED más ADDED ([lecciones de git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md), lección 1).
 
 ## Lo que no se sabe
 
@@ -46,5 +48,6 @@ summary: "Dos changes en curso con deltas sobre la misma capability pueden choca
 
 ## Sources
 
+- [Lessons Learned: git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md): lección 1.
 - [Lessons Learned: conflictos entre deltas de changes concurrentes](../../raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md): lecciones 1 a 3.
 - [Opinión del usuario: la spec en la rama de origen y las dos formas del ciclo](../../raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md): punto 7 y objeciones.

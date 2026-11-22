@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md
   - raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md
   - raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
@@ -93,6 +94,8 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 - **La suite** prueba el plugin en un OpenCode simulado con varias sesiones (`idd@772d0f0:acceptance-tests/support/agents/opencode-sim.mjs`). Es un proceso hijo que el World maneja por IPC, con un modelo guionizado por escenario y fallos inyectables. Lo que no está en las specs va en `core-tests/autopilot-next-step.test.js` y `core-tests/autopilot-plugin.test.js` (`idd@772d0f0:acceptance-tests/README.md`). El simulador ejecuta en cada recarga, y al cerrar, la limpieza que devuelve cada `setup`, respeta el `signal` de `events.on` y deja una traza en el terminal por cada suscripción viva al cerrar (`idd@99bdccd:acceptance-tests/support/agents/opencode-sim.mjs`).
 - **El simulador no detecta un cambio real de OpenCode**: al subir de versión hay que repetir las pruebas en el banco de la lección 9, fuera del repositorio (ver [el registro de vigilancia](../../inventory/candidates/volver-a-comprobar-apis-de-sesion-al-subir-opencode.md)).
+- **Separar zonas para `check commit`**: la puerta cuenta también los archivos sin seguimiento, así que hay que apartar la otra zona con `git stash push -u -- <rutas>`; no basta con no prepararla ([lecciones de git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md), lección 2).
+- **Una puerta nueva se aplica al change que la introduce**: está versionada en la rama, así que el change la cumple en cuanto la implementa. Planifica pronto la configuración que el propio change necesita para pasarla; en este change, `x-main-protected: true` ([lecciones de git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md), lección 4).
 
 ## Lo que no se sabe
 
@@ -109,6 +112,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## Sources
 
+- [Lessons Learned: git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md): lecciones 2 y 4.
 - [Collection: archivado de git-discipline-standard-with-exception (idd@e9fced1)](../../raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md): `adr/0020-git-discipline-standard-rule-with-protected-main-exception.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.agents/openspec/branch-change.mjs`, `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/config.yaml`, `README.md`.
 - [Lessons Learned: conflictos entre deltas de changes concurrentes](../../raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md): lecciones 1 y 2.
 - [Lessons Learned: el cierre de la revisión pasa de la confirmación en la TUI a git (ADR-0014)](../../raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md): lección 1.
