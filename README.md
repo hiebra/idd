@@ -233,7 +233,7 @@ La lógica vive en la parte de servidor del plugin y funciona con cualquier clie
 
 `opencode run "…"` en una rama temporal no arranca nada por accidente; con `opencode run autopilot` sí.
 
-En Claude Code no hay plugin: los mismos workflows se lanzan a mano (`/openspec-new-change`, `/openspec-continue-change`, `/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`), con el mismo ciclo y el mismo resultado versionado ([ADR-0006](adr/0006-agent-asymmetry-policy.md)). Ahí los workflows sí te piden el commit.
+En Claude Code no hay plugin: los mismos workflows se lanzan a mano (`/openspec-new-change`, `/openspec-continue-change`, `/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`), con el mismo ciclo y el mismo resultado versionado ([ADR-0025](adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md), que sustituye a ADR-0006). Ahí los workflows sí te piden el commit.
 
 ### Modo auto
 
@@ -246,6 +246,8 @@ El modo auto quita las sesiones de revisión: el producto de cada paso pasa al s
 ```
 
 OpenCode recarga el plugin al cambiar la opción, y el modo nuevo vale desde el paso siguiente.
+
+**El modo también decide cuántas tasks hace el apply por sesión** ([ADR-0025](adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md)). En el modo normal, `openspec/config.yaml` lleva en `operations.apply.guidance` cuatro indicaciones: el apply hace una sola task por sesión, sin delegarla en un subagente, y al terminarla se para. Así lo hace también un apply que lances a mano, en OpenCode o en Claude Code. En el modo auto, esas indicaciones no están. Al cargarse, el plugin ajusta el archivo al modo: añade el bloque si falta o lo quita si sobra, sin tocar nada más. El proyecto lo versiona como lo deja el modo normal, que es el modo por defecto. Así, al activar el modo auto verás `openspec/config.yaml` modificado: haz su commit aparte o descarta el cambio. Mientras siga sin commit, el autopilot espera con el árbol sucio. Claude Code lee el archivo tal como lo dejó la última carga del plugin.
 
 ### Desactivar el plugin en local
 

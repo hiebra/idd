@@ -526,3 +526,32 @@ test('a build turn gives no notice although git changes', async (t) => {
   assert.equal(ap.metaOf(ap.session(w, owner)).planNotice ?? null, null);
   assert.deepEqual(w.opencode.crashes, []);
 });
+
+// apply-one-task-per-session-in-normal-mode, design D6: the plugin adjusting
+// openspec/config.yaml when it loads with another mode does not close the open
+// review as not satisfactory; a later commit still closes it as satisfactory
+test('reloading with another mode does not close the open review of the verify', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { tasks: [1, 2].map((id) => ({ id: String(id), done: true })) });
+  const { gitState } = await import(pathToFileURL(path.join(REPO_ROOT, '.opencode', 'plugins', 'openspec-autopilot', 'lib', 'git.mjs')).href);
+  const git = await gitState(w.project.dir);
+  const config = fs.readFileSync(w.project.path('openspec', 'config.yaml'), 'utf8');
+  await w.startOpenCode();
+  const review = await ap.seed(w, {
+    title: 'revisión del verify de exportar-datos',
+    agent: 'build',
+    step: { kind: 'review', id: 'verify', of: 'verify' },
+    meta: { phase: 'review', zone: 'code', review: { result: null, conclusions: '', report: 'Sin problemas.', git: { head: git.head, signature: git.signature } } },
+  });
+  // OpenCode reloads the plugin when the user turns the auto mode on: the same sessions
+  w.sim.config.pluginOptions = { auto: true };
+  w.opencode = await w.sim.restart();
+  assert.notEqual(fs.readFileSync(w.project.path('openspec', 'config.yaml'), 'utf8'), config, 'the plugin did not adjust config.yaml');
+  await w.opencodeCall('message', { sessionID: review, text: '¿Qué ha encontrado el verify?' });
+  assert.equal(ap.metaOf(ap.session(w, review)).phase, 'review', ap.describeSessions(w));
+  assert.equal(ap.owners(w).filter((s) => ap.metaOf(s).step.kind === 'update').length, 0, ap.describeSessions(w));
+  ap.gitIn(w, 'commit', '-q', '--allow-empty', '-m', 'verify revisado');
+  await w.opencodeCall('message', { sessionID: review, text: 'Todo bien.' });
+  const next = ap.owners(w).filter((s) => s.id !== review).map((s) => ap.metaOf(s).step.kind);
+  assert.deepEqual(next, ['archive'], ap.describeSessions(w));
+});

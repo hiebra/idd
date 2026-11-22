@@ -3,6 +3,7 @@ title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
   - raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md
+  - raw/repos/2026-11-22-idd-f9f014c-apply-one-task-per-session-in-normal-mode.md
   - raw/notes/2026-11-22-ll-guiar-revision-con-tests.md
   - raw/repos/2026-11-22-idd-288741b-guiar-revision-con-tests.md
   - raw/notes/2026-11-22-ll-check-commit-arbol-entero.md
@@ -28,10 +29,10 @@ sources:
 created: 2026-11-21
 updated: 2026-11-22
 verified: 2026-11-22
-tags: [openspec, git, opencode, plugins, openspec-autopilot, adr, spec]
+tags: [openspec, git, opencode, plugins, openspec-autopilot, adr, spec, apply]
 confidence: high
 volatility: warm
-summary: "Un change sigue la regla de la skill estándar de intent-driven y, solo si el acceso directo a las ramas permanentes está vetado (x-main-protected: true), su única excepción: el change entero en una rama temporal con una sola fusión con --no-ff (ADR-0020), y el agente fusiona solo cuando el usuario se lo pide (ADR-0016); la rama temporal la puede crear el modelo con el módulo neutral branch-change.mjs, y el change de la rama se lee de git. En OpenCode 2, el plugin openspec-autopilot mantiene una sesión operativa por rama, decide lo producido en cada paso con el CLI de OpenSpec y cierra las revisiones con git, con la lógica en el servidor para cualquier cliente; todas sus sesiones nacen con el agente build, pasar la sesión operativa a plan es explorar el paso con openspec-explore, y lo que se modifica en plan se avisa antes de seguir; en Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006, ADR-0013, ADR-0014, ADR-0015, ADR-0019, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
+summary: "Un change sigue la regla de la skill estándar de intent-driven y, solo si el acceso directo a las ramas permanentes está vetado (x-main-protected: true), su única excepción: el change entero en una rama temporal con una sola fusión con --no-ff (ADR-0020), y el agente fusiona solo cuando el usuario se lo pide (ADR-0016); la rama temporal la puede crear el modelo con el módulo neutral branch-change.mjs, y el change de la rama se lee de git. En OpenCode 2, el plugin openspec-autopilot mantiene una sesión operativa por rama, decide lo producido en cada paso con el CLI de OpenSpec y cierra las revisiones con git, con la lógica en el servidor para cualquier cliente; todas sus sesiones nacen con el agente build, pasar la sesión operativa a plan es explorar el paso con openspec-explore, y lo que se modifica en plan se avisa antes de seguir; su modo decide además, con un bloque versionado en openspec/config.yaml, si el apply hace una sola task por sesión. En Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006, ADR-0025, ADR-0013, ADR-0014, ADR-0015, ADR-0019, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
 ---
 
 # El ciclo de un change y su automatización en OpenCode
@@ -63,13 +64,15 @@ Desde `git-discipline-standard-with-exception`, el ciclo lo fija ADR-0020 (`idd@
 
 ## La asimetría entre agentes
 
-`idd@772d0f0:adr/0006-agent-asymmetry-policy.md` fija cuándo una capacidad puede existir en un solo agente. Deben cumplirse estas condiciones:
+`idd@772d0f0:adr/0006-agent-asymmetry-policy.md` fijaba cuándo una capacidad puede existir en un solo agente. Desde `apply-one-task-per-session-in-normal-mode`, lo sustituye `idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md`, que mantiene sus condiciones:
 
 - el ciclo y lo versionado son iguales con ella y sin ella;
 - en el otro agente lo mismo se hace a mano;
 - no deja restos en el otro agente;
 - la suite verifica las dos cosas;
 - se declara en la proposal y en un ADR.
+
+ADR-0025 añade una excepción acotada a la primera condición: un plugin de un solo agente puede añadir o quitar en un archivo versionado un bloque que dependa de una preferencia del usuario si el bloque está declarado y es literal (su texto exacto, en una spec, sin marcas ni comentarios), si los dos agentes leen el archivo igual, si el resultado del ciclo no cambia (solo el ritmo y las pausas) y si el cambio queda en el árbol, sin stage, para que el usuario haga el commit. Consecuencia admitida: dos usuarios con modos distintos generan diffs de solo ese bloque. El primer caso es el bloque de apply del autopilot (abajo).
 
 Lo común al ciclo va en una pieza neutral, y por eso `branch-change.mjs` está fuera del plugin. En Claude Code no hay nada del plugin, y la suite lo comprueba (`.claude/` no nombra el plugin, sus tools ni su RPC).
 
@@ -86,7 +89,7 @@ Lo común al ciclo va en una pieza neutral, y por eso `branch-change.mjs` está 
 - **La revisión de una task y la del verify se guían con los tests de aceptación** (change `guiar-revision-con-tests`, `idd@288741b:.opencode/plugins/openspec-autopilot/lib/prompts.mjs` y `idd@288741b:openspec/specs/openspec-autopilot/spec.md`): la instrucción pide localizar en `openspec/changes/<change>/specs/` los escenarios que cubren la task (en el verify, todos), recorrerlos con el usuario como guion, ejecutarlos con el runner de aceptación del proyecto sin dejar archivos que git no ignore (alterarían el cierre por git) y, si hay código ejecutable, darle la orden para ejecutarlo en modo depuración, que lanza el usuario. Las revisiones de los artefactos y de los cambios en el plan no lo piden. Se comprobó con OpenCode 2.3.2 cuando la revisión aún corría con el agente `plan`: lo ejecutó sin pedir permiso, porque la shell de `plan` no pide confirmación (`idd@288741b:openspec/changes/archive/2026-11-22-guiar-revision-con-tests/tasks.md`, task 3.2; [lecciones](../../raw/notes/2026-11-22-ll-guiar-revision-con-tests.md)). Desde `autopilot-plan-explore` la revisión nace con build, que tampoco pide permiso para la shell, así que eso no cambia. Esas pruebas solo valen en la sesión que abrió el plugin para el paso (lección 2).
 - **Esperas de commit**: tras el archive y la resincronización del wiki, y en el modo auto en cada cambio de zona, siempre que el árbol esté sucio. `update-change` empieza con el árbol sucio a propósito.
 - **La lógica vive en el servidor y funciona con cualquier cliente**; la TUI solo pone modal, foco, navegación y archivado. Sin TUI (UI web, Desktop, `opencode run`): aviso en el contexto de las sesiones ajenas, archivado diferido (`archivePending`) hasta que llega una TUI, y arranque solo con el mensaje `autopilot`.
-- **Lo que se mantiene**: una sesión por paso con su workflow, el estado solo en la metadata, el índice de sesiones para `update-change`, las lecciones candidatas en la metadata, el aviso tras compactar, los dos modos y nada en Claude Code (ADR-0006).
+- **Lo que se mantiene**: una sesión por paso con su workflow, el estado solo en la metadata, el índice de sesiones para `update-change`, las lecciones candidatas en la metadata, el aviso tras compactar, los dos modos y nada del plugin en Claude Code (ADR-0006, hoy ADR-0025).
 
 ### El agente plan: explorar, y avisar de lo que se modifica
 
@@ -102,6 +105,16 @@ Desde `autopilot-plan-explore` (`idd@9eae630:adr/0019-autopilot-plan-agent-explo
 - **La clave del turno** es el último `messageID` que guarda el hook `prompt` (`turnMessage`), y se toma solo cuando algún mensaje de la petición lleva ese `id`; si no, sigue la anterior. Así, un mensaje que entra a mitad de turno cambia la clave en la primera petición que lo lleva. La primera versión sacaba la clave de los mensajes de la petición, y la invalidó el recordatorio de plan que añade OpenCode (`idd@9eae630:openspec/changes/archive/2026-11-22-autopilot-plan-explore/tasks.md`, tasks 1.4 y 4.2).
 - **El aviso de lo modificado en plan**: al empezar un turno en plan se guarda el estado de git (HEAD, stage y árbol, `planTurn`); al quedar en reposo, si cambió, el plugin avisa. En la TUI, con un modal de un botón "Entendido" que retiene la cadena hasta que se cierra (Enter o Esc) y entonces encadena como lo habría hecho; sin TUI, la cadena no espera y el aviso va al principio del mensaje con el que arranca la sesión siguiente, o en el contexto de la siguiente petición si no hubo producto. Un aviso pendiente (fase `plan-notice`) se vuelve a pedir a una TUI con otro PID, no tras una recarga, y un prompt del usuario en la sesión cuenta como acuse. El acuse se identifica por la sesión, no por una petición pendiente en memoria (task 5.2).
 - **Se probó con OpenCode 2.3.2 real** con el banco de siempre, incluido el Shift+Tab a mitad de un turno en build: la petición con el mensaje nuevo ya va con plan y recibe la exploración completa (task 7.2, punto 9). Sin TUI se probó con `opencode run`, que para el plugin es lo mismo que la UI web: un cliente sin TUI.
+
+## El modo decide cuántas tasks hace el apply por sesión
+
+Desde `apply-one-task-per-session-in-normal-mode` (`idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:openspec/specs/openspec-autopilot/spec.md`, requisitos «Indicaciones de apply según el modo» y «El ajuste de config.yaml no toca nada más»; `idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:openspec/changes/archive/2026-11-22-apply-one-task-per-session-in-normal-mode/design.md`; `idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:README.md`):
+
+- **Qué hace el bloque**: cuatro indicaciones literales en `operations.apply.guidance` de `idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:openspec/config.yaml`. El apply hace una sola task por sesión, en la sesión interactiva y sin delegarla en un subagente, y al marcarla se para como en la pausa «User interrupts» del workflow; no añade nada por el corte (ni archivos de traspaso ni commits). Como el workflow lee siempre ese archivo, vale también para el apply lanzado a mano, en OpenCode y en Claude Code.
+- **Lo sigue al modo**: en el modo normal el bloque está y en el auto no. Al cargarse el servidor, `start` llama una vez, con límite de tiempo, a `syncApplyGuidance` (`idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:.opencode/plugins/openspec-autopilot/lib/apply-guidance.mjs`), que añade o quita solo esas líneas y no escribe si el archivo ya está como pide el modo. No vigila el archivo: cambiar de modo ya recarga el plugin. Sin `config.yaml` no lo crea; si falla, avisa y sigue.
+- **Edición de texto, sin librería de YAML**: `adjust(text, mode)` es puro y reconoce el bloque por su texto canónico (sangría incluida); localiza las claves por sangría, crea `operations`/`apply`/`guidance` si faltan y al quitar poda las que quedan vacías, así que añadir y quitar deja el archivo como estaba. Un bloque reformateado a mano deja de reconocerse y el plugin avisa del texto parecido.
+- **El proyecto versiona el bloque** (design D7), porque el modo por defecto es el normal: en un clon nuevo la carga no escribe y el autopilot arranca con el árbol limpio. Solo quien activa el modo auto ve `config.yaml` modificado, sin stage; hace su commit aparte (zona de specs) o lo descarta, y mientras tanto el autopilot espera con el árbol sucio. La alternativa de que lo añadiera la primera carga rompía seis escenarios existentes.
+- **No cierra una revisión abierta** (D6): si el ajuste escribe, el plugin actualiza la firma de git de la revisión abierta de la rama, para que el cambio no la dé por no satisfactoria.
 
 ## Las restricciones de OpenCode 2.3.2 que lo moldean
 
@@ -157,6 +170,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 ## Sources
 
 - [Collection: archivado de autopilot-plan-explore (idd@9eae630)](../../raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md): `adr/0019-autopilot-plan-agent-explores-and-warns.md`, `openspec/specs/openspec-autopilot/spec.md`, `.opencode/plugins/openspec-autopilot/lib/agent-turn.mjs`, `README.md`, `acceptance-tests/README.md`, `openspec/changes/archive/2026-11-22-autopilot-plan-explore/tasks.md`.
+- [Collection: archivado de apply-one-task-per-session-in-normal-mode (idd@f9f014c)](../../raw/repos/2026-11-22-idd-f9f014c-apply-one-task-per-session-in-normal-mode.md): `adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/config.yaml`, `.opencode/plugins/openspec-autopilot/lib/apply-guidance.mjs`, `README.md`, `openspec/changes/archive/2026-11-22-apply-one-task-per-session-in-normal-mode/design.md`.
 - [Lessons Learned: el agente plan en la revisión guiada con tests](../../raw/notes/2026-11-22-ll-guiar-revision-con-tests.md): lecciones 1 y 2.
 - [Collection: archivado de guiar-revision-con-tests (idd@288741b)](../../raw/repos/2026-11-22-idd-288741b-guiar-revision-con-tests.md): `.opencode/plugins/openspec-autopilot/lib/prompts.mjs`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/changes/archive/2026-11-22-guiar-revision-con-tests/design.md` y `tasks.md`.
 - [Lessons Learned: git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md): lecciones 2 y 4.

@@ -49,6 +49,7 @@ import { branchChange, changeState, validateErrors } from './lib/project.mjs';
 import { gitState, stage, treeClean, verdict } from './lib/git.mjs';
 import { describeProducts, productOf, reviewQueue, snapshotOf, stagePaths } from './lib/product.mjs';
 import { MODAL_BUTTON, directive, modalText } from './lib/screen.mjs';
+import { CONFIG_PATH, SYNC_TIMEOUT_MS, syncApplyGuidance, withTimeout } from './lib/apply-guidance.mjs';
 
 const ID = RPC.id;
 const REGISTRY = Symbol.for('openspec-autopilot.registry');
@@ -104,12 +105,23 @@ function clientBridge(ctx, gen, registry, directory, onFirst) {
     request('toast', { message, variant }).catch((error) => log('toast:', error?.message ?? error));
   };
 
+  // Un aviso que no se pierde sin TUI: espera a que se presente la primera
+  const queued = [];
+  const notice = (message, variant = 'warning') => {
+    if (ready()) toast(message, variant);
+    else {
+      log(message);
+      queued.push({ message, variant });
+    }
+  };
+
   const start = async (handlers) => {
     const all = {
       hello: async (input) => {
         const instance = typeof input?.instance === 'string' ? input.instance : null;
         if (!instance) return { ok: false };
         target = instance;
+        for (const { message, variant } of queued.splice(0)) toast(message, variant);
         const pid = String(input?.pid ?? /^tui-(\d+)-/.exec(instance)?.[1] ?? '');
         // Un PID nuevo es un arranque de la TUI; el mismo, una recarga (D3)
         const seen = (registry.pids[directory] ??= []);
@@ -139,7 +151,7 @@ function clientBridge(ctx, gen, registry, directory, onFirst) {
     }
   };
 
-  return { ready, pid, request, toast, start };
+  return { ready, pid, request, toast, notice, start };
 }
 
 // --- El plugin --------------------------------------------------------------------
@@ -875,6 +887,46 @@ async function start(ctx) {
     );
   });
 
+  // --- Indicaciones de apply según el modo (apply-one-task-per-session-in-normal-mode, D4 y D5) ---
+
+  // Al cargarse, una vez: la recarga de OpenCode al cambiar la opción `auto`
+  // vuelve a pasar por aquí. El cambio queda en el árbol, para el commit del usuario.
+  // Una revisión abierta de la rama no se cierra por el ajuste (D6): su
+  // inicio pasa a ser el estado de git tras escribir. HEAD no cambia, así que
+  // un commit posterior la sigue cerrando como satisfactoria.
+  const rebaseReviews = async () => {
+    const bc = await branchChange(directory);
+    if (!bc?.branch) return;
+    const sessions = await branchSessions(api, { worktree: directory, branch: bc.branch });
+    const open = owners(sessions).filter((s) => meta(s)?.phase === 'review' && meta(s)?.review?.git);
+    if (open.length === 0) return;
+    const git = await gitState(directory);
+    for (const session of open) {
+      const m = meta(session);
+      await writeMeta(api, session.id, { review: { ...m.review, git: { head: m.review.git.head, signature: git.signature } } });
+    }
+  };
+
+  const file = CONFIG_PATH.split(path.sep).join('/');
+  const adjustGuidance = async () => {
+    const result = await syncApplyGuidance(directory, mode);
+    if (result.error) ui.notice(`openspec-autopilot: no se ha podido ajustar \`${file}\` al modo ${mode} (${result.error?.message ?? result.error}).`);
+    else if (result.missing) ui.notice(`openspec-autopilot: no hay \`${file}\`; no se ajustan las indicaciones de apply al modo ${mode}.`);
+    else if (result.written) ui.notice(`openspec-autopilot: he ajustado \`${file}\` al modo ${mode} (indicaciones de apply de una task por sesión); haz su commit aparte.`, 'info');
+    if (result.written) await rebaseReviews();
+    if (result.similar) ui.notice(`openspec-autopilot: \`${file}\` tiene un texto parecido a las indicaciones de una task por sesión que no reconozco; revísalo a mano.`);
+    return result;
+  };
+
+  // Con límite de tiempo (D4): si el ajuste se cuelga, el plugin arranca igual.
+  // El ajuste sigue en segundo plano y, si acaba, avisa como siempre.
+  const syncGuidance = guard('apply-guidance', async () => {
+    const late = adjustGuidance().catch((error) => log('apply-guidance:', error));
+    const result = await withTimeout(late, SYNC_TIMEOUT_MS);
+    if (result?.timedOut) ui.notice(`openspec-autopilot: el ajuste de \`${file}\` al modo ${mode} tarda más de ${SYNC_TIMEOUT_MS / 1000} s; sigo sin esperarlo.`);
+    return result;
+  });
+
   // --- Registro ---
 
   ctx.tool.transform((editor) => {
@@ -903,6 +955,7 @@ async function start(ctx) {
   });
   // El acuse del aviso: por la sesión, no por una petición en memoria (D5)
   const onAck = guard('ack', async (input) => ({ ok: await releaseNotice(String(input?.sessionID ?? '')) }));
+  await syncGuidance();
   await ui.start({ screen: async (input) => (await onScreen(input)) ?? { action: 'none' }, ack: async (input) => (await onAck(input)) ?? { ok: false } });
   await api.hook('prompt', onPrompt);
   await api.hook('context', onContext);
