@@ -146,3 +146,9 @@
 ## [2026-11-22] inventory | tema abierto: declarar skip_specs al proponer un change sin specs (inventory/candidates/declarar-skip-specs-al-proponer-un-change-sin-specs.md)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] inventory | added task puente-del-autopilot-sigue-con-una-tui-cerrada (inventory/candidates/puente-del-autopilot-sigue-con-una-tui-cerrada.md)
+
+## [2026-11-22] inventory | added task dos-sesiones-que-toman-el-control-a-la-vez (inventory/candidates/dos-sesiones-que-toman-el-control-a-la-vez.md)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
