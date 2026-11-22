@@ -1,7 +1,9 @@
 // Los textos del plugin (design D6, D8, D9, D10 y D13 de
-// autopilot-sesion-operativa): la instrucción con la que arranca cada paso,
-// el recordatorio de cada petición, el aviso de las sesiones ajenas y el
-// workflow y el agente de cada paso. Ningún texto pide commits: el plugin
+// autopilot-sesion-operativa; D1 y D3 de autopilot-plan-explore): la
+// instrucción con la que arranca cada paso, el recordatorio de cada petición,
+// lo que se inyecta al cambiar entre build y plan, el aviso de lo modificado
+// con plan, el aviso de las sesiones ajenas y el workflow y el agente de cada
+// paso (siempre build). Ningún texto pide commits: el plugin
 // pasa el producto al stage y el usuario hace el commit (ADR-0013).
 
 import { describe } from './next-step.mjs';
@@ -112,6 +114,41 @@ export function reminderPrompt({ step, change, phase }) {
   }
   if (step?.kind === 'review') return `${MARK} Recordatorio: esta sesión es la ${describe(step, change)}. No modifiques archivos ni pidas commits: la revisión la cierra git.`;
   return `${MARK} Recordatorio: esta sesión hace solo el paso «${describe(step, change)}». No empieces el paso siguiente. ${GIT} Al terminar, llama a \`${HANDOFF_TOOL}\`.`;
+}
+
+// Lo que recibe el modelo al cambiar de agente en la sesión operativa (design
+// D3 de autopilot-plan-explore, ADR-0019). Ninguno queda en el historial: los
+// inyecta el hook context en cada petición del turno.
+
+const WHERE = (step, change) => (step?.kind === 'review' ? `la ${describe(step, change)}` : `el paso «${describe(step, change)}»`);
+
+// Al pasar de build a plan: el flujo completo de exploración
+export function explorePrompt({ step, change }) {
+  return (
+    `${MARK} El usuario ha pasado al agente plan para explorar ${WHERE(step, change)}. ` +
+    'Usa la skill `openspec-explore`: sé su compañero de pensamiento, investiga, compara alternativas y aclara dudas sobre el change y este paso, sin implementar nada y sin escribir artefactos ni código. ' +
+    `No llames a \`${HANDOFF_TOOL}\`: explorar no cierra el paso. ` +
+    'Si el usuario te pide expresamente modificar archivos, recuérdale que eso es del agente build (Tab) y que, si lo haces aquí, el plugin le avisará antes de seguir con el ciclo.'
+  );
+}
+
+// Las peticiones siguientes con el agente plan
+export function exploreReminderPrompt({ step, change }) {
+  return `${MARK} Recordatorio: estás explorando ${WHERE(step, change)} con el agente plan y la skill \`openspec-explore\`. No implementes ni modifiques archivos.`;
+}
+
+// Al volver de plan a build: solo el recordatorio de lo que había antes
+export function returnPrompt({ step, change, phase }) {
+  const reminder = reminderPrompt({ step, change, phase }).replace(`${MARK} `, '').replace(/^Recordatorio: /, '');
+  return `${MARK} Vuelves de explorar con el agente plan; sigue con lo que había antes. ${reminder.charAt(0).toUpperCase()}${reminder.slice(1)}`;
+}
+
+// El aviso de lo modificado con el agente plan (design D5)
+export function planNoticeText() {
+  return (
+    'openspec-autopilot: con el agente plan se han hecho modificaciones en el repositorio que, por el enfoque del workflow y la naturaleza del agente plan, deberían haberse reservado al agente build. ' +
+    'Normalmente es porque se le ha pedido expresamente. Revisa los cambios (`git status`) antes de seguir.'
+  );
 }
 
 // Lo que recibe el modelo en una sesión que no es la operativa (design D13)
