@@ -75,7 +75,7 @@ Las releases salen de los tags `v<x.y.z>`. Al subir uno, el workflow `.github/wo
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
-Un tag con `-ci`, como `v0.0.0-ci1`, prueba el workflow sin publicar nada: pasa los dos jobs y se salta la publicación. Bórralo después.
+El mismo workflow se ejecuta con cada push a cualquier rama, y entonces pasa los dos primeros pasos sin publicar nada: cada commit queda probado en Linux y en Windows sin crear ningún tag. Un push nuevo a la misma rama cancela el run anterior que siga en marcha. Un tag con `-ci`, como `v0.0.0-ci1`, tampoco publica.
 
 Al cambiar una skill del origen o el schema, actualiza `.agents/release/origins.json` con el commit nuevo. Las tres skills propias (`openspec-git-discipline`, `acceptance-test-authoring` y `spec-as-source`) se mantienen al día con el origen a mano, porque el origen no tiene tags.
 

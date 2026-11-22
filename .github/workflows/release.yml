@@ -10,16 +10,24 @@
 # - publish: publica la release del tag con los tres artefactos, solo si los
 #   dos jobs anteriores pasan.
 #
-# Un disparo manual (workflow_dispatch) pasa los dos primeros jobs sin
-# publicar nada: monta los artefactos con un tag local, v0.0.0-ci, que no se
-# sube. Un tag de prueba con -ci (por ejemplo, v0.0.0-ci1) tampoco publica.
+# Cada push a una rama, y un disparo manual (workflow_dispatch), pasan los dos
+# primeros jobs sin publicar nada: montan los artefactos con un tag local,
+# v0.0.0-ci, que no se sube. Así cada commit se prueba en Linux y en Windows
+# sin crear tags. Un tag de prueba con -ci (por ejemplo, v0.0.0-ci1) tampoco
+# publica.
 
 name: release
 
 on:
   push:
+    branches: ['**']
     tags: ['v*']
   workflow_dispatch:
+
+# Un push nuevo a la misma rama cancela el run que siga en marcha; un tag no
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 permissions:
   contents: read

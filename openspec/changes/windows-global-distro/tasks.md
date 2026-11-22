@@ -83,6 +83,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - la publicación de la release con los tres artefactos.
 
   → commit
+  - Además, por decisión del usuario, se dispara con cada push a cualquier rama, sin publicar, para probar cada commit en Linux y en Windows sin crear tags de prueba. Un push nuevo a la misma rama cancela el run anterior.
 - [x] 6.4 Probar el workflow sin publicar, con un disparo manual o un tag de prueba que se borra después, y comprobar que los dos jobs pasan → anotar el resultado aquí
   - 2026-11-22, tag `v0.0.0-ci1` sobre `3fcfaab`, ya borrado (run 45050800884). Ninguno de los dos jobs ha publicado nada.
     - **windows:** en verde, con los 8 escenarios de Windows (45 steps) en 1 min 18 s.
