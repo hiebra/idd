@@ -1017,11 +1017,13 @@ Then('indica no hacer el commit de fusión sin el ok del usuario', function () {
   assertIn(section(this, 'merge'), /Sin el ok del usuario no hagas el commit de fusión/, 'the merge section');
 });
 
-When('se revisa qué dicen sobre lo que sigue al commit del wiki', function () {
+// The merge proposal is its own entry of the archive guidance, outside the
+// wiki steps, so that it is there with the wiki disabled too (add-project-wiki-toggle)
+When('se revisa qué dicen sobre lo que sigue al archive', function () {
   const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
   const guidance = (openspecSupport.archiveInstructions(this.project, name).operationGuidance ?? []).map(String);
-  this.afterWiki = { skill: section(this, 'archive'), config: guidance.filter((entry) => /^8\./.test(entry)).join('\n') };
-  assert.ok(this.afterWiki.config, `no step 8 in the archive guidance:\n${JSON.stringify(guidance, null, 2)}`);
+  this.afterWiki = { skill: section(this, 'archive'), config: guidance.filter((entry) => /merge-targets/.test(entry)).join('\n') };
+  assert.ok(this.afterWiki.config, `no merge proposal in the archive guidance:\n${JSON.stringify(guidance, null, 2)}`);
 });
 
 Then('los dos indican proponer la fusión con cada rama de `x-main`, en el orden de la lista, con `merge-targets`', function () {
