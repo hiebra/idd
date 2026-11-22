@@ -1,0 +1,302 @@
+{
+  "contractVersion": "1.0",
+  "title": "MCP de depuración",
+  "description": "Lo que debe ofrecer un servidor MCP para que quien verifica un change depure con su IDE el código que revisa. El servidor solo informa: dice qué se puede depurar y qué pasos lanzan el IDE en modo depuración; los pasos los hacen el modelo y la persona.",
+  "tools": [
+    {
+      "name": "debug_targets",
+      "title": "Objetivos de depuración",
+      "description": "Dice qué se puede depurar en un árbol de trabajo, con qué IDE y en qué estado está cada objetivo. Con `files`, dice a qué objetivo pertenece cada archivo. Solo informa: no arranca ni para procesos, no abre el IDE y no escribe en el árbol de trabajo. Un árbol de trabajo sin nada que depurar no es un error: devuelve `targets` vacío.",
+      "annotations": { "readOnlyHint": true, "openWorldHint": false },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Ruta absoluta del árbol de trabajo que se revisa. Por defecto, el directorio en el que corre el servidor."
+          },
+          "files": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Archivos que se revisan, con rutas relativas a `workspace`. Con ellos, cada objetivo dice cuáles le pertenecen."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["contractVersion", "workspace", "ides", "targets"],
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "pattern": "^1\\.[0-9]+$",
+            "description": "Versión del contrato que implementa el servidor."
+          },
+          "workspace": { "type": "string", "description": "Ruta absoluta del árbol de trabajo al que se refiere la respuesta." },
+          "ides": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/ide" },
+            "description": "IDE con los que el servidor sabe lanzar la depuración."
+          },
+          "targets": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/target" },
+            "description": "Objetivos de depuración del árbol de trabajo. Vacío si no hay nada que depurar."
+          },
+          "unmatchedFiles": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Archivos de `files` que no pertenecen a ningún objetivo."
+          }
+        },
+        "$defs": {
+          "problem": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string", "description": "Identificador estable del problema, como `extension-missing`." },
+              "message": { "type": "string", "description": "Qué pasa, para decírselo a la persona." },
+              "fix": { "type": "string", "description": "Cómo lo arregla la persona. El modelo no lo ejecuta por su cuenta." }
+            }
+          },
+          "ide": {
+            "type": "object",
+            "required": ["id", "name", "available"],
+            "properties": {
+              "id": { "type": "string", "description": "Identificador del IDE, como `vscode`." },
+              "name": { "type": "string" },
+              "available": { "type": "boolean", "description": "Si el IDE se puede lanzar en esta máquina." },
+              "problems": { "type": "array", "items": {"$ref": "#/$defs/problem"} }
+            }
+          },
+          "target": {
+            "type": "object",
+            "required": ["id", "title", "sources", "ides", "state"],
+            "properties": {
+              "id": { "type": "string", "description": "Identificador estable del objetivo dentro del árbol de trabajo." },
+              "title": { "type": "string" },
+              "technology": { "type": "string", "description": "Texto libre, como `java-liberty` o `react-vite`." },
+              "sources": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Patrones glob, relativos a `workspace`, del código que cubre el objetivo."
+              },
+              "files": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Archivos de `files` que pertenecen al objetivo."
+              },
+              "ides": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Identificadores de los IDE que depuran el objetivo."
+              },
+              "state": {
+                "enum": ["stopped", "running", "debuggable", "unknown"],
+                "description": "`stopped`: no está en marcha. `running`: en marcha, pero un depurador no puede adjuntarse. `debuggable`: en marcha y un depurador puede adjuntarse o ya lo está. `unknown`: el servidor no lo sabe."
+              },
+              "problems": { "type": "array", "items": {"$ref": "#/$defs/problem"} }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "debug_launch_plan",
+      "title": "Plan para lanzar la depuración",
+      "description": "Da los pasos para lanzar el IDE en modo depuración sobre unos objetivos, con unos puntos de ruptura. Solo informa: no arranca ni para procesos, no abre el IDE y no escribe en el árbol de trabajo. Cada paso dice quién lo hace: `agent`, el modelo, que ejecuta `command.argv`; o `user`, la persona, que sigue `instruction`. Un paso de `agent` termina solo y enseguida: no arranca servidores, no espera a un depurador y no ejecuta código que pueda detenerse en un punto de ruptura. Los pasos van en el orden en que hay que hacerlos, con los de `agent` primero si se puede. Seguir un plan no deja en el árbol de trabajo archivos que git no ignore. `cleanup` da los pasos que dejan todo como estaba.",
+      "annotations": { "readOnlyHint": true, "openWorldHint": false },
+      "inputSchema": {
+        "type": "object",
+        "required": ["targets"],
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Ruta absoluta del árbol de trabajo que se revisa. Por defecto, el directorio en el que corre el servidor."
+          },
+          "targets": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1,
+            "description": "Identificadores de objetivos de `debug_targets`. Con varios, el plan los depura en una misma sesión."
+          },
+          "ide": {
+            "type": "string",
+            "description": "Identificador del IDE. Por defecto, el primero disponible que depure esos objetivos."
+          },
+          "breakpoints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["file", "line"],
+              "properties": {
+                "file": { "type": "string", "description": "Ruta relativa a `workspace`." },
+                "line": { "type": "integer", "minimum": 1 },
+                "condition": { "type": "string", "description": "Expresión que debe cumplirse para detenerse." }
+              },
+              "additionalProperties": false
+            },
+            "description": "Puntos de ruptura que se quieren poner."
+          },
+          "scenarios": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Nombres de los escenarios de aceptación que ejercitan el código. Con ellos, el plan dice cómo lanzarlos contra lo que se depura."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["contractVersion", "workspace", "ide", "targets", "steps", "cleanup", "breakpoints"],
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "pattern": "^1\\.[0-9]+$",
+            "description": "Versión del contrato que implementa el servidor."
+          },
+          "workspace": { "type": "string", "description": "Ruta absoluta del árbol de trabajo al que se refiere el plan." },
+          "ide": { "type": "string", "description": "Identificador del IDE para el que es el plan." },
+          "targets": { "type": "array", "items": {"type": "string"}, "minItems": 1 },
+          "summary": { "type": "string", "description": "Qué sesión de depuración deja montada el plan, en una frase." },
+          "steps": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/step" },
+            "minItems": 1,
+            "description": "Pasos para lanzar la depuración, en orden."
+          },
+          "cleanup": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/step" },
+            "description": "Pasos que dejan todo como estaba, en orden."
+          },
+          "breakpoints": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/breakpoint" },
+            "description": "Qué pasa con cada punto de ruptura pedido."
+          },
+          "configurations": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/configuration" },
+            "description": "Configuraciones de depuración del IDE que usa el plan."
+          },
+          "endpoints": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/endpoint" },
+            "description": "Direcciones de la aplicación y del depurador."
+          },
+          "warnings": { "type": "array", "items": {"type": "string"} }
+        },
+        "$defs": {
+          "command": {
+            "type": "object",
+            "required": ["argv"],
+            "properties": {
+              "argv": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1,
+                "description": "El programa y sus argumentos, sin sintaxis de ninguna shell."
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Directorio de trabajo, relativo a `workspace`. Por defecto, `workspace`."
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": { "type": "string" },
+                "description": "Variables de entorno que se añaden."
+              }
+            }
+          },
+          "step": {
+            "type": "object",
+            "required": ["id", "title", "actor"],
+            "properties": {
+              "id": { "type": "string", "description": "Identificador del paso, único en el plan." },
+              "title": { "type": "string" },
+              "actor": { "enum": ["agent", "user"], "description": "`agent`: lo ejecuta el modelo. `user`: lo hace la persona." },
+              "command": { "$ref": "#/$defs/command" },
+              "instruction": { "type": "string", "description": "Lo que tiene que hacer la persona, y cómo sabe que ha salido bien." },
+              "longRunning": {
+                "type": "boolean",
+                "description": "El paso deja algo en marcha o no termina hasta que la persona acaba de depurar."
+              }
+            },
+            "allOf": [
+              {
+                "if": { "properties": {"actor": {"const": "agent"}}, "required": ["actor"] },
+                "then": { "required": ["command"], "properties": {"command": true, "longRunning": {"const": false}} }
+              },
+              {
+                "if": { "properties": {"actor": {"const": "user"}}, "required": ["actor"] },
+                "then": { "required": ["instruction"], "properties": {"instruction": true} }
+              }
+            ]
+          },
+          "breakpoint": {
+            "type": "object",
+            "required": ["file", "line", "status"],
+            "properties": {
+              "file": { "type": "string" },
+              "line": { "type": "integer", "minimum": 1 },
+              "condition": { "type": "string" },
+              "status": {
+                "enum": ["planned", "rejected"],
+                "description": "`planned`: algún paso lo pone o pide ponerlo. `rejected`: no se puede poner."
+              },
+              "reason": { "type": "string", "description": "Por qué se rechaza." }
+            }
+          },
+          "configuration": {
+            "type": "object",
+            "required": ["name", "origin", "definition"],
+            "properties": {
+              "name": { "type": "string" },
+              "origin": {
+                "enum": ["project", "generated"],
+                "description": "`project`: ya está en el proyecto. `generated`: la aporta el servidor, y los pasos dicen cómo llega al IDE."
+              },
+              "definition": {
+                "type": "object",
+                "description": "La configuración en el formato del IDE; en VS Code, una entrada de `launch.json`."
+              }
+            }
+          },
+          "endpoint": {
+            "type": "object",
+            "required": ["target", "kind"],
+            "properties": {
+              "target": { "type": "string" },
+              "kind": { "enum": ["app", "debug"] },
+              "url": { "type": "string" },
+              "host": { "type": "string" },
+              "port": { "type": "integer" },
+              "protocol": { "type": "string", "description": "Texto libre, como `jdwp`." }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "errors": {
+    "description": "Un error de ejecución se devuelve como resultado de la tool con `isError: true` y un bloque de texto que empieza por el código del error, seguido de dos puntos y de cómo corregir la llamada. Un punto de ruptura que no se puede poner no es un error: va en `breakpoints` como `rejected`.",
+    "codes": [
+      {
+        "code": "invalid-workspace",
+        "tools": ["debug_targets", "debug_launch_plan"],
+        "when": "`workspace` no es la ruta absoluta de un directorio que exista."
+      },
+      {
+        "code": "unknown-target",
+        "tools": ["debug_launch_plan"],
+        "when": "Algún identificador de `targets` no es de un objetivo de ese árbol de trabajo. El texto dice cuáles hay."
+      },
+      {
+        "code": "ide-unavailable",
+        "tools": ["debug_launch_plan"],
+        "when": "`ide` no es un IDE que el servidor conozca, o no puede depurar esos objetivos. El texto dice cuáles sí."
+      }
+    ]
+  }
+}
