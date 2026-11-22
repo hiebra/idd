@@ -20,11 +20,9 @@
 #         y en acceptance-tests/ cuando faltan o han cambiado package.json,
 #         package-lock.json o este script.
 #       Por stdout, una línea "clave=valor" por dato que el adaptador necesita,
-#       y nada más. Las rutas son relativas al proyecto, y cada adaptador las
-#       completa con el proyecto tal como lo nombra su agente (design D4 de
-#       windows-support: en Git Bash, bash ve /c/... y OpenCode, C:\...):
-#         bin=node_modules/.bin, si hay un openspec del proyecto
-#         wiki-engine=<ruta del paquete de Claude Code del motor>, el
+#       y nada más:
+#         bin=<ruta absoluta a node_modules/.bin>, si hay un openspec del proyecto
+#         wiki-engine=<ruta absoluta del paquete de Claude Code del motor>, el
 #           valor de CLAUDE_PLUGIN_ROOT, si el motor está instalado
 #   session-bootstrap.sh guide <agente> <directorio del proyecto>
 #   session-bootstrap.sh reminder <agente> <directorio del proyecto>
@@ -117,10 +115,7 @@ link_engine() {
       warn "ya existe '$link' y no es del motor del wiki; no se sustituye, así que el agente no verá esa parte del motor"
       continue
     fi
-    # En Git Bash, ln -s copia salvo que se pidan symlinks nativos; con
-    # nativestrict falla en vez de copiar (design D3 de windows-support).
-    # Fuera de MSYS, la variable no tiene efecto
-    mkdir -p "$(dirname "$link")" && MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict" ln -s "$target" "$link" ||
+    mkdir -p "$(dirname "$link")" && ln -s "$target" "$link" ||
       warn "no se ha podido crear '$link', que expone el motor del wiki al agente"
   done
 }
@@ -173,7 +168,7 @@ install_wiki_engine() {
   fi
   [ -d "$ENGINE_DIR/claude-plugin" ] || return
   link_engine
-  echo "wiki-engine=$ENGINE_DIR/claude-plugin"
+  echo "wiki-engine=$PWD/$ENGINE_DIR/claude-plugin"
 }
 
 # .wiki/ se versiona siempre (design D5): el motor lo añade a .gitignore al
@@ -256,7 +251,7 @@ install_dependencies() {
 
   # El openspec del proyecto, para que el adaptador lo ponga por delante en el PATH
   if [ -x node_modules/.bin/openspec ]; then
-    echo "bin=node_modules/.bin"
+    echo "bin=$PWD/node_modules/.bin"
   fi
 }
 

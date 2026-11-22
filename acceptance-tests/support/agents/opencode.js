@@ -57,11 +57,7 @@ class OpenCodeAgent {
 
   #open({ machine, project, workDir }, options) {
     const resultFile = path.join(workDir, `opencode-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
-    // On a Windows machine (windows-support), OpenCode's process reports
-    // win32, and it may name the project with another path than bash
-    const hostOptions = machine.windows ? { ...options, platform: 'win32' } : options;
-    const projectDir = machine.windows?.alias?.from ?? project.dir;
-    const child = spawnSync(process.execPath, [HOST, projectDir, JSON.stringify(hostOptions), resultFile], {
+    const child = spawnSync(process.execPath, [HOST, project.dir, JSON.stringify(options), resultFile], {
       cwd: project.dir,
       env: machine.env(),
       encoding: 'utf8',
@@ -83,8 +79,6 @@ class OpenCodeAgent {
       request,
       context: request?.delivered ? request.system.slice(1) : [],
       exitCode: child.status,
-      // The environment of the session's commands, as the plugin left it
-      env,
       error: result.error,
       startProblems,
       warnings: result.toasts.flatMap((toast) => String(toast.message).split('\n')),

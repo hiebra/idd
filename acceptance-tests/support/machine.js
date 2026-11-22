@@ -21,17 +21,6 @@
 //   - wiki disabled for the user: PROJECT_WIKI=off in the environment the
 //     agent is launched from (design D4); Claude Code reads it from
 //     .claude/settings.local.json instead, see its adapter
-//   - Git Bash's ln (windows-support, design D8): an `ln` first in PATH that
-//     copies on `ln -s` unless MSYS asks for native symlinks
-//     (winsymlinks:nativestrict), as Git Bash does
-//   - Windows (windows-support, design D5): OpenCode's process reports
-//     win32 (see the OpenCode adapter); a fake `git` whose --exec-path leads
-//     to a Git for Windows install whose bin/bash.exe logs its calls and runs
-//     the real bash, and an empty %ProgramFiles%. Without Git for Windows,
-//     that install has no bin/bash.exe. A WSL bash first in PATH logs its
-//     calls. With a project alias, the Git Bash rewrites the alias to the
-//     real path in its arguments and working directory, as Git Bash turns
-//     C:\... into /c/...
 
 const fs = require('node:fs');
 const os = require('node:os');
@@ -98,10 +87,6 @@ class Machine {
     this.commentsDisabled = false;
     // true: the session runs in an ephemeral container (manage-git-discipline)
     this.ephemeral = false;
-    // true: `ln -s` copies unless MSYS asks for native symlinks (windows-support)
-    this.gitBashLn = false;
-    // null, or { gitForWindows, wslFirst, alias: { from, to } | null } (windows-support)
-    this.windows = null;
 
     const realNpm = which('npm');
     if (!realNpm) throw new Error('the acceptance suite needs npm on the machine that runs it');
@@ -173,68 +158,6 @@ class Machine {
     }
 
     this.emptyCache = path.join(this.workDir, 'empty-npm-cache');
-
-    this.realBash = which('bash', systemFirst);
-    const realLn = which('ln', systemFirst);
-    this.gitBashLnDir = bin('git-bash-ln');
-    writeExecutable(
-      path.join(this.gitBashLnDir, 'ln'),
-      '#!/bin/bash\n' +
-        '# Git Bash: ln -s copies unless MSYS asks for native symlinks\n' +
-        'case " $* " in *" -s "*|*" -sf "*|*" -fs "*) symbolic=1 ;; *) symbolic=0 ;; esac\n' +
-        `if [ "$symbolic" = 0 ] || [[ "\${MSYS:-}" == *winsymlinks:nativestrict* ]]; then exec "${realLn}" "$@"; fi\n` +
-        'args=(); for a in "$@"; do case "$a" in -*) ;; *) args+=("$a") ;; esac; done\n' +
-        'target="${args[0]}"; link="${args[1]}"\n' +
-        'case "$target" in /*) source="$target" ;; *) source="$(dirname "$link")/$target" ;; esac\n' +
-        'exec cp -R "$source" "$link"\n'
-    );
-
-    this.wslDir = bin('wsl');
-    this.wslLog = path.join(this.workDir, 'wsl-bash.log');
-    writeExecutable(path.join(this.wslDir, 'bash'), '#!/bin/bash\n' + `printf '%s\\n' "$*" >> "${this.wslLog}"\n` + `exec "${this.realBash}" "$@"\n`);
-    this.gitBashLog = path.join(this.workDir, 'git-bash.log');
-    this.programFiles = path.join(this.workDir, 'ProgramFiles');
-    fs.mkdirSync(this.programFiles, { recursive: true });
-  }
-
-  // The fake Git for Windows of a Windows machine: `git` (with --exec-path)
-  // and, with Git for Windows, its bin/bash.exe; rewritten on every call,
-  // since the alias is known only once the project exists
-  #windowsBins() {
-    const root = path.join(this.workDir, this.windows.gitForWindows ? 'Git' : 'GitSinBash');
-    const execPath = path.join(root, 'mingw64', 'libexec', 'git-core');
-    fs.mkdirSync(execPath, { recursive: true });
-    const gitDir = path.join(this.workDir, 'bin', 'windows-git');
-    fs.mkdirSync(gitDir, { recursive: true });
-    writeExecutable(
-      path.join(gitDir, 'git'),
-      '#!/bin/bash\n' + `if [ "\${1:-}" = "--exec-path" ]; then echo "${execPath}"; exit 0; fi\n` + `exec "${path.join(this.spyDir, 'git')}" "$@"\n`
-    );
-    const bash = path.join(root, 'bin', 'bash.exe');
-    if (this.windows.gitForWindows) {
-      fs.mkdirSync(path.dirname(bash), { recursive: true });
-      const { from = '', to = '' } = this.windows.alias ?? {};
-      writeExecutable(
-        bash,
-        '#!/bin/bash\n' +
-          `printf '%s\\n' "$*" >> "${this.gitBashLog}"\n` +
-          `from='${from}'; to='${to}'\n` +
-          'args=()\n' +
-          'for a in "$@"; do if [ -n "$from" ] && [[ "$a" == "$from"* ]]; then a="$to${a#"$from"}"; fi; args+=("$a"); done\n' +
-          'here="$(pwd -L)"; if [ -n "$from" ] && [[ "$here" == "$from"* ]]; then cd "$to${here#"$from"}"; fi\n' +
-          `exec "${this.realBash}" "\${args[@]}"\n`
-      );
-    } else {
-      fs.rmSync(bash, { force: true });
-    }
-    return gitDir;
-  }
-
-  // The calls each bash of a Windows machine received, one argument string per call
-  bashCalls(which) {
-    const file = which === 'wsl' ? this.wslLog : this.gitBashLog;
-    if (!fs.existsSync(file)) return [];
-    return fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
   }
 
   get oldNodeVersion() {
@@ -251,12 +174,8 @@ class Machine {
   }
 
   path() {
-    const front = [];
-    if (this.windows?.wslFirst) front.push(this.wslDir);
-    if (this.windows) front.push(this.#windowsBins());
-    if (this.gitBashLn) front.push(this.gitBashLnDir);
-    if (!this.hasNpm) return [...front, this.spyGitOnlyDir(), this.noNpmDir].join(path.delimiter);
-    const dirs = [...front];
+    if (!this.hasNpm) return [this.spyGitOnlyDir(), this.noNpmDir].join(path.delimiter);
+    const dirs = [];
     if (this.globalOpenspec) dirs.push(this.globalOpenspecDir);
     if (this.nodeVersion) dirs.push(this.oldNodeDir);
     dirs.push(this.spyDir, ...this.basePath);
@@ -284,7 +203,6 @@ class Machine {
     if (this.wikiDisabled) env.PROJECT_WIKI = 'off';
     if (this.commentsDisabled) env.PROJECT_COMMENTS = 'off';
     if (this.ephemeral) Object.assign(env, EPHEMERAL_ENV);
-    if (this.windows) env.ProgramFiles = this.programFiles;
     if (this.offline) {
       fs.rmSync(this.emptyCache, { recursive: true, force: true });
       Object.assign(env, {
