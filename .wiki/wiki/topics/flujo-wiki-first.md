@@ -9,6 +9,10 @@ sources:
   - raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md
   - raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md
   - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
+  - raw/notes/2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md
+  - raw/articles/2026-11-22-openspec-docs-cli-archive.md
+  - raw/articles/2026-11-22-openspec-docs-opsx-sync.md
+  - raw/articles/2026-11-22-openspec-docs-commands-sync-archive.md
 created: 2026-11-21
 updated: 2026-11-22
 verified: 2026-11-21
@@ -74,6 +78,7 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 
 - **Antes de mover el change**, revisa los enlaces relativos de sus artefactos que salen del change: el archive lo baja un nivel y necesitan un `../` más. Citar por la ruta desde la raíz del repositorio lo evita ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 1).
 - **Las rutas que tocó el change** salen de sus propios commits si la rama lleva más de un change; el diff de la rama contra `main` mezcla los de ambos. Con la forma recomendada (ADR-0015, que sustituye a ADR-0007) una rama temporal lleva un solo change, y el plugin no actúa en una rama con varios ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 2).
+- **La guidance de archivado solo añade pasos**: el workflow de archive no le deja saltarse su pregunta sobre el sync de specs ni cambiar sus flags, así que no puede forzar el sync (`idd@a62cf14:.claude/skills/openspec-archive-change/SKILL.md`). Con deltas aplicables se sincroniza siempre; archivar sin sincronizar es para changes sin cambios de comportamiento, mejor declarados con `skip_specs: true` en su `.openspec.yaml`, o para syncs bloqueados ([lecciones sobre la guidance de archivado](../../raw/notes/2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md); [docs/cli.md de OpenSpec](../../raw/articles/2026-11-22-openspec-docs-cli-archive.md); si las specs ya se sincronizaron con `/opsx:sync`, el archive ofrece archivar sin más: [docs/opsx.md](../../raw/articles/2026-11-22-openspec-docs-opsx-sync.md), [docs/commands.md](../../raw/articles/2026-11-22-openspec-docs-commands-sync-archive.md)).
 
 ## El motor
 
@@ -100,3 +105,6 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `openspec/config.yaml`.
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `adr/0009-wiki-read-and-write-operations.md`, `openspec/specs/wiki-first-knowledge/spec.md`, `.agents/wiki/guide.md`, `.agents/wiki/reminder.md`.
 - [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `.agents/wiki/guide.md`, `openspec/config.yaml`, `openspec/specs/wiki-first-knowledge/spec.md`.
+- [Lecciones sobre la guidance de archivado](../../raw/notes/2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md): la guidance no salta las preguntas del archive y cuándo archivar sin sincronizar.
+- [OpenSpec docs/cli.md (2.1.1)](../../raw/articles/2026-11-22-openspec-docs-cli-archive.md): `--skip-specs` y `skip_specs: true`.
+- [OpenSpec docs/opsx.md (2.1.1)](../../raw/articles/2026-11-22-openspec-docs-opsx-sync.md) y [docs/commands.md (2.1.1)](../../raw/articles/2026-11-22-openspec-docs-commands-sync-archive.md): `/opsx:sync` es opcional y el archive pregunta si sincronizar.
