@@ -114,7 +114,7 @@ Cada una sigue el ciclo de las secciones 3 a 5: rojo por la razón esperada, imp
 - [x] 8.3 «Quitar un worktree conserva su rama» y «Con cambios sin commit no se quita»: pasos rojos; en `lib/worktree.mjs`, `remove` en `sourceDirectory ?? directory` y el mensaje con el commit o `git worktree remove --force` (D5); verde. Ampliar `core-tests/autopilot-worktree.test.js` con `remove` sin `sourceDirectory`.
 - [x] 8.4 «Sin TUI, el modelo crea un worktree con su sesión operativa» en rojo con el contexto real; `projectID` de `ctx.location.project.id` o de la sesión que llama (D6); verde.
 - [x] 8.5 «Crear un worktree nuevo desde el modal» en rojo con el diálogo que tarda en montarse; pausa y reintento entre los dos `dispatch` en `tui.js` (D4); verde.
-- [ ] 8.6 «El primer mensaje de un worktree nuevo es la descripción del change»: paso rojo; ruta en `hello` y descripción de la sesión de OpenCode (D10); verde.
+- [x] 8.6 «El primer mensaje de un worktree nuevo es la descripción del change»: paso rojo; ruta en `hello` y descripción de la sesión de OpenCode (D10); verde.
 - [ ] 8.7 La carrera de D1: un `core-test` en el que `screen` y `prompt` (`autopilot`) llegan a la vez sobre una sesión nueva, que falla de forma reproducible; `trackBranch` decide con la sesión que acaba de leer y no escribe `role` si ya lo tiene; verde.
 - [ ] 8.8 `README.md`: quitar un worktree con cambios, el primer mensaje del worktree desde la pantalla de inicio, `/new` desde un worktree y la opción `serverUrl`. `acceptance-tests/README.md`: lo nuevo del simulador.
 - [ ] 8.9 Suite completa con los deltas, `npm run test:core`, `npm run lint:specs` y `openspec validate autopilot-rama-por-sesion --type change --strict`.

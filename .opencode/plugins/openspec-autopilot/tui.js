@@ -171,7 +171,11 @@ export default {
         if (presenting.has(dir) && attempt === 0) return presenting.get(dir);
         const p = (async () => {
           try {
-            await client.hello({ instance, pid: process.pid, client: 'tui' }, at(dir));
+            // Con la ruta: la sesión con que OpenCode crea un worktree desde la
+            // pantalla de inicio da la descripción del change (design D10)
+            const route = current();
+            const at_ = route?.type === 'session' && route.sessionID ? { type: 'session', sessionID: route.sessionID } : { type: route?.type ?? 'home' };
+            await client.hello({ instance, pid: process.pid, client: 'tui', route: at_ }, at(dir));
             presented.add(dir);
           } catch (error) {
             if (rpcUnavailable(error) && attempt < HELLO_RETRY_MS.length) {

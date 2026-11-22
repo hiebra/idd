@@ -56,6 +56,9 @@ import { strategy as worktreeStrategy } from './lib/worktree.mjs';
 
 const ID = RPC.id;
 const REGISTRY = Symbol.for('openspec-autopilot.registry');
+// Los reintentos para leer el primer mensaje de un worktree nuevo (design D10)
+const FIRST_MESSAGE_RETRY_MS = [100, 200, 400, 800];
+const FIRST_MESSAGE_MAX_AGE_MS = 30000;
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
 const VERB = {
@@ -117,7 +120,7 @@ function clientBridge(ctx, gen, registry, directory, onFirst) {
         const seen = (registry.pids[directory] ??= []);
         const first = pid !== '' && !seen.includes(pid);
         if (first) seen.push(pid);
-        await onFirst({ first });
+        await onFirst({ first, route: input?.route ?? null });
         return { ok: true, first };
       },
       reply: async (input) => {
@@ -352,7 +355,7 @@ async function start(ctx) {
   };
 
   // La sesión operativa de la rama, creándola si no hay ninguna válida (D3)
-  const ensureOperational = async (bc, { go = false } = {}) => {
+  const ensureOperational = async (bc, { go = false, description = '' } = {}) => {
     if (!actionable(bc) || bc.kind === 'archived') return null;
     const { op, invalid, sessions } = await opOf(bc);
     for (const s of invalid) {
@@ -364,7 +367,7 @@ async function start(ctx) {
     const step = bc.kind === 'active' ? stepFromState(state) : { kind: 'new' };
     if (step.kind === 'blocked') throw new Error(`openspec status no da ningún artefacto listo para ${bc.change}`);
     const clean = await treeClean(directory);
-    const created = await createStep({ branch: bc.branch, change: bc.change ?? null, step, seq: nextSeq(sessions), zone: null, wait: !clean });
+    const created = await createStep({ branch: bc.branch, change: bc.change ?? null, step, seq: nextSeq(sessions), zone: null, wait: !clean, extra: step.kind === 'new' && description ? { description } : {} });
     // Escribir y comprobar: si otra TUI ha creado otra a la vez, gana la más antigua
     const first = await lostTo(bc, created.id);
     if (first) {
@@ -396,7 +399,30 @@ async function start(ctx) {
     }
   };
 
-  const onFirst = guard('hello', async ({ first }) => {
+  // La sesión con que OpenCode crea un worktree desde la pantalla de inicio:
+  // de este directorio, sin paso y con mensajes del usuario (design D10)
+  const firstMessage = async (route) => {
+    if (route?.type !== 'session' || !route.sessionID) return '';
+    let s = null;
+    try {
+      s = await api.get({ sessionID: route.sessionID });
+    } catch {
+      return '';
+    }
+    if (!s || isArchived(s) || (sessionDir(s) ?? directory) !== directory || meta(s)?.step) return '';
+    // Solo una sesión recién creada: no la conversación de una sesión anterior
+    const created = Number(s.time?.created ?? 0);
+    if (!created || Date.now() - created > FIRST_MESSAGE_MAX_AGE_MS) return '';
+    // El mensaje puede guardarse un poco después de que la TUI entre en la sesión
+    for (const pause of [0, ...FIRST_MESSAGE_RETRY_MS]) {
+      if (pause) await new Promise((resolve) => setTimeout(resolve, pause));
+      const text = await userText(s.id);
+      if (text) return text;
+    }
+    return '';
+  };
+
+  const onFirst = guard('hello', async ({ first, route }) => {
     await archivePending();
     if (!first) return;
     const bc = await branchChange(directory);
@@ -410,7 +436,8 @@ async function start(ctx) {
       return;
     }
     try {
-      await ensureOperational(bc, { go: true });
+      const description = bc.kind === 'none' ? await firstMessage(route) : '';
+      await ensureOperational(bc, { go: true, description });
     } catch (error) {
       await failed('no se ha podido crear la sesión operativa', error, null);
     }
