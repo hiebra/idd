@@ -122,3 +122,71 @@ test('a guidance list at the same indentation as its key is kept', async () => {
   assert.equal(out.text, ['operations:', '  apply:', '    guidance:', '    - Keep test summaries concise', ...BLOCK, ''].join('\n'));
   assert.equal(adjust(out.text, 'auto').text, text);
 });
+
+// --- syncApplyGuidance (task 1.2, design D4) ---
+
+function tempProject(config) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'apply-guidance-'));
+  if (config !== undefined) {
+    fs.mkdirSync(path.join(dir, 'openspec'));
+    fs.writeFileSync(path.join(dir, 'openspec', 'config.yaml'), config);
+  }
+  return dir;
+}
+
+test('syncApplyGuidance writes only when the mode asks for a change', async () => {
+  const { syncApplyGuidance, BLOCK } = await load();
+  const config = 'schema: x\n';
+  const dir = tempProject(config);
+  const file = path.join(dir, 'openspec', 'config.yaml');
+  try {
+    assert.deepEqual(await syncApplyGuidance(dir, 'auto'), { written: false, missing: false, similar: false, error: null });
+    const first = await syncApplyGuidance(dir, 'normal');
+    assert.equal(first.written, true);
+    assert.ok(fs.readFileSync(file, 'utf8').includes(BLOCK.join('\n')));
+    const mtime = fs.statSync(file).mtimeMs;
+    fs.utimesSync(file, new Date(0), new Date(0));
+    assert.equal((await syncApplyGuidance(dir, 'normal')).written, false);
+    assert.equal(fs.statSync(file).mtimeMs, 0, `rewritten (was ${mtime})`);
+    assert.equal((await syncApplyGuidance(dir, 'auto')).written, true);
+    assert.equal(fs.readFileSync(file, 'utf8'), config);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('syncApplyGuidance does not create a missing config.yaml', async () => {
+  const { syncApplyGuidance } = await load();
+  const dir = tempProject(undefined);
+  try {
+    assert.deepEqual(await syncApplyGuidance(dir, 'normal'), { written: false, missing: true, similar: false, error: null });
+    assert.equal(fs.existsSync(path.join(dir, 'openspec')), false);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('syncApplyGuidance returns read and write errors without throwing', async () => {
+  const { syncApplyGuidance } = await load();
+  // Unreadable: config.yaml is a directory
+  const unreadable = tempProject(undefined);
+  fs.mkdirSync(path.join(unreadable, 'openspec', 'config.yaml'), { recursive: true });
+  // Unwritable: read-only file (skipped as root, who can write it anyway)
+  const unwritable = tempProject('schema: x\n');
+  const file = path.join(unwritable, 'openspec', 'config.yaml');
+  fs.chmodSync(file, 0o444);
+  try {
+    const read = await syncApplyGuidance(unreadable, 'normal');
+    assert.equal(read.written, false);
+    assert.ok(read.error);
+    if (process.getuid?.() !== 0) {
+      const write = await syncApplyGuidance(unwritable, 'normal');
+      assert.equal(write.written, false);
+      assert.ok(write.error);
+    }
+  } finally {
+    fs.chmodSync(file, 0o644);
+    fs.rmSync(unreadable, { recursive: true, force: true });
+    fs.rmSync(unwritable, { recursive: true, force: true });
+  }
+});

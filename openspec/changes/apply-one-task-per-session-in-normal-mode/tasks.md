@@ -11,7 +11,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que la secci
   - avisar (`similar: true`) si hay texto parecido al bloque que no se reconoce.
 
   Tests en `core-tests/apply-guidance.test.js`, con el `openspec/config.yaml` real del proyecto, para comprobar que el resto queda byte a byte igual y que añadir y luego quitar deja el archivo como estaba.
-- [ ] 1.2 `syncApplyGuidance(directory, mode)` (D4): lee, ajusta y escribe solo si cambia. Sin `config.yaml` no hace nada, y si falla la lectura o la escritura devuelve el error sin lanzarlo. Tests con un directorio temporal en el mismo archivo.
+- [x] 1.2 `syncApplyGuidance(directory, mode)` (D4): lee, ajusta y escribe solo si cambia. Sin `config.yaml` no hace nada, y si falla la lectura o la escritura devuelve el error sin lanzarlo. Tests con un directorio temporal en el mismo archivo.
 
 ## 2. Pasos de aceptación (zona de código): «Indicaciones de apply según el modo»
 

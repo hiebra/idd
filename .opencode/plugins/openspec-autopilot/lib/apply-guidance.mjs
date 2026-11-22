@@ -143,3 +143,26 @@ export function adjust(text, mode) {
   }
   return { text: lines.join('\n'), changed: true, similar };
 }
+
+// syncApplyGuidance(directory, mode) -> { written, missing, similar, error }
+//   Lee `openspec/config.yaml` del directorio, lo ajusta al modo y lo escribe
+//   solo si cambia. Sin el archivo no hace nada (no lo crea). Nunca lanza: un
+//   fallo de lectura o escritura vuelve en `error`.
+export async function syncApplyGuidance(directory, mode) {
+  const file = path.join(directory, CONFIG_PATH);
+  let text;
+  try {
+    text = await fs.readFile(file, 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return { written: false, missing: true, similar: false, error: null };
+    return { written: false, missing: false, similar: false, error };
+  }
+  const out = adjust(text, mode);
+  if (!out.changed) return { written: false, missing: false, similar: out.similar, error: null };
+  try {
+    await fs.writeFile(file, out.text, 'utf8');
+  } catch (error) {
+    return { written: false, missing: false, similar: out.similar, error };
+  }
+  return { written: true, missing: false, similar: out.similar, error: null };
+}
