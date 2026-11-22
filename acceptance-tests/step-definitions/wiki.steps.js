@@ -76,8 +76,8 @@ Given('un clon del proyecto con el wiki deshabilitado y con `.wiki\\/`', functio
   cloneWithWiki(this, 'deshabilitado').addCommittedWiki();
 });
 
-Given('un clon del proyecto con el wiki deshabilitado y sin `.wiki\\/`', function () {
-  const project = cloneWithWiki(this, 'deshabilitado');
+Given(new RegExp(`^un clon del proyecto con el wiki ${STATE} y sin \`\\.wiki/\`$`), function (state) {
+  const project = cloneWithWiki(this, state);
   assert.equal(fs.existsSync(project.path('.wiki')), false);
 });
 
