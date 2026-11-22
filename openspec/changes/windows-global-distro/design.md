@@ -140,6 +140,16 @@ Los escenarios de `windows-global-install` y `slim-template` que ejecutan el `.b
 
 El núcleo en Node, la regla de los proyectos intent-driven, la búsqueda de `branch-change.mjs` y el montaje de la release (`build.mjs`) se prueban en Linux con los artefactos montados. Ejecutarlos con `cmd.exe` solo es necesario en Windows. Como en ADR-0002, los agentes no se arrancan: se simula cómo OpenCode carga plugins y skills de `<config>`.
 
+### D8. El diagnóstico de Windows conoce la instalación global
+
+El diagnóstico `scripts/windows/Test-OfflineInstall.ps1` (ADR-0017, de `windows-support`) suponía que todo estaba en el proyecto. Recoge, además de lo de hoy, la instalación global de `<data>` y `<config>`, calculados como el `.bat`.
+
+- **Cuándo cuenta:** solo en un proyecto sin `openspec/schemas/intent-driven/`. En la plantilla completa no hace falta, y se da en `OK`.
+- **Qué comprueba:** la versión de `<data>\idd\version`, el schema, el motor, la skill `openspec-git-discipline` con su script, las skills del motor y los tres plugins. Si falta algo, nombra qué y remite al `.bat` de la release.
+- **El motor del wiki de un proyecto adelgazado** es el de la instalación global: ese proyecto no tiene `.agents/wiki/engine.json`.
+
+Como el resto del diagnóstico, la recogida de hechos va aparte de la evaluación, y la suite prueba la evaluación con hechos simulados.
+
 ## Risks / Trade-offs
 
 - **[Riesgo] OpenCode cambia sus rutas globales o su búsqueda de plugins.** → `global-roots.ts` y la búsqueda de plugins de OpenCode están recogidas en el wiki con su commit. Cada release se prueba en Windows contra la versión de OpenCode que fija la suite.
