@@ -15,6 +15,7 @@ sources:
   - raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md
   - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
   - raw/notes/2026-11-22-ll-add-quote-comment-rule.md
+  - raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md
 created: 2026-11-21
 updated: 2026-11-22
 verified: 2026-11-22
@@ -57,6 +58,8 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - **Variables del entorno real**: la suite hereda el entorno de la máquina que la ejecuta. En la nube eso incluye `CLAUDE_CODE_CONTAINER_ID` y `CLAUDE_CODE_REMOTE`, que hacen que el proyecto se crea en un contenedor efímero. `cleanEnv` y `sessionEnv` las quitan y solo las pone el escenario que las pide; cualquier variable real que cambie el comportamiento debe tratarse igual (`idd@5d7f5b0:acceptance-tests/support/machine.js`; [lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 4).
 - **Regex con grupos opcionales**: cucumber pasa un argumento por cada grupo capturante y decide por la aridad si la función es de callback. Un grupo opcional que no captura descuadra la cuenta y el paso se cuelga hasta el timeout. Solo deben capturar los grupos que la función recibe ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 2).
 - **Duración en la nube**: el entorno firma cada commit, también los de los repos de prueba, y la suite entera tarda 15-20 minutos. Conviene ejecutarla en segundo plano e iterar con `--name` ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 1).
+- **Delta specs sin H1**: `extract-gherkin.cjs` exige que toda `spec.md`, también las de un change activo, empiece por `# <capability>`; sin ella falla la carga de `cucumber.cjs` y no se ejecuta ningún escenario, aunque `openspec validate` dé el change por válido ([lecciones de update-comment-closing-and-quotes](../../raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md), lección 2).
+- **Escenarios renombrados en una delta**: un MODIFIED sustituye el requisito entero y no puede perder escenarios de la spec principal, así que cambiar el nombre de un escenario exige REMOVED del requisito viejo (con Reason y Migration) y ADDED del nuevo, no RENAMED + MODIFIED (lección 3 de la misma nota).
 
 ## Su límite
 
@@ -85,5 +88,6 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `acceptance-tests/README.md`, `acceptance-tests/support/branches.js`, `acceptance-tests/support/agents/opencode-sim.mjs`, `acceptance-tests/support/agents/opencode-sim.js`.
 - [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `acceptance-tests/support/branches.js`, `acceptance-tests/support/machine.js`, `acceptance-tests/core-tests/branches-support.test.js`.
 - [Lessons Learned: manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md): lecciones 1, 2 y 4.
+- [Lessons Learned: update-comment-closing-and-quotes](../../raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md): lecciones 2 y 3.
 - [Collection: archivado de replace-gherkin-lint-with-gplint (idd@d355c01)](../../raw/repos/2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md): `acceptance-tests/README.md`, `acceptance-tests/support/spec-lint.js`, `adr/0012-spec-lint-with-gplint.md`, el `design.md` del change archivado.
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `acceptance-tests/README.md`, `acceptance-tests/support/agents/opencode-host.mjs`.

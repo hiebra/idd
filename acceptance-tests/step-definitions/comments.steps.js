@@ -1,6 +1,7 @@
 'use strict';
 
-// Steps of response-comments (add-quote-comment-rule). As with the wiki guide,
+// Steps of response-comments (add-quote-comment-rule,
+// update-comment-closing-and-quotes). As with the wiki guide,
 // the suite cannot check that the model follows the rule: it checks what the
 // template guarantees through the agent adapters (design D6).
 
@@ -46,16 +47,18 @@ Then(new RegExp(`^el proyecto no tiene archivos de instrucciones que ${AGENT} ca
 // --- Contenido de la regla ----------------------------------------------------
 
 const FIXED_REPLY =
-  'Puedes seguir comentando mi intervención, pedirme que conteste a todos tus comentarios introduciendo en el prompt la palabra "ya", o pedirme que reformule mi intervención introduciendo la palabra "reformula".';
+  'Puedes seguir añadiendo comentarios, pedirme que los procese (p) o que reformule (r) el mensaje en base a ellos';
 
 // Each Then of the rule scenarios names one section of the rule, by its
 // identifier, so that they do not depend on its wording (design D1)
 const RULE_SECTIONS = {
   'indica que es un comentario sobre la intervención anterior del agente': 'es-comentario',
+  'indica que una cita de Markdown al principio del mensaje también es una marca de comentario': 'es-comentario-cita',
   'indica contestar solo con la frase fija': 'frase-fija',
+  'indica contestar en el idioma del comentario': 'idioma',
   'indica acumular el comentario sin investigar ni modificar nada a raíz de él': 'acumular',
-  'indica responder en un solo mensaje a todos los comentarios acumulados': 'ya-responde-todos',
-  'indica incluir entre ellos el propio mensaje si es un comentario': 'ya-incluye-comentario',
+  'indica responder en un solo mensaje a todos los comentarios acumulados': 'procesar-responde-todos',
+  'indica incluir entre ellos el propio mensaje si es un comentario': 'procesar-incluye-comentario',
   'indica repetir la intervención completa incorporando los comentarios acumulados': 'reformula-completa',
   'indica asumir que el usuario solo ha leído las partes que citó': 'reformula-solo-leido',
   'indica que la intervención reformulada no remite a la anterior': 'reformula-autonoma',

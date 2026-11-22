@@ -1,11 +1,13 @@
 'use strict';
 
 // Core test of the session bootstrap, outside the specs (design D2 of
-// add-quote-comment-rule): the comments-reminder mode reads the user's message
-// on stdin and prints the reminder of the comments rule only when the message
-// is a comment (it starts with a string between single quotes) or contains a
-// closing word ("ya" or "reformula") outside that string. PROJECT_COMMENTS=off
-// turns it off, and it always exits with 0.
+// add-quote-comment-rule, D1 and D2 of update-comment-closing-and-quotes): the
+// comments-reminder mode reads the user's message on stdin and prints the
+// reminder of the comments rule only when the message is a comment or contains
+// a closing word (p, procesa, procesar, r, reformula, reformular). A comment
+// starts, after any leading HTML comments, with a string between single quotes
+// or a Markdown quote. PROJECT_COMMENTS=off turns it off, and it always exits
+// with 0.
 //
 // Run with: npm run test:core
 
@@ -33,25 +35,37 @@ function commentsReminder(message, { agent = 'claude-code', env = {} } = {}) {
 
 const ACTIVATE = [
   "'el segundo punto' no lo entiendo",
-  'ya',
-  'Reformula, por favor',
   "   'con espacios delante' sobra",
-  'YA',
-  'vale, ya.',
-  "'ya está bien' sobra",
   "'esto sobra'",
-  'creo que\nya',
-  "'ya' no",
+  "'p' no",
+  '> el segundo punto',
+  '>sin espacio',
+  '<!-- attach -->\n> mensaje citado\n\nqué tal este?',
+  '<!-- attach --> <!-- otra -->\n\n> cita tras dos marcas',
+  '  > con espacios delante',
+  'p',
+  'R',
+  'procesa',
+  'Procesar los comentarios',
+  'Reformula, por favor',
+  'reformular',
+  'vale, p.',
+  'creo que\nr',
 ];
 
 const IGNORE = [
   '"foo" no aparece en el log',
+  'ya',
+  'ya lo veo',
   'mayo empieza el lunes',
   '¿lo reformulamos mañana?',
+  'el resultado es a > b',
+  '<!-- attach -->',
   "'' vacío",
   "sin comillas al principio 'aquí'",
-  'yate',
-  'ayá',
+  'pr',
+  'reformulado',
+  'procesado',
   '',
 ];
 

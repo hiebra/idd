@@ -380,16 +380,24 @@ comments_disabled() {
 }
 
 # activates_comments MENSAJE: éxito si el mensaje activa la regla de comentarios
-# (design D2 de add-quote-comment-rule). Es un comentario si, sin los espacios
-# iniciales, empieza por una cadena no vacía entre comillas simples; si no lo
-# es, la activa "ya" o "reformula" como palabra completa, sin distinguir
-# mayúsculas. Dentro de un comentario las palabras de cierre no cambian nada:
-# el mensaje ya la activa.
+# (design D2 de add-quote-comment-rule; D1 y D2 de
+# update-comment-closing-and-quotes). Es un comentario si, sin los espacios ni
+# los comentarios HTML iniciales (la app de Claude antepone `<!-- attach -->` a
+# las citas), empieza por una cadena no vacía entre comillas simples o por una
+# cita de Markdown (`>`). Si no lo es, la activa una palabra de cierre ("p",
+# "procesa", "procesar", "r", "reformula" o "reformular") como palabra
+# completa, sin distinguir mayúsculas. Dentro de un comentario las palabras de
+# cierre no cambian nada: el mensaje ya la activa.
 activates_comments() {
   local message="$1"
-  message="${message#"${message%%[![:space:]]*}"}"
+  while :; do
+    message="${message#"${message%%[![:space:]]*}"}"
+    [[ "$message" == '<!--'*'-->'* ]] || break
+    message="${message#*-->}"
+  done
   [[ "$message" =~ ^\'[^\']+\' ]] && return 0
-  printf '%s\n' "$message" | LC_ALL=C.UTF-8 grep -qiwE '(ya|reformula)' 2>/dev/null
+  [[ "$message" == '>'* ]] && return 0
+  printf '%s\n' "$message" | LC_ALL=C.UTF-8 grep -qiwE '(p|procesa|procesar|r|reformula|reformular)' 2>/dev/null
 }
 
 # comments_text MODO AGENTE DIRECTORIO: la regla (rule) o su recordatorio
