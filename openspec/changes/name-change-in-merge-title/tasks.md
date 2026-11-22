@@ -4,12 +4,12 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --name "título"` en `a
 
 ## 0. Antes del apply
 
-- [ ] 0.1 Pasar `node .agents/openspec/branch-change.mjs check apply name-change-in-merge-title`. Hacer `git fetch` y, si `origin/main` ha avanzado, decírselo al usuario: tres ramas concurrentes tocan los mismos archivos (design, Risks), y traerla pronto con `check merge <rama de la sesión>` reduce los conflictos. Solo se trae si el usuario lo pide
+- [x] 0.1 Pasar `node .agents/openspec/branch-change.mjs check apply name-change-in-merge-title`. Hacer `git fetch` y, si `origin/main` ha avanzado, decírselo al usuario: tres ramas concurrentes tocan los mismos archivos (design, Risks), y traerla pronto con `check merge <rama de la sesión>` reduce los conflictos. Solo se trae si el usuario lo pide
 
 ## 1. Preparación
 
-- [ ] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los seis pasos sin definir de este change (`npm test` y `npm run test:core` en `acceptance-tests/`). En la nube, los escenarios de `windows-readiness` fallan por falta de `pwsh`: se cuenta el resto
-- [ ] 1.2 `openspec-change-lifecycle: El título de la fusión nombra el change de la rama`, paso `la rama temporal lleva <changes>`. Definirlo sobre la rama que monta `temporaryBranchWithRemote`, con las cuatro formas de los `Examples`: añade cada change con `addChange` (y `archiveChange` si está archivado) y hace commit; con «solo código, sin ningún change» no añade nada. Comprobar en el propio paso que el árbol queda limpio y que `branchChange` da esos changes → commit
+- [x] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los seis pasos sin definir de este change (`npm test` y `npm run test:core` en `acceptance-tests/`). En la nube, los escenarios de `windows-readiness` fallan por falta de `pwsh`: se cuenta el resto
+- [x] 1.2 `openspec-change-lifecycle: El título de la fusión nombra el change de la rama`, paso `la rama temporal lleva <changes>`. Definirlo sobre la rama que monta `temporaryBranchWithRemote`, con las cuatro formas de los `Examples`: añade cada change con `addChange` (y `archiveChange` si está archivado) y hace commit; con «solo código, sin ningún change» no añade nada. Comprobar en el propio paso que el árbol queda limpio y que `branchChange` da esos changes → commit
 
 ## 2. El título en la orden local (D1 a D4): rojo → implementar → verde → commit
 

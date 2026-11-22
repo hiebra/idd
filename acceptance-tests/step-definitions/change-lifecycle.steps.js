@@ -877,6 +877,32 @@ Given(/^el clon está en la rama temporal `([^`]+)`, que contiene `origin\/main`
   temporaryBranchWithRemote(this, name, { containing: true });
 });
 
+// The changes the temporary branch of a check merge scenario carries
+// (name-change-in-merge-title, D7), on top of the branch that already contains
+// origin/main: each one in progress or archived, and with a commit, because the
+// gate does not let merge with a dirty tree
+Given(
+  /^la rama temporal lleva (solo código, sin ningún change|el change (?:en curso|archivado) `[^`]+`|los changes en curso `[^`]+` e `[^`]+`)$/,
+  function (what) {
+    const project = this.project;
+    const names = [...what.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+    const archived = what.includes('archivado');
+    for (const name of names) {
+      this.branches.addChange(project, name, { planned: archived });
+      this.branches.commitAll(project, `propuesta de ${name}`);
+      if (archived) {
+        this.branches.archiveChange(project, name);
+        this.branches.commitAll(project, `archiva ${name}`);
+      }
+    }
+    assert.deepEqual(project.gitStatus(), [], 'the gate needs a clean tree');
+    const state = this.branches.branchChange(project);
+    assert.deepEqual(state.changes.map((c) => c.name), names, describeState(state));
+    assert.ok(state.changes.every((c) => c.state === (archived ? 'archived' : 'active')), describeState(state));
+    assert.ok(this.branches.contains(project, 'HEAD', 'origin/main'), 'the branch still contains origin/main');
+  }
+);
+
 When('se ejecuta la puerta `check merge` hacia la rama temporal', function () {
   this.gate = this.branches.checkGate(this.project, 'merge', this.tempBranch, { ephemeral: Boolean(this.ephemeral) });
 });
@@ -918,6 +944,17 @@ Then('el commit que da esa orden tiene el árbol de la rama temporal y los padre
   git(project.dir, 'fetch', '-q', 'origin');
   assert.equal(this.branches.revParse(project, 'refs/remotes/origin/main'), commit, 'the push took the merge to main');
   assert.equal(this.branches.currentBranch(project), this.tempBranch, 'the clone did not change branch');
+});
+
+// The title of the merge (name-change-in-merge-title, D1, D4): the order is
+// run without its push, so the commit stays as a loose object, and the title
+// is read from the commit it makes, not from the text of the message
+Then(/^el commit de fusión que da su orden se titula `([^`]+)`$/, function (title) {
+  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
+  const commitTree = commandsOf(this.gate.message).find((c) => /^commit=\$\(git commit-tree /.test(c));
+  assert.ok(commitTree, JSON.stringify(this.gate));
+  const commit = shell(this, `${commitTree} && echo "$commit"`);
+  assert.equal(git(this.project.dir, 'log', '-1', '--format=%s', commit).trim(), title, JSON.stringify(this.gate));
 });
 
 Then(/^su mensaje indica abrir un PR de `([^`]+)` contra `([^`]+)` y fusionarlo con un commit de fusión, no con squash$/, function (from, into) {
