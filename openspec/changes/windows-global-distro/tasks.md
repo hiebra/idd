@@ -76,17 +76,29 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   → commit
 - [ ] 6.4 Probar el workflow sin publicar, con un disparo manual o un tag de prueba que se borra después, y comprobar que los dos jobs pasan → anotar el resultado aquí
 
-## 7. Documentación y cierre
+## 7. Integración con `windows-support`
 
-- [ ] 7.1 README:
+`windows-support` (rama `claude/vigilant-cori-oo4t14`) se reduce a lo que no depende del núcleo del arranque: `.gitattributes` con LF y su requisito en `session-bootstrap`, `openspecCommand()` del autopilot (el CLI del proyecto como `node <bin.openspec del paquete>`), la capability `windows-readiness` con el diagnóstico `scripts/windows/Test-OfflineInstall.ps1`, y ADR-0017 reescrito sin decidir nada del núcleo. Se fusiona y archiva antes que este change.
+
+- [ ] 7.1 Cuando `windows-support` esté archivado en la rama de origen, hacer `git merge` de la rama de origen, sin rebase. En `lib/project.mjs` del autopilot, conservar a la vez `openspecCommand()` y la búsqueda de `branch-change.mjs` de `lib/branch-script.mjs` → suite en verde → commit
+- [ ] 7.2 Rehacer los deltas de `session-bootstrap` y `openspec-autopilot` sobre las specs ya archivadas, sin pisar el requisito de LF ni el del CLI con `node`. Si con el núcleo en Node el requisito de LF deja de servir, retirarlo con REMOVED y su motivo → `openspec validate` → commit
+- [ ] 7.3 Adaptar el diagnóstico `Test-OfflineInstall.ps1` a la instalación global: el schema en `<data>\openspec\schemas`, el motor en `<data>\idd\wiki-engine`, y las skills y los plugins copiados a `<config>\opencode` (`%XDG_CONFIG_HOME%` o `%USERPROFILE%\.config`). Con sus escenarios de `windows-readiness`, rojo → verde → commit
+- [ ] 7.4 Verificar en Windows 11 real, y anotar aquí el resultado:
+  - el diagnóstico con PowerShell 5.1 y con PowerShell 7;
+  - el `.bat` de una release, en una instalación nueva y en una actualización;
+  - una sesión real de OpenCode 2 en un proyecto adelgazado: arranque, guía del wiki, regla de comentarios y autopilot.
+
+## 8. Documentación y cierre
+
+- [ ] 8.1 README:
   - las dos variantes;
   - cómo instalar y actualizar en Windows con el `.bat`;
   - cómo pasar un proyecto existente a la variante adelgazada;
   - cómo se publica una release.
 
   → commit
-- [ ] 7.2 Antes del archive:
+- [ ] 8.2 Antes del archive:
   - hacer `git fetch` y comprobar que los ADRs 0023 y 0024 siguen sin choque;
-  - comprobar si `windows-support` (ADR-0017) se ha fusionado o abandonado, y ajustar el `Supersedes` de ADR-0023;
+  - quitar ADR-0017 del `Supersedes` de ADR-0023, que solo sustituye a ADR-0002: el ADR-0017 reescrito de `windows-support` ya no decide nada del núcleo;
   - comprobar si ya han llegado a `main` el ADR-0021 (ON/OFF del wiki) y el ADR-0022 (autopilot dueño de su rama), y hacer que ADR-0024 los tenga en cuenta.
-- [ ] 7.3 Ejecutar la suite entera (`npm test`), `npm run test:core`, `npm run lint:specs` y `openspec validate windows-global-distro`. Va sin `--strict`, porque los avisos de SHALL/MUST en español y de los escenarios en Gherkin los dan también las specs vigentes. Anotar aquí los resultados
+- [ ] 8.3 Ejecutar la suite entera (`npm test`), `npm run test:core`, `npm run lint:specs` y `openspec validate windows-global-distro`. Va sin `--strict`, porque los avisos de SHALL/MUST en español y de los escenarios en Gherkin los dan también las specs vigentes. Anotar aquí los resultados
