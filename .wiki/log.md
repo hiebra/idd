@@ -295,3 +295,11 @@
 ## [2026-11-22] merge | origin/main (apply-one-task-per-session-in-normal-mode) en la rama de autopilot-plan-explore: conflictos del wiki unidos; «Lo que se mantiene» cita ADR-0025 sin «y su agente»; contadores recontados (60 fuentes, 13 artículos, 8 registros, 7 activos)
 
 ## [2026-11-22] ll | "lo que llega de main puede contradecir el change sin conflicto de git" → raw/notes/2026-11-22-ll-fusion-supuestos-invalidados.md (1 lesson, 1 article updated: flujo-wiki-first)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, idd@4b8d2b3, archivado de name-change-in-merge-title): 1 new, 0 skipped, 12 total candidates
+
+## [2026-11-22] refresh | 1 articles checked (ciclo-de-un-change-y-autopilot), 0 new raw revisions (la revisión es el manifiesto idd@4b8d2b3), 1 updated, 0 verified, 0 flagged, 0 retracted
+
+## [2026-11-22] inventory | archivado de name-change-in-merge-title: nombrar-el-change-en-el-titulo-de-la-fusion → archived; nuevo sanear-el-nombre-de-la-rama-en-las-ordenes-de-las-puertas; nuevo caso en la-task-del-archive-no-es-un-checkbox
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed

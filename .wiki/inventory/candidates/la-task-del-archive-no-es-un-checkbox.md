@@ -8,6 +8,7 @@ updated: 2026-11-22
 last_checked: 2026-11-22
 next_action: "Decidir si rules.tasks de openspec/config.yaml prohíbe una task final para el archive y la resincronización del wiki, o pide marcarla en el commit del archivado limitada a lo hecho en él."
 sources:
+  - raw/repos/2026-11-22-idd-4b8d2b3-name-change-in-merge-title.md
   - raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md
 tags: [openspec, archive, tasks, task]
 confidence: high
@@ -23,6 +24,8 @@ En `autopilot-plan-explore`, la task 7.5 ("Archivar … y resincronizar el wiki 
 ## Current State
 
 Abierto. La plantilla no tiene ninguna regla sobre la task final; el change archivado conserva la 7.5 sin marcar.
+
+Otro caso en `name-change-in-merge-title`: la task 5.4 («Al archivar, en la resincronización del wiki: …») dejó el change en 16 de 17 tasks, y el archive volvió a avisar de una task incompleta. Se marcó después del archivado, en el `tasks.md` ya archivado ([manifiesto](../../raw/repos/2026-11-22-idd-4b8d2b3-name-change-in-merge-title.md)).
 
 ## Next Action
 
