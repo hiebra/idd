@@ -148,5 +148,5 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
     - ADR-0021 y ADR-0022 siguen sin llegar a `main`.
   - Queda:
     - repetir el `git fetch` y la comprobación justo antes del archive;
-    - que ADR-0024 cite ADR-0020, ya en `main`, que sustituye a ADR-0013, al integrar la rama de origen (7.1).
+    - ~~que ADR-0024 cite ADR-0020~~: hecho el 2026-11-22. ADR-0024 cita ADR-0020 en lugar de ADR-0013 y ADR-0017 por el diagnóstico, y recoge lo que no lleva la variante adelgazada (5.6) y los escenarios de Windows elegidos por nombre.
 - [ ] 8.3 Ejecutar la suite entera (`npm test`), `npm run test:core`, `npm run lint:specs` y `openspec validate windows-global-distro`. Va sin `--strict`, porque los avisos de SHALL/MUST en español y de los escenarios en Gherkin los dan también las specs vigentes. Anotar aquí los resultados
