@@ -192,6 +192,18 @@ Examples:
   | OpenCode    |
 ```
 
+### Requirement: Wiki del proyecto versionado
+El wiki del proyecto DEBE vivir en `.wiki/`, en la raíz del repositorio, y git NO DEBE ignorar ninguno de sus archivos, tampoco cuando el motor intente ignorarlo al inicializarlo.
+
+#### Scenario: Inicializar el wiki del proyecto
+
+```gherkin
+Given un clon del proyecto con el wiki habilitado y sin `.wiki/`
+When el motor inicializa el wiki del proyecto
+Then el wiki del proyecto queda en `.wiki/`
+And git no ignora ningún archivo de `.wiki/`
+```
+
 ### Requirement: Hub del usuario opcional
 El hub del usuario DEBE ser opcional. Su ausencia, por ejemplo en una sesión en la nube, NO DEBE producir avisos ni errores, y el wiki del proyecto, si está habilitado, DEBE seguir disponible.
 

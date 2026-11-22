@@ -19,6 +19,32 @@ Examples:
   | OpenCode    |
 ```
 
+### Requirement: Consultar el wiki antes de responder
+La guía DEBE indicar al agente que, ante una petición que requiere conocimiento, consulte el wiki en modo de solo lectura antes de usar su conocimiento interno: primero el wiki del proyecto y, si no basta, el topic que corresponda del hub del usuario, si existe. La consulta DEBE hacerse con la operación de solo lectura del motor en cada agente, nombrada como se invoca en él: la skill `wiki-query` en OpenCode y el comando `/wiki:query --local` en Claude Code.
+
+#### Scenario: La guía exige consultar antes de responder
+
+```gherkin
+Given la guía del wiki del proyecto
+When se revisa qué indica sobre las peticiones que requieren conocimiento
+Then indica consultar el wiki en modo de solo lectura antes de usar el conocimiento interno
+And indica consultar primero el wiki del proyecto y después el hub del usuario, si existe
+```
+
+#### Scenario Outline: La guía nombra la operación de lectura de cada agente
+
+```gherkin
+Given una sesión de <agente> abierta en un proyecto con el wiki habilitado
+When se revisa con qué operación indica la guía consultar el wiki
+Then nombra <operación>
+And no nombra `wiki-manager` para consultar
+
+Examples:
+  | agente      | operación                 |
+  | Claude Code | `/wiki:query --local`     |
+  | OpenCode    | la skill `wiki-query`     |
+```
+
 ### Requirement: Resincronizar el wiki al archivar un change
 Con el wiki del proyecto habilitado, las indicaciones de archivado de OpenSpec del proyecto DEBEN incluir la resincronización del wiki del proyecto con lo que tocó el change, mediante las operaciones del motor, escribiendo solo lo que confirme el usuario, dejando el wiki sin errores de lint y en un commit posterior al del archivado. Con el wiki deshabilitado, NO DEBEN mencionar el wiki.
 
