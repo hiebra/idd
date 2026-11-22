@@ -36,7 +36,8 @@ const readConfig = (world) => fs.readFileSync(configFile(world), 'utf8');
 
 function writeConfig(world, text) {
   fs.writeFileSync(configFile(world), text);
-  world.configWritten = fs.statSync(configFile(world)).mtimeMs;
+  // An old modification time, to see whether the plugin writes the file again
+  fs.utimesSync(configFile(world), new Date(0), new Date(0));
 }
 
 // The config.yaml without the block, as the project has it
@@ -92,6 +93,85 @@ Then(/^`openspec\/config.yaml` (tiene|no tiene) las indicaciones de una task por
 
 Then('el resto de `openspec\\/config.yaml` no cambia', function () {
   assert.equal(withoutBlock(readConfig(this)), withoutBlock(this.configBefore));
+});
+
+// --- El ajuste de config.yaml no toca nada más ---
+
+// The items of operations.apply.guidance, as written (one string per item)
+function applyItems(text) {
+  const m = /\n {2}apply:\n {4}guidance:\n((?: {6,}.*\n?)*)/.exec(text);
+  if (!m) return [];
+  return m[1].split(/\n(?= {6}- )/).filter((l) => l.trim()).map((l) => l.trim());
+}
+
+// The four items as the CLI gives them: each folded scalar on one line
+function foldedItems() {
+  return specBlock()
+    .split(/\n(?= {6}- >-)/)
+    .map((item) => item.split('\n').slice(1).map((l) => l.trim()).join(' '));
+}
+
+Given('un clon del proyecto cuyo `openspec\\/config.yaml` tiene en apply la indicación {string}', function (item) {
+  const base = withoutBlock(fs.readFileSync(this.lifecycleProject().path(CONFIG), 'utf8'));
+  writeConfig(this, base.replace(/^operations:\n/m, `operations:\n  apply:\n    guidance:\n      - ${item}\n`));
+  this.configBefore = readConfig(this);
+});
+
+Given('un clon del proyecto cuyo `openspec\\/config.yaml` no tiene la clave `operations.apply`', function () {
+  const base = withoutBlock(fs.readFileSync(this.lifecycleProject().path(CONFIG), 'utf8'));
+  assert.equal(/^ {2}apply:/m.test(base), false, 'the project config.yaml has operations.apply besides the block');
+  writeConfig(this, base);
+  this.configBefore = readConfig(this);
+});
+
+Given('un clon del proyecto con un change en curso `exportar-datos`', async function () {
+  // Without the block in the committed config.yaml, so that loading the plugin adds it
+  const base = withoutBlock(fs.readFileSync(this.lifecycleProject().path(CONFIG), 'utf8'));
+  writeConfig(this, base);
+  await ap.prepareChange(this);
+  this.configBefore = readConfig(this);
+});
+
+Given('un clon del proyecto sin `openspec\\/config.yaml`', function () {
+  fs.rmSync(configFile(this), { force: true });
+});
+
+When(/^el usuario cambia el plugin a modo (normal|auto)$/, async function (mode) {
+  this.pluginOptions = mode === 'auto' ? { auto: true } : {};
+  await loadPlugin(this);
+});
+
+Then('`openspec\\/config.yaml` no se escribe', function () {
+  // writeConfig() left the file with an old modification time on purpose
+  assert.equal(fs.statSync(configFile(this)).mtimeMs, 0, 'config.yaml was written');
+  assert.equal(readConfig(this), this.configBefore);
+});
+
+Then('`openspec\\/config.yaml` tiene en apply solo la indicación {string}', function (item) {
+  assert.deepEqual(applyItems(readConfig(this)), [`- ${item}`]);
+});
+
+Then('`openspec\\/config.yaml` queda igual que antes de cargar el plugin', function () {
+  assert.equal(readConfig(this), this.configBefore);
+});
+
+Then('`openspec instructions apply --change exportar-datos` da las indicaciones de una task por sesión', function () {
+  const result = this.branches.openspec(this.lifecycleProject(), ['instructions', 'apply', '--change', 'exportar-datos', '--json']);
+  assert.equal(result.exitCode, 0, result.stderr);
+  const guidance = JSON.parse(result.stdout).operationGuidance ?? [];
+  const texts = guidance.map((g) => (typeof g === 'string' ? g : g.text ?? JSON.stringify(g)));
+  for (const item of foldedItems()) assert.ok(texts.includes(item), `missing in the CLI guidance:\n${item}\n\ngot:\n${texts.join('\n')}`);
+});
+
+Then('no existe `openspec\\/config.yaml`', function () {
+  assert.equal(fs.existsSync(configFile(this)), false);
+});
+
+Then('OpenCode sigue funcionando', async function () {
+  const state = await this.opencodeCall('state');
+  assert.ok(state, 'the simulated OpenCode did not answer');
+  assert.deepEqual(this.opencode.crashes, []);
+  assert.match(ap.toasts(this), /no hay `openspec\/config\.yaml`/);
 });
 
 module.exports = { specBlock, withBlock, withoutBlock, readConfig, writeConfig, loadPlugin, CONFIG };

@@ -21,10 +21,10 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que la secci
 
 ## 3. Pasos de aceptación (zona de código): «El ajuste de config.yaml no toca nada más»
 
-- [ ] 3.1 «Sin cambio de modo no se reescribe el archivo»: rojo → verde.
-- [ ] 3.2 «Otras indicaciones de apply se conservan» y «Sin indicaciones de apply previas no quedan claves vacías», con el cambio de modo como recarga del plugin en el simulador: rojo → verde.
-- [ ] 3.3 «El CLI de OpenSpec acepta el archivo en los dos modos», con el CLI real (`openspec instructions apply --change exportar-datos --json`): rojo → verde.
-- [ ] 3.4 «Sin config.yaml no se crea», con el toast de aviso y OpenCode funcionando: rojo → verde.
+- [x] 3.1 «Sin cambio de modo no se reescribe el archivo»: rojo → verde.
+- [x] 3.2 «Otras indicaciones de apply se conservan» y «Sin indicaciones de apply previas no quedan claves vacías», con el cambio de modo como recarga del plugin en el simulador: rojo → verde.
+- [x] 3.3 «El CLI de OpenSpec acepta el archivo en los dos modos», con el CLI real (`openspec instructions apply --change exportar-datos --json`): rojo → verde.
+- [x] 3.4 «Sin config.yaml no se crea», con el toast de aviso y OpenCode funcionando: rojo → verde.
 
 ## 4. Revisión abierta (zona de código), D6
 
