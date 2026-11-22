@@ -259,3 +259,5 @@
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ll | "archive de autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-archive-autopilot-rama-por-sesion.md (2 lessons, 1 articles updated)
+
+## [2026-11-22] ll | "fusión de main con autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md (2 lessons, 2 articles updated)

@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md
   - raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md
   - raw/repos/2026-11-22-idd-812f22d-autopilot-rama-por-sesion.md
   - raw/notes/2026-11-22-ll-pruebas-opencode-real-autopilot.md
@@ -99,6 +100,7 @@ Lo común al ciclo va en una pieza neutral, y por eso `branch-change.mjs` está 
 - **El autopilot no actúa en las ramas permanentes**: sus sesiones son libres, puede haber varias y ninguna toma el control. Con HEAD separado tampoco crea, archiva ni encadena sesiones.
 - **Un change nuevo empieza en una rama temporal**: en un worktree, o con un checkout y una sesión nueva. Una sesión nueva en una rama temporal que ya tiene sesión operativa abre un modal que ofrece «Crear un worktree nuevo» y, con el árbol limpio, «Cambiar a la rama de origen». Sin TUI, lo ofrece el contexto del modelo, que puede crear el worktree y su sesión operativa y dar el enlace.
 - **Los worktrees de OpenCode nacen en una rama**, con una estrategia de worktree del plugin (`lib/worktree.mjs`), la vía que describe [[worktrees-de-opencode|cómo crea OpenCode 2 los worktrees]] ([cómo crea OpenCode 2 los worktrees](../concepts/worktrees-de-opencode.md)), que sirve a la TUI, a la web y al modelo. La rama se llama como el worktree; si existe, se abre en ella, y si no, sale de la rama de origen del remoto tras un `git fetch`, sin seguirla y con push hacia `origin/<rama>`. Al quitar un worktree, su rama se conserva, y con cambios sin commit no se quita.
+- **El plugin cambia de rama sin el entorno del contenedor**: `branch-change.mjs` rechaza `switch` y `origin` en un contenedor efímero (ADR-0016), y el plugin hereda el entorno del proceso de OpenCode; por eso los llama con un entorno vacío, porque esos cambios los pide el usuario al entrar en una sesión, no el modelo ([lecciones de la fusión](../../raw/notes/2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md), lección 2).
 - **La TUI habla con el plugin del directorio de la ventana**, no con el de su arranque, porque al saltar a una sesión de otro directorio OpenCode carga la instancia del plugin de ese directorio.
 - **Consecuencias**: varios changes avanzan a la vez, cada uno en su worktree, a costa de disco y dependencias por worktree (se mitiga con `worktree.symlinkDirectories`). El plugin depende de APIs sin documentar de OpenCode (la estrategia de worktree, los comandos de `keymap` y la ruta de la web), que hay que comprobar al subir de versión. Claude Code no cambia (ADR-0006).
 
@@ -151,6 +153,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## Sources
 
+- [Lessons Learned: fusión de main en la rama de autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md): lección 2.
 - [Lessons Learned: autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md): lección 2.
 - [Collection: archivado de autopilot-rama-por-sesion (idd@812f22d)](../../raw/repos/2026-11-22-idd-812f22d-autopilot-rama-por-sesion.md): `adr/0022-autopilot-session-owns-its-branch-and-worktrees.md`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.opencode/plugins/openspec-autopilot/`.
 - [Lessons Learned: el agente plan en la revisión guiada con tests](../../raw/notes/2026-11-22-ll-guiar-revision-con-tests.md): lecciones 1 y 2.

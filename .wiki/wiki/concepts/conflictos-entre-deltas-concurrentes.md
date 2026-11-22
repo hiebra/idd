@@ -2,6 +2,7 @@
 title: "Conflictos entre deltas de changes concurrentes"
 category: concept
 sources:
+  - raw/notes/2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md
   - raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md
   - raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md
   - raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md
@@ -36,6 +37,10 @@ summary: "Dos changes en curso con deltas sobre la misma capability pueden choca
 - **Los ADR van al revés.** Escribirlos en la rama de origen reserva su número, mientras que los ADR creados en ramas paralelas son los que chocan (lección 3, deducida de las reglas, no ejecutada). Ver [[ciclo-de-un-change-y-autopilot|el ciclo de un change]] ([el ciclo de un change](../topics/ciclo-de-un-change-y-autopilot.md)), «Números de ADR sin choques».
 - **`openspec validate` aplica la misma protección**: un MODIFIED que omite escenarios de la spec actual es un error ya al validar. Para quitar o reemplazar escenarios, el requisito va como REMOVED más ADDED ([lecciones de git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md), lección 1).
 
+## Al unir los dos lados de un conflicto
+
+Cuando dos ramas añaden al final de un mismo bloque (requisitos al final de una spec, pasos al final de un archivo de pasos), git deja fuera del conflicto la línea común que cierra los dos lados. Poner un lado detrás del otro deja el primero sin cerrar: en la fusión de `main` con `autopilot-rama-por-sesion`, el lint de las specs falló hasta añadir el cierre del bloque de código al primer lado. Se mira la línea que sigue a `>>>>>>>` y se pasa el lint o `node --check` de cada archivo ([lecciones de la fusión](../../raw/notes/2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md), lección 1).
+
 ## Lo que no se sabe
 
 - **Con el schema `intent-driven`**: no se ejecutó. El archive es el mismo comando del CLI, pero el schema podría cambiar la validación.
@@ -48,6 +53,7 @@ summary: "Dos changes en curso con deltas sobre la misma capability pueden choca
 
 ## Sources
 
+- [Lessons Learned: fusión de main en la rama de autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md): lección 1.
 - [Lessons Learned: git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md): lección 1.
 - [Lessons Learned: conflictos entre deltas de changes concurrentes](../../raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md): lecciones 1 a 3.
 - [Opinión del usuario: la spec en la rama de origen y las dos formas del ciclo](../../raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md): punto 7 y objeciones.
