@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // El change de la rama (openspec-change-lifecycle, design D1 de
-// add-openspec-autopilot, D1 a D6 de manage-git-discipline y D3 a D7 de
-// allow-user-requested-merges): un módulo
+// add-openspec-autopilot, D1 a D6 de manage-git-discipline, D3 a D7 de
+// allow-user-requested-merges y D1 y D2 de git-discipline-standard-with-exception):
+// un módulo
 // neutral, común a los dos agentes, que lee de git qué change tiene la rama
 // actual y decide las puertas del ciclo. Lo importa el plugin de OpenCode y lo
 // ejecutan los workflows de OpenSpec desde la skill openspec-git-discipline.
@@ -10,6 +11,10 @@
 //   Su último elemento es la rama de origen. Solo se entiende una lista de
 //   escalares simples, en flujo ([main, develop]) o en bloque (- main); con
 //   cualquier otra forma la clave se trata como ausente y se avisa.
+// - Veto (`protected`): `x-main-protected: true` en openspec/config.yaml
+//   declara que el acceso directo a las ramas permanentes está vetado, y abre
+//   la única excepción a la regla estándar del ciclo (ADR-0020). Sin la clave,
+//   o con otro valor, no hay veto.
 // - Rama temporal: cualquier rama local fuera de la lista; con HEAD separado
 //   no hay ninguna.
 // - Referencia de origen (`originRef`): la más avanzada de refs/heads/<origen>
@@ -22,24 +27,26 @@
 //   change cuyo directorio está igual en `originRef` y en HEAD, sin cambios
 //   sin commit: ya llegó a la rama de origen (por ejemplo, tras un squash).
 //
-// Resultado: { kind, branch, origin, originRef, permanent, changes, change, warnings }
+// Resultado: { kind, branch, origin, originRef, permanent, protected, changes, change, warnings }
 //   kind: "permanent" (rama permanente o HEAD separado), "unknown" (no se
 //   encuentra la rama de origen), "none", "active", "archived" o "several".
 //   originRef es null en una rama permanente o si no hay rama de origen.
 //
-// Puertas (check):
-// - propose: en una rama temporal sin change. En una rama permanente también
-//   deja seguir (forma canónica), avisando de que lo recomendado es una rama
-//   temporal; con HEAD separado, no.
-// - apply <change>: en la rama temporal del change. Forma canónica: también
-//   en una rama temporal sin change propio si <change> está en curso en
-//   `originRef`, y en una rama permanente si está en curso en el árbol de
-//   trabajo, con aviso.
-// - archive <change>: en la rama temporal del change. Forma canónica: también
-//   en una rama permanente si <change> está en curso en el árbol de trabajo y
-//   su tasks.md no tiene ninguna `- [ ]`. En los dos casos no deja seguir si
-//   un ADR nuevo de la rama repite el número de otro de `originRef`, o si dos
-//   ADRs del árbol de trabajo tienen el mismo número.
+// Puertas (check). La regla es la de la skill estándar de intent-driven, y
+// nada de lo que permite se detiene ni lleva avisos; la excepción solo vale
+// con el veto:
+// - propose: en la rama permanente, sin avisos (con HEAD separado, no). En
+//   una rama temporal, sin veto, deja seguir con un aviso (la regla prefiere
+//   la rama de origen); con veto, solo si la rama no tiene otro change.
+// - apply <change>: la regla, donde <change> esté en curso en el árbol de
+//   trabajo (rama permanente, rama temporal o worktree) con su proposal.md ya
+//   en `originRef`, o en la rama permanente. La excepción: el change de la
+//   rama temporal, aunque su propuesta no esté en la rama de origen.
+// - archive <change>: la regla, en la rama permanente si <change> está en
+//   curso en el árbol de trabajo, tenga o no tasks sin hacer. La excepción:
+//   en la rama temporal del change. En los dos casos no deja seguir si un ADR
+//   nuevo de la rama repite el número de otro de `originRef`, o si dos ADRs
+//   del árbol de trabajo tienen el mismo número.
 // - commit: los commits y el push del agente. Solo deja seguir en un
 //   contenedor efímero (CLAUDE_CODE_CONTAINER_ID no vacía y
 //   CLAUDE_CODE_REMOTE=true), en la rama de la sesión guardada en
@@ -74,14 +81,16 @@
 //   node .agents/openspec/branch-change.mjs start <change>
 //   node .agents/openspec/branch-change.mjs switch <rama>
 //   node .agents/openspec/branch-change.mjs env
-// `check`, `start` y `switch` imprimen { ok, message } en JSON y salen con 0
-// si se puede seguir y con 1 si no. `list` da las ramas temporales con su
+// `check`, `start` y `switch` imprimen { ok, message } en JSON, más `warning`
+// cuando `check` deja seguir con un aviso, y salen con 0 si se puede seguir y
+// con 1 si no. `list` da las ramas temporales con su
 // change; `start` crea la rama del change desde la referencia de origen
 // (`originRef`) y cambia a ella; `switch` cambia a una rama temporal (ADR-0013,
 // design D12 de autopilot-sesion-operativa). Ni `start` ni `switch` actúan con
 // el árbol sucio. En un contenedor efímero no actúan: salen con 1, antes de
 // comprobar nada más, y su mensaje dice que se siga en la rama de la sesión
-// (ADR-0016). `merge-targets` da, tras el archive, las ramas de `x-main` a
+// (ADR-0016). Fuera de él, el modelo solo los usa con la excepción, o si el
+// usuario lo pide (ADR-0020). `merge-targets` da, tras el archive, las ramas de `x-main` a
 // las que proponer la fusión, en el orden de la lista: omite las que no
 // tienen origin/<rama> (con un aviso) y las cuyo origin/<rama> ya contiene
 // HEAD, y marca con `bringFirst` las que hay que traer antes; no hace
@@ -142,6 +151,24 @@ export function parsePermanent(text) {
   }
   if (items.length === 0 || items.some((item) => !item)) return invalid;
   return { permanent: items, warning: null };
+}
+
+// Lee `x-main-protected` del texto de openspec/config.yaml: el veto del acceso
+// directo a las ramas permanentes (design D1 de
+// git-discipline-standard-with-exception). Solo `true` lo declara; sin la
+// clave, o con cualquier otro valor, no hay veto.
+export function parseProtected(text) {
+  const line = text.split(/\r?\n/).find((l) => /^x-main-protected\s*:/.test(l));
+  if (!line) return false;
+  return scalar(line.replace(/^x-main-protected\s*:/, '').replace(/\s+#.*$/, '')) === 'true';
+}
+
+export function readProtected(dir) {
+  try {
+    return parseProtected(fs.readFileSync(path.join(dir, CONFIG), 'utf8'));
+  } catch {
+    return false;
+  }
 }
 
 export function readPermanent(dir) {
@@ -207,7 +234,7 @@ export function branchChange(dir = process.cwd()) {
   const { permanent, warning } = readPermanent(dir);
   const origin = permanent.at(-1);
   const warnings = warning ? [warning] : [];
-  const base = { branch: null, origin, originRef: null, permanent, changes: [], change: null, warnings };
+  const base = { branch: null, origin, originRef: null, permanent, protected: readProtected(dir), changes: [], change: null, warnings };
 
   const head = git(dir, 'symbolic-ref', '--short', '-q', 'HEAD');
   if (!head.ok || !head.out) return { ...base, kind: 'permanent' };
@@ -305,18 +332,6 @@ function adrClash(dir, state) {
     seen.set(number, file);
   }
   return null;
-}
-
-// Las tasks sin hacer del tasks.md de un change en curso del árbol de
-// trabajo, o null si no tiene tasks.md
-function pendingTasks(dir, name) {
-  let text;
-  try {
-    text = fs.readFileSync(path.join(dir, CHANGES, name, 'tasks.md'), 'utf8');
-  } catch {
-    return null;
-  }
-  return text.split('\n').filter((line) => /^\s*- \[ \]/.test(line)).length;
 }
 
 function activeHere(dir, name) {
@@ -480,7 +495,7 @@ export function check(dir, gate, name, { env = process.env, source = null } = {}
   const newBranch = `crea una rama temporal desde la rama de origen ('git switch -c <rama> ${state.origin}') y sigue en ella`;
   const named = state.changes.map((c) => c.name).join(', ');
   const deny = (message) => ({ ok: false, message, state });
-  const allow = (message) => ({ ok: true, message, state });
+  const allow = (message, warning = null) => ({ ok: true, message, ...(warning ? { warning } : {}), state });
   if (!['propose', 'apply', 'archive'].includes(gate)) return deny(`puerta desconocida '${gate}': usa propose, apply, archive, commit o merge.`);
   if (gate !== 'propose' && !name) return deny(`Falta el nombre del change para la puerta '${gate}': check ${gate} <change>.`);
 
@@ -488,29 +503,60 @@ export function check(dir, gate, name, { env = process.env, source = null } = {}
     if (!state.branch) return deny(`El clon está en un HEAD separado: ${newBranch}.`);
     const where = `la rama permanente '${state.branch}'`;
     if (gate === 'propose') {
-      return allow(`Se puede proponer en ${where} (forma canónica), pero la forma recomendada es proponer en una rama temporal: ${newBranch}.`);
+      return allow(`Se puede proponer en ${where}.`);
     }
     if (!activeHere(dir, name)) {
       if (gate === 'archive') {
-        return deny(`El archive se hace en la rama temporal del change, no en ${where}, donde '${name}' no está en curso: cambia a la rama temporal de '${name}' y archiva allí.`);
+        return deny(`'${name}' no está en curso en ${where}: el archive se hace donde está en curso, en la rama de origen después de fusionar la implementación${state.protected ? ', o en su rama temporal (excepción: x-main-protected)' : ''}.`);
       }
-      return deny(`'${name}' no está en curso en ${where}: el apply se hace en la rama temporal del change; cambia a ella, o ${newBranch} si su propuesta ya está en '${state.origin}'.`);
+      return deny(`'${name}' no está en curso en ${where}: aplícalo donde esté en curso, con su propuesta ya en la rama de origen${state.protected ? ', o en su rama temporal (excepción: x-main-protected)' : ''}.`);
     }
     if (gate === 'apply') {
-      return allow(`Se puede aplicar '${name}' en ${where} (forma canónica), pero la forma recomendada es aplicarlo en una rama temporal: ${newBranch}.`);
-    }
-    const pending = pendingTasks(dir, name);
-    if (pending === null) return deny(`'${name}' no tiene tasks.md: en ${where} solo se archiva un change con todas sus tasks hechas.`);
-    if (pending > 0) {
-      return deny(`A '${name}' le faltan tasks por hacer (${pending}): en ${where} solo se archiva un change con todas sus tasks hechas. Termínalas en su rama temporal y fusiónala antes de archivar.`);
+      return allow(`Se puede aplicar '${name}' en ${where}.`);
     }
     const clash = adrClash(dir, state);
     if (clash) return deny(clash);
-    return allow(`Se puede archivar '${name}' en ${where} (forma canónica): todas sus tasks están hechas.`);
+    return allow(`Se puede archivar '${name}' en ${where}.`);
   }
 
+  // Proponer en una rama temporal sin la excepción: la regla lo permite, con el
+  // aviso de la skill estándar ("Prefer main; if not, warn and ask")
+  if (gate === 'propose' && !state.protected) {
+    return allow(
+      `Se puede proponer en la rama temporal '${state.branch}'.`,
+      `La regla prefiere proponer en la rama de origen '${state.origin}': pregunta al usuario si sigue aquí a propósito. La propuesta tendrá que llegar a '${state.origin}' antes del apply.`
+    );
+  }
   if (state.kind === 'unknown') {
     return deny(`No se puede leer el change de la rama: ${state.warnings.at(-1)}. Trae la rama de origen ('git fetch origin ${state.origin}') y vuelve a ejecutar la puerta.`);
+  }
+  // El apply (design D2 de git-discipline-standard-with-exception). La regla:
+  // el change en curso en el árbol de trabajo, con su propuesta ya en la rama
+  // de origen. La excepción, solo con x-main-protected: true: el change de la
+  // rama temporal, aunque su propuesta no esté en la rama de origen.
+  if (gate === 'apply') {
+    const inOrigin = Boolean(state.originRef) &&
+      git(dir, 'rev-parse', '-q', '--verify', `${state.originRef}:${CHANGES}${name}/proposal.md`).ok;
+    if (activeHere(dir, name) && inOrigin) {
+      return allow(`Se puede aplicar '${name}' en la rama temporal '${state.branch}': su propuesta ya está en la rama de origen '${state.origin}'.`);
+    }
+    if (state.protected && state.kind === 'active' && state.change === name) {
+      return allow(`Se puede aplicar '${name}' en la rama temporal '${state.branch}' (excepción: x-main-protected).`);
+    }
+    if (!state.protected) {
+      return deny(
+        `La propuesta de '${name}' no está en la rama de origen '${state.origin}': la regla pide que llegue antes a la rama de origen. ` +
+          `Fusiona la propuesta con '${state.origin}' y aplica allí, en una rama o en un worktree. ` +
+          `Si el acceso directo a las ramas permanentes está vetado, declara \`x-main-protected: true\` en openspec/config.yaml.`
+      );
+    }
+  }
+  // El archive en una rama temporal solo lo permite la excepción
+  if (gate === 'archive' && !state.protected) {
+    return deny(
+      `No se archiva '${name}' en la rama temporal '${state.branch}': la regla es archivar en la rama de origen '${state.origin}' tras fusionar la implementación. ` +
+        `Fusiona la rama con '${state.origin}' y archiva allí. Si el acceso directo a las ramas permanentes está vetado, declara \`x-main-protected: true\` en openspec/config.yaml.`
+    );
   }
   if (state.kind === 'several') {
     return deny(
@@ -529,11 +575,6 @@ export function check(dir, gate, name, { env = process.env, source = null } = {}
       return allow(`Se puede archivar '${name}' en la rama temporal '${state.branch}'.`);
     }
     return allow(`Se puede aplicar '${name}' en la rama temporal '${state.branch}'.`);
-  }
-  // El apply canónico: la propuesta ya está en la rama de origen y la rama aún no la ha modificado
-  if (gate === 'apply' && state.kind === 'none' && activeHere(dir, name) && state.originRef &&
-    git(dir, 'rev-parse', '-q', '--verify', `${state.originRef}:${CHANGES}${name}/proposal.md`).ok) {
-    return allow(`Se puede aplicar '${name}' en la rama temporal '${state.branch}': su propuesta ya está en la rama de origen '${state.origin}' (forma canónica).`);
   }
   const has = state.kind === 'none' ? 'no tiene ningún change en curso' : `tiene el change ${state.kind === 'archived' ? 'archivado' : 'en curso'} '${state.change}'`;
   return deny(`El ${gate} de '${name}' se hace en su rama temporal, y la rama '${state.branch}' ${has}: cambia a la rama temporal de '${name}', o ${newBranch} si su propuesta ya está en '${state.origin}'.`);
@@ -671,7 +712,8 @@ function main(argv) {
   }
   if (argv[0] === 'check') {
     const result = check(dir, argv[1], argv[2], { source: argv[3] ?? null });
-    process.stdout.write(`${JSON.stringify({ ok: result.ok, message: result.message })}\n`);
+    const out = { ok: result.ok, message: result.message, ...(result.warning ? { warning: result.warning } : {}) };
+    process.stdout.write(`${JSON.stringify(out)}\n`);
     return result.ok ? 0 : 1;
   }
   const state = branchChange(dir);
