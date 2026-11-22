@@ -20,6 +20,19 @@
 //   nada en el stage es ok; HEAD igual, nada en el stage y cambios, ko.
 // - Sin TUI (D13): aviso en el contexto de las sesiones ajenas, archivado
 //   diferido (`archivePending`) y arranque con el mensaje `autopilot`.
+// - El agente plan (autopilot-plan-explore, ADR-0019): todas las sesiones
+//   nacen con build. Lo que se inyecta en la sesión operativa se decide una vez
+//   por turno según el agente (lib/agent-turn.mjs): la clave del turno es el
+//   último messageID del hook `prompt` (`turnMessage`), desde la primera
+//   petición que lleva ese mensaje. Al pasar a plan, el flujo de
+//   openspec-explore; en plan, su recordatorio; al volver a build, el
+//   recordatorio del paso.
+// - Lo modificado con plan (D4 y D5 de autopilot-plan-explore): el estado de
+//   git al empezar un turno en plan (`planTurn`) se compara al quedar en
+//   reposo. Si ha cambiado, aviso: en la TUI, un modal (`notice`) que, con
+//   producto, retiene la cadena en `plan-notice` hasta el acuse (`ack`, por la
+//   sesión) o un prompt del usuario; sin TUI, en el mensaje de arranque de la
+//   sesión siguiente o en el contexto de la petición siguiente.
 // - Nunca lanza una excepción hacia OpenCode ni bloquea una petición: un
 //   fallo se avisa y deja la sesión libre. Todas las esperas tienen límite.
 //

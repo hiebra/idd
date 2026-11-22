@@ -106,9 +106,12 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 6. Documentación (zona de código)
 
-- [ ] 6.1 README, sección del autopilot: las revisiones nacen en build, qué pasa con Tab a plan y al volver a build, y el aviso de lo modificado en plan (con TUI y sin ella). Enlazar ADR-0019.
-- [ ] 6.2 `acceptance-tests/README.md`: la operación `notice` de la TUI simulada, los turnos guionizados con el agente plan y los casos nuevos de `core-tests`.
-- [ ] 6.3 Comentarios de cabecera de `server.js`, `lib/prompts.mjs` y `lib/rpc.mjs`: la inyección por turno según el agente, el aviso y la operación `notice`.
+- [x] 6.1 README, sección del autopilot: las revisiones nacen en build, qué pasa con Tab a plan y al volver a build, y el aviso de lo modificado en plan (con TUI y sin ella). Enlazar ADR-0019.
+  - Resultado: sección del autopilot: el agente plan (Tab), lo modificado en plan avisado y el aviso sin TUI, con el enlace a ADR-0019.
+- [x] 6.2 `acceptance-tests/README.md`: la operación `notice` de la TUI simulada, los turnos guionizados con el agente plan y los casos nuevos de `core-tests`.
+  - Resultado: la ejecución (hook `prompt` con su `messageID`, mensajes a mitad de turno, recordatorio del agente plan, `switchAgent`), las entregas RPC con un modal abierto, `match.agent` y `delayMs`, y los casos nuevos de `core-tests`.
+- [x] 6.3 Comentarios de cabecera de `server.js`, `lib/prompts.mjs` y `lib/rpc.mjs`: la inyección por turno según el agente, el aviso y la operación `notice`.
+  - Resultado: `server.js` con la inyección por turno y el aviso; `lib/prompts.mjs` y `lib/rpc.mjs` ya se actualizaron con su código (4.1 y 5.2), y `lib/agent-turn.mjs` es nuevo con su cabecera.
 
 ## 7. Cierre
 
