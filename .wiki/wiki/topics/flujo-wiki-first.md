@@ -88,6 +88,7 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 - [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](carga-en-la-misma-sesion-por-agente.md))
 - [[una-sola-copia-de-las-skills|Una sola copia de las skills]] ([Una sola copia de las skills](../concepts/una-sola-copia-de-las-skills.md))
 - [[ciclo-de-un-change-y-autopilot|El ciclo de un change y su automatización en OpenCode]] ([El ciclo de un change y su automatización en OpenCode](ciclo-de-un-change-y-autopilot.md))
+- [[regla-de-comentarios|La regla de comentarios]] ([La regla de comentarios](../concepts/regla-de-comentarios.md))
 
 ## Sources
 

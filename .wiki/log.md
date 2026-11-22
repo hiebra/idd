@@ -152,3 +152,5 @@
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed; manual: 0 broken links, 0 uncited sources, 4 pre-existing one-way See Also links (hook-context-opencode, flujo-wiki-first, suite-de-aceptacion-y-spec-as-source do not link back)
+
+## [2026-11-22] lint | See Also completados: hook-context-opencode → ciclo-de-un-change-y-autopilot y regla-de-comentarios; flujo-wiki-first y suite-de-aceptacion-y-spec-as-source → regla-de-comentarios (0 one-way links left)
