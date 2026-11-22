@@ -478,12 +478,13 @@ export function checkMerge(dir, target, source, env = process.env) {
       );
     }
     if (isEphemeral(env)) {
-      // El PR lleva el título de la fusión (design D5 de name-change-in-merge-title)
+      // El PR lleva el título de la fusión, y se recomienda para su commit de
+      // fusión (design D5 de name-change-in-merge-title)
       const title = mergeTitle(state, target);
       return allow(
         `Se puede llevar la rama de la sesión '${branch}' a '${target}' por PR: sube la rama (\`git push -u origin ${branch}\`), ` +
           `abre un PR de \`${branch}\` contra \`${target}\` con las herramientas de GitHub de la sesión, con el título \`${title}\` (si el PR ya está abierto, ponle ese título), ` +
-          `y recomienda al usuario fusionarlo con un commit de fusión, no con squash. ` +
+          `y recomienda al usuario fusionarlo con un commit de fusión, no con squash, y con ese mismo título en el commit de fusión: el que propone GitHub nombra la rama de la sesión, no el change. ` +
           `En un contenedor efímero no hagas push a '${target}': el PR lo fusiona el usuario.`
       );
     }

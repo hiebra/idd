@@ -977,6 +977,11 @@ Then(/^su mensaje indica que el PR lleve el título `([^`]+)`, también si ya es
   assert.match(this.gate.message, /si el PR ya está abierto, ponle ese título/, JSON.stringify(this.gate));
 });
 
+Then('su mensaje recomienda ese mismo título para el commit de fusión', function () {
+  assert.match(this.gate.message, /recomienda al usuario[^.]*ese mismo título en el commit de fusión/, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /el que propone GitHub nombra la rama de la sesión/, JSON.stringify(this.gate));
+});
+
 // merge-targets (D6)
 
 Given('ni `origin\\/main` ni `origin\\/develop` contienen la rama', function () {
