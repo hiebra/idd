@@ -40,6 +40,8 @@ import { MODAL_BUTTON, directive, modalText } from './lib/screen.mjs';
 
 const ID = 'openspec-autopilot';
 const REGISTRY = Symbol.for('openspec-autopilot.registry');
+// Cuánto se juntan las peticiones de control de una rama que llegan a la vez
+const CONTEST_MS = 150;
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
 const VERB = {
@@ -139,6 +141,7 @@ async function start(ctx) {
   registry.gens ??= {};
   registry.pids ??= {};
   registry.claims ??= {};
+  registry.contests ??= {};
   const gen = (registry.gens[directory] = (registry.gens[directory] ?? 0) + 1);
   const alive = () => registry.gens[directory] === gen;
   const mode = ctx.options?.auto === true ? 'auto' : 'normal';
@@ -303,6 +306,41 @@ async function start(ctx) {
     registry.claims[key] = run.catch(() => {});
     return run;
   };
+
+  // Varias sesiones que piden el control a la vez (el mensaje `autopilot`):
+  // se juntan durante CONTEST_MS desde que llega el mensaje, antes de leer
+  // nada del proyecto, y se atienden de una en una de la más antigua a la más
+  // nueva, así que gana la más antigua (D4) aunque su mensaje llegue después
+  // o tarde más en leer la rama. Resuelve con lo que devuelve run
+  const contend = (sessionID, run) =>
+    new Promise((resolve, reject) => {
+      const key = directory;
+      let contest = registry.contests[key];
+      if (!contest) {
+        contest = registry.contests[key] = { entries: [] };
+        const timer = setTimeout(async () => {
+          delete registry.contests[key];
+          const created = async (id) => {
+            try {
+              return (await api.get({ sessionID: id }))?.time?.created ?? 0;
+            } catch {
+              return 0;
+            }
+          };
+          const ordered = await Promise.all(contest.entries.map(async (entry) => ({ ...entry, created: await created(entry.sessionID) })));
+          ordered.sort((a, b) => a.created - b.created || String(a.sessionID).localeCompare(String(b.sessionID)));
+          for (const entry of ordered) {
+            try {
+              entry.resolve(await entry.run());
+            } catch (error) {
+              entry.reject(error);
+            }
+          }
+        }, CONTEST_MS);
+        timer.unref?.();
+      }
+      contest.entries.push({ sessionID, run, resolve, reject });
+    });
 
   const ensureOperational = (bc, options) => claim(bc?.branch, () => ensureOperationalNow(bc, options));
 
@@ -598,9 +636,11 @@ async function start(ctx) {
     }
     // Una sesión que no es la operativa: solo pasa a serlo con `autopilot` si la rama no tiene ninguna (D13)
     if (text.trim().toLowerCase() !== START_WORD) return;
-    const bc = await branchChange(directory);
-    if (!actionable(bc) || bc.kind === 'archived') return;
-    await claim(bc.branch, () => takeControl(input, sessionID, bc));
+    await contend(sessionID, async () => {
+      const bc = await branchChange(directory);
+      if (!actionable(bc) || bc.kind === 'archived') return;
+      await claim(bc.branch, () => takeControl(input, sessionID, bc));
+    });
   });
 
   // La sesión `sessionID` pasa a ser la operativa de la rama si no tiene

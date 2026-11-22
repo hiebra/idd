@@ -83,7 +83,8 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - Falta un run con los dos jobs en verde.
 - [x] 6.5 Arreglar la carrera del autopilot que hace fallar a veces «two sessions taking control at once» y bloquea el job de Linux (6.4). Ocurre en los dos sitios donde una sesión toma el control de una rama: el mensaje `autopilot` y `ensureOperational`. El plugin escribe que es la operativa y después comprueba quién gana por antigüedad. Si la sesión más nueva comprueba antes de que escriba la más antigua, se ve sola y sigue; después la más antigua escribe, gana por antigüedad y sigue también, y la rama queda con dos operativas.
   - En `server.js`, tomar el control de una rama va en serie dentro del proceso (`claim`, con la cola en el registro de `globalThis` para que valga entre recargas): la segunda sesión ve ya escrita a la primera. Entre dos procesos de OpenCode sobre el mismo worktree sigue valiendo solo escribir y comprobar.
-  - Con el test aislado: sin el arreglo falla 7 de 12 veces y con él 0 de 12.
+  - Con solo eso, gana la que entra primero en la cola, que no siempre es la más antigua. En el run de `v0.0.0-ci2` ganó la más nueva, porque la primera lectura de la rama (`branchChange`, que importa `branch-change.mjs` en frío) tardó más en la primera sesión. Por eso las peticiones del mensaje `autopilot` se juntan durante 150 ms desde que llega el mensaje, antes de leer nada del proyecto (`contend`), y se atienden de una en una de la más antigua a la más nueva (D4).
+  - Con el test aislado: sin el arreglo falla 7 de 12 veces y con él 0 de 12. Con la primera lectura de la rama retrasada 400 ms a propósito, para reproducir el orden del runner, la versión solo en serie falla 6 de 6 y la definitiva 0 de 6.
 
 ## 7. Integración con `windows-support`
 
