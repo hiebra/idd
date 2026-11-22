@@ -130,6 +130,13 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - el `.bat` de una release, en una instalación nueva y en una actualización;
   - una sesión real de OpenCode 2 en un proyecto adelgazado: arranque, guía del wiki, regla de comentarios y autopilot.
 
+- [ ] 7.5 Volver a integrar `main`, que ha avanzado desde la 7.1 (`git merge`, sin rebase, y el ok del usuario a la resolución antes del commit de fusión). Han llegado el change del ON/OFF del wiki (ADR-0021), el del autopilot dueño de su rama y sus worktrees (ADR-0022) y el ADR-0025: 148 archivos. `git merge-tree` da conflictos en 17:
+  - `.agents/hooks/session-bootstrap.sh`: borrado aquí y modificado en `main`. Los cambios del ON/OFF del wiki hay que portarlos a `session-bootstrap.mjs` y al modo global, y comprobar la guía y el recordatorio que instala el `.bat`;
+  - el autopilot: `server.js`, `lib/project.mjs`, `lib/prompts.mjs` y `lib/screen.mjs`. Hay que conservar a la vez lo de ADR-0022 y lo nuestro (`branchScript()`, el control de una rama de uno en uno con `claim` y `contend`, y que una sesión que acaba de pasar el control no se trate como ajena);
+  - `openspec-git-discipline`: `SKILL.md` (otra vez la línea «El script es: …») y `branch-change.mjs`;
+  - `README.md`, `acceptance-tests/README.md`, `openspec/config.yaml` y los tests, steps y soporte de la suite: `autopilot-product`, `prepare-git`, `wiki-markers`, `autopilot.steps.js`, `change-lifecycle.steps.js`, `opencode-sim.js`, `opencode-sim.mjs` y `machine.js`.
+  - Después: rehacer los deltas de `session-bootstrap` y `openspec-autopilot` sobre las specs nuevas, hacer que ADR-0024 tenga en cuenta ADR-0021 y ADR-0022, y que el instalador y la variante adelgazada incluyan el ajuste del wiki. Orden recomendado: la 7.5, después la 7.4 en Windows y por último la 8.3, porque la 7.5 cambia código que la 7.4 verifica.
+
 ## 8. Documentación y cierre
 
 - [x] 8.1 README:
@@ -146,7 +153,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - Hecho el 2026-11-22:
     - el `git fetch` no da choques: 0023 y 0024 solo están en esta rama. En otras ramas están 0019, 0021, 0022 y 0025, y en `main`, 0017, 0018 y 0020;
     - ADR-0017 está fuera del `Supersedes` de ADR-0023 (`5f4ea17`);
-    - ADR-0021 y ADR-0022 siguen sin llegar a `main`.
+    - ADR-0021 y ADR-0022 han llegado a `main` después (ver la 7.5), junto con el ADR-0025. Nuestros 0023 y 0024 siguen sin choque.
   - Queda:
     - repetir el `git fetch` y la comprobación justo antes del archive;
     - ~~que ADR-0024 cite ADR-0020~~: hecho el 2026-11-22. ADR-0024 cita ADR-0020 en lugar de ADR-0013 y ADR-0017 por el diagnóstico, y recoge lo que no lleva la variante adelgazada (5.6) y los escenarios de Windows elegidos por nombre.
