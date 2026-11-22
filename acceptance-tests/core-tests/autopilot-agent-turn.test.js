@@ -3,9 +3,11 @@
 // Core tests of what the openspec-autopilot plugin injects when the user
 // switches agents in the operational session (autopilot-plan-explore, design
 // D2 and D3), outside the specs:
-// - the turn's key does not change between the requests of one turn (after
-//   each tool), whatever other hooks inject before the user's message, and
-//   changes with each new message of the user;
+// - the turn's key is the last messageID that the `prompt` hook saw, from the
+//   first request that carries that message: it does not change between the
+//   requests of one turn (after each tool), whatever OpenCode or other hooks
+//   inject, and a message that enters mid-turn changes it in the first
+//   request that carries it (D2, task 1.4);
 // - the transitions between build and plan, with an absent or unknown agent
 //   treated as build;
 // - the texts name the step or the review, explorePrompt names the skill
@@ -23,23 +25,28 @@ const LIB = path.join(REPO_ROOT, '.opencode', 'plugins', 'openspec-autopilot', '
 const TURN = pathToFileURL(path.join(LIB, 'agent-turn.mjs')).href;
 const PROMPTS = pathToFileURL(path.join(LIB, 'prompts.mjs')).href;
 
-const user = (text) => ({ role: 'user', content: [{ type: 'text', text }] });
-const assistant = (text) => ({ role: 'assistant', content: [{ type: 'text', text }] });
-const call = (name) => ({ role: 'assistant', content: [{ type: 'tool-call', name, input: {} }] });
-const result = (name) => ({ role: 'tool', content: [{ type: 'tool-result', name, result: { type: 'text', value: 'ok' } }] });
 
-test('the turn key is stable within a turn and changes with each message of the user', async () => {
+// A request's messages, with the ids OpenCode gives the stored ones (task 1.4)
+const user = (text, id) => ({ ...(id ? { id } : {}), role: 'user', content: [{ type: 'text', text }] });
+const call = (id) => ({ id, role: 'assistant', content: [{ type: 'tool-call', name: 'read', input: {} }] });
+const result = () => ({ role: 'tool', content: [{ type: 'tool-result', name: 'read', result: { type: 'text', value: 'ok' } }] });
+const PLAN = '<system-reminder>\nYou are in Plan mode\n</system-reminder>';
+
+test('the turn key is the last messageID of the prompt hook, once a request carries that message', async () => {
   const { turnKey } = await import(TURN);
-  const first = [user('[openspec-autopilot] Esta sesión es la sesión operativa…')];
-  const afterTool = [...first, call('read'), result('read')];
-  assert.equal(turnKey(first), turnKey(afterTool));
-  // Another hook (session-bootstrap) injects its reminder before the last user message
-  assert.equal(turnKey(first), turnKey([user('Recordatorio del wiki'), ...afterTool]));
-  const second = [...afterTool, assistant('Hecho.'), user('¿Qué queda?')];
-  assert.notEqual(turnKey(second), turnKey(first));
-  const third = [...second, assistant('Nada.'), user('¿Qué queda?')];
-  assert.notEqual(turnKey(third), turnKey(second));
-  assert.equal(turnKey([]), null);
+  // The first request of the step: the plugin's own message opens the turn
+  assert.equal(turnKey([user('[openspec-autopilot] Esta sesión…', 'msg_1')], { turnMessage: 'msg_1', previous: null }), 'msg_1');
+  // After a tool, with the plan reminder at the end (its own id, never seen by the prompt hook)
+  const afterTool = [user('¿Qué queda?', 'msg_2'), call('msg_3'), result(), user(PLAN, 'msg_r4')];
+  assert.equal(turnKey(afterTool, { turnMessage: 'msg_2', previous: 'msg_2' }), 'msg_2');
+  // A message that entered mid-turn, during the tool: the request after the tool does not carry it yet...
+  assert.equal(turnKey([user('Mira el README', 'msg_5'), call('msg_6')], { turnMessage: 'msg_7', previous: 'msg_5' }), 'msg_5');
+  // ...and the first request that carries it changes the key
+  const steered = [user('Mira el README', 'msg_5'), call('msg_6'), result(), user('Y el CHANGELOG', 'msg_7')];
+  assert.equal(turnKey(steered, { turnMessage: 'msg_7', previous: 'msg_5' }), 'msg_7');
+  // Without any key, nothing to decide
+  assert.equal(turnKey([user(PLAN), user('Hola')], { turnMessage: null, previous: null }), null);
+  assert.equal(turnKey([], { turnMessage: 'msg_9', previous: 'msg_8' }), 'msg_8');
 });
 
 test('the transitions between build and plan decide what the turn injects', async () => {

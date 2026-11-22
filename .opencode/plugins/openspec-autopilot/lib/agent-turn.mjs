@@ -6,36 +6,21 @@
 // el historial: por eso se decide una vez por turno (por mensaje del usuario)
 // y se repite en todas las peticiones del turno.
 //
-// - turnKey(messages): la clave del turno. Es el número de mensajes del
-//   modelo (asistente y tools) antes del último mensaje del usuario, con el
-//   texto de ese mensaje. No cambia entre las peticiones de un turno, aunque
-//   otros hooks inserten sus recordatorios antes del mensaje del usuario, y
-//   cambia con cada mensaje nuevo del usuario, también con el mensaje con el
-//   que el plugin arranca el paso.
+// - turnKey(messages, { turnMessage, previous }): la clave del turno. Es el
+//   último `messageID` que guardó el hook `prompt` (`turnMessage`), desde la
+//   primera petición que lleva ese mensaje (con ese `id`); hasta entonces, la
+//   clave anterior. Un mensaje que entra a mitad de turno (OpenCode lo mete en
+//   el mismo bucle, task 1.4) cambia la clave en la primera petición en la que
+//   el modelo lo ve. Lo que OpenCode u otros plugins insertan (el recordatorio
+//   del agente plan, los de session-bootstrap) no pasa por el hook `prompt` y
+//   no la cambia.
 // - transition(previo, actual): lo que se inyecta en el turno.
 // - agentTurn(guardado, { key, agent }): el estado del turno, y si es nuevo.
 
-import { createHash } from 'node:crypto';
-
-const textOf = (message) => {
-  const content = message?.content;
-  if (typeof content === 'string') return content;
-  return (Array.isArray(content) ? content : []).map((p) => (p?.type === 'text' ? (p.text ?? '') : '')).join('\n');
-};
-
-export function turnKey(messages) {
+export function turnKey(messages, { turnMessage = null, previous = null } = {}) {
   const list = Array.isArray(messages) ? messages : [];
-  let last = -1;
-  for (let i = list.length - 1; i >= 0; i--) {
-    if (list[i]?.role === 'user' && textOf(list[i]).trim() !== '') {
-      last = i;
-      break;
-    }
-  }
-  if (last < 0) return null;
-  const replies = list.slice(0, last).filter((m) => m?.role === 'assistant' || m?.role === 'tool').length;
-  const hash = createHash('sha1').update(textOf(list[last])).digest('hex').slice(0, 12);
-  return `${replies}:${hash}`;
+  if (turnMessage && list.some((m) => m?.id === turnMessage)) return turnMessage;
+  return previous ?? null;
 }
 
 // Un agente ausente o desconocido es build: el plugin se comporta como antes
