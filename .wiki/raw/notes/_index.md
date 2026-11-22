@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-fusion-no-ff-y-trazabilidad.md](2026-11-22-ll-fusion-no-ff-y-trazabilidad.md) | 3 lecciones: la regla de una zona no afecta a la fusión, --no-ff mantiene en main los commits citados y el título de la fusión debe nombrar el change | lessons-learned, git, no-ff, trazabilidad | 2026-11-22 |
 | [2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md](2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md) | 2 lecciones: la guidance de archivado no salta la pregunta del sync y cuándo archivar sin sincronizar | lessons-learned, openspec, archive | 2026-11-22 |
 | [2026-11-22-ll-modo-auto-instalar-opencode.md](2026-11-22-ll-modo-auto-instalar-opencode.md) | 1 lección: el modo auto de Claude Code en la nube bloqueó instalar @opencode/cli para el banco; reglas allow sin comprobar | lessons-learned, opencode, claude-code, auto-mode | 2026-11-22 |
 | [2026-11-22-ll-manage-git-discipline.md](2026-11-22-ll-manage-git-discipline.md) | 4 lecciones de manage-git-discipline: firma de commits en la nube, grupos opcionales de cucumber, worktree para probar el módulo y variables del contenedor efímero | lessons-learned, acceptance-tests, cucumber, git | 2026-11-22 |
@@ -24,6 +25,7 @@ Last updated: 2026-11-22
 
 ## Recent Changes
 
+- 2026-11-22: Lecciones de la fusión con --no-ff y la trazabilidad
 - 2026-11-22: Lecciones sobre la guidance de archivado y archivar sin sincronizar
 
 - 2026-11-22: Lecciones de replace-gherkin-lint-with-gplint
