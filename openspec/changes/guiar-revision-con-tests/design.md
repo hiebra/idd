@@ -40,7 +40,7 @@ El cierre por git compara el estado al empezar la revisión. Un archivo nuevo no
 
 ## Risks / Trade-offs
 
-- **[El agente `plan` pide permiso para cada orden de shell]** → Es lo esperado: el usuario aprueba cada ejecución. No se ha comprobado con OpenCode real que `plan` pueda ejecutar el runner; si no puede, el modelo da la orden al usuario como con la depuración. Queda como comprobación manual (task 3.2).
+- **[El agente `plan` ejecuta el runner sin pedir permiso]** → Con la configuración por defecto de OpenCode 2.3.2, la shell de `plan` no pide confirmación (comprobado en la task 3.2): el modelo ejecuta los escenarios sin que el usuario apruebe cada ejecución. Se acepta, porque el runner no cambia archivos versionados y D3 cubre lo que deja en el árbol; quien quiera aprobar cada orden puede pedirlo con los permisos de `plan` en su configuración de OpenCode. Si otra versión le quitara la shell a `plan`, el modelo daría la orden al usuario como con la depuración.
 - **[La suite tarda]** → El modelo ejecuta los escenarios que cubren lo revisado, no la suite entera, salvo en el verify.
 - **[Un modelo que no sigue la instrucción]** → La suite solo comprueba la instrucción; el resultado lo juzga el usuario, que sigue cerrando la revisión con git.
 
