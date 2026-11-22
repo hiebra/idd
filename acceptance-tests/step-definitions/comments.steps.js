@@ -1,6 +1,7 @@
 'use strict';
 
-// Steps of response-comments (add-quote-comment-rule). As with the wiki guide,
+// Steps of response-comments (add-quote-comment-rule,
+// update-comment-closing-and-quotes, update-comment-phrase-and-opencode-marker). As with the wiki guide,
 // the suite cannot check that the model follows the rule: it checks what the
 // template guarantees through the agent adapters (design D6).
 
@@ -45,17 +46,19 @@ Then(new RegExp(`^el proyecto no tiene archivos de instrucciones que ${AGENT} ca
 
 // --- Contenido de la regla ----------------------------------------------------
 
-const FIXED_REPLY =
-  'Puedes seguir comentando mi intervención, pedirme que conteste a todos tus comentarios introduciendo en el prompt la palabra "ya", o pedirme que reformule mi intervención introduciendo la palabra "reformula".';
+const FIXED_REPLY = 'Añade más comentarios o pídeme que los procese (p) o reformule (r) en base a ellos';
 
 // Each Then of the rule scenarios names one section of the rule, by its
 // identifier, so that they do not depend on its wording (design D1)
 const RULE_SECTIONS = {
   'indica que es un comentario sobre la intervención anterior del agente': 'es-comentario',
+  'indica que una cita de Markdown al principio del mensaje también es una marca de comentario': 'es-comentario-cita',
+  'indica que una cita de la web de OpenCode en el mensaje también lo convierte en un comentario': 'es-comentario-cita-web',
   'indica contestar solo con la frase fija': 'frase-fija',
+  'indica contestar en el idioma del comentario': 'idioma',
   'indica acumular el comentario sin investigar ni modificar nada a raíz de él': 'acumular',
-  'indica responder en un solo mensaje a todos los comentarios acumulados': 'ya-responde-todos',
-  'indica incluir entre ellos el propio mensaje si es un comentario': 'ya-incluye-comentario',
+  'indica responder en un solo mensaje a todos los comentarios acumulados': 'procesar-responde-todos',
+  'indica incluir entre ellos el propio mensaje si es un comentario': 'procesar-incluye-comentario',
   'indica repetir la intervención completa incorporando los comentarios acumulados': 'reformula-completa',
   'indica asumir que el usuario solo ha leído las partes que citó': 'reformula-solo-leido',
   'indica que la intervención reformulada no remite a la anterior': 'reformula-autonoma',
@@ -90,6 +93,20 @@ const REMINDER = path.join('.agents', 'comments', 'reminder.md');
 function commentsReminder(world) {
   return fs.readFileSync(path.join(world.ensureProject().dir, REMINDER), 'utf8').trim();
 }
+
+// OpenCode loads every local plugin it finds; without this one, the session
+// has only the bootstrap (ADR-0018)
+Given('un clon del proyecto sin el plugin de comentarios de OpenCode', function () {
+  fs.rmSync(path.join(this.ensureProject().dir, '.opencode', 'plugins', 'response-comments'), { recursive: true, force: true });
+});
+
+// A quote from OpenCode's web reaches the context hook as text inside the
+// user message (D1b of update-comment-phrase-and-opencode-marker)
+When(/^el usuario cita "([^"]+)" desde la web de OpenCode con el comentario "([^"]+)"$/, function (fragment, comment) {
+  this.sendMessage(
+    `\nThe user quoted the following from la respuesta:\n> ${fragment}\n\nThe user made the following comment regarding this quote: ${comment}`
+  );
+});
 
 // The rest of the line is the message: the examples carry single and double quotes
 When(/^el usuario envía el mensaje (.+)$/, function (text) {

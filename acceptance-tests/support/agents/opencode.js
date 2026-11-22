@@ -1,7 +1,10 @@
 'use strict';
 
 // OpenCode 2 agent adapter (design D6): opens a session the way OpenCode 2
-// loads the project's local plugin, .opencode/plugins/session-bootstrap/.
+// loads the project's local session plugins: .opencode/plugins/session-bootstrap/
+// and, if the project has it, .opencode/plugins/response-comments/ (D5 of
+// update-comment-phrase-and-opencode-marker). The autopilot has its own
+// simulator (opencode-sim.mjs).
 // The simulated host (opencode-host.mjs) runs as a child process with the
 // simulated machine's environment; see that file for what it simulates.
 //
@@ -19,6 +22,8 @@ const { spawnSync } = require('node:child_process');
 const HOST = path.join(__dirname, 'opencode-host.mjs');
 // OpenCode must not wait for the install to finish before it starts (design D3)
 const MAX_SETUP_MS = 2000;
+// The project's session plugins, in the order the host loads them
+const SESSION_PLUGINS = ['session-bootstrap', 'response-comments'];
 
 class OpenCodeAgent {
   get name() {
@@ -56,6 +61,10 @@ class OpenCodeAgent {
   }
 
   #open({ machine, project, workDir }, options) {
+    if (!options.plugin && !options.plugins) {
+      const plugins = SESSION_PLUGINS.filter((name, index) => index === 0 || fs.existsSync(path.join(project.dir, '.opencode', 'plugins', name, 'server.js')));
+      options = { ...options, plugins };
+    }
     const resultFile = path.join(workDir, `opencode-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
     const child = spawnSync(process.execPath, [HOST, project.dir, JSON.stringify(options), resultFile], {
       cwd: project.dir,

@@ -47,16 +47,31 @@
 //   that writes in sessions; and model responses with effects on the project
 //   (`files`, `git`) before their text or tool call. What the plugin writes to
 //   console.error is kept in `logs`.
+// - autopilot-plan-explore (design D6): an RPC delivery to the TUI whose
+//   listener waits on an open dialog (dialogWait) does not keep settle()
+//   waiting, as OpenCode's emit does not wait for the TUI; the scenario sees
+//   the dialog open in `dialogs` and closes it with `answers`. Model rules
+//   match the session's agent (`match.agent`), switched with `switchAgent`.
+//   With the plan agent, each request carries OpenCode's reminder as a user
+//   message (`<system-reminder>`): before the user's message in the first
+//   request of a turn, at the end after a tool's result in the next ones.
+//   Each stored message carries its `id` in the `context` input (a user
+//   message, the messageID of its `prompt` hook). A message sent while the
+//   turn goes on passes the `prompt` hook when it enters and joins the same
+//   loop (delivery "steer"), before the next request, with a single idle at
+//   the end. A scripted response may take `delayMs` before it acts.
 //
 // The model is a script per scenario: rules matched against the session,
 // each with a queue of responses ({ text }, { tool: { name, input } }).
 
 import fs from 'node:fs';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const BASE_SYSTEM = 'You are OpenCode (simulated system prompt).';
+const PLAN_REMINDER = '<system-reminder>\nYou are in Plan mode (simulated): you must not make any edits; only read, search and plan.\n</system-reminder>';
 const BUILTIN_TOOLS = ['edit', 'glob', 'grep', 'question', 'read', 'shell', 'skill', 'subagent', 'write'];
 
 let clock = 0;
@@ -108,6 +123,13 @@ export class Host {
       original(...args);
     };
     this.pending = new Set();
+    // Sessions with a turn running, and the messages that entered during it (steer)
+    this.running = new Set();
+    this.steering = new Map();
+    // RPC deliveries to the TUI that wait on an open dialog (see settle)
+    this.delivery = new AsyncLocalStorage();
+    // Each tracked delivery and its state ({ blocked }), set while it waits on an open dialog
+    this.deliveries = new Map();
     this.interrupted = new Set();
   }
 
@@ -124,18 +146,30 @@ export class Host {
     return p;
   }
 
+  // An RPC delivery to the TUI: tracked, and idle for settle() while it waits on an open dialog
+  trackDelivery(store, fn) {
+    const p = this.track(this.delivery.run(store, fn));
+    this.deliveries.set(p, store);
+    p.finally(() => this.deliveries.delete(p));
+    return p;
+  }
+
   crash(where, error) {
     this.out.crashes.push(`${where}: ${error?.stack ?? error}`);
   }
 
-  // Waits until no turn, hook, tool or RPC delivery is still running
+  // Waits until no turn, hook, tool or RPC delivery is still running. A
+  // delivery to the TUI that waits on an open dialog does not count: in
+  // OpenCode the server's emit does not wait for the TUI, so the scenario sees
+  // the dialog open and answers it later (autopilot-plan-explore, D6)
   async settle(limitMs = 20000) {
     const deadline = Date.now() + limitMs;
+    const idle = () => [...this.pending].every((p) => this.deliveries.get(p)?.blocked === true);
     for (;;) {
       await new Promise((resolve) => setTimeout(resolve, 10));
-      if (this.pending.size === 0) {
+      if (idle()) {
         await new Promise((resolve) => setTimeout(resolve, 30));
-        if (this.pending.size === 0) return;
+        if (idle()) return;
       }
       if (Date.now() > deadline) throw new Error(`the simulated OpenCode did not settle (${this.pending.size} pending)`);
       await Promise.race([Promise.all([...this.pending]), new Promise((resolve) => setTimeout(resolve, 50))]);
@@ -292,8 +326,7 @@ export class Host {
           return {
             events: {
               emit: (name, data) =>
-                host.track(
-                  (async () => {
+                host.trackDelivery({ rpc: definition.id, event: name, blocked: false }, async () => {
                     if (host.tuiSilent) return;
                     for (const listener of [...(entry.listeners.get(name) ?? [])]) {
                       try {
@@ -302,8 +335,7 @@ export class Host {
                         host.crash(`rpc listener ${name}`, error);
                       }
                     }
-                  })()
-                ),
+                  }),
             },
             async dispose() {},
           };
@@ -449,7 +481,18 @@ export class Host {
             host.out.dialogs.push(shown);
             let answer;
             if (host.dialogAnswers.length > 0) answer = host.dialogAnswers.shift();
-            else if (host.dialogWait) answer = await new Promise((resolve) => host.openDialogs.push(resolve));
+            else if (host.dialogWait) {
+              // Inside an RPC delivery, the open dialog is the user's to answer, not pending work.
+              // A promise the listener detached keeps the context, but its delivery is no longer
+              // tracked, so marking it changes nothing
+              const delivery = host.delivery.getStore();
+              if (delivery) delivery.blocked = true;
+              try {
+                answer = await new Promise((resolve) => host.openDialogs.push(resolve));
+              } finally {
+                if (delivery) delivery.blocked = false;
+              }
+            }
             else answer = { value: undefined };
             if (answer.delayMs) await new Promise((resolve) => setTimeout(resolve, answer.delayMs));
             // Enter chooses the highlighted (first) option; Esc closes without choosing
@@ -471,10 +514,53 @@ export class Host {
 
   startTurn(sessionID, message) {
     const session = this.session(sessionID);
+    // As OpenCode 2.3.2 (task 1.4 of autopilot-plan-explore): a message sent
+    // while the turn goes on passes the `prompt` hook when it enters and joins
+    // the same loop (delivery "steer"), with no idle in between
+    if (this.running.has(sessionID)) {
+      this.track(
+        (async () => {
+          const admitted = await this.admit(session, message);
+          this.steering.get(sessionID).push(admitted);
+        })()
+      );
+      return;
+    }
     session.time.busy = now();
     delete session.outcome;
     this.save();
-    this.track(this.turn(sessionID, message));
+    this.running.add(sessionID);
+    this.steering.set(sessionID, []);
+    this.track(this.turn(sessionID, message).finally(() => {
+      this.running.delete(sessionID);
+      this.steering.delete(sessionID);
+    }));
+  }
+
+  // The `prompt` hook of a message that enters a session; returns the message to store
+  async admit(session, message) {
+    const sessionID = session.id;
+    this.store.messageSeq = (this.store.messageSeq ?? 0) + 1;
+    const messageID = `msg_${String(this.store.messageSeq).padStart(4, '0')}`;
+    const prompt = { sessionID, messageID, prompt: { text: message.text }, delivery: 'steer' };
+    for (const hook of [...this.hooks.prompt]) {
+      try {
+        await hook(prompt);
+      } catch (error) {
+        this.crash('prompt hook', error);
+      }
+    }
+    this.out.prompts.push({ sessionID, text: message.text, final: prompt.prompt.text });
+    return { ...message, id: messageID, text: prompt.prompt.text };
+  }
+
+  // Messages that entered during the turn join it before its next request
+  joinSteered(session) {
+    const queue = this.steering.get(session.id) ?? [];
+    if (queue.length === 0) return false;
+    for (const m of queue.splice(0)) session.messages.push({ type: 'user', id: m.id, text: m.text });
+    this.save();
+    return true;
   }
 
   visibleTools() {
@@ -483,17 +569,30 @@ export class Host {
 
   request(session) {
     const messages = [];
-    for (const m of session.messages) {
-      if (m.type === 'user' || m.type === 'synthetic') messages.push({ role: 'user', content: [{ type: 'text', text: m.text }] });
+    // Each stored message carries its id (a user message, the messageID of its
+    // `prompt` hook); a tool's result has none (task 1.4 of autopilot-plan-explore)
+    const withId = (m, id) => (id ? { id, ...m } : m);
+    session.messages.forEach((m, index) => {
+      if (m.type === 'user' || m.type === 'synthetic') messages.push(withId({ role: 'user', content: [{ type: 'text', text: m.text }] }, m.id));
       if (m.type === 'assistant') {
+        const id = m.id ?? `msg_a${index}`;
         for (const part of m.content) {
-          if (part.type === 'text') messages.push({ role: 'assistant', content: [{ type: 'text', text: part.text }] });
+          if (part.type === 'text') messages.push(withId({ role: 'assistant', content: [{ type: 'text', text: part.text }] }, id));
           if (part.type === 'tool') {
-            messages.push({ role: 'assistant', content: [{ type: 'tool-call', name: part.name, input: part.state.input }] });
+            messages.push(withId({ role: 'assistant', content: [{ type: 'tool-call', name: part.name, input: part.state.input }] }, id));
             messages.push({ role: 'tool', content: [{ type: 'tool-result', name: part.name, result: { type: 'text', value: part.state.content?.[0]?.text ?? '' } }] });
           }
         }
       }
+    });
+    // As OpenCode 2.3.2 with the plan agent (task 1.1 of autopilot-plan-explore):
+    // its reminder goes before the user's message in the first request of the
+    // turn, and at the end, after the tool's result, in the next ones
+    if (session.agent === 'plan') {
+      // Without an id in the first request; already stored, with its own one, after a tool
+      const reminder = { role: 'user', content: [{ type: 'text', text: PLAN_REMINDER }] };
+      if (messages.at(-1)?.role === 'user') messages.splice(messages.length - 1, 0, reminder);
+      else messages.push({ id: `msg_r${session.messages.length}`, ...reminder });
     }
     return {
       sessionID: session.id,
@@ -523,19 +622,11 @@ export class Host {
 
   async turn(sessionID, message) {
     const session = this.session(sessionID);
-    const prompt = { sessionID, messageID: `msg_${session.messages.length}`, prompt: { text: message.text }, delivery: 'steer' };
-    for (const hook of [...this.hooks.prompt]) {
-      try {
-        await hook(prompt);
-      } catch (error) {
-        this.crash('prompt hook', error);
-      }
-    }
-    this.out.prompts.push({ sessionID, text: message.text, final: prompt.prompt.text });
-    message = { ...message, text: prompt.prompt.text };
-    session.messages.push({ type: 'user', text: message.text, ...(message.skills?.length ? { skills: message.skills } : {}), ...(message.command ? { command: message.command } : {}) });
+    message = await this.admit(session, message);
+    session.messages.push({ type: 'user', id: message.id, text: message.text, ...(message.skills?.length ? { skills: message.skills } : {}), ...(message.command ? { command: message.command } : {}) });
     this.save();
     for (let i = 0; i < 20; i++) {
+      this.joinSteered(session);
       const input = this.request(session);
       let failed = null;
       for (const hook of [...this.hooks.context]) {
@@ -564,6 +655,7 @@ export class Host {
       }
       if (this.interrupted.delete(sessionID)) return this.interrupt(session);
       const response = this.scriptedResponse(session, input);
+      if (response.delayMs) await new Promise((resolve) => setTimeout(resolve, response.delayMs));
       this.applyEffects(response);
       if (response.tool) {
         const tool = this.tools.get(response.tool.name);
@@ -588,6 +680,8 @@ export class Host {
         continue;
       }
       session.messages.push({ type: 'assistant', agent: session.agent, content: [{ type: 'text', text: response.text ?? '' }] });
+      // A message that entered meanwhile gets the next request, in the same loop
+      if (this.joinSteered(session)) continue;
       session.messages.push({ type: 'idle', outcome: 'succeeded' });
       session.outcome = 'succeeded';
       session.time.idle = now();

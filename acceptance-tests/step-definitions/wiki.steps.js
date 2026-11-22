@@ -676,10 +676,11 @@ const openspec = require('../support/openspec');
 // (design D6), so that the check does not depend on the guidance's wording
 const RESYNC_STEPS = {
   'fijar como fuentes, en el commit del archivado, el código, specs y ADRs que tocó': /\/wiki:ingest-collection\b.*--manifest-only/,
-  'refrescar los artículos cuyas fuentes cambiaron y compilar las fuentes nuevas': /\/wiki:refresh\b.*\/wiki:compile\b/,
-  'revisar con el librarian, sin modificar, lo que quedó obsoleto o contradicho': /\/wiki:librarian scan\b/,
+  'refrescar sin escribir los artículos que citan lo que tocó el change': /\/wiki:refresh\b/,
   'extraer las lecciones aprendidas sin escribir': /\/wiki:ll\b.*--dry-run/,
-  'presentarlo al usuario y escribir solo lo que confirme': /confirm/i,
+  'revisar sin escribir los registros del inventario que el change completa o deja obsoletos': /\/wiki:inventory list\b/,
+  'presentarlo al usuario y escribir solo lo que confirme: refresco, lecciones, compile, inventario':
+    /confirm.*\/wiki:refresh\b.*\/wiki:ll\b.*\/wiki:compile\b.*\/wiki:inventory update\b/i,
   'pasar el lint del wiki hasta dejarlo sin errores': /\/wiki:lint\b/,
   'hacer el commit del wiki después del commit del archivado': /commit del wiki.*después del commit del archivado/i,
 };
@@ -702,4 +703,9 @@ Then('incluyen resincronizar el wiki del proyecto con estos pasos, en este orden
     assert.ok(at > last, `the archive guidance has no '${paso}' after the previous step:\n${JSON.stringify(guidance, null, 2)}`);
     last = at;
   }
+});
+
+Then('no incluyen la revisión con el librarian', function () {
+  const librarian = this.archiveGuidance.map(String).filter((entry) => /\/wiki:librarian\b/.test(entry));
+  assert.deepEqual(librarian, [], `the archive guidance still runs the librarian:\n${JSON.stringify(librarian, null, 2)}`);
 });

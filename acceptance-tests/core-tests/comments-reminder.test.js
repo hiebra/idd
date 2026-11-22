@@ -1,11 +1,15 @@
 'use strict';
 
 // Core test of the session bootstrap, outside the specs (design D2 of
-// add-quote-comment-rule): the comments-reminder mode reads the user's message
-// on stdin and prints the reminder of the comments rule only when the message
-// is a comment (it starts with a string between single quotes) or contains a
-// closing word ("ya" or "reformula") outside that string. PROJECT_COMMENTS=off
-// turns it off, and it always exits with 0.
+// add-quote-comment-rule, D1 and D2 of update-comment-closing-and-quotes, D1
+// and D1b of update-comment-phrase-and-opencode-marker): the
+// comments-reminder mode reads the user's message on stdin and prints the
+// reminder of the comments rule only when the message is a comment or contains
+// a closing word (p, procesa, procesar, r, reformula, reformular). A comment
+// starts, after any leading HTML comments, with a string between doubled single
+// quotes ('') or a Markdown quote, or it holds a quote from OpenCode's web
+// (a "The user quoted the following from …:" line followed by "> " lines). PROJECT_COMMENTS=off turns it off, and it always exits
+// with 0.
 //
 // Run with: npm run test:core
 
@@ -31,27 +35,52 @@ function commentsReminder(message, { agent = 'claude-code', env = {} } = {}) {
   return result.stdout;
 }
 
+const WEB_QUOTE = '\nThe user quoted the following from la respuesta:\n> el segundo punto\n> y el tercero\n';
+
 const ACTIVATE = [
-  "'el segundo punto' no lo entiendo",
-  'ya',
+  "''el segundo punto'' no lo entiendo",
+  "   ''con espacios delante'' sobra",
+  "''esto sobra''",
+  "''p'' no",
+  "<!-- attach -->\n''tras una marca''",
+  '> el segundo punto',
+  '>sin espacio',
+  '<!-- attach -->\n> mensaje citado\n\nqué tal este?',
+  '<!-- attach --> <!-- otra -->\n\n> cita tras dos marcas',
+  '  > con espacios delante',
+  WEB_QUOTE,
+  `${WEB_QUOTE}\nThe user made the following comment regarding this quote: no lo entiendo`,
+  `mira esto${WEB_QUOTE}\nThe user made the following comment regarding this quote: no lo entiendo`,
+  'p',
+  'R',
+  'procesa',
+  'Procesar los comentarios',
   'Reformula, por favor',
-  "   'con espacios delante' sobra",
-  'YA',
-  'vale, ya.',
-  "'ya está bien' sobra",
-  "'esto sobra'",
-  'creo que\nya',
-  "'ya' no",
+  'reformular',
+  'vale, p.',
+  'creo que\nr',
 ];
 
 const IGNORE = [
   '"foo" no aparece en el log',
+  'ya',
+  'ya lo veo',
   'mayo empieza el lunes',
   '¿lo reformulamos mañana?',
+  'el resultado es a > b',
+  '<!-- attach -->',
   "'' vacío",
+  "'''' vacío",
+  "'el segundo punto' no lo entiendo",
+  "'esto sobra'",
+  "''sin cierre",
+  "''a'b'' con una comilla dentro",
+  '\nThe user quoted the following from la respuesta:\nsin cita debajo',
+  'The user quoted the following from la respuesta: > en la misma línea',
   "sin comillas al principio 'aquí'",
-  'yate',
-  'ayá',
+  'pr',
+  'reformulado',
+  'procesado',
   '',
 ];
 
@@ -71,7 +100,7 @@ for (const agent of ['claude-code', 'opencode']) {
 }
 
 test('PROJECT_COMMENTS=off: no reminder and no rule', () => {
-  assert.equal(commentsReminder("'el segundo punto' no lo entiendo", { env: { PROJECT_COMMENTS: 'off' } }), '');
+  assert.equal(commentsReminder("''el segundo punto'' no lo entiendo", { env: { PROJECT_COMMENTS: 'off' } }), '');
   const result = spawnSync('bash', [CORE, 'comments-rule', 'claude-code', ROOT], {
     encoding: 'utf8',
     env: { ...process.env, PROJECT_COMMENTS: 'off' },

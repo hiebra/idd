@@ -6,9 +6,9 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 23 raw documents
-- Articles: 10 compiled wiki articles
-- Inventory records: 4 tracked items
+- Sources: 61 raw documents
+- Articles: 13 compiled wiki articles
+- Inventory records: 6 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
 - Last compiled: 2026-11-22
@@ -29,6 +29,26 @@ Last updated: 2026-11-22
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: 1 lección sobre el archivo de rerun de cucumber-js; suite-de-aceptacion-y-spec-as-source actualizado
+
+- 2026-11-22: Resincronizado con el archivado de apply-one-task-per-session-in-normal-mode: manifiesto en idd@f9f014c, ADR-0025 y el bloque de apply del autopilot en el artículo del ciclo, y 1 cita a ADR-0006 matizada
+
+- 2026-11-22: 1 lección de apply-one-task-per-session-in-normal-mode (unref() y node --test); suite-de-aceptacion-y-spec-as-source actualizado
+
+- 2026-11-22: Resincronizado con reorder-wiki-resync (idd@fc31fe5): manifiesto, flujo-wiki-first con la secuencia nueva y 1 lección en suite-de-aceptacion-y-spec-as-source
+
+- 2026-11-22: 2 lecciones del motor 1.0.0 (lint --fix y librarian scan) en raw/notes; flujo-wiki-first actualizado
+
+- 2026-11-22: 7 lecciones de windows-support en raw/notes; 3 artículos actualizados y una tarea en el inventario (la prueba intermitente del autopilot)
+
+- 2026-11-22: Resincronizado con git-discipline-standard-with-exception (ADR-0020): manifiesto idd@e9fced1, 4 artículos actualizados y 5 lecciones
+
+- 2026-11-22: Conflictos entre deltas concurrentes (lecciones y concepto nuevo) y la hipótesis del usuario sobre el motivo de la forma canónica
+
+- 2026-11-22: Compilado el concepto worktrees-de-opencode (2 fuentes)
+
+- 2026-11-22: Worktrees de OpenCode 2.3.2 (fuente) y 3 lecciones sobre crearlos desde origin/main
 
 - 2026-11-22: 3 páginas de la documentación de OpenSpec (archive y sync) y 2 lecciones sobre la guidance de archivado; flujo-wiki-first actualizado
 
