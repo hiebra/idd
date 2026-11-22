@@ -20,7 +20,8 @@
 // solo módulos node:, porque el propio arranque es lo que instala las
 // dependencias del proyecto.
 
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 
 const ID = "session-bootstrap";
@@ -29,6 +30,9 @@ const PATH_WARNING =
   "session-start: no se ha podido ajustar el PATH de la sesión; ejecuta el CLI del proyecto con 'npx openspec'";
 const ENGINE_WARNING =
   "session-start: no se ha podido exportar CLAUDE_PLUGIN_ROOT; las operaciones del wiki que usan el helper del motor no lo encontrarán";
+
+const GIT_BASH_WARNING =
+  "session-start: en Windows, el arranque de sesión necesita Git for Windows, y no se ha encontrado su bash; instálalo y abre de nuevo la sesión";
 
 // Si el núcleo tarda más que esto, se avisa de que los comandos esperan a la instalación
 const SLOW_CORE_MS = 3000;
@@ -63,6 +67,39 @@ const RPC = {
 
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
+// El bash con el que se ejecuta el núcleo (design D5 de windows-support):
+// fuera de Windows, el del PATH; en Windows, el de Git for Windows, aunque
+// haya otro bash antes en el PATH (el de WSL), o null si no está. Se busca a
+// partir de `git --exec-path` (<raíz>\mingw64\libexec\git-core) y, si no,
+// en la instalación por defecto
+let bashFound;
+function coreBash() {
+  if (process.platform !== "win32") return "bash";
+  if (bashFound !== undefined) return bashFound;
+  const candidates = [];
+  try {
+    const exec = execFileSync("git", ["--exec-path"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 10000,
+      windowsHide: true,
+    }).trim();
+    if (exec) candidates.push(path.join(exec, "..", "..", "..", "bin", "bash.exe"));
+  } catch {
+    // sin git en el PATH
+  }
+  if (process.env.ProgramFiles) candidates.push(path.join(process.env.ProgramFiles, "Git", "bin", "bash.exe"));
+  bashFound =
+    candidates.find((candidate) => {
+      try {
+        return fs.statSync(candidate).isFile();
+      } catch {
+        return false;
+      }
+    }) ?? null;
+  return bashFound;
+}
+
 // Ejecuta el núcleo en un modo que imprime un texto para el agente (guide,
 // reminder, comments-rule o comments-reminder, que lee `input` por stdin) y
 // resuelve con ese texto, o con "" si no hay o falla; nunca rechaza
@@ -70,7 +107,12 @@ function coreText(directory, mode, input = null) {
   return new Promise((resolve) => {
     let stdout = "";
     try {
-      const child = spawn("bash", [path.join(directory, CORE), mode, "opencode", directory], {
+      const bash = coreBash();
+      if (!bash) {
+        resolve("");
+        return;
+      }
+      const child = spawn(bash, [path.join(directory, CORE), mode, "opencode", directory], {
         cwd: directory,
         stdio: [input === null ? "ignore" : "pipe", "pipe", "ignore"],
       });
@@ -130,7 +172,12 @@ function runCore(directory) {
       resolve({ bin: value("bin"), engine: value("wiki-engine"), warnings: [...warnings, ...extra] });
     };
     try {
-      child = spawn("bash", [path.join(directory, CORE), directory], {
+      const bash = coreBash();
+      if (!bash) {
+        finish([GIT_BASH_WARNING]);
+        return;
+      }
+      child = spawn(bash, [path.join(directory, CORE), directory], {
         cwd: directory,
         stdio: ["ignore", "pipe", "pipe"],
       });
