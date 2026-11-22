@@ -94,4 +94,4 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
   - que el arranque completa el clon, pone al día `main` y guarda la rama de la sesión;
   - que `check commit` deja seguir en `claude/magical-turing-3z291f` y no deja con zonas mezcladas;
   - que `check propose` en `main` avisa sin bloquear.
-- [ ] 6.4 Ejecutar `openspec validate manage-git-discipline --type change --strict` antes del archive. Como en los changes anteriores, el criterio es la validación sin `--strict`; en modo estricto solo deben quedar los avisos de idioma (SHALL/MUST) y de formato (Gherkin en bloques de código)
+- [x] 6.4 Ejecutar `openspec validate manage-git-discipline --type change --strict` antes del archive. Como en los changes anteriores, el criterio es la validación sin `--strict`; en modo estricto solo deben quedar los avisos de idioma (SHALL/MUST) y de formato (Gherkin en bloques de código)
