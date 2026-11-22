@@ -35,6 +35,9 @@
 
 import { HELLO_RETRY_MS, RPC, rpcUnavailable } from './lib/rpc.mjs';
 
+// Las pausas antes de abrir «Name worktree» tras «Manage workspaces» (design D4)
+const NAME_DIALOG_PAUSES_MS = [200, 600];
+
 const log = (...args) => console.error(`[${RPC.id}]`, ...args);
 const POLL_MS = 300;
 
@@ -139,8 +142,17 @@ export default {
               toast('openspec-autopilot: esta TUI no deja abrir el diálogo de worktrees; ábrelo con «Manage workspaces».', 'warning');
               return;
             }
+            // «Manage workspaces» tarda en montarse: un dispatch seguido no abre
+            // «Name worktree» (comprobado con OpenCode 2.3.2; design D4)
             await keymap.dispatch('session.move');
-            await keymap.dispatch('dialog.move_session.new');
+            let opened = false;
+            for (const pause of NAME_DIALOG_PAUSES_MS) {
+              await new Promise((resolve) => setTimeout(resolve, pause));
+              if (signal.aborted) return;
+              opened = (await keymap.dispatch('dialog.move_session.new')) !== false;
+              if (opened) break;
+            }
+            if (!opened) toast('openspec-autopilot: no se ha podido abrir el diálogo de nombre; pulsa ctrl+a en «Manage workspaces».', 'warning');
           } else if (choice === 'origin') {
             const result = await client.origin({ instance }, at(dir));
             toast(result?.message ?? '', result?.ok ? 'info' : 'warning');
