@@ -162,3 +162,13 @@
 ## [2026-11-22] compile | archivado de allow-user-requested-merges (idd@cac0041) en ciclo-de-un-change-y-autopilot, origen-de-openspec-git-discipline y flujo-wiki-first; librarian scan sin hallazgos
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, update-comment-phrase-and-opencode-marker @ 1657745): 1 manifest, 18 files pinned
+
+## [2026-11-22] refresh | update-comment-phrase-and-opencode-marker @ 1657745: 4 articles refreshed (regla-de-comentarios, hook-context-opencode, arranque-de-sesion, suite-de-aceptacion-y-spec-as-source)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "update-comment-phrase-and-opencode-marker" → raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md (3 lessons, 3 articles updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
