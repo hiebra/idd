@@ -16,3 +16,15 @@ Then indica tomar el blob de la ruta en el manifiesto citado
 And indica resolverlo con git por su blob
 And indica no tratar la cita como rota
 ```
+
+### Requirement: Resincronizar el wiki al archivar en la rama de origen
+Cuando un change se archiva en la rama de origen, en la forma canónica, las indicaciones de archivado DEBEN calcular las rutas que tocó el change a partir de las fusiones de su propuesta y de su implementación con la rama de origen, más el commit del archive, en vez de a partir del merge-base de una rama temporal. El commit del wiki DEBE ir igualmente aparte y después del commit del archive.
+
+#### Scenario: Las indicaciones de archivado cubren el archive en la rama de origen
+
+```gherkin
+Given el `openspec/config.yaml` del proyecto
+When se consultan las indicaciones de archivado para un change archivado en la rama de origen
+Then indican calcular las rutas que tocó el change a partir de las fusiones de su propuesta y de su implementación y del commit del archive
+And indican hacer el commit del wiki después del commit del archive
+```

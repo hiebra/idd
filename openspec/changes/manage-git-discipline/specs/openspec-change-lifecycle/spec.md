@@ -1,6 +1,6 @@
 # openspec-change-lifecycle
 
-El ciclo de una rama y una sola fusión (ADR-0007) se adapta a clones con la rama de origen local atrasada, a sesiones en contenedores efímeros, donde el agente hace commit y push en la rama de la sesión, a la fusión con o sin squash y a ramas concurrentes que crean ADRs.
+El ciclo de una rama y una sola fusión (ADR-0007) pasa a ser la forma recomendada, y se admite también la forma canónica de intent-driven. Además se adapta a clones con la rama de origen local atrasada, a sesiones en contenedores efímeros, donde el agente hace commit y push en la rama de la sesión, al squash y a ramas concurrentes que crean ADRs.
 
 ## MODIFIED Requirements
 
@@ -51,6 +51,70 @@ And una rama temporal que sale de la rama de origen local
 When se consulta el change de la rama temporal
 Then el merge-base se calcula contra la rama de origen local
 And se avisa de que la rama de origen local y la remota han divergido
+```
+
+### Requirement: Un change, una rama y una sola fusión
+La forma recomendada del ciclo es hacer todo el change (propuesta, implementación, archive y resincronización del wiki) en una sola rama temporal, archivar en ella y llevarla a la rama de origen en una única fusión con `--no-ff`. La skill de disciplina de git DEBE recomendarla, y el ciclo DEBE poder hacerse entero así. Los workflows de OpenSpec NO DEBEN exigir que la propuesta haya llegado a la rama de origen antes del apply. DEBE admitirse además la forma canónica de intent-driven: fusionar la propuesta con la rama de origen antes del apply, y archivar en la rama de origen después de fusionar la implementación. Un change en curso en la rama de origen DEBE poder archivarse allí solo si todas sus tasks están hechas.
+
+#### Scenario: El apply empieza con la propuesta solo en la rama temporal
+
+```gherkin
+Given una rama temporal con el change en curso `exportar-datos`
+And la propuesta de `exportar-datos` tiene commit en la rama temporal y no está en la rama de origen
+When se lanza el apply de `exportar-datos`
+Then el apply no se detiene porque la propuesta no esté en la rama de origen
+```
+
+#### Scenario: El apply empieza con la propuesta ya fusionada en la rama de origen
+
+```gherkin
+Given una rama de origen con el change en curso `exportar-datos` sin tasks hechas
+And una rama temporal que sale de ella después de ese change
+When se lanza el apply de `exportar-datos` en la rama temporal
+Then el apply no se detiene
+```
+
+#### Scenario: El archive se hace en la rama temporal
+
+```gherkin
+Given una rama temporal con el change `exportar-datos` implementado
+And la implementación no está fusionada con la rama de origen
+When se lanza el archive de `exportar-datos` en la rama temporal
+Then el change queda archivado en la rama temporal
+And la resincronización del wiki se hace en la rama temporal, después del commit del archive
+```
+
+#### Scenario: El archive no se hace en una rama permanente
+
+```gherkin
+Given el clon está en la rama de origen
+And la rama de origen no tiene el change en curso `exportar-datos`
+When se lanza el archive de un change
+Then el archive se detiene
+And se indica que el archive se hace en la rama temporal del change
+```
+
+#### Scenario Outline: El archive en la rama de origen
+
+```gherkin
+Given el clon está en la rama de origen
+And la rama de origen tiene el change en curso `exportar-datos` con <tasks>
+When se lanza la puerta `check archive` de `exportar-datos`
+Then la puerta <resultado>
+
+Examples:
+  | tasks                 | resultado                                          |
+  | todas las tasks hechas | deja seguir                                        |
+  | tasks sin hacer        | no deja seguir e indica que faltan tasks por hacer |
+```
+
+#### Scenario: La skill recomienda la fusión con --no-ff
+
+```gherkin
+Given la skill de disciplina de git del proyecto
+When se revisa qué indica sobre la fusión de la rama temporal
+Then recomienda la forma de una rama con una fusión con `--no-ff`
+And indica que la forma canónica y el squash también se admiten
 ```
 
 ### Requirement: Los commits y las fusiones los hace el usuario
@@ -151,15 +215,16 @@ Examples:
   | `src/exportar.js` y `openspec/changes/exportar-datos/design.md`  | no deja seguir |
 ```
 
-### Requirement: Fusión con o sin squash
-La rama temporal PUEDE llegar a la rama de origen con una fusión normal o con squash, a elección del usuario. Ningún paso del ciclo DEBE depender de que los commits de la rama temporal lleguen a la rama de origen.
+### Requirement: El ciclo no depende de que los commits de la rama lleguen a la rama de origen
+Ningún paso del ciclo DEBE depender de que los commits de la rama temporal lleguen a la rama de origen, para que el squash no rompa nada.
 
 #### Scenario: La skill admite el squash
 
 ```gherkin
 Given la skill de disciplina de git del proyecto
-When se revisa qué indica sobre la fusión de la rama temporal
-Then indica que la fusión puede ser normal o con squash, a elección del usuario
+When se revisa qué indica sobre el squash
+Then indica que el squash se admite
+And indica que las citas del wiki a commits de la rama se resuelven entonces por su blob
 ```
 
 ### Requirement: Números de ADR sin choques entre ramas
@@ -189,14 +254,14 @@ Examples:
   | `adr/0011-importar-en-lote.md`               | no deja seguir e indica renumerar `0011`      |
 ```
 
-### Requirement: El motivo del archive en la rama temporal está donde se archiva
-La skill de disciplina de git y las indicaciones de archivado de `openspec/config.yaml` DEBEN dar el motivo de archivar en la rama temporal antes de fusionar: que el plan, el código, el archive y el wiki lleguen juntos en una sola fusión, y que la rama permanente no reciba commits directos. Las dos DEBEN nombrar la regla heredada de intent-driven (archivar desde la rama permanente después de fusionar) y decir que este proyecto no la aplica.
+### Requirement: Cuándo conviene cada forma del ciclo, donde se archiva
+La skill de disciplina de git y las indicaciones de archivado de `openspec/config.yaml` DEBEN explicar las dos formas del ciclo y cuándo conviene cada una. La forma recomendada, con el archive en la rama temporal y una fusión con `--no-ff`, hace que el plan, el código, el archive y el wiki lleguen en una sola fusión, y que la rama permanente no reciba commits directos. La forma canónica de intent-driven permite revisar el plan aparte y reserva pronto los números de ADR, a cambio de tres fusiones y de commits del archive y del wiki en la rama permanente. Las dos DEBEN presentar la forma canónica como admitida, no como una infracción.
 
-#### Scenario: El motivo y la regla descartada están en la skill y en las indicaciones de archivado
+#### Scenario: Las dos formas del ciclo están en la skill y en las indicaciones de archivado
 
 ```gherkin
 Given la skill de disciplina de git y el `openspec/config.yaml` del proyecto
 When se revisa qué dicen sobre dónde se archiva
-Then los dos dan el motivo de archivar en la rama temporal antes de fusionar
-And los dos dicen que la regla heredada de archivar desde la rama permanente no se aplica
+Then los dos explican la forma recomendada y la forma canónica, con cuándo conviene cada una
+And ninguno trata la forma canónica como una infracción
 ```
