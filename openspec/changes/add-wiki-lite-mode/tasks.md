@@ -1,0 +1,62 @@
+`acceptance-tests/` ya existe, así que se omite la puesta en marcha de la suite. Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → commit. Un commit nunca mezcla la zona de specs con la de código; los `tasks.md` y `openspec/config.yaml` son neutros.
+
+Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/changes/add-wiki-lite-mode/specs/*/spec.feature`. Las referencias D1 a D8 son las del `design.md` del change. Lo que se compruebe en real y sirva en otra ocasión se apunta como lección candidata; el wiki de este repositorio está deshabilitado, así que no se registra nada en él.
+
+## 1. Punto de partida
+
+- [ ] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core`, `npm run lint:specs`), y guardar la guía y el recordatorio de hoy (`.agents/wiki/guide.md` y `reminder.md`, ya entregados por el núcleo para los dos agentes) como referencia del texto de `full` que no debe cambiar (D2)
+- [ ] 1.2 Comprobar en real que los dos comandos `/toggle-wiki` reciben el argumento con `$ARGUMENTS` (OpenCode 2.3.2 y Claude Code) y fijar con ello el paso `toggle-wiki:mode` de D6. Si no hay banco de OpenCode en la nube, avisar al usuario y seguir con lo que no dependa de él
+
+## 2. Núcleo: leer el modo y preparar los textos (D1, D2)
+
+- [ ] 2.1 Añadir a `core-tests/wiki-markers.test.js` pruebas de:
+  - la tabla de D1: modo ausente, `"full"`, `"lite"`, y los valores inválidos (`"light"`, `"Lite"`, `""`, `lite` sin comillas, un número), con el wiki habilitado y deshabilitado;
+  - el aviso del modo principal ante un valor inválido, con el prefijo `session-start:`, los modos `full` y `lite` y el valor recibido, y que `guide` y `reminder` usan `full` sin avisar;
+  - los textos de `full` iguales, carácter a carácter, a los de la tarea 1.1, para los dos agentes;
+  - los bloques mal formados (sin cerrar, de un modo que no existe, anidados), que no entregan el texto.
+
+  Rojo sin la lectura del modo
+- [ ] 2.2 Implementar en `.agents/hooks/session-bootstrap.sh` `wiki_current_mode`, el aviso del modo principal y el tratamiento de los bloques de modo en `wiki_text` (D2), con el recordatorio como párrafo único. Documentarlo en la cabecera del script → verde la prueba de 2.1 → commit
+
+## 3. Núcleo: cambiar el modo (D5)
+
+- [ ] 3.1 Añadir a `core-tests/wiki-toggle.test.js` pruebas de `wiki mode <full|lite>` y de `status`:
+  - escribe `"mode"`, inserta la clave si falta y crea `engine.json` si no existe, sin reescribir el resto del archivo;
+  - no cambia `enabled`, `config.yaml` ni el motor, con el wiki habilitado y deshabilitado;
+  - con el modo ya declarado, o ausente y pedido `full`, `changed=false` y nada en el stage; con un valor inválido, lo reescribe;
+  - pasa al stage solo `engine.json`, sin commit;
+  - otro argumento no escribe nada, avisa con los modos que existen y sale con 0;
+  - `status` imprime `mode=` y avisa de un valor inválido;
+  - `on` y `off` conservan `"mode"`.
+
+  Rojo sin la acción
+- [ ] 3.2 Implementar `set_field` (generalizando `set_enabled`), la acción `mode` del modo `wiki` y `mode=` en `status` → verde la prueba de 3.1 → commit
+
+## 4. Guía y recordatorio: los bloques de modo (D2, D3, D4)
+
+- [ ] 4.1 Añadir a `core-tests/wiki-markers.test.js` pruebas de que la guía y el recordatorio de `lite`, para los dos agentes:
+  - tienen los identificadores `consultar-a-peticion` y `no-consultar-por-iniciativa`, y no `consultar-antes`, `peticiones-con-conocimiento`, `operaciones-sin-conocimiento` ni `discernir-peticiones`;
+  - fuera de la consulta, tienen las mismas líneas que los de `full`;
+  - la guía no pasa de 6.000 caracteres y el recordatorio, de 600;
+  - el recordatorio dice «salvo que el usuario lo pida expresamente» y no «consulta antes».
+
+  Rojo sin los bloques de `lite`
+- [ ] 4.2 Marcar en `.agents/wiki/guide.md` y `.agents/wiki/reminder.md` lo propio de cada modo y añadir lo de `lite` (D3, D4) → verde la prueba de 4.1 y la de 2.1 (`full` sin cambios) → commit
+
+## 5. Suite: el modo es del clon (D8)
+
+- [ ] 5.1 Añadir a `support/machine.js` el modo del `engine.json` del proyecto de prueba (`wikiMode`) y definir los pasos `un clon del proyecto con el wiki habilitado sin declarar ningún modo|en el modo <modo>|en un modo que no existe`, `... con el wiki deshabilitado y declarado el modo lite`, las variantes `una sesión de <agente> abierta en un proyecto con el wiki habilitado en el modo <modo>` y `un proyecto con el wiki habilitado en el modo lite`, y el paso de la plantilla sin modo. Comprobar que los escenarios vigentes con el wiki habilitado pasan en los dos agentes sin declarar modo → commit
+- [ ] 5.2 `llm-wiki: Dos modos del wiki habilitado, declarados en el ajuste del proyecto` (los cuatro escenarios) y `Aviso ante un modo del wiki que no existe`. Rojo → definir los pasos, con `guideAsDelivered(agente, modo)` y la función de `support/` que aplica los bloques de D2, y el aviso por `systemMessage` y por toast → verde → commit
+- [ ] 5.3 `wiki-first-knowledge: En el modo lite, el wiki se consulta solo a petición expresa` y los escenarios modificados de la guía, la consulta, el discernimiento y el hueco: los pasos `la guía del wiki del proyecto en el modo <modo>`, «solo cambia lo que indica sobre cuándo consultar el wiki», «no incluye lo propio del otro modo» y las indicaciones de archivado en `lite`. Rojo → verde → commit
+- [ ] 5.4 `wiki-first-knowledge: Recordatorio del flujo en cada mensaje` en `lite`. Rojo → definir los pasos del recordatorio de `lite` en los dos agentes → verde → commit
+
+## 6. `/toggle-wiki` con argumento (D6)
+
+- [ ] 6.1 `llm-wiki: Cambiar el modo del wiki con /toggle-wiki lite y /toggle-wiki full` y el escenario `Deshabilitar y habilitar el wiki conserva su modo`. Rojo → añadir el paso `toggle-wiki:mode` y los textos del paso 5 a `.claude/commands/toggle-wiki.md` y `.opencode/commands/toggle-wiki.md`, y extender `support/toggle-wiki.js` y los pasos con el argumento → verde → commit
+- [ ] 6.2 Comprobar en real, con el banco de la tarea 1.2 y un proyecto de prueba, `/toggle-wiki lite`, `/toggle-wiki full`, `/toggle-wiki light` y `/toggle-wiki` en los dos agentes. Lo que no se pueda comprobar en la nube se dice al usuario
+
+## 7. Documentación y cierre
+
+- [ ] 7.1 Describir en `README.md` los dos modos, que el modo es el ajuste `"mode"` de `engine.json` y que se cambia con `/toggle-wiki lite|full` → commit
+- [ ] 7.2 Ejecutar la suite completa (`npm test`, `npm run test:core`, `npm run lint:specs`): cada escenario pasa, sin pasos pendientes ni sin definir, y el informe HTML generado
+- [ ] 7.3 Ejecutar `openspec validate add-wiki-lite-mode --type change --strict` antes del archive
