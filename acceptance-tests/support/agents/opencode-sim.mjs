@@ -47,11 +47,17 @@
 //   that writes in sessions; and model responses with effects on the project
 //   (`files`, `git`) before their text or tool call. What the plugin writes to
 //   console.error is kept in `logs`.
+// - autopilot-plan-explore (design D6): an RPC delivery to the TUI whose
+//   listener waits on an open dialog (dialogWait) does not keep settle()
+//   waiting, as OpenCode's emit does not wait for the TUI; the scenario sees
+//   the dialog open in `dialogs` and closes it with `answers`. Model rules
+//   match the session's agent (`match.agent`), switched with `switchAgent`.
 //
 // The model is a script per scenario: rules matched against the session,
 // each with a queue of responses ({ text }, { tool: { name, input } }).
 
 import fs from 'node:fs';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -108,6 +114,9 @@ export class Host {
       original(...args);
     };
     this.pending = new Set();
+    // RPC deliveries to the TUI that wait on an open dialog (see settle)
+    this.delivery = new AsyncLocalStorage();
+    this.blockedDeliveries = 0;
     this.interrupted = new Set();
   }
 
@@ -128,14 +137,18 @@ export class Host {
     this.out.crashes.push(`${where}: ${error?.stack ?? error}`);
   }
 
-  // Waits until no turn, hook, tool or RPC delivery is still running
+  // Waits until no turn, hook, tool or RPC delivery is still running. A
+  // delivery to the TUI that waits on an open dialog does not count: in
+  // OpenCode the server's emit does not wait for the TUI, so the scenario sees
+  // the dialog open and answers it later (autopilot-plan-explore, D6)
   async settle(limitMs = 20000) {
     const deadline = Date.now() + limitMs;
+    const idle = () => this.pending.size <= this.blockedDeliveries;
     for (;;) {
       await new Promise((resolve) => setTimeout(resolve, 10));
-      if (this.pending.size === 0) {
+      if (idle()) {
         await new Promise((resolve) => setTimeout(resolve, 30));
-        if (this.pending.size === 0) return;
+        if (idle()) return;
       }
       if (Date.now() > deadline) throw new Error(`the simulated OpenCode did not settle (${this.pending.size} pending)`);
       await Promise.race([Promise.all([...this.pending]), new Promise((resolve) => setTimeout(resolve, 50))]);
@@ -293,7 +306,7 @@ export class Host {
             events: {
               emit: (name, data) =>
                 host.track(
-                  (async () => {
+                  host.delivery.run({ rpc: definition.id, event: name }, async () => {
                     if (host.tuiSilent) return;
                     for (const listener of [...(entry.listeners.get(name) ?? [])]) {
                       try {
@@ -302,7 +315,7 @@ export class Host {
                         host.crash(`rpc listener ${name}`, error);
                       }
                     }
-                  })()
+                  })
                 ),
             },
             async dispose() {},
@@ -449,7 +462,16 @@ export class Host {
             host.out.dialogs.push(shown);
             let answer;
             if (host.dialogAnswers.length > 0) answer = host.dialogAnswers.shift();
-            else if (host.dialogWait) answer = await new Promise((resolve) => host.openDialogs.push(resolve));
+            else if (host.dialogWait) {
+              // Inside an RPC delivery, the open dialog is the user's to answer, not pending work
+              const blocking = host.delivery.getStore() !== undefined;
+              if (blocking) host.blockedDeliveries += 1;
+              try {
+                answer = await new Promise((resolve) => host.openDialogs.push(resolve));
+              } finally {
+                if (blocking) host.blockedDeliveries -= 1;
+              }
+            }
             else answer = { value: undefined };
             if (answer.delayMs) await new Promise((resolve) => setTimeout(resolve, answer.delayMs));
             // Enter chooses the highlighted (first) option; Esc closes without choosing

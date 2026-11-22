@@ -10,13 +10,15 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 2. Simulador (zona de código)
 
-- [ ] 2.1 En `acceptance-tests/support/agents/opencode-sim.mjs` y `opencode-sim-process.mjs`, según D6:
+- [x] 2.1 En `acceptance-tests/support/agents/opencode-sim.mjs` y `opencode-sim-process.mjs`, según D6:
   - la operación `notice` en la TUI simulada: muestra un modal que queda abierto hasta que el escenario lo cierra, y responde con `reply` al cerrarse;
   - poder cerrar ese modal desde el World y consultar los modales abiertos;
   - poder guionizar que el modelo escriba o modifique archivos en un turno con el agente plan.
 
   Los escenarios y `core-tests` que ya existen siguen en verde.
-- [ ] 2.2 Ejecutar la suite con los deltas del change: los escenarios nuevos salen con pasos sin definir o fallan por lo que el change cambia, y el resto pasa. Anotar aquí cuáles fallan, en particular los pasos que hoy comprueban que la revisión nace con el agente plan (`autopilot.steps.js`).
+  - Resultado: el simulador ya tenía casi todo. Tenía los modales que quedan abiertos hasta que el escenario los contesta (`dialogWait`, `answers`, `waitDialog`, `dialogs[].open`), las reglas del modelo por agente (`match.agent`, con `switchAgent`) y los efectos `files` y `git` de una respuesta. Su RPC es genérico, así que la operación `notice` de `tui.js` le llegará sin cambios. Faltaba una cosa: si un evento RPC esperaba un modal abierto en la TUI, `settle()` esperaba hasta su límite (20 s), cuando en OpenCode el `emit` del servidor no espera a la TUI. Ahora una entrega que espera un modal abierto no cuenta como trabajo pendiente (`AsyncLocalStorage`). Lo prueba `core-tests/opencode-sim.test.js` con un plugin sonda: falló por el límite y ahora pasa. `npm run test:core`: 110 de 110.
+- [x] 2.2 Ejecutar la suite con los deltas del change: los escenarios nuevos salen con pasos sin definir o fallan por lo que el change cambia, y el resto pasa. Anotar aquí cuáles fallan, en particular los pasos que hoy comprueban que la revisión nace con el agente plan (`autopilot.steps.js`).
+  - Resultado: 215 escenarios, 202 pasan, 13 con pasos sin definir y ninguno falla. Los 13 son los escenarios nuevos del change (los dos ejemplos de "Toda sesión del ciclo nace con el agente build", los seis de "El agente plan explora en la sesión operativa" y los cinco del aviso). Los pasos que comprueban que la revisión nace con plan siguen pasando, porque el plugin aún no ha cambiado; se cambian en 3.1.
 
 ## 3. openspec-autopilot: las sesiones nacen en build (zona de código)
 
