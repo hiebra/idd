@@ -120,6 +120,24 @@ export function parsePermanent(text) {
   return { permanent: items, warning: null };
 }
 
+// Lee `x-main-protected` del texto de openspec/config.yaml: el veto del acceso
+// directo a las ramas permanentes (design D1 de
+// git-discipline-standard-with-exception). Solo `true` lo declara; sin la
+// clave, o con cualquier otro valor, no hay veto.
+export function parseProtected(text) {
+  const line = text.split(/\r?\n/).find((l) => /^x-main-protected\s*:/.test(l));
+  if (!line) return false;
+  return scalar(line.replace(/^x-main-protected\s*:/, '').replace(/\s+#.*$/, '')) === 'true';
+}
+
+export function readProtected(dir) {
+  try {
+    return parseProtected(fs.readFileSync(path.join(dir, CONFIG), 'utf8'));
+  } catch {
+    return false;
+  }
+}
+
 export function readPermanent(dir) {
   let text = '';
   try {
@@ -183,7 +201,7 @@ export function branchChange(dir = process.cwd()) {
   const { permanent, warning } = readPermanent(dir);
   const origin = permanent.at(-1);
   const warnings = warning ? [warning] : [];
-  const base = { branch: null, origin, originRef: null, permanent, changes: [], change: null, warnings };
+  const base = { branch: null, origin, originRef: null, permanent, protected: readProtected(dir), changes: [], change: null, warnings };
 
   const head = git(dir, 'symbolic-ref', '--short', '-q', 'HEAD');
   if (!head.ok || !head.out) return { ...base, kind: 'permanent' };

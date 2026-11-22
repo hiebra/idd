@@ -30,6 +30,15 @@ function repo(t, config = 'schema: intent-driven\n') {
   return dir;
 }
 
+test('x-main-protected declares the veto only with true', async () => {
+  const { parseProtected } = await import(MODULE);
+  assert.equal(parseProtected('schema: x\nx-main-protected: true\n'), true);
+  assert.equal(parseProtected("x-main-protected: 'true' # veto\n"), true);
+  for (const text of ['schema: x\n', 'x-main-protected: false\n', 'x-main-protected: yes\n', 'x-main-protected:\n', '  x-main-protected: true\n']) {
+    assert.equal(parseProtected(text), false, text);
+  }
+});
+
 test('x-main as a list of plain scalars, in flow or block form', async () => {
   const { parsePermanent } = await import(MODULE);
   assert.deepEqual(parsePermanent('x-main: [main, develop]\n').permanent, ['main', 'develop']);

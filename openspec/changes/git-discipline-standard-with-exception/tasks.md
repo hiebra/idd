@@ -9,7 +9,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
 ## 2. La clave del veto (D1): rojo → implementar → verde → commit
 
-- [ ] 2.1 `El veto del acceso directo a las ramas permanentes se declara en la configuración`: el Scenario Outline `Cuándo hay excepción`, con los pasos `un proyecto con \`x-main-protected: true\``, `un proyecto con \`x-main-protected: false\``, `un proyecto sin la clave \`x-main-protected\``, `se consulta si el proyecto tiene la excepción a la regla del ciclo`, `la excepción está disponible` y `la excepción no está disponible`. Rojo: el estado de `--json` no tiene `protected`. Implementar en `branch-change.mjs` la lectura de la clave (`parseProtected`, `readProtected`) y exponerla como `protected` en el estado → verde → commit
+- [x] 2.1 `El veto del acceso directo a las ramas permanentes se declara en la configuración`: el Scenario Outline `Cuándo hay excepción`, con los pasos `un proyecto con \`x-main-protected: true\``, `un proyecto con \`x-main-protected: false\``, `un proyecto sin la clave \`x-main-protected\``, `se consulta si el proyecto tiene la excepción a la regla del ciclo`, `la excepción está disponible` y `la excepción no está disponible`. Rojo: el estado de `--json` no tiene `protected`. Implementar en `branch-change.mjs` la lectura de la clave (`parseProtected`, `readProtected`) y exponerla como `protected` en el estado → verde → commit
 - [ ] 2.2 `OpenSpec acepta la clave x-main-protected`: paso `ninguno falla ni avisa por la clave \`x-main-protected\``, con el mismo mecanismo que el escenario de `x-main` → verde → commit
 
 ## 3. Las puertas (D2): rojo → implementar → verde → commit

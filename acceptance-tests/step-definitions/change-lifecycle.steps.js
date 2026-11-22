@@ -45,6 +45,29 @@ Given('un proyecto con `x-main: [main, develop]` en `openspec\\/config.yaml`', f
   git(project.dir, 'branch', 'develop');
 });
 
+// --- El veto del acceso directo a las ramas permanentes (x-main-protected) -----
+
+Given(/^un proyecto con `x-main-protected: (true|false)`$/, function (value) {
+  this.branches.setProtected(this.lifecycleProject(), value === 'true');
+  this.configKey = 'x-main-protected';
+});
+
+Given('un proyecto sin la clave `x-main-protected`', function () {
+  this.branches.setProtected(this.lifecycleProject(), null);
+});
+
+When('se consulta si el proyecto tiene la excepción a la regla del ciclo', function () {
+  this.branchState = this.branches.branchChange(this.project);
+});
+
+Then('la excepción está disponible', function () {
+  assert.equal(this.branchState.protected, true, describeState(this.branchState));
+});
+
+Then('la excepción no está disponible', function () {
+  assert.equal(this.branchState.protected, false, describeState(this.branchState));
+});
+
 When('se consultan las ramas permanentes del proyecto', function () {
   this.branchState = this.branches.branchChange(this.project);
 });
