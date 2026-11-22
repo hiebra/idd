@@ -30,8 +30,8 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 3. Ramas (zona de código): `openspec-change-lifecycle`
 
-- [ ] 3.1 "Crear la rama del change desde cualquier rama" y "No se crea la rama con el árbol sucio": pasos rojos; implementar `start` en `.agents/openspec/branch-change.mjs` (D12); verde.
-- [ ] 3.2 "Listar las ramas temporales con su change" y "Cambiar a otra rama temporal": pasos rojos; implementar `list` y `switch`; verde. Ampliar `core-tests/branch-change.test.js`.
+- [x] 3.1 "Crear la rama del change desde cualquier rama" y "No se crea la rama con el árbol sucio": pasos rojos; implementar `start` en `.agents/openspec/branch-change.mjs` (D12); verde.
+- [x] 3.2 "Listar las ramas temporales con su change" y "Cambiar a otra rama temporal": pasos rojos; implementar `list` y `switch`; verde. Ampliar `core-tests/branch-change.test.js`.
 - [ ] 3.3 "En el autopilot, el modelo no pide commits" y "Un artefacto terminado queda sin commit": pasos rojos; reescribir los prompts de `lib/prompts.mjs` (D6) sin peticiones de commit; verde.
 
 ## 4. Servidor: producto, revisión por git y encadenado (zona de código): `openspec-autopilot`

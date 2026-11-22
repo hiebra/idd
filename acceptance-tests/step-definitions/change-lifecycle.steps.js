@@ -260,7 +260,7 @@ Then('se indica que el archive se hace en la rama temporal del change', function
 
 // --- Commits del usuario -----------------------------------------------------------
 
-When('un workflow termina un artefacto de `exportar-datos`', function () {
+When(/^un workflow termina un artefacto de `exportar-datos`(?: fuera del autopilot)?$/, function () {
   const project = this.project;
   this.branches.commitAll(project, 'exportar-datos');
   const before = git(project.dir, 'rev-parse', 'HEAD').trim();
@@ -274,11 +274,134 @@ Then('el artefacto queda sin commit', function () {
   assert.ok(project.gitStatus().some((line) => line.includes('openspec/changes/exportar-datos/design.md')), project.gitStatus().join('\n'));
   // Nothing in the cycle makes commits, branches or merges on its own
   const commits = skillSection(this, 'commits');
-  assert.match(commits, /nunca (hagas|hace)s? (tú )?commits?, ramas ni fusiones/i);
+  assert.match(commits, /nunca hagas commits ni fusiones/i);
 });
 
 Then('se pide al usuario que haga el commit', function () {
   const commits = skillSection(this, 'commits');
   for (const moment of [/artefacto/, /task/, /archive/, /wiki/]) assert.match(commits, moment);
   assert.match(commits, /pide al usuario (que haga )?el commit/i);
+});
+
+// --- Ramas temporales que crea el modelo (autopilot-sesion-operativa, ADR-0012) ---
+
+const BRANCH_CHANGE = path.join('.agents', 'openspec', 'branch-change.mjs');
+
+function runBranchChange(world, ...args) {
+  const result = require('node:child_process').spawnSync(process.execPath, [BRANCH_CHANGE, ...args], { cwd: world.project.dir, encoding: 'utf8' });
+  let json = null;
+  try {
+    json = JSON.parse(result.stdout);
+  } catch {
+    // not JSON
+  }
+  return { exitCode: result.status, stdout: result.stdout, stderr: result.stderr, json };
+}
+
+Given('el clon está en una rama temporal con el change en curso `importar-datos`, con el árbol limpio', function () {
+  const project = this.lifecycleProject();
+  this.branches.branch(project, 'importar-datos');
+  this.branches.addChange(project, 'importar-datos');
+  this.branches.commitAll(project, 'importar-datos');
+  this.originHead = git(project.dir, 'rev-parse', 'main').trim();
+});
+
+Given('el clon está en la rama de origen con cambios sin commit', function () {
+  const project = this.lifecycleProject();
+  fs.appendFileSync(project.path('README.md'), '\nCambio sin commit.\n');
+});
+
+When('se crea la rama del change `exportar-datos` con `branch-change.mjs`', function () {
+  this.branchesBefore = git(this.project.dir, 'branch', '--format=%(refname:short)').trim();
+  this.result = runBranchChange(this, 'start', 'exportar-datos');
+});
+
+Then(/^el clon queda en la rama `([^`]+)`$/, function (name) {
+  assert.equal(this.result.exitCode, 0, JSON.stringify(this.result));
+  assert.equal(this.branches.currentBranch(this.project), name);
+});
+
+Then('la rama `exportar-datos` sale de la rama de origen', function () {
+  const base = git(this.project.dir, 'merge-base', 'exportar-datos', 'main').trim();
+  assert.equal(base, git(this.project.dir, 'rev-parse', 'main').trim());
+  assert.equal(git(this.project.dir, 'rev-parse', 'exportar-datos').trim(), base, 'the new branch starts at the tip of the origin branch');
+});
+
+Then('no se crea ninguna rama', function () {
+  assert.equal(this.result.exitCode, 1, JSON.stringify(this.result));
+  assert.equal(git(this.project.dir, 'branch', '--format=%(refname:short)').trim(), this.branchesBefore);
+});
+
+Then('se indica que hay que hacer antes el commit o guardar los cambios', function () {
+  assert.match(this.result.json?.message ?? '', /commit/);
+  assert.match(this.result.json?.message ?? '', /stash/);
+});
+
+Given(/^una rama temporal `([^`]+)` con el change en curso `([^`]+)`$/, function (branch, change) {
+  const project = this.lifecycleProject();
+  const back = this.branches.currentBranch(project);
+  this.branches.branch(project, branch, { from: 'main' });
+  this.branches.addChange(project, change);
+  this.branches.commitAll(project, change);
+  this.branches.checkout(project, back);
+});
+
+Given(/^una rama temporal `([^`]+)` sin change$/, function (branch) {
+  const project = this.lifecycleProject();
+  const back = this.branches.currentBranch(project);
+  this.branches.branch(project, branch, { from: 'main' });
+  this.branches.checkout(project, back);
+});
+
+When('se listan las ramas temporales con `branch-change.mjs`', function () {
+  this.result = runBranchChange(this, 'list', '--json');
+  assert.equal(this.result.exitCode, 0, this.result.stderr);
+  this.list = JSON.parse(this.result.stdout);
+});
+
+Then(/^la lista tiene la rama `([^`]+)` con el change `([^`]+)`$/, function (branch, change) {
+  const entry = this.list.find((b) => b.branch === branch);
+  assert.ok(entry, JSON.stringify(this.list));
+  assert.equal(entry.change, change);
+  assert.equal(entry.kind, 'active');
+});
+
+Then(/^la lista tiene la rama `([^`]+)` sin change$/, function (branch) {
+  const entry = this.list.find((b) => b.branch === branch);
+  assert.ok(entry, JSON.stringify(this.list));
+  assert.equal(entry.change, null);
+  assert.equal(entry.kind, 'none');
+});
+
+Then('la lista no tiene la rama de origen', function () {
+  assert.ok(!this.list.some((b) => b.branch === 'main'), JSON.stringify(this.list));
+});
+
+Given('el clon está en la rama de origen con el árbol limpio', function () {
+  const project = this.lifecycleProject();
+  if (this.branches.currentBranch(project) !== 'main') this.branches.checkout(project, 'main');
+  assert.deepEqual(project.gitStatus(), []);
+});
+
+When(/^se cambia a la rama `([^`]+)` con `branch-change.mjs`$/, function (branch) {
+  this.result = runBranchChange(this, 'switch', branch);
+});
+
+Given('una sesión del autopilot que crea un artefacto de `exportar-datos`', async function () {
+  const { stepPrompt } = await import(require('node:url').pathToFileURL(this.lifecycleProject().path('.opencode', 'plugins', 'openspec-autopilot', 'lib', 'prompts.mjs')).href);
+  this.instruction = stepPrompt({ step: { kind: 'artifact', id: 'design' }, change: 'exportar-datos' });
+});
+
+When('se lee la instrucción del paso', function () {
+  assert.ok(this.instruction);
+});
+
+Then('la instrucción no pide al usuario ningún commit', function () {
+  assert.doesNotMatch(this.instruction, /pide al usuario (que haga )?(el )?commit/i);
+  assert.match(this.instruction, /no pidas commits/i);
+});
+
+Then('la instrucción dice que el modelo no haga commits ni pase nada al stage', function () {
+  assert.match(this.instruction, /No hagas commits/);
+  assert.match(this.instruction, /no pases nada al stage/);
 });
