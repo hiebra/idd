@@ -6,7 +6,7 @@ sources:
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 verified: 2026-11-21
 tags: [opencode, plugins, context, session-bootstrap]
 confidence: high
@@ -42,6 +42,7 @@ Es una API de plugins de una versión concreta. La suite la simula (`idd@1cf0792
 - [[proveedor-falso-para-verificar-contexto|Proveedor falso para verificar el contexto]] ([Proveedor falso para verificar el contexto](proveedor-falso-para-verificar-contexto.md))
 - [[arranque-de-sesion|El arranque de sesión]] ([El arranque de sesión](../topics/arranque-de-sesion.md))
 - [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md))
+- [[worktrees-de-opencode|Cómo crea OpenCode 2 los worktrees]] ([Cómo crea OpenCode 2 los worktrees](worktrees-de-opencode.md))
 
 ## Sources
 
