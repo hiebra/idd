@@ -1,4 +1,4 @@
-# ADR-0023: Cada release publica una instalación global para Windows y una variante adelgazada de la plantilla que la usa
+# ADR-0024: Cada release publica una instalación global para Windows y una variante adelgazada de la plantilla que la usa
 
 - Status: accepted
 - Date: 2026-11-22
@@ -10,7 +10,7 @@ Cada proyecto creado desde la plantilla lleva su propia copia de varias cosas:
 - el schema `intent-driven`;
 - las skills del schema (ADR-0003);
 - `branch-change.mjs` (ADR-0013);
-- el arranque y sus instrucciones (ADR-0022, ADR-0010, ADR-0018);
+- el arranque y sus instrucciones (ADR-0023, ADR-0010, ADR-0018);
 - el motor del wiki, que descarga el arranque (ADR-0005);
 - el plugin autopilot (ADR-0014).
 

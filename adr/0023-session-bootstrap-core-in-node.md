@@ -1,4 +1,4 @@
-# ADR-0022: El núcleo del arranque de sesión es un script de Node, igual en Linux, macOS y Windows
+# ADR-0023: El núcleo del arranque de sesión es un script de Node, igual en Linux, macOS y Windows
 
 - Status: accepted, supersedes ADR-0002, ADR-0017
 - Date: 2026-11-22
