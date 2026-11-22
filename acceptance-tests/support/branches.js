@@ -61,6 +61,15 @@ function setPermanent(project, value) {
   commitAll(project, 'x-main');
 }
 
+// Sets `x-main-protected` in openspec/config.yaml (true, false, or null to remove it) and commits it
+function setProtected(project, value) {
+  const file = project.path(CONFIG);
+  const kept = fs.readFileSync(file, 'utf8').split('\n').filter((line) => !/^x-main-protected\s*:/.test(line));
+  if (value !== null) kept.splice(1, 0, `x-main-protected: ${value}`);
+  fs.writeFileSync(file, kept.join('\n'));
+  commitAll(project, 'x-main-protected');
+}
+
 function branch(project, name, { from = null } = {}) {
   git(project.dir, 'checkout', '-q', '-b', name, ...(from ? [from] : []));
 }
@@ -267,6 +276,7 @@ module.exports = {
   clearActiveChanges,
   commitAll,
   setPermanent,
+  setProtected,
   branch,
   checkout,
   detach,

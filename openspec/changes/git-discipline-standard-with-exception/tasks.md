@@ -4,8 +4,8 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
 ## 1. Preparación
 
-- [ ] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core` y `npm run lint:specs` en `acceptance-tests/`)
-- [ ] 1.2 Ampliar `support/branches.js` para escribir `x-main-protected: true`, `x-main-protected: false` o ninguna clave en el `openspec/config.yaml` de la copia, junto a `x-main`, con una prueba en `core-tests/` → commit
+- [x] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core` y `npm run lint:specs` en `acceptance-tests/`)
+- [x] 1.2 Ampliar `support/branches.js` para escribir `x-main-protected: true`, `x-main-protected: false` o ninguna clave en el `openspec/config.yaml` de la copia, junto a `x-main`, con una prueba en `core-tests/` → commit
 
 ## 2. La clave del veto (D1): rojo → implementar → verde → commit
 
