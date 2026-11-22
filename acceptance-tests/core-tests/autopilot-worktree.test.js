@@ -5,7 +5,8 @@
 // a new branch from origin/<origin branch>, --no-track and publishable with a
 // plain `git push`; an existing branch; a branch checked out elsewhere; a
 // failed fetch; the starting ref ignored; and remove, which keeps the branch
-// and asks to force with changes.
+// and, with changes, says to commit first or force it, with or without
+// sourceDirectory (OpenCode 2.3.2 sends only { directory, force }).
 //
 // Run with: npm run test:core
 
@@ -149,4 +150,26 @@ test('remove keeps the branch, and with changes asks to force', async (t) => {
   await remove({ directory, sourceDirectory: env.clone, force: true });
   assert.equal(fs.existsSync(directory), false);
   assert.ok(ok(env.clone, 'rev-parse', '--verify', '-q', 'refs/heads/importar-datos'), 'the branch is kept');
+});
+
+test('remove without sourceDirectory, as OpenCode 2.3.2 calls it', async (t) => {
+  const { create, remove } = await load();
+  const env = setup(t);
+  const clean = path.join(env.worktrees, 'importar-datos');
+  await create({ directory: clean, sourceDirectory: env.clone });
+  await remove({ directory: clean, force: false });
+  assert.equal(fs.existsSync(clean), false);
+  assert.ok(ok(env.clone, 'rev-parse', '--verify', '-q', 'refs/heads/importar-datos'), 'the branch is kept');
+
+  const dirty = path.join(env.worktrees, 'exportar-pdf');
+  await create({ directory: dirty, sourceDirectory: env.clone });
+  fs.writeFileSync(path.join(dirty, 'sin-commit.txt'), 'x\n');
+  await assert.rejects(remove({ directory: dirty, force: false }), (error) => {
+    assert.match(error.message, /commit/);
+    assert.ok(error.message.includes('git worktree remove --force'), error.message);
+    return true;
+  });
+  assert.ok(fs.existsSync(path.join(dirty, 'sin-commit.txt')));
+  await remove({ directory: dirty, force: true });
+  assert.equal(fs.existsSync(dirty), false);
 });

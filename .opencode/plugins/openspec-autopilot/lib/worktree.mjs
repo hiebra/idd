@@ -12,8 +12,10 @@
 //   sin argumentos la publique sin tocar push.autoSetupRemote. Un `fetch`
 //   fallido no crea nada. `branch` (la referencia de partida que manda la web)
 //   se ignora. Devuelve { directory }.
-// - remove({ directory, sourceDirectory, force }): `git worktree remove`; la
-//   rama se conserva. Con cambios, pide confirmación con forceRequired.
+// - remove({ directory, sourceDirectory, force }): `git worktree remove`, en
+//   sourceDirectory o, si no llega (OpenCode 2.3.2), en el propio worktree; la
+//   rama se conserva. Con cambios no se quita: el error dice que se haga antes
+//   el commit o se quite con `git worktree remove --force`.
 // - list(sourceDirectory): `git worktree list --porcelain`, como
 //   [{ directory, type: "root" | "worktree" }].
 //
@@ -97,11 +99,20 @@ export async function create({ directory, sourceDirectory }) {
 }
 
 export async function remove({ directory, sourceDirectory, force = false }) {
-  const cwd = sourceDirectory ?? path.dirname(directory);
+  // OpenCode 2.3.2 manda solo { directory, force }: git se ejecuta entonces en
+  // el propio worktree, que sabe de qué clon es
+  const cwd = sourceDirectory ?? directory;
   const result = await git(cwd, ['worktree', 'remove', ...(force ? ['--force'] : []), directory]);
   if (result.code === 0) return;
   const text = output(result);
-  if (!force && /modified or untracked|contains|cambios|--force/i.test(text)) throw operationError('Uncommitted changes', { forceRequired: true });
+  if (!force && /modified or untracked|is dirty|--force/i.test(text)) {
+    // forceRequired, por si una versión de OpenCode lo respeta; la 2.3.2 solo
+    // muestra el mensaje, porque no es de sus propias clases de error
+    throw operationError(
+      `El worktree ${directory} tiene cambios sin commit: haz antes el commit, o quítalo con \`git worktree remove --force ${directory}\`. Su rama se conserva.`,
+      { forceRequired: true }
+    );
+  }
   throw operationError(`git worktree remove ha fallado: ${text}`);
 }
 
