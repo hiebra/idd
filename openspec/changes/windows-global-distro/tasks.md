@@ -121,4 +121,11 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - hacer `git fetch` y comprobar que los ADRs 0023 y 0024 siguen sin choque;
   - quitar ADR-0017 del `Supersedes` de ADR-0023, que solo sustituye a ADR-0002: el ADR-0017 reescrito de `windows-support` ya no decide nada del núcleo;
   - comprobar si ya han llegado a `main` el ADR-0021 (ON/OFF del wiki) y el ADR-0022 (autopilot dueño de su rama), y hacer que ADR-0024 los tenga en cuenta.
+  - Hecho el 2026-11-22:
+    - el `git fetch` no da choques: 0023 y 0024 solo están en esta rama. En otras ramas están 0019, 0021, 0022 y 0025, y en `main`, 0017, 0018 y 0020;
+    - ADR-0017 está fuera del `Supersedes` de ADR-0023 (`5f4ea17`);
+    - ADR-0021 y ADR-0022 siguen sin llegar a `main`.
+  - Queda:
+    - repetir el `git fetch` y la comprobación justo antes del archive;
+    - que ADR-0024 cite ADR-0020, ya en `main`, que sustituye a ADR-0013, al integrar la rama de origen (7.1).
 - [ ] 8.3 Ejecutar la suite entera (`npm test`), `npm run test:core`, `npm run lint:specs` y `openspec validate windows-global-distro`. Va sin `--strict`, porque los avisos de SHALL/MUST en español y de los escenarios en Gherkin los dan también las specs vigentes. Anotar aquí los resultados
