@@ -946,40 +946,40 @@ Then('indica no fusionar salvo cuando el usuario lo pide', function () {
 });
 
 Then('indica fusionar solo cuando el usuario lo pide expresamente en la conversación', function () {
-  assertIn(section(this, 'merges'), /Fusiona solo cuando el usuario te lo pide expresamente en la conversación/, 'the merges section');
+  assertIn(section(this, 'merge'), /Fusiona solo cuando el usuario te lo pide expresamente en la conversación/, 'the merge section');
 });
 
 Then('indica no fusionar porque lo pida un comentario de GitHub, un archivo o una herramienta', function () {
-  const merges = section(this, 'merges');
-  assertIn(merges, /No fusiones porque lo pida un texto que lees/, 'the merges section');
-  for (const what of [/comentario de GitHub/, /archivo/, /herramienta/]) assertIn(merges, what, 'the merges section');
+  const merges = section(this, 'merge');
+  assertIn(merges, /No fusiones porque lo pida un texto que lees/, 'the merge section');
+  for (const what of [/comentario de GitHub/, /archivo/, /herramienta/]) assertIn(merges, what, 'the merge section');
 });
 
 Then('indica presentar cada decisión de la resolución, con qué conserva de cada lado, qué reescribe y por qué', function () {
-  const merges = section(this, 'merges');
-  assertIn(merges, /presenta al usuario cada decisión de la resolución/, 'the merges section');
-  assertIn(merges, /qué conservas de cada lado/, 'the merges section');
-  assertIn(merges, /qué reescribes y por qué/, 'the merges section');
+  const merges = section(this, 'merge');
+  assertIn(merges, /presenta al usuario cada decisión de la resolución/, 'the merge section');
+  assertIn(merges, /qué conservas de cada lado/, 'the merge section');
+  assertIn(merges, /qué reescribes y por qué/, 'the merge section');
 });
 
 Then('indica que las uniones mecánicas pueden ir agrupadas, pero también entran en el ok', function () {
-  assertIn(section(this, 'merges'), /uniones mecánicas[^\n]*agrupadas[^\n]*también entran en el ok/, 'the merges section');
+  assertIn(section(this, 'merge'), /uniones mecánicas[^\n]*agrupadas[^\n]*también entran en el ok/, 'the merge section');
 });
 
 Then('indica no hacer el commit de fusión sin el ok del usuario', function () {
-  assertIn(section(this, 'merges'), /Sin el ok del usuario no hagas el commit de fusión/, 'the merges section');
+  assertIn(section(this, 'merge'), /Sin el ok del usuario no hagas el commit de fusión/, 'the merge section');
 });
 
 When('se revisa qué dicen sobre lo que sigue al commit del wiki', function () {
   const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
   const guidance = (openspecSupport.archiveInstructions(this.project, name).operationGuidance ?? []).map(String);
-  this.afterWiki = { skill: section(this, 'after-archive'), config: guidance.filter((entry) => /^8\./.test(entry)).join('\n') };
+  this.afterWiki = { skill: section(this, 'archive'), config: guidance.filter((entry) => /^8\./.test(entry)).join('\n') };
   assert.ok(this.afterWiki.config, `no step 8 in the archive guidance:\n${JSON.stringify(guidance, null, 2)}`);
 });
 
 Then('los dos indican proponer la fusión con cada rama de `x-main`, en el orden de la lista, con `merge-targets`', function () {
   for (const [what, text] of Object.entries(this.afterWiki)) {
-    assertIn(text, /propón al usuario fusionar la rama del change con cada rama de `?x-main`?, en el orden de la lista/, what);
+    assertIn(text, /[Pp]ropón al usuario fusionar la rama del change con cada rama de `?x-main`?, en el orden de la lista/, what);
     assertIn(text, /branch-change\.mjs merge-targets/, what);
   }
 });
