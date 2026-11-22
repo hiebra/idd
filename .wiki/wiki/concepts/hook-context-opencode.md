@@ -5,8 +5,9 @@ sources:
   - raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md
+  - raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 verified: 2026-11-21
 tags: [opencode, plugins, context, session-bootstrap]
 confidence: high
@@ -28,7 +29,9 @@ summary: "Contrato del hook context de OpenCode 2.3.2, comprobado capturando los
 
 ## Cómo lo usa la plantilla
 
-El plugin `session-bootstrap` (`idd@1cf0792:.opencode/plugins/session-bootstrap/server.js`) añade la guía del wiki a `system` e inserta el recordatorio como mensaje `user` justo antes del último mensaje del usuario. **[lectura de código]** El modo Plan de OpenCode hace lo mismo, según su código en el binario de `@opencode/cli` 2.3.2. Todo el callback va en `try/catch`. Desde `add-quote-comment-rule` añade también la regla de comentarios a `system` y, si el último mensaje del usuario la activa, su recordatorio junto al del wiki. Como el hook se ejecuta en cada petición al modelo, también en las que siguen a una herramienta dentro del mismo turno, solo pregunta al núcleo cuando cambia el texto de ese mensaje, y guarda la respuesta (`idd@16e4617:.opencode/plugins/session-bootstrap/server.js`, `lastUserText`).
+El plugin `session-bootstrap` (`idd@1cf0792:.opencode/plugins/session-bootstrap/server.js`) añade la guía del wiki a `system` e inserta el recordatorio como mensaje `user` justo antes del último mensaje del usuario. **[lectura de código]** El modo Plan de OpenCode hace lo mismo, según su código en el binario de `@opencode/cli` 2.3.2. Todo el callback va en `try/catch`. Entre `add-quote-comment-rule` y `update-comment-phrase-and-opencode-marker` añadía también la regla de comentarios y su recordatorio (`idd@16e4617:.opencode/plugins/session-bootstrap/server.js`). Desde este último lo hace un plugin propio, `response-comments` (`idd@1657745:.opencode/plugins/response-comments/server.js`; ADR-0018), con su propio hook `context` sobre la misma petición: pone la regla en `system` y, si el último mensaje del usuario la activa, el recordatorio justo antes de ese mensaje. Como el hook se ejecuta en cada petición al modelo, también en las que siguen a una herramienta dentro del mismo turno, solo pregunta al núcleo cuando cambia el texto de ese mensaje, y guarda la respuesta (`lastUserText`). El orden en que llegan a `system` los textos de los dos plugins depende del orden de carga, y ninguna instrucción depende de él (`idd@1657745:adr/0018-opencode-optional-instructions-own-plugin.md`).
+
+**[heredado]** Según el usuario, `input.messages` llega en formato LLM: una cita de la web de OpenCode aparece solo como texto dentro del mensaje `user` (ver [[regla-de-comentarios|La regla de comentarios]] ([La regla de comentarios](regla-de-comentarios.md))).
 
 **[heredado]** El design del change descartó el hook `prompt`, que cambiaría el texto guardado del mensaje, e `instructions.entry.put`, una API experimental marcada para retirarse (`idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/design.md`, D3).
 
@@ -44,6 +47,8 @@ Es una API de plugins de una versión concreta. La suite la simula (`idd@1cf0792
 - [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md))
 
 ## Sources
+
+- [Collection: archivado de update-comment-phrase-and-opencode-marker](../../raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md): `.opencode/plugins/response-comments/server.js`, `.opencode/plugins/session-bootstrap/server.js`, `adr/0018-opencode-optional-instructions-own-plugin.md`.
 
 - [Lessons Learned](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lección 3.
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `server.js`, `opencode-host.mjs`, y `tasks.md` y `design.md` del change archivado.

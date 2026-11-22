@@ -2,6 +2,7 @@
 title: "El arranque de sesión: núcleo neutral y un adaptador por agente"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
   - raw/repos/2026-11-21-idd-1cf0792.md
@@ -19,7 +20,7 @@ summary: "Qué hace el arranque de sesión de la plantilla, por qué se divide e
 
 # El arranque de sesión: núcleo neutral y un adaptador por agente
 
-> Al abrir una sesión de Claude Code u OpenCode 2, el proyecto se prepara solo: instala sus dependencias, deja el `openspec` del proyecto en el `PATH`, instala el motor del wiki y entrega al agente las instrucciones del proyecto: la guía y el recordatorio del wiki, y la regla de comentarios con su recordatorio. Todo lo de esta página sale de los archivos citados, fijados en `idd@1cf0792` (el README, en `idd@f2be907`).
+> Al abrir una sesión de Claude Code u OpenCode 2, el proyecto se prepara solo: instala sus dependencias, deja el `openspec` del proyecto en el `PATH`, instala el motor del wiki y entrega al agente las instrucciones del proyecto: la guía y el recordatorio del wiki y, en Claude Code, la regla de comentarios con su recordatorio. En OpenCode, la regla de comentarios la entrega su propio plugin, `response-comments`, desde `update-comment-phrase-and-opencode-marker` (`idd@1657745:adr/0018-opencode-optional-instructions-own-plugin.md`). Todo lo de esta página sale de los archivos citados, fijados en `idd@1cf0792` (el README, en `idd@f2be907`).
 
 ## Por qué existe
 
@@ -72,6 +73,7 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 
 ## Sources
 
+- [Collection: archivado de update-comment-phrase-and-opencode-marker](../../raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md): `adr/0018-opencode-optional-instructions-own-plugin.md`.
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `adr/0001-session-bootstrap-hook.md`, `adr/0002-agent-neutral-session-bootstrap.md`, `adr/0005-wiki-engine-through-session-bootstrap.md`, `openspec/specs/session-bootstrap/spec.md`, `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/session-start.sh`, `.claude/hooks/user-prompt-submit.sh`, `.opencode/plugins/session-bootstrap/server.js`.
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `.agents/hooks/session-bootstrap.sh`.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
