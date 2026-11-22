@@ -1,0 +1,15 @@
+{
+  "schema": {
+    "repo": "intent-driven-dev/openspec-schemas",
+    "commit": "4bb6de2f57c9275a18a4106341fe4632f5026ac6",
+    "path": "openspec/schemas/intent-driven",
+    "local": "openspec/schemas/intent-driven"
+  },
+  "skills": {
+    "repo": "intent-driven-dev/skills",
+    "commit": "15aa67841421805c221747702839d1edfce9f950",
+    "path": ".agents/skills",
+    "local": ".agents/skills",
+    "own": ["openspec-git-discipline", "acceptance-test-authoring", "spec-as-source"]
+  }
+}

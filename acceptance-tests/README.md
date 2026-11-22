@@ -34,6 +34,12 @@ Pruebas del núcleo del arranque que no están en las specs (conflictos de nombr
 npm run test:core
 ```
 
+Prueba de la release: el schema `intent-driven` y las skills que la plantilla no mantiene como propias son idénticos a su origen en el commit que fija `.agents/release/origins.json`. Necesita acceso a GitHub, así que no está en `test:core` ni en el perfil por defecto: la ejecuta el job de Linux del workflow de release (`RELEASE_TREE` elige otro árbol que comprobar):
+
+```bash
+npm run test:release
+```
+
 Lint del Gherkin de las specs, con gplint:
 
 ```bash
