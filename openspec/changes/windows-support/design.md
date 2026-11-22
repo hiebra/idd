@@ -101,7 +101,13 @@ La recogida solo se puede probar en Windows. Se comprueba a mano, en una máquin
 
 El diagnóstico deja de comprobar lo que el arranque resuelve con este change: `MSYS` (D3) y qué bash va primero en el `PATH` (D5). Añade la comprobación de finales de línea CRLF en los scripts del arranque del clon, y como agente solo da por bueno OpenCode 2 (spec `windows-readiness`).
 
-Alternativa: probar el script en Windows con agentes de CI. El proyecto no tiene CI, y la suite se ejecuta en la sesión del agente.
+La suite ejecuta el script con `pwsh` (PowerShell 7), así que `pwsh` pasa a ser requisito de la suite, como ya lo es el acceso al registro de npm (decisión del usuario, 2026-11-22). Si falta, los escenarios de `windows-readiness` fallan con un mensaje que lo dice, en lugar de saltarse. En la sesión en la nube se instala con el script de configuración del entorno.
+
+Alternativas:
+
+- **Probar el script en Windows con agentes de CI.** El proyecto no tiene CI, y la suite se ejecuta en la sesión del agente.
+- **Un lanzador PowerShell mínimo que solo compruebe Git for Windows y delegue el resto en un diagnóstico bash**, que la suite probaría sin `pwsh`. Seguiría habiendo PowerShell sin probar, el diagnóstico quedaría repartido entre dos lenguajes y dependería de Node para leer los lockfiles. Si de todos modos hay que depender de PowerShell, es mejor que esté todo en PowerShell.
+- **Etiquetar los escenarios y excluirlos cuando no hay `pwsh`.** Habría que cambiar `cucumber.cjs`, que es copia literal de la skill, y la suite quedaría en verde sin haberlos probado.
 
 ### D8. Los escenarios de Windows del arranque se simulan en Linux
 
@@ -120,7 +126,7 @@ El plugin de OpenCode en Windows se comprueba además con OpenCode 2 real en Win
 - **[Riesgo] OpenCode 2 en Windows carga los plugins o entrega `directory` de otra forma que en Linux.** → Se comprueba con OpenCode 2 real en Windows 11 (tasks de verificación). Si difiere, se actualiza el design.
 - **[Compromiso] Quien use Claude Code en Windows no tiene arranque.** → El README y el diagnóstico lo dicen. Soportarlo irá en otro change.
 - **[Riesgo] La recogida de hechos del diagnóstico no la cubre la suite.** → Está separada de la evaluación y es lineal (leer, no decidir), y se verifica a mano en Windows con las dos versiones de PowerShell.
-- **[Compromiso] Los escenarios de `windows-readiness` necesitan `pwsh`** en la máquina de la suite. → Ver Open Questions.
+- **[Compromiso] La suite necesita `pwsh`** en la máquina en la que se ejecuta. → Sin él, los escenarios de `windows-readiness` fallan con un mensaje que lo dice. El README de la suite lo pone entre los requisitos, y el entorno de la nube lo instala con su script de configuración.
 - **[Riesgo] Cambiar el formato de `bin=` y `wiki-engine=` rompe a quien lea la salida del núcleo.** → Solo la leen los dos adaptadores del repositorio y sus pruebas, que cambian en el mismo commit.
 
 ## Migration Plan
@@ -133,9 +139,5 @@ Rollback: revertir los commits del change. `.gitattributes` se puede retirar sin
 
 ## Open Questions
 
-1. **`pwsh` en la suite.** Los escenarios de `windows-readiness` lo necesitan, y la sesión en la nube no lo tiene (descargarlo se ha bloqueado en esta sesión). Opciones:
-   - **(a)** `pwsh` pasa a ser requisito de la suite, como ya lo es el acceso al registro de npm, y se instala en la nube con el script de configuración del entorno. Sin él, esos escenarios fallan con un mensaje que lo dice;
-   - **(b)** se etiquetan `@pwsh` y se excluyen cuando no hay `pwsh`, avisando. Pero cambia `cucumber.cjs`, que es copia literal de la skill, y la suite se queda en verde sin haber probado nada.
-
-   La recomendación es (a).
+1. **Instalar `pwsh` en la sesión en la nube.** En esta sesión se bloqueó la descarga de PowerShell. Hay que decidir de dónde se instala (el paquete de Microsoft para Linux o el tarball de las releases de GitHub) y añadirlo al script de configuración del entorno, con la aprobación del usuario.
 2. **ADRs vigentes.** Ninguno hay que sustituir. Este change se apoya en ADR-0002 (un núcleo bash y un adaptador por agente) y fija en uno nuevo que en Windows solo se soporta OpenCode 2, con Git Bash (D1).

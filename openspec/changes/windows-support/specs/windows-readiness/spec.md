@@ -50,7 +50,9 @@ Then el informe da Node.js en estado OK (vendor)
 ```
 
 ### Requirement: Dependencias npm para la plataforma de la máquina
-El diagnóstico DEBE comprobar, para la raíz y para `acceptance-tests/`, cada paquete de su `package-lock.json` que se instala en la plataforma y la arquitectura de la máquina, y solo esos. Un paquete cuenta como presente si está instalado en la versión del lockfile o si su contenido está en la caché de npm del vendor o en la global. Si alguno falta, DEBE nombrarlo. Si los que faltan en el proyecto solo están en la caché global y npm no está configurado para trabajar sin red, DEBE dar un `AVISO`, porque el arranque de sesión intentaría usar la red.
+El diagnóstico DEBE comprobar, para la raíz y para `acceptance-tests/`, cada paquete de su `package-lock.json` que se instala en la plataforma y la arquitectura de la máquina, y solo esos. Un paquete cuenta como presente si está instalado en la versión del lockfile o si su contenido está en la caché de npm del vendor o en la global. Si alguno falta, DEBE nombrarlo.
+
+Si los que faltan en el proyecto solo están en la caché global y npm no está configurado para trabajar sin red, DEBE dar un `AVISO`: el arranque de sesión intentaría usar la red.
 
 #### Scenario: Dependencias instaladas en otro sistema operativo
 
