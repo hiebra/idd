@@ -9,7 +9,8 @@
 //                       label, el número de tasks.md)
 //   verify              openspec-verify-change
 //   archive             openspec-archive-change
-//   wiki                la resincronización del wiki de las indicaciones de archivado
+//   wiki                la resincronización del wiki de las indicaciones de
+//                       archivado, solo con el wiki del proyecto habilitado
 //   review <id> of      revisión humana de un artefacto, una task, el verify o el plan
 //   update <id> of      openspec-update-change tras una revisión no satisfactoria
 //   end                 el ciclo ha terminado
@@ -58,23 +59,26 @@ export function stepFromState(state) {
   return { kind: 'verify' };
 }
 
-// next({ mode, finished, result, state, lastZone }) -> { step, zoneChange }
+// next({ mode, finished, result, state, lastZone, wikiEnabled }) -> { step, zoneChange }
 //   mode: "normal" | "auto"
 //   finished: el paso terminado ({ kind, id, of }), o null al tomar el control
 //   result: "ok" | "ko" (revisiones, por git), "clean" | "critical" (verify)
 //   state: { change, status (openspec status --json), tasks }
 //   lastZone: la zona del último paso que escribió, para el cambio de zona
+//   wikiEnabled: el ajuste del wiki del proyecto, leído al terminar el archive
+//     (design D5 de add-project-wiki-toggle); sin él, tras el archive no hay
+//     paso del wiki y el ciclo termina
 //
 // En el modo normal, tras un artefacto, una task, el verify o un update viene
 // una revisión: la abre el servidor con la cola de productos (lib/product.mjs).
-export function next({ mode = 'normal', finished = null, result = null, state = null, lastZone = null }) {
-  const step = decide({ mode, finished, result, state });
+export function next({ mode = 'normal', finished = null, result = null, state = null, lastZone = null, wikiEnabled = false }) {
+  const step = decide({ mode, finished, result, state, wikiEnabled });
   const zone = zoneOf(step);
   const zoneChange = Boolean(zone && lastZone && zone !== lastZone);
   return { step, zoneChange };
 }
 
-function decide({ mode, finished, result, state }) {
+function decide({ mode, finished, result, state, wikiEnabled }) {
   if (!finished) return stepFromState(state);
   const auto = mode === 'auto';
   switch (finished.kind) {
@@ -93,7 +97,7 @@ function decide({ mode, finished, result, state }) {
     case 'update':
       return { kind: 'review', id: 'plan', of: 'plan' };
     case 'archive':
-      return { kind: 'wiki' };
+      return wikiEnabled ? { kind: 'wiki' } : { kind: 'end' };
     case 'wiki':
       return { kind: 'end' };
     default:
@@ -102,7 +106,9 @@ function decide({ mode, finished, result, state }) {
 }
 
 // Si el paso siguiente tiene que esperar el commit del usuario (design D9):
-// tras el archive y tras la resincronización del wiki, en los dos modos; en el
+// tras el archive y tras la resincronización del wiki, en los dos modos (si el
+// paso siguiente es end, como tras el archive con el wiki deshabilitado, no hay
+// sesión que espere: el ciclo termina); en el
 // modo auto, en cada cambio de zona. update-change nunca espera: empieza con
 // el árbol sucio a propósito.
 export function waitsForCommit({ mode, finished, step, zoneChange }) {

@@ -31,7 +31,7 @@ import { RPC, TIMEOUT_MS } from './lib/rpc.mjs';
 import { describe, discrepancy, next, stepFromState, waitsForCommit, zoneOf } from './lib/next-step.mjs';
 import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, closedPrompt, foreignPrompt, reminderPrompt, resumeCommand, stepPrompt } from './lib/prompts.mjs';
 import { allSessions, branchSessions, changeSessions, isArchived, isWorking, meta, nextSeq, owners, winner, writeMeta } from './lib/state.mjs';
-import { branchChange, changeState, validateErrors } from './lib/project.mjs';
+import { branchChange, changeState, validateErrors, wikiEnabled } from './lib/project.mjs';
 import { gitState, stage, treeClean, verdict } from './lib/git.mjs';
 import { describeProducts, productOf, reviewQueue, snapshotOf, stagePaths } from './lib/product.mjs';
 import { MODAL_BUTTON, directive, modalText } from './lib/screen.mjs';
@@ -426,7 +426,14 @@ async function start(ctx) {
   const chainTo = async ({ from, m, step, wait, lastZone, extra = {} }) => {
     await writeMeta(api, from.id, { role: 'free', phase: 'done' });
     if (step.kind === 'end') {
-      ui.toast(`openspec-autopilot: el ciclo de ${m.change} ha terminado. Haz el commit del wiki, aparte del commit del archive, y fusiona la rama.`, 'info');
+      // Tras la resincronización del wiki queda su commit; con el wiki
+      // deshabilitado, el ciclo acaba en el archive (design D5 de add-project-wiki-toggle)
+      const pending = m.step?.kind === 'wiki'
+        ? 'Haz el commit del wiki, aparte del commit del archive, y fusiona la rama.'
+        : (await treeClean(directory))
+          ? 'Queda fusionar la rama.'
+          : 'Queda fusionar la rama; antes, haz el commit del archive.';
+      ui.toast(`openspec-autopilot: el ciclo de ${m.change} ha terminado. ${pending}`, 'info');
       await archiveOrMark(from.id);
       return;
     }
@@ -495,7 +502,9 @@ async function start(ctx) {
     }
     if (!products.every((p) => p.kind === 'verdict')) await stage(directory);
     const state = change && (bc.kind === 'active' || m.step.kind === 'new') ? await changeState(directory, change).catch(() => null) : null;
-    const { step, zoneChange } = next({ mode, finished: m.step, result: m.handoff?.result, state, lastZone });
+    // El ajuste del wiki se lee al terminar el archive, para que cambiarlo durante el change valga
+    const wiki = m.step.kind === 'archive' ? wikiEnabled(directory) : false;
+    const { step, zoneChange } = next({ mode, finished: m.step, result: m.handoff?.result, state, lastZone, wikiEnabled: wiki });
     await chainTo({ from: session, m: mm, step, wait: waitsForCommit({ mode, finished: m.step, step, zoneChange }), lastZone });
   };
 

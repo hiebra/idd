@@ -35,6 +35,16 @@ async function openspecJson(directory, args) {
   }
 }
 
+// El ajuste del wiki del proyecto (design D1 de add-project-wiki-toggle): solo
+// el literal true de "enabled" en .agents/wiki/engine.json lo habilita
+export function wikiEnabled(directory) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(directory, '.agents', 'wiki', 'engine.json'), 'utf8')).enabled === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function openspecStatus(directory, change) {
   return openspecJson(directory, ['status', '--change', change]);
 }
