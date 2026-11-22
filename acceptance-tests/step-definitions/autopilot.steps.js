@@ -1098,8 +1098,28 @@ Then('el terminal no muestra ningún error del plugin', function () {
 
 // --- Revisión guiada con los tests de aceptación --------------------------------------
 
-When(/^el plugin abre la revisión (?:de |del )(la task 3|el verify|artefacto `design`)$/, async function (what) {
-  const review = what === 'el verify' ? await reachVerifyReview(this) : await reachReview(this, what === 'la task 3' ? what : 'el artefacto `design`');
+// A ko review of the task 3 leads to an update-change whose plan changes get their own review
+async function reachPlanReview(world) {
+  await reachReview(world, 'la task 3');
+  GIT_ACTIONS['saca todo del stage'](world);
+  await say(world, world.owner, CONCLUSIONS);
+  const update = newOwnerAfter(world, world.owner);
+  assert.equal(ap.metaOf(update).step.kind, 'update', detail(world));
+  world.owner = update.id;
+  await produce(world, { [rel('design.md')]: '## Context\n\nPrueba, con el formato de las fechas.\n' });
+  const review = newOwnerAfter(world, update.id);
+  assert.deepEqual(ap.metaOf(review).step, { kind: 'review', id: 'plan', of: 'plan' }, detail(world));
+  return review;
+}
+
+When(/^el plugin abre la revisión (?:de |del )(la task 3|el verify|artefacto `design`|los cambios en el plan)$/, async function (what) {
+  const reach = {
+    'la task 3': () => reachReview(this, 'la task 3'),
+    'el verify': () => reachVerifyReview(this),
+    'artefacto `design`': () => reachReview(this, 'el artefacto `design`'),
+    'los cambios en el plan': () => reachPlanReview(this),
+  }[what];
+  const review = await reach();
   this.reviewInstruction = ap.instructionOf(this, review.id);
 });
 
