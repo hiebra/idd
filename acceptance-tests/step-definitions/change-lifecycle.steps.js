@@ -434,6 +434,12 @@ Then('la puerta no avisa de nada', function () {
   assert.doesNotMatch(this.gate.message, /(recomendad|prefiere|pero )/i, JSON.stringify(this.gate));
 });
 
+Then('la puerta no deja seguir e indica que la propuesta llegue antes a la rama de origen', function () {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /propuesta[^.]*llegue antes a la rama de origen/, JSON.stringify(this.gate));
+});
+
 Then('la puerta deja seguir', function () {
   assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
   assert.equal(this.gate.exitCode, 0, JSON.stringify(this.gate));

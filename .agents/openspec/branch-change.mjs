@@ -391,6 +391,27 @@ export function check(dir, gate, name, { env = process.env } = {}) {
   if (state.kind === 'unknown') {
     return deny(`No se puede leer el change de la rama: ${state.warnings.at(-1)}. Trae la rama de origen ('git fetch origin ${state.origin}') y vuelve a ejecutar la puerta.`);
   }
+  // El apply (design D2 de git-discipline-standard-with-exception). La regla:
+  // el change en curso en el árbol de trabajo, con su propuesta ya en la rama
+  // de origen. La excepción, solo con x-main-protected: true: el change de la
+  // rama temporal, aunque su propuesta no esté en la rama de origen.
+  if (gate === 'apply') {
+    const inOrigin = Boolean(state.originRef) &&
+      git(dir, 'rev-parse', '-q', '--verify', `${state.originRef}:${CHANGES}${name}/proposal.md`).ok;
+    if (activeHere(dir, name) && inOrigin) {
+      return allow(`Se puede aplicar '${name}' en la rama temporal '${state.branch}': su propuesta ya está en la rama de origen '${state.origin}'.`);
+    }
+    if (state.protected && state.kind === 'active' && state.change === name) {
+      return allow(`Se puede aplicar '${name}' en la rama temporal '${state.branch}' (excepción: x-main-protected).`);
+    }
+    if (!state.protected) {
+      return deny(
+        `La propuesta de '${name}' no está en la rama de origen '${state.origin}': la regla pide que llegue antes a la rama de origen. ` +
+          `Fusiona la propuesta con '${state.origin}' y aplica allí, en una rama o en un worktree. ` +
+          `Si el acceso directo a las ramas permanentes está vetado, declara \`x-main-protected: true\` en openspec/config.yaml.`
+      );
+    }
+  }
   if (state.kind === 'several') {
     return deny(
       `La rama '${state.branch}' tiene varios changes (${named}); tiene que quedar uno solo: lleva cada uno de los demás a su propia rama temporal ` +
@@ -408,11 +429,6 @@ export function check(dir, gate, name, { env = process.env } = {}) {
       return allow(`Se puede archivar '${name}' en la rama temporal '${state.branch}'.`);
     }
     return allow(`Se puede aplicar '${name}' en la rama temporal '${state.branch}'.`);
-  }
-  // El apply canónico: la propuesta ya está en la rama de origen y la rama aún no la ha modificado
-  if (gate === 'apply' && state.kind === 'none' && activeHere(dir, name) && state.originRef &&
-    git(dir, 'rev-parse', '-q', '--verify', `${state.originRef}:${CHANGES}${name}/proposal.md`).ok) {
-    return allow(`Se puede aplicar '${name}' en la rama temporal '${state.branch}': su propuesta ya está en la rama de origen '${state.origin}' (forma canónica).`);
   }
   const has = state.kind === 'none' ? 'no tiene ningún change en curso' : `tiene el change ${state.kind === 'archived' ? 'archivado' : 'en curso'} '${state.change}'`;
   return deny(`El ${gate} de '${name}' se hace en su rama temporal, y la rama '${state.branch}' ${has}: cambia a la rama temporal de '${name}', o ${newBranch} si su propuesta ya está en '${state.origin}'.`);
