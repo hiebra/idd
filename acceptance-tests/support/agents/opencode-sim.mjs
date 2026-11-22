@@ -128,7 +128,8 @@ export class Host {
     this.steering = new Map();
     // RPC deliveries to the TUI that wait on an open dialog (see settle)
     this.delivery = new AsyncLocalStorage();
-    this.blockedDeliveries = 0;
+    // Each tracked delivery and its state ({ blocked }), set while it waits on an open dialog
+    this.deliveries = new Map();
     this.interrupted = new Set();
   }
 
@@ -145,6 +146,14 @@ export class Host {
     return p;
   }
 
+  // An RPC delivery to the TUI: tracked, and idle for settle() while it waits on an open dialog
+  trackDelivery(store, fn) {
+    const p = this.track(this.delivery.run(store, fn));
+    this.deliveries.set(p, store);
+    p.finally(() => this.deliveries.delete(p));
+    return p;
+  }
+
   crash(where, error) {
     this.out.crashes.push(`${where}: ${error?.stack ?? error}`);
   }
@@ -155,7 +164,7 @@ export class Host {
   // the dialog open and answers it later (autopilot-plan-explore, D6)
   async settle(limitMs = 20000) {
     const deadline = Date.now() + limitMs;
-    const idle = () => this.pending.size <= this.blockedDeliveries;
+    const idle = () => [...this.pending].every((p) => this.deliveries.get(p)?.blocked === true);
     for (;;) {
       await new Promise((resolve) => setTimeout(resolve, 10));
       if (idle()) {
@@ -317,8 +326,7 @@ export class Host {
           return {
             events: {
               emit: (name, data) =>
-                host.track(
-                  host.delivery.run({ rpc: definition.id, event: name }, async () => {
+                host.trackDelivery({ rpc: definition.id, event: name, blocked: false }, async () => {
                     if (host.tuiSilent) return;
                     for (const listener of [...(entry.listeners.get(name) ?? [])]) {
                       try {
@@ -327,8 +335,7 @@ export class Host {
                         host.crash(`rpc listener ${name}`, error);
                       }
                     }
-                  })
-                ),
+                  }),
             },
             async dispose() {},
           };
@@ -475,13 +482,15 @@ export class Host {
             let answer;
             if (host.dialogAnswers.length > 0) answer = host.dialogAnswers.shift();
             else if (host.dialogWait) {
-              // Inside an RPC delivery, the open dialog is the user's to answer, not pending work
-              const blocking = host.delivery.getStore() !== undefined;
-              if (blocking) host.blockedDeliveries += 1;
+              // Inside an RPC delivery, the open dialog is the user's to answer, not pending work.
+              // A promise the listener detached keeps the context, but its delivery is no longer
+              // tracked, so marking it changes nothing
+              const delivery = host.delivery.getStore();
+              if (delivery) delivery.blocked = true;
               try {
                 answer = await new Promise((resolve) => host.openDialogs.push(resolve));
               } finally {
-                if (blocking) host.blockedDeliveries -= 1;
+                if (delivery) delivery.blocked = false;
               }
             }
             else answer = { value: undefined };

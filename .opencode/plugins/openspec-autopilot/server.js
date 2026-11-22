@@ -29,7 +29,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { RPC, TIMEOUT_MS } from './lib/rpc.mjs';
 import { describe, discrepancy, next, stepFromState, waitsForCommit, zoneOf } from './lib/next-step.mjs';
-import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, closedPrompt, explorePrompt, exploreReminderPrompt, foreignPrompt, reminderPrompt, resumeCommand, returnPrompt, stepPrompt } from './lib/prompts.mjs';
+import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, closedPrompt, explorePrompt, exploreReminderPrompt, foreignPrompt, planNoticeText, reminderPrompt, resumeCommand, returnPrompt, stepPrompt } from './lib/prompts.mjs';
 import { agentTurn, transition, turnKey } from './lib/agent-turn.mjs';
 import { allSessions, branchSessions, changeSessions, isArchived, isWorking, meta, nextSeq, owners, winner, writeMeta } from './lib/state.mjs';
 import { branchChange, changeState, validateErrors } from './lib/project.mjs';
@@ -61,6 +61,8 @@ function clientBridge(ctx, gen, registry, directory, onFirst) {
   let registration = null;
 
   const ready = () => target !== null;
+  // El PID de la TUI presentada: distingue un arranque de una recarga (D5 de autopilot-plan-explore)
+  const pid = () => /^tui-(\d+)-/.exec(target ?? '')?.[1] ?? null;
 
   const request = (op, args) =>
     new Promise((resolve, reject) => {
@@ -124,7 +126,7 @@ function clientBridge(ctx, gen, registry, directory, onFirst) {
     }
   };
 
-  return { ready, request, toast, start };
+  return { ready, pid, request, toast, start };
 }
 
 // --- El plugin --------------------------------------------------------------------
@@ -268,9 +270,11 @@ async function start(ctx) {
     const { snapshot, git } = await takeSnapshot(m);
     const isReview = m.step.kind === 'review';
     const review = isReview ? { ...(m.review ?? {}), git: { head: git.head, signature: git.signature } } : m.review;
-    const patch = { phase: isReview ? 'review' : 'running', snapshot, handoff: null, ...(isReview ? { review } : {}) };
+    const patch = { phase: isReview ? 'review' : 'running', snapshot, handoff: null, ...(isReview ? { review } : {}), ...(m.noticeAtStart ? { noticeAtStart: null } : {}) };
     await writeMeta(api, sessionID, patch);
-    const text = await promptFor({ ...m, review });
+    const instruction = await promptFor({ ...m, review });
+    // Lo modificado con plan en el paso anterior, sin TUI que lo avisara (D5)
+    const text = m.noticeAtStart ? `${MARK} ${planNoticeText()} Díselo al usuario al empezar.\n\n${instruction}` : instruction;
     if (!send) return text;
     const skill = WORKFLOW[m.step.kind]?.skill;
     await api.prompt({ sessionID, text, ...(skill ? { skills: [{ id: skill }] } : {}) });
@@ -329,9 +333,23 @@ async function start(ctx) {
     }
   };
 
+  // Los avisos pendientes se vuelven a pedir a una TUI con otro PID; tras una
+  // recarga (el mismo PID) el modal anterior sigue en pantalla (D5)
+  const pendingNotices = async () => {
+    const bc = await branchChange(directory);
+    if (!actionable(bc)) return;
+    for (const s of await branchSessions(api, { worktree: directory, branch: bc.branch })) {
+      const m = meta(s);
+      if (isArchived(s) || m?.role !== 'owner' || m.phase !== 'plan-notice' || m.planNotice?.pid === ui.pid()) continue;
+      await writeMeta(api, s.id, { planNotice: { ...(m.planNotice ?? {}), pid: ui.pid() } });
+      await showPlanNotice(s.id);
+    }
+  };
+
   const onFirst = guard('hello', async ({ first }) => {
     await archivePending();
     if (!first) return;
+    await pendingNotices();
     const bc = await branchChange(directory);
     if (bc.kind === 'several') {
       const names = [...new Set(bc.changes.map((c) => c.name))];
@@ -436,7 +454,7 @@ async function start(ctx) {
     if (wait) wait = !(await treeClean(directory));
     let created;
     try {
-      created = await createStep({ branch: m.branch, change: m.change, step, seq: (m.seq ?? 0) + 1, zone: lastZone, wait, extra: { ...(m.description ? { description: m.description } : {}), ...extra } });
+      created = await createStep({ branch: m.branch, change: m.change, step, seq: (m.seq ?? 0) + 1, zone: lastZone, wait, extra: { ...(m.description ? { description: m.description } : {}), ...(m.planNoticed ? { noticeAtStart: true } : {}), ...extra } });
     } catch (error) {
       await failed(`no se ha podido crear la sesión del paso siguiente (${describe(step, m.change)})`, error, from.id);
       return;
@@ -500,14 +518,84 @@ async function start(ctx) {
     await chainTo({ from: session, m: mm, step, wait: waitsForCommit({ mode, finished: m.step, step, zoneChange }), lastZone });
   };
 
+  // Lo modificado con el agente plan (D4 y D5 de autopilot-plan-explore): si
+  // git ha cambiado desde que empezó el turno en plan. Borra planTurn.
+  const changedInPlan = async (session, m) => {
+    if (!m.planTurn) return false;
+    let changed = false;
+    try {
+      const now = await gitState(directory);
+      changed = now.signature !== m.planTurn.git?.signature;
+    } catch (error) {
+      log('planTurn:', error?.message ?? error);
+    }
+    await writeMeta(api, session.id, { planTurn: null });
+    return changed;
+  };
+
+  // Pide a la TUI el modal del aviso; la TUI lo abre, responde enseguida y llama a ack al cerrarlo
+  const showPlanNotice = async (sessionID) => {
+    try {
+      await ui.request('notice', { sessionID, message: planNoticeText() });
+      return true;
+    } catch (error) {
+      log('notice:', error?.message ?? error);
+      return false;
+    }
+  };
+
+  // Sigue la cadena retenida por el aviso (acuse de la TUI o prompt del usuario)
+  const releaseNotice = async (sessionID, { noticeAtStart = false } = {}) => {
+    if (chaining.has(sessionID)) return false;
+    const session = await api.get({ sessionID });
+    const m = meta(session);
+    if (!m || m.role !== 'owner' || isArchived(session) || m.phase !== 'plan-notice') return false;
+    chaining.add(sessionID);
+    try {
+      await writeMeta(api, sessionID, { phase: 'running', planNotice: null });
+      const mm = { ...m, phase: 'running', planNotice: null, ...(noticeAtStart ? { planNoticed: true } : {}) };
+      const evaluated = await evaluate(mm);
+      if (evaluated.products.length > 0) await finishStep(session, mm, evaluated);
+      return true;
+    } catch (error) {
+      await failed('no se ha podido seguir tras el aviso', error, sessionID);
+      return false;
+    } finally {
+      chaining.delete(sessionID);
+    }
+  };
+
   const onIdle = guard('idle', async ({ sessionID }) => {
     if (chaining.has(sessionID)) return;
     const session = await api.get({ sessionID });
-    const m = meta(session);
-    if (!m || m.role !== 'owner' || isArchived(session) || !['running', 'handed-off'].includes(m.phase) || !m.step) return;
+    let m = meta(session);
+    if (!m || m.role !== 'owner' || isArchived(session) || !m.step) return;
+    const noticed = await changedInPlan(session, m);
+    m = { ...m, planTurn: null };
+    const chains = ['running', 'handed-off'].includes(m.phase);
+    if (noticed && !chains) {
+      // Sin cadena que retener: el aviso solo (en una revisión, en la espera del commit…)
+      if (!(ui.ready() && (await showPlanNotice(sessionID)))) await writeMeta(api, sessionID, { planNotice: { next: true } });
+      return;
+    }
+    if (!chains) return;
     chaining.add(sessionID);
     try {
       const evaluated = await evaluate(m);
+      if (noticed) {
+        if (evaluated.products.length === 0) {
+          if (!(ui.ready() && (await showPlanNotice(sessionID)))) await writeMeta(api, sessionID, { planNotice: { next: true } });
+          return;
+        }
+        if (ui.ready()) {
+          // La cadena espera al acuse de la TUI
+          await writeMeta(api, sessionID, { phase: 'plan-notice', planNotice: { chain: true, pid: ui.pid() } });
+          if (await showPlanNotice(sessionID)) return;
+          await writeMeta(api, sessionID, { phase: m.phase, planNotice: null });
+        }
+        // Sin TUI: se sigue, y el aviso va al principio de la sesión siguiente
+        m = { ...m, planNoticed: true };
+      }
       if (evaluated.products.length === 0) return;
       await finishStep(session, { ...m, phase: 'running' }, evaluated);
     } catch (error) {
@@ -573,6 +661,12 @@ async function start(ctx) {
     const m = meta(session);
     if (m?.role === 'owner') {
       if (m.phase === 'review') return reviewPrompted(session, m, input);
+      // Un prompt con el aviso pendiente cuenta como acuse (D5)
+      if (m.phase === 'plan-notice') {
+        input.prompt.text = `${MARK} El usuario ha seguido tras el aviso de lo modificado con el agente plan, y el ciclo pasa a la sesión siguiente. No hagas nada más: responde solo «Sigo con el ciclo.».`;
+        await releaseNotice(sessionID, { noticeAtStart: true });
+        return;
+      }
       if (m.phase === 'waiting-commit') {
         if (!(await treeClean(directory))) return;
         try {
@@ -651,8 +745,20 @@ async function start(ctx) {
     const key = turnKey(input.messages, { turnMessage: m.turnMessage, previous: m.agentTurn?.key });
     const { state, fresh } = agentTurn(m.agentTurn, { key, agent: input.agent });
     if (fresh) {
+      // El estado de git al empezar un turno en plan (D4): se compara al quedar en reposo
+      const patch = { agentTurn: state };
+      if (state.agent === 'plan') {
+        if (!m.planTurn) {
+          try {
+            const git = await gitState(directory);
+            patch.planTurn = { key: state.key, git: { head: git.head, signature: git.signature } };
+          } catch (error) {
+            log('planTurn:', error?.message ?? error);
+          }
+        }
+      } else if (m.planTurn) patch.planTurn = null;
       try {
-        await writeMeta(api, input.sessionID, { agentTurn: state });
+        await writeMeta(api, input.sessionID, patch);
       } catch (error) {
         log('agentTurn:', error?.message ?? error);
       }
@@ -669,6 +775,15 @@ async function start(ctx) {
     const m = meta(session);
     if (m?.role === 'owner') {
       if (m.step) inject(input, await turnText(input, m));
+      // Sin TUI y sin producto: el aviso de lo modificado con plan, una vez (D5)
+      if (m.planNotice?.next) {
+        inject(input, `${MARK} ${planNoticeText()} Díselo al usuario al empezar tu respuesta.`);
+        try {
+          await writeMeta(api, sessionID, { planNotice: null });
+        } catch (error) {
+          log('planNotice:', error?.message ?? error);
+        }
+      }
       return;
     }
     const bc = await branchChange(directory);
@@ -773,7 +888,9 @@ async function start(ctx) {
       execute: async (input, context) => (await readSession(input, context)) ?? { content: 'openspec-autopilot no ha podido leer la sesión.' },
     });
   });
-  await ui.start({ screen: async (input) => (await onScreen(input)) ?? { action: 'none' } });
+  // El acuse del aviso: por la sesión, no por una petición en memoria (D5)
+  const onAck = guard('ack', async (input) => ({ ok: await releaseNotice(String(input?.sessionID ?? '')) }));
+  await ui.start({ screen: async (input) => (await onScreen(input)) ?? { action: 'none' }, ack: async (input) => (await onAck(input)) ?? { ok: false } });
   await api.hook('prompt', onPrompt);
   await api.hook('context', onContext);
   await api.hook('experimental.idle', onIdle);

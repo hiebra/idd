@@ -1116,6 +1116,98 @@ Then('el plugin no añade ningún mensaje a la sesión', function () {
   for (const m of stored) assert.ok(!m.text.includes(ap.MARK), JSON.stringify(stored));
 });
 
+// --- Aviso de lo modificado con el agente plan (autopilot-plan-explore) ---------------------
+
+const PLAN_NOTICE = /con el agente plan se han hecho modificaciones/;
+
+// The model, with the plan agent, answers the next message after writing these files
+async function planTurn(world, files, text = 'Hazlo.') {
+  await world.opencodeCall('switchAgent', { sessionID: world.owner, agent: 'plan' });
+  await ap.refresh(world).then((state) => (world.opencode = state));
+  world.sessionsBefore = ap.sessions(world).length;
+  world.stepSession = world.owner;
+  await script(world, world.owner, files ? [{ files, text: 'Hecho.' }] : [{ text: 'Lo pienso contigo.' }]);
+  await say(world, world.owner, text);
+}
+
+// The TUI keeps each dialog open until the scenario closes it
+async function keepDialogsOpen(world) {
+  await world.opencodeCall('dialogWait', { on: true });
+}
+
+function planNoticeDialog(world) {
+  const shown = world.opencode.dialogs.filter((d) => PLAN_NOTICE.test(d.title ?? ''));
+  assert.equal(shown.length, 1, detail(world));
+  return shown[0];
+}
+
+Given('una rama temporal con el change en curso `exportar-datos`, en modo normal, en la TUI', async function () {
+  await ap.prepareChange(this, { tasks: TASKS_1_2_DONE });
+  await startMode(this, 'normal');
+  await keepDialogsOpen(this);
+});
+
+Given('una sesión operativa que crea el artefacto `design` de `exportar-datos`, en la TUI', async function () {
+  await ap.prepareChange(this, { artifacts: ['proposal', 'specs'] });
+  await startMode(this, 'normal');
+  await keepDialogsOpen(this);
+  await seedOperational(this, { kind: 'artifact', id: 'design' }, { zone: 'specs' });
+  await say(this, this.owner, 'Empieza.');
+});
+
+Given('una sesión operativa de `exportar-datos` con el aviso de lo modificado con el agente plan en pantalla', async function () {
+  await ap.prepareChange(this, { artifacts: ['proposal', 'specs'] });
+  await startMode(this, 'normal');
+  await keepDialogsOpen(this);
+  await seedOperational(this, { kind: 'artifact', id: 'design' }, { zone: 'specs' });
+});
+
+Given('el turno en plan dejó escrito el artefacto `design`', async function () {
+  await planTurn(this, ARTIFACT_FILES.design(), 'Escribe el design.');
+  assert.equal(planNoticeDialog(this).open, true);
+  assert.equal(ap.metaOf(ap.session(this, this.owner)).phase, 'plan-notice', detail(this));
+});
+
+When('el usuario, con el agente plan, pide al modelo que escriba el artefacto `design` y la sesión queda en reposo', async function () {
+  await planTurn(this, ARTIFACT_FILES.design(), 'Escribe el design.');
+});
+
+When('el modelo, con el agente plan, escribe el artefacto `design` y la sesión queda en reposo', async function () {
+  await planTurn(this, ARTIFACT_FILES.design(), 'Escribe el design.');
+});
+
+When('el modelo, con el agente plan, modifica el README y la sesión queda en reposo', async function () {
+  await planTurn(this, { 'README.md': '# Proyecto\n\nCambiado en plan.\n' }, 'Arregla el README.');
+});
+
+When('el usuario conversa con el agente plan sin que cambie nada en git y la sesión queda en reposo', async function () {
+  await planTurn(this, null, '¿Qué opinas del formato?');
+});
+
+When('el usuario cierra el modal', async function () {
+  await this.opencodeCall('answers', { answers: [{ key: 'enter' }], settle: true });
+});
+
+Then('se muestra un modal de un solo botón que avisa de que con el agente plan se han hecho modificaciones', function () {
+  const shown = planNoticeDialog(this);
+  assert.equal(shown.open, true);
+  assert.deepEqual(shown.options.map((o) => o.title), ['Entendido']);
+});
+
+Then('se muestra el modal que avisa de que con el agente plan se han hecho modificaciones', function () {
+  assert.equal(planNoticeDialog(this).open, true);
+});
+
+Then('la sesión sigue siendo la operativa del artefacto `design`', function () {
+  const owner = ap.onlyOwner(this);
+  assert.equal(owner.id, this.owner, detail(this));
+  assert.deepEqual(ap.metaOf(owner).step, { kind: 'artifact', id: 'design' });
+});
+
+Then('el mensaje con el que arranca la revisión avisa de que con el agente plan se han hecho modificaciones', function () {
+  assert.match(ap.instructionOf(this, this.review), PLAN_NOTICE, detail(this));
+});
+
 // --- Compactación y fallos ---------------------------------------------------------------------
 
 Given('una sesión dueña que aplica la task 3 de `exportar-datos`', async function () {

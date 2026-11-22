@@ -431,3 +431,95 @@ test('a failure writing the turn does not block the request nor throw', async (t
   assert.match(injectedIn(last)[0], /`openspec-explore`/);
   assert.deepEqual(w.opencode.crashes, []);
 });
+
+// autopilot-plan-explore (D4, D5): the notice of what was modified with the plan agent
+const DESIGN_FILE = { 'openspec/changes/exportar-datos/design.md': '## Context\n\nEscrito en plan.\n' };
+const noticeDialogs = (w) => w.opencode.dialogs.filter((d) => /con el agente plan se han hecho modificaciones/.test(d.title ?? ''));
+
+// An operational session doing `design`; its plan turn writes these files
+async function planWrites(w, files, { keepOpen = true } = {}) {
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  if (keepOpen) await w.opencodeCall('dialogWait', { on: true });
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' }, meta: { zone: 'specs' } });
+  await w.opencodeCall('switchAgent', { sessionID: owner, agent: 'plan' });
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ files, text: 'Hecho.' }] }] });
+  await w.opencodeCall('message', { sessionID: owner, text: 'Escríbelo.' });
+  return owner;
+}
+
+test('a plan turn keeps the git state of its start until the session goes idle', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  await w.opencodeCall('switchAgent', { sessionID: owner, agent: 'plan' });
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ tool: { name: 'read', input: {} }, delayMs: 400 }, { text: 'Visto.' }] }] });
+  await w.opencodeCall('messageAsync', { sessionID: owner, text: '¿Qué hay?' });
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  await ap.refresh(w);
+  const during = ap.metaOf(ap.session(w, owner)).planTurn;
+  assert.match(during?.git?.signature ?? '', /^[0-9a-f]{40}$/, ap.describeSessions(w));
+  await w.opencodeCall('settle');
+  assert.equal(ap.metaOf(ap.session(w, owner)).planTurn, null);
+  assert.equal(noticeDialogs(w).length, 0);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('a pending notice is asked again of a TUI with another PID, not after a hot reload nor on each screen', async (t) => {
+  const w = world(t);
+  const owner = await planWrites(w, DESIGN_FILE);
+  assert.equal(noticeDialogs(w).length, 1);
+  await w.opencodeCall('reload');
+  await w.opencodeCall('goto', { sessionID: owner });
+  await w.opencodeCall('focus');
+  assert.equal(noticeDialogs(w).length, 1, 'the modal of the previous load is still on screen');
+  assert.equal(ap.metaOf(ap.session(w, owner)).phase, 'plan-notice');
+  // A new TUI (another process): the notice again; this one is closed at once, and the chain goes on
+  w.opencode = await w.sim.restart();
+  await w.opencodeCall('settle');
+  assert.equal(noticeDialogs(w).length, 1, ap.describeSessions(w));
+  const review = ap.onlyOwner(w);
+  assert.notEqual(review.id, owner);
+  assert.equal(ap.metaOf(review).step.kind, 'review');
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('after a hot reload with the modal open, closing it chains once through the new server', async (t) => {
+  const w = world(t);
+  const owner = await planWrites(w, DESIGN_FILE);
+  await w.opencodeCall('reload');
+  await w.opencodeCall('answers', { answers: [{ key: 'esc' }], settle: true });
+  const review = ap.onlyOwner(w);
+  assert.notEqual(review.id, owner, ap.describeSessions(w));
+  assert.deepEqual(ap.metaOf(review).step, { kind: 'review', id: 'design', of: 'artifact' });
+  assert.equal(ap.sessions(w).length, 2);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('a prompt with the notice pending chains, with the notice in the next session, and a later ack is ignored', async (t) => {
+  const w = world(t);
+  const owner = await planWrites(w, DESIGN_FILE);
+  await w.opencodeCall('message', { sessionID: owner, text: 'Vale, sigue.' });
+  const review = ap.onlyOwner(w);
+  assert.notEqual(review.id, owner, ap.describeSessions(w));
+  assert.match(ap.instructionOf(w, review.id), /con el agente plan se han hecho modificaciones/);
+  // The modal, still open, is closed now: its ack finds no session waiting
+  await w.opencodeCall('answers', { answers: [{ key: 'enter' }], settle: true });
+  assert.equal(ap.onlyOwner(w).id, review.id);
+  assert.equal(ap.sessions(w).length, 2, ap.describeSessions(w));
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('a build turn gives no notice although git changes', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  await w.opencodeCall('dialogWait', { on: true });
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ files: { 'README.md': '# Cambiado en build\n' }, text: 'Hecho.' }] }] });
+  await w.opencodeCall('message', { sessionID: owner, text: 'Arregla el README.' });
+  assert.equal(noticeDialogs(w).length, 0);
+  assert.equal(ap.metaOf(ap.session(w, owner)).planNotice ?? null, null);
+  assert.deepEqual(w.opencode.crashes, []);
+});
