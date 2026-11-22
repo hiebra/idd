@@ -5,10 +5,14 @@ El plugin `openspec-autopilot` (ADR-0014) da una sesión a cada paso y le recuer
 Lo que ya se sabe de OpenCode 2.3.2 y condiciona el diseño:
 
 - El hook `context` se ejecuta en **cada petición al modelo**, también en las que siguen a una tool dentro del mismo turno, y lo que añade no queda en el historial ni se acumula (`.wiki/wiki/concepts/hook-context-opencode.md`). Por eso lo que se inyecta se decide **por turno** (por mensaje del usuario), no por petición, como ya hace `session-bootstrap` con `lastUserText`.
-- La entrada del hook trae el agente de la petición (`input.agent`) en el simulador de la suite (`opencode-sim.mjs`, `request()`); en OpenCode real no está comprobado (ver Open Questions).
+- La entrada del hook `context` trae el agente de la petición, `input.agent` (`"build"` o `"plan"`), junto a `sessionID`, `model`, `system`, `messages`, `options` y `tools`; cambia de un mensaje al siguiente, y todas las peticiones de un turno llevan el mismo (task 1.1, comprobado con OpenCode 2.3.2 real).
+- Con el agente plan, OpenCode añade su propio recordatorio (`<system-reminder> You are in Plan mode…`) como mensaje `user`: antes del mensaje del usuario en la primera petición del turno y al final, tras el resultado de la tool, en las siguientes (task 1.1). Ninguna clave sacada de la lista de mensajes de la petición es estable dentro del turno.
+- El hook de servidor `prompt` llega con cada mensaje que entra en una sesión, también el que envía el plugin con `session.prompt`, antes de la petición al modelo, con `{ sessionID, messageID, prompt, delivery }`; también llega cuando el mensaje queda pendiente detrás del turno en curso (design de `autopilot-sesion-operativa`, Context 3). Qué distingue ese caso está por comprobar (task 1.4).
+- El agente plan carga la skill `openspec-explore` con la tool `skill` (task 1.2).
+- El `emit` del servidor vuelve sin esperar a la TUI, y la TUI puede tener un `dialog.select` abierto mientras el servidor espera. Una recarga en caliente recarga las dos partes y ejecuta la limpieza de la TUI, pero el modal de la carga anterior sigue abierto; al cerrarlo, la carga anterior responde y la respuesta llega al servidor nuevo, que no conoce la petición pendiente del anterior (task 1.3).
 - La metadata de la sesión se sustituye entera: se escribe leyendo, combinando y volviendo a escribir (`writeMeta`, lección 2 de `.wiki/raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md`).
 - La TUI vuelve al agente build al abrirse aunque el último fuera plan (lección 7 de la misma nota): el agente de la sesión no es un estado fiable entre arranques; el de cada petición, sí.
-- El servidor solo se comunica con la TUI por el RPC del plugin (D1 de `autopilot-sesion-operativa`): peticiones `request` con límite de tiempo y una sola respuesta, y directivas de `screen`. Hoy el modal informativo (`notice`) solo sale como directiva de `screen`, sin acuse.
+- El servidor solo se comunica con la TUI por el RPC del plugin (D1 de `autopilot-sesion-operativa`): peticiones `request` con límite de tiempo y una sola respuesta, guardadas en la memoria del servidor, y directivas de `screen`. Hoy el modal informativo (`notice`) solo sale como directiva de `screen`, sin acuse.
 - `experimental.idle` encadena el paso (`onIdle` → `finishStep`) y solo actúa con la fase `running` o `handed-off`.
 
 ADRs en vigor que acotan el diseño: ADR-0006 (asimetría: nada en Claude Code), ADR-0011 (el plugin libera lo que registra), ADR-0013 (el plugin pasa al stage, el usuario hace el commit), ADR-0014 (producto por el CLI, cierre de las revisiones por git, lógica en el servidor y degradación sin TUI) y ADR-0015 (ciclo git). Ninguno fija el agente de las revisiones ni prohíbe inyectar al cambiar de agente: esas decisiones están solo en el design y la proposal de `add-openspec-autopilot`.
@@ -37,7 +41,7 @@ Alternativa descartada: dejar las revisiones en plan y no inyectar `openspec-exp
 
 ### D2. El cambio de agente se decide por turno
 
-En el hook `context` de la sesión operativa, el turno es el último mensaje `user` de la petición, también el que lleva la marca del plugin (`[openspec-autopilot]`), porque el mensaje con el que el plugin arranca cada paso la lleva y es el primer turno. Su clave es el número de mensajes del modelo (asistente y tools) que hay antes de ese mensaje, más un hash de su texto. No cambia entre las peticiones de un turno, aunque otro hook (`session-bootstrap`) inserte sus recordatorios como mensajes `user` antes del mensaje del usuario, y cambia con cada mensaje nuevo, porque entre dos mensajes del usuario siempre hay al menos una respuesta del modelo. La metadata guarda `agentTurn: { key, agent, kind }`, donde `kind` es lo que se inyecta en todo el turno:
+La clave del turno es el `messageID` del mensaje que lo abre, tal como llega al hook `prompt` de la sesión operativa. El hook la guarda en la metadata (`turnMessage`) antes de decidir nada más, también con los mensajes que llevan la marca del plugin (el mensaje con el que el plugin arranca cada paso abre el primer turno). En las peticiones del turno, el hook `context` lee esa clave de la metadata y no mira la lista de mensajes de la petición. Un mensaje que queda pendiente detrás del turno en curso no debe cambiar la clave del turno en curso: cómo distinguirlo lo decide la task 1.4 (si `delivery` u otro dato lo distingue, solo se guarda la clave de los mensajes que abren turno ya; si no, se guarda como clave pendiente y pasa a ser la del turno en la primera petición después de que la sesión quede en reposo). La metadata guarda `agentTurn: { key, agent, kind }`, donde `kind` es lo que se inyecta en todo el turno:
 
 | agente del turno anterior | agente de este turno | `kind`                      |
 | ------------------------- | -------------------- | --------------------------- |
@@ -50,7 +54,11 @@ Al empezar un turno nuevo (la clave cambia), el plugin calcula `kind`, lo escrib
 
 Alternativa descartada: decidir por petición comparando con la petición anterior. Dentro de un turno en plan, la segunda petición (tras una tool) ya vería "plan → plan" y perdería la instrucción completa, que no queda en el historial.
 
-Alternativa descartada: contar los mensajes `user` sin la marca del plugin. Deja sin clave el primer turno de cada paso, y las inserciones de otros hooks cambian la posición del mensaje del usuario.
+Alternativas descartadas para la clave:
+
+- Sacarla de los mensajes de la petición (el último mensaje `user`, o los mensajes del modelo antes de él, con su texto). El recordatorio del agente plan, insertado como mensaje `user` al final de la petición tras una tool, la cambia dentro del turno (task 1.1).
+- Lo mismo saltando los mensajes que empiezan por `<system-reminder>`. Depende del formato de una inyección de OpenCode y no protege de las de otros plugins.
+- Contar los mensajes guardados de la sesión. Una lectura de la sesión por petición, y tiene el mismo problema con los mensajes pendientes.
 
 ### D3. Los textos nuevos, en `lib/prompts.mjs`
 
@@ -69,16 +77,16 @@ Alternativa descartada: guardar el estado en el hook `prompt`. Ahí no se conoce
 
 ### D5. El aviso retiene la cadena con un acuse de la TUI
 
-- **Con producto y TUI presentada**: la sesión pasa a la fase `plan-notice`, con `planNotice: { chain: true }`, y el servidor pide a la TUI la operación nueva `notice` (servidor → cliente, en el evento `request`). La TUI muestra el modal de un botón, "Entendido", y responde con `reply` al cerrarse de cualquier forma. Con el acuse, el servidor vuelve a la fase `running` y llama a `finishStep` con el producto recalculado: stage y revisión (modo normal) o paso siguiente (modo auto), como si no hubiera aviso.
+- **Con producto y TUI presentada**: la sesión pasa a la fase `plan-notice`, con `planNotice: { chain: true, pid }` (el PID de la TUI a la que se pide), y el servidor pide a la TUI la operación nueva `notice` (servidor → cliente, en el evento `request`), que no espera respuesta: la TUI abre el modal de un botón, "Entendido", y responde enseguida. Al cerrarse el modal, de cualquier forma, la TUI llama al método nuevo `ack({ instance, sessionID })` (cliente → servidor). El acuse se identifica por la sesión, no por una petición pendiente en memoria: el servidor lo acepta si esa sesión sigue en `plan-notice`, y lo ignora si no. Así vale también tras una recarga en caliente, en la que el modal de la carga anterior sigue abierto y su acuse llega al servidor nuevo (task 1.3). Con el acuse, el servidor vuelve a la fase `running` y llama a `finishStep` con el producto recalculado: stage y revisión (modo normal) o paso siguiente (modo auto), como si no hubiera aviso.
 - **Sin producto y TUI presentada**: la misma operación `notice`, sin retener nada: `planNotice` no se guarda y la sesión sigue en su fase.
 - **Sin TUI**: el plugin encadena sin esperar. Con producto, el mensaje con el que arranca la sesión siguiente (`stepPrompt`, `reviewPrompt`) empieza con el aviso, y lo ve el usuario en el historial; sin producto, la sesión guarda `planNotice: { next: true }` y el hook `context` de la siguiente petición de esa sesión lo añade, para que el modelo lo transmita, y lo borra.
-- **Nunca retenida para siempre**: `notice` no tiene el límite corto de las demás operaciones (la TUI espera al usuario); si vence, si la TUI se recarga o se cierra, la sesión sigue en `plan-notice`, y el servidor vuelve a pedir el aviso cuando una TUI se presenta (`hello`, junto a `archivePending`) o vuelve a esa sesión (`screen`). Si en `plan-notice` el usuario envía un prompt en esa sesión (por ejemplo desde la web), el hook `prompt` lo toma como acuse: encadena, y la sesión siguiente arranca con el aviso como sin TUI.
+- **Nunca retenida para siempre**: si la TUI se cierra con el modal abierto, la sesión sigue en `plan-notice`, y el servidor vuelve a pedir el aviso cuando se presenta una TUI con otro PID que el de `planNotice.pid` (un arranque, junto a `archivePending`). No lo vuelve a pedir tras una recarga en caliente (el mismo PID), porque el modal anterior sigue en pantalla, ni en cada `screen`. Si en `plan-notice` el usuario envía un prompt en esa sesión (por ejemplo desde la web), el hook `prompt` lo toma como acuse: encadena, y la sesión siguiente arranca con el aviso como sin TUI.
 
 Alternativa descartada: la directiva `notice` de `screen` que ya existe. No tiene acuse, solo sale al cambiar de pantalla o recuperar el foco, y la cadena no sabría cuándo seguir.
 
 ### D6. El simulador
 
-`opencode-sim.mjs` ya tiene `switchAgent` y pasa `agent` en la entrada de `context`. Le falta la operación `notice` en la TUI simulada, con un modal que el escenario cierra cuando quiere (para comprobar que la cadena espera), y poder guionizar que el modelo escriba archivos en un turno con plan.
+`opencode-sim.mjs` ya tiene `switchAgent`, pasa `agent` en la entrada de `context`, deja modales abiertos hasta que el escenario los cierra y guioniza respuestas que escriben archivos. Le falta que una entrega RPC que espera un modal no cuente como trabajo pendiente (hecho en la task 2.1), reproducir el recordatorio del agente plan como mensaje `user` en las peticiones (task 2.3), y lo que diga la task 1.4 sobre el hook `prompt` con los mensajes pendientes.
 
 ## Risks / Trade-offs
 
@@ -86,9 +94,9 @@ Alternativa descartada: la directiva `notice` de `screen` que ya existe. No tien
 - [Un turno en plan en una revisión cambia git y confunde el veredicto del cierre] → El aviso (D4) sale en la revisión igual, antes del siguiente prompt del usuario, que es el que cierra la revisión: el usuario sabe que el árbol ha cambiado antes de decidir.
 - [El usuario cambia git a mano en otro terminal durante un turno en plan] → Da un aviso que no se debe al modelo. Se acepta: el texto dice que se han hecho modificaciones, no que las hiciera el modelo, y el turno en plan suele ser corto.
 - [Calcular el estado de git en el hook `context` retrasa la primera petición de un turno en plan] → Solo una vez por turno en plan, con el límite de tiempo de `lib/git.mjs`; un fallo se registra y el turno sigue sin `planTurn` (sin aviso), sin bloquear la petición.
-- [`input.agent` no llega en OpenCode real] → Todo se trata como build y el plugin se comporta como hoy; la task de comprobación con OpenCode real lo detecta antes de implementar.
-- [La TUI no muestra el modal y la cadena queda en `plan-notice`] → Se vuelve a pedir al presentarse una TUI o volver a la sesión, y un prompt del usuario la libera (D5).
-- [Un turno interrumpido antes de que el modelo responda y un mensaje siguiente con el mismo texto dan la misma clave] → Se tratan como un solo turno, con la inyección del primero. Solo importa si el usuario cambia de agente entre los dos, y el turno siguiente con otro texto vuelve a decidir.
+- [Una versión de OpenCode deja de pasar `input.agent` o el `messageID` del hook `prompt`] → Todo se trata como build, o como un solo turno, y el plugin se comporta como antes de este change; se vigila al subir de versión con las comprobaciones de la sección 1 de las tasks.
+- [La TUI se cierra con el modal abierto y la cadena queda en `plan-notice`] → Se vuelve a pedir al presentarse una TUI nueva, y un prompt del usuario la libera (D5).
+- [Un mensaje pendiente detrás del turno en curso cambia la clave del turno antes de tiempo] → El turno en curso repetiría la inyección del siguiente en sus peticiones restantes. Lo evita lo que decida la task 1.4.
 
 ## Migration Plan
 
@@ -96,6 +104,5 @@ Sin migración de datos. Las sesiones operativas vivas al instalar la versión n
 
 ## Open Questions
 
-- **`input.agent` en OpenCode 2.3.2 real**: el simulador lo pasa, pero no está comprobado en el banco de la lección 9. Es la primera task: si no llega, hay que sacar el agente de otro sitio (el último mensaje del asistente o `session.agent`) antes de seguir.
-- **La skill `openspec-explore` con el agente plan**: hay que comprobar que plan puede cargar una skill con la tool `skill` en la sesión operativa; si no, el texto de D3 incluye el flujo resumido en lugar de pedir la skill.
+- **El hook `prompt` con un mensaje pendiente** (task 1.4): qué `messageID` y qué `delivery` trae un mensaje que entra mientras el turno anterior sigue, y si vuelve a pasar por el hook cuando empieza su turno. Decide cómo guarda D2 la clave.
 - **Supersesión**: este change no contradice ningún ADR en vigor. El ADR del change debe registrar que el autopilot trata el agente plan como exploración y avisa de lo modificado en plan, y que las revisiones nacen en build, en lugar de D6 del design y del fuera de alcance de la proposal de `add-openspec-autopilot`, que no llegaron a un ADR.
