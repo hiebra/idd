@@ -38,6 +38,6 @@ Queda fuera de alcance:
 - `.opencode/plugins/openspec-autopilot/lib/prompts.mjs` (`reviewPrompt`). La lógica de servidor no cambia.
 - `acceptance-tests/`: pasos nuevos y una dependencia de desarrollo para validar JSON Schema.
 - `README.md`: el límite, el contrato y cómo se conecta un MCP que lo cumpla.
-- Claude Code: el límite le llega igual. La parte de la revisión solo existe en el plugin de OpenCode, como el resto de la revisión guiada (ADR-0006).
-- Ramas sin fusionar que tocan lo mismo: `apply-one-task-per-session-in-normal-mode` añade `operations.apply` a `config.yaml` (otra zona del archivo), y `autopilot-plan-explore` pasa las revisiones al agente `build`. Ninguna toca el bloque de verificación de la revisión.
+- Claude Code: el límite le llega igual. La parte de la revisión solo existe en el plugin de OpenCode, como el resto de la revisión guiada (ADR-0025, que mantiene la política de asimetrías de ADR-0006).
+- Lo que ha llegado a `main` durante la planificación, ya fusionado en la rama (`ed2f488`): `apply-one-task-per-session-in-normal-mode`, que añade a `config.yaml` las indicaciones de apply de «una task por sesión» (otra zona del archivo), y `autopilot-plan-explore`, con el que las revisiones nacen con el agente `build`. Ninguno toca el bloque de verificación de la revisión.
 - El wiki del proyecto: las 12 fuentes de la investigación ya están ingeridas (`4b984f3`); se compilan en la resincronización tras el archive.

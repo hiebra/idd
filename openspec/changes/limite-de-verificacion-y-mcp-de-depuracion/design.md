@@ -2,7 +2,7 @@
 
 **La revisión de hoy.** En el modo normal, el autopilot abre una revisión tras cada task. `reviewPrompt` (`.opencode/plugins/openspec-autopilot/lib/prompts.mjs`) pide al modelo guiarla con los escenarios de aceptación y, si hay código ejecutable, dar al usuario una orden de terminal para depurarlo (`guiar-revision-con-tests`, D2). Esa orden la lanza el usuario porque un proceso que espera al depurador deja colgada la orden del modelo. La revisión la cierra git (ADR-0014), así que nada de lo que se ejecute en ella puede dejar archivos que git no ignore.
 
-**El tamaño de las tasks.** `rules.tasks` solo exige la skill `spec-as-source`, y el schema pide que una task se pueda completar en una sesión. Medido en este repositorio (`git log --numstat origin/main`, 159 commits con código, sin lockfiles, `.wiki/` ni `openspec/`): la mediana es de 42 líneas cambiadas, el percentil 75 de 103 y el 90 de 282, con un máximo de 3.843. Son commits, no tasks, pero dan el orden de magnitud.
+**El tamaño de las tasks.** `rules.tasks` solo exige la skill `spec-as-source`, y el schema pide que una task se pueda completar en una sesión. En el modo normal, además, el apply hace una task por sesión también fuera del autopilot (`operations.apply.guidance`, ADR-0025): la task es la unidad que se implementa y se verifica de una vez. Medido en este repositorio (`git log --numstat origin/main`, 159 commits con código, sin lockfiles, `.wiki/` ni `openspec/`): la mediana es de 42 líneas cambiadas, el percentil 75 de 103 y el 90 de 282, con un máximo de 3.843. Son commits, no tasks, pero dan el orden de magnitud.
 
 **Lo que no hay.** No existe todavía ningún MCP de depuración, y este change no lo crea: fija qué debe ofrecer. Los primeros casos son VS Code con Java sobre WLP y con React sobre Vite.
 
@@ -15,7 +15,7 @@
 - **React sobre Vite.** El servidor de desarrollo escucha en `localhost:5173` (`vite-dev-server`). VS Code lanza Edge o Chrome con el depurador puesto contra esa URL, con el servidor ya en marcha (`vscode-browser-debugging`).
 - **Antecedente.** DebugMCP, de Microsoft, es una extensión de VS Code con un servidor MCP con el que el agente maneja el depurador (`microsoft-debugmcp`). Aquí depura la persona, no el agente.
 
-**ADRs en vigor que afectan.** ADR-0006 (una capacidad en un solo agente), ADR-0014 (la revisión la cierra git, y el plugin no tiene dependencias) y ADR-0010 (la plantilla no tiene instrucciones que un agente cargue siempre).
+**ADRs en vigor que afectan.** ADR-0025 (una capacidad en un solo agente; sustituye a ADR-0006 y mantiene su política), ADR-0014 (la revisión la cierra git, y el plugin no tiene dependencias), ADR-0019 (las revisiones nacen con el agente `build`) y ADR-0010 (la plantilla no tiene instrucciones que un agente cargue siempre).
 
 ## Goals / Non-Goals
 
@@ -52,7 +52,7 @@ rules:
 Las reglas de un artefacto llegan al modelo con `openspec instructions tasks --json`, en los dos agentes y también cuando `openspec-update-change` rehace las tasks. Comprobado: con el change recién creado, ese comando ya devuelve `rules: ["Must use spec-as-source skill"]`.
 
 - Alternativa: una clave `x-task-verification-minutes` y una regla que la nombre. Descartada: el CLI entrega el texto de las reglas, no las claves `x-`, así que el modelo tendría que abrir el archivo para saber el número, y en este change nada lo lee de forma determinista. Se añadiría si algún día el plugin valida las estimaciones.
-- Alternativa: `operations.apply.guidance`. Descartada: actúa al implementar, no al planificar, y es la zona del archivo que añade la rama `apply-one-task-per-session-in-normal-mode`.
+- Alternativa: `operations.apply.guidance`. Descartada: actúa al implementar, no al planificar, y es la lista en la que el plugin pone y quita las indicaciones de «una task por sesión» según el modo (ADR-0025).
 - Alternativa: cambiar la instrucción del schema. Descartada: el schema es una copia del origen.
 
 #### D2. Quince minutos, con una referencia para estimar
@@ -221,7 +221,7 @@ La frase de la depuración de `reviewPrompt`, para una task y para el verify, pa
 - El modelo reconoce el MCP por el nombre de las tools, que no depende del nombre que cada usuario dé al servidor. Con un servidor llamado `ide`: `ide_debug_targets` en OpenCode, `mcp__ide__debug_targets` en Claude Code y `tools.ide.debug_targets(…)` en Code Mode.
 - Sin MCP, la instrucción es la de hoy.
 - El plugin no habla con el MCP: no tiene cliente, y no lo necesita.
-- En Claude Code no hay sesiones de revisión (ADR-0006). Un usuario puede pedir lo mismo a mano, y las descripciones de las tools dicen cómo se usan.
+- En Claude Code no hay sesiones de revisión (ADR-0025). Un usuario puede pedir lo mismo a mano, y las descripciones de las tools dicen cómo se usan.
 
 #### D14. Qué comprueba la suite
 
@@ -239,14 +239,14 @@ Tres apartados nuevos: el límite de verificación y cómo se cambia; el contrat
 ## Risks / Trade-offs
 
 - **[El contrato no se ha probado contra un servidor real]** → No hay ninguno. La versión del contrato permite corregirlo, y los ejemplos están marcados como no probados. Lo primero que hay que hacer cuando exista un servidor está en Open Questions.
-- **[No se sabe si el agente de la revisión llega a las tools de un MCP]** → En OpenCode 2.3.2 las revisiones usan el agente `plan`, que ejecuta la shell sin preguntar y ve las tools de los plugins, pero no se ha probado con tools de MCP ni con Code Mode. Si no llegara, la instrucción cae en la alternativa de hoy. La rama `autopilot-plan-explore` pasa las revisiones a `build`.
+- **[No se ha probado que la revisión llegue a las tools de un MCP]** → Las revisiones nacen con el agente `build` (ADR-0019), que tiene las tools de cualquier sesión, pero no se ha probado con las de un MCP, ni con Code Mode ni sin él: no hay servidor. Si no llegara a ellas, la instrucción cae en la alternativa de hoy.
 - **[El modelo ejecuta un paso que no le toca, o un arreglo]** → La instrucción lo prohíbe, las descripciones de las tools lo repiten y los permisos del agente siguen siendo del usuario (`<server>_*`). El contrato limita los pasos de `agent` a órdenes que terminan.
 - **[Las órdenes de un plan las dicta el servidor]** → Es un servidor local que configura el usuario. La instrucción pide enseñar el plan antes de ejecutar nada.
 - **[`code --goto` puede abrir el archivo en otra ventana]** → La documentación no dice en qué ventana abre. Es un detalle del ejemplo, no del contrato.
 - **[Las estimaciones fallan]** → Son estimaciones, y la referencia de D2 son supuestos. La estimación queda escrita, así que el desvío se ve y se corrige en la regla.
 - **[Más tasks, más revisiones]** → Un límite bajo multiplica las sesiones de revisión, cuyo coste fijo no se ha medido. El valor se cambia en una línea.
 - **[La regla alarga las instrucciones de `tasks`]** → Unas 90 palabras más en cada planificación.
-- **[Ramas sin fusionar]** → `apply-one-task-per-session-in-normal-mode` toca otra zona de `config.yaml`. `autopilot-plan-explore`, `windows-global-distro`, `autopilot-rama-por-sesion` y `add-project-wiki-toggle` tocan `prompts.mjs` fuera del bloque de verificación (comprobado en sus diffs contra `main`). Puede haber conflictos de contexto al fusionar, no de contenido.
+- **[Ramas sin fusionar]** → `windows-global-distro`, `autopilot-rama-por-sesion` y `add-project-wiki-toggle` tocan `prompts.mjs` fuera del bloque de verificación (comprobado en sus diffs contra `main`), y la última saca de `config.yaml` las indicaciones del wiki, en otra zona del archivo. Puede haber conflictos de contexto al fusionar, no de contenido. `apply-one-task-per-session-in-normal-mode` y `autopilot-plan-explore` ya están en `main` y en esta rama (`ed2f488`), sin más conflicto que los índices del wiki.
 
 ## Migration Plan
 
@@ -256,7 +256,7 @@ Tres apartados nuevos: el límite de verificación y cómo se cambia; el contrat
 
 ## Open Questions
 
-- **ADR.** La decisión D6 es duradera: la depuración en la verificación se apoya en un MCP externo que solo informa, con un contrato que fija la plantilla. El paso adr debe registrarla en un ADR nuevo, ADR-0026: el número más alto en las ramas remotas es ADR-0025. No sustituye a ninguno.
+- **ADR.** La decisión D6 es duradera: la depuración en la verificación se apoya en un MCP externo que solo informa, con un contrato que fija la plantilla. El paso adr debe registrarla en un ADR nuevo, ADR-0027: el número más alto en `main` es ADR-0025, y la rama `origin/claude/exciting-shannon-bgr8tv` (`add-wiki-lite-mode`) ya usa ADR-0026. No sustituye a ninguno.
 - **Cuando exista un servidor.** Hay que probar el contrato con OpenCode real (que el agente de la revisión llega a las tools, con Code Mode y sin él), ejecutar los dos ejemplos en una máquina con VS Code, Liberty y Vite, y entonces escribir el comprobador de conformidad. Antes solo se probaría contra un servidor falso escrito por nosotros.
 - **La fuente de SmartBear** de D2 no está en el wiki. Se propone al usuario registrarla.
 - **Si el límite debe ser legible por máquina.** Depende de si se quiere que el plugin valide las estimaciones (D1 y D4).
