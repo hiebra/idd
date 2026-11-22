@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-idd-f9f014c-apply-one-task-per-session-in-normal-mode.md](2026-11-22-idd-f9f014c-apply-one-task-per-session-in-normal-mode.md) | Manifiesto de lo que tocó apply-one-task-per-session-in-normal-mode en el commit del archivado (idd@f9f014c) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-cac0041-allow-user-requested-merges.md](2026-11-22-idd-cac0041-allow-user-requested-merges.md) | Manifiesto de lo que tocó allow-user-requested-merges en el commit del archivado (idd@cac0041) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md](2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md) | Manifiesto de lo que tocó update-comment-phrase-and-opencode-marker en el commit del archivado (idd@1657745) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-c4d6b27-update-comment-closing-and-quotes.md](2026-11-22-idd-c4d6b27-update-comment-closing-and-quotes.md) | Manifiesto de lo que tocó update-comment-closing-and-quotes en el commit del archivado (idd@c4d6b27) | collection, collection-manifest, git | 2026-11-22 |

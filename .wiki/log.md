@@ -188,3 +188,5 @@
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ll | "límite de tiempo de syncGuidance (apply-one-task-per-session-in-normal-mode)" → raw/notes/2026-11-22-ll-apply-guidance-timeout.md (1 lesson, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, apply-one-task-per-session-in-normal-mode @ f9f014c): 1 manifest, 15 paths pinned, 0 children, 15 total candidates
