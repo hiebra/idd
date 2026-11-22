@@ -146,3 +146,9 @@
 ## [2026-11-22] ll | "archivado de windows-support" → raw/notes/2026-11-22-ll-archive-windows-support.md (3 lessons, 2 articles updated)
 
 ## [2026-11-22] compile | correcciones del librarian: lo que deja fuera windows-support en soporte-de-windows y los symlinks en Windows en una-sola-copia-de-las-skills (idd@3d2d8fe)
+
+## [2026-11-22] ll | "check commit mira todo el árbol de trabajo" → raw/notes/2026-11-22-ll-check-commit-arbol-entero.md (1 lesson, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed; manual: 0 broken links, 0 uncited sources, 4 pre-existing one-way See Also links (hook-context-opencode, flujo-wiki-first, suite-de-aceptacion-y-spec-as-source do not link back)
