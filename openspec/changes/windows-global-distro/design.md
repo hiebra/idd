@@ -7,7 +7,7 @@ Hoy la plantilla lo lleva todo dentro del proyecto:
 - el arranque de sesión, un núcleo en bash en `.agents/hooks/session-bootstrap.sh` (ADR-0002);
 - el motor del wiki, que el núcleo descarga a `.agents/wiki-engine/` y expone con symlinks (ADR-0005);
 - la guía, el recordatorio y la regla de comentarios, en `.agents/wiki/` y `.agents/comments/` (ADR-0010);
-- los plugins de OpenCode, en `.opencode/plugins/` (ADR-0014).
+- los plugins de OpenCode, en `.opencode/plugins/`: `session-bootstrap`, `openspec-autopilot` (ADR-0014) y `response-comments`, que entrega la regla de comentarios (ADR-0018).
 
 Este change añade, como artefactos de cada release, una instalación global para Windows (solo OpenCode) y una variante adelgazada de la plantilla que la usa (ver la propuesta y las specs `windows-global-install` y `slim-template`).
 
@@ -20,7 +20,7 @@ Las restricciones salen de lo comprobado en esta exploración:
 ## Goals / Non-Goals
 
 **Goals:**
-- Un `.bat` por release que instala o actualiza, en Windows, el schema, las skills, los dos plugins y el motor del wiki, en las ubicaciones que usan OpenSpec y OpenCode, con XDG o sin XDG.
+- Un `.bat` por release que instala o actualiza, en Windows, el schema, las skills, los tres plugins y el motor del wiki, en las ubicaciones que usan OpenSpec y OpenCode, con XDG o sin XDG.
 - Una variante adelgazada, generada desde el tag de la release, que funciona con esa instalación.
 - Un núcleo del arranque en Node, el mismo para la plantilla completa y la instalación global.
 - La plantilla completa sigue funcionando como hoy en Claude Code y en OpenCode.
@@ -44,6 +44,12 @@ Así los adaptadores solo cambian la orden con la que lo lanzan:
 - el de OpenCode pasa de lanzar `bash` a lanzar `node`;
 - los de Claude Code siguen siendo scripts de shell, porque Claude Code no se instala en Windows, y también lanzan `node`.
 
+ADR-0002 descartó un núcleo en Node porque no podría avisar si falta Node o su versión es inferior a la requerida. Ahora se reparte así:
+- **La versión**, la comprueba el propio núcleo con `process.versions.node` frente a `engines.node`, y avisa sin instalar.
+- **La falta de Node**, la detecta el adaptador: si lanzar `node` falla porque no existe, avisa con el mismo texto que hoy da el núcleo.
+
+Son unas pocas líneas por adaptador, y no reparten la lógica de instalación.
+
 Hay un único núcleo, no uno en bash y otro en Node, para no mantener dos implementaciones del mismo comportamiento. Descarto mantener bash y exigir Git Bash en Windows: añade una dependencia que el `.bat` tendría que comprobar, y los symlinks seguirían fallando.
 
 Supersede la parte de ADR-0002 que dice que el núcleo es un script de bash.
@@ -57,13 +63,15 @@ El núcleo recibe, además del directorio del proyecto, si se ejecuta desde el p
   - solo actúa si `openspec/config.yaml` declara `schema: intent-driven`. Lo comprueba con una expresión regular sobre la línea `schema:`, sin un parser de YAML, como ya hace `branch-change.mjs` con `x-main`;
   - no descarga el motor ni crea symlinks;
   - toma el motor de `<data>\idd\wiki-engine\`;
-  - toma la guía, el recordatorio y la regla de comentarios del directorio del propio plugin.
+  - toma la guía, el recordatorio y la regla de comentarios de su propia instalación, junto al plugin `session-bootstrap`.
+
+`response-comments` sigue pidiendo sus textos al núcleo (ADR-0018). En la instalación global lo encuentra en `../session-bootstrap/` respecto a su propio directorio.
 
 Preparar git, instalar las dependencias, poner `openspec` en el `PATH` y exportar `CLAUDE_PLUGIN_ROOT` se hace igual en los dos casos.
 
 ### D3. Lo global cede ante lo del proyecto
 
-Si el proyecto tiene su propio `.opencode/plugins/session-bootstrap/` u `.opencode/plugins/openspec-autopilot/`, el plugin global con el mismo papel no hace nada. Así, un proyecto de la plantilla completa abierto en una máquina con la instalación global no arranca dos veces ni tiene dos autopilots.
+Si el proyecto tiene su propio `.opencode/plugins/<plugin>/`, sea `session-bootstrap`, `openspec-autopilot` o `response-comments`, el plugin global con ese mismo nombre no hace nada. Así, un proyecto de la plantilla completa abierto en una máquina con la instalación global no arranca dos veces ni tiene dos autopilots.
 
 No sabemos si OpenCode descarta un plugin con el mismo `id` cargado desde dos sitios, así que no se confía en ello. Es la misma regla que ya aplica OpenSpec al schema: la copia del proyecto gana. Lo recogen las specs `session-bootstrap` y `openspec-autopilot`.
 
@@ -90,7 +98,7 @@ Supersede la ruta de ADR-0013.
 - `config\opencode\skills\`:
   - las skills de `.agents/skills/`, con el `SKILL.md` de `openspec-git-discipline` en sus tres piezas;
   - las dos skills del motor que usa OpenCode: `wiki-query` para la consulta y `wiki-manager` para la gestión. Las dos hacen falta para cumplir `llm-wiki`;
-- `config\opencode\plugins\`: los dos plugins, y en el de `session-bootstrap`, el núcleo, la guía, el recordatorio y la regla de comentarios.
+- `config\opencode\plugins\`: los tres plugins, y en el de `session-bootstrap`, el núcleo, la guía, el recordatorio y la regla de comentarios.
 
 **`idd-<versión>.bat`**, con la versión y la URL del zip escritas dentro.
 

@@ -13,14 +13,14 @@ Cada proyecto creado desde la plantilla lleva su propia copia del schema `intent
   - en `<data>\openspec\schemas\intent-driven\`, el schema `intent-driven` sin modificar, tal como está en `intent-driven-dev/openspec-schemas@4bb6de2`;
   - en `<data>\idd\wiki-engine\`, el motor del wiki en la versión que fija la release;
   - en `<config>\opencode\skills\`, las skills del schema y la skill `wiki-query` del motor. Las skills del schema son las cinco del origen sin cambios (`intent-driven-dev/skills@15aa678`) y nuestras tres modificadas: `openspec-git-discipline`, `acceptance-test-authoring` y `spec-as-source`;
-  - en `<config>\opencode\plugins\`, los plugins `openspec-autopilot` y `session-bootstrap`, este con la guía y el recordatorio del wiki y la regla de comentarios.
+  - en `<config>\opencode\plugins\`, los plugins `openspec-autopilot`, `session-bootstrap` y `response-comments` (ADR-0018), con el núcleo del arranque, la guía y el recordatorio del wiki y la regla de comentarios.
 - **`branch-change.mjs` viaja dentro de la skill `openspec-git-discipline`**, en `scripts/`. El `.bat` escribe en su `SKILL.md` la ruta absoluta del script. El plugin autopilot lo encuentra por una ruta relativa a la suya y la pasa a sus prompts.
 - **El núcleo del arranque de sesión se porta de bash a Node**, sin dependencias, para que funcione en Windows sin bash. En la instalación global deja de descargar el motor y de crear symlinks, porque de eso se encarga el `.bat`. Conserva todo lo que depende de cada proyecto:
   - preparar git;
   - instalar las dependencias del proyecto;
   - poner el `openspec` del proyecto en el `PATH`;
   - exportar `CLAUDE_PLUGIN_ROOT` con la ruta del motor;
-  - entregar la guía, el recordatorio y la regla de comentarios.
+  - preparar la guía, el recordatorio y la regla de comentarios, que entregan `session-bootstrap` y `response-comments`.
 - **El arranque global solo actúa en proyectos intent-driven**, los que declaran `schema: intent-driven` en `openspec/config.yaml`. En cualquier otro proyecto no hace nada.
 - **Variante adelgazada de la plantilla** para quien usa la instalación global. Es otro artefacto de la misma release, generado desde este repositorio: un zip con la plantilla ya adelgazada, de la misma versión que el `.bat`. No es otro repositorio ni una rama. Prescinde de:
   - `openspec/schemas/` y `.agents/skills/`;

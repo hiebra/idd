@@ -69,3 +69,21 @@ When se abre una sesión de OpenCode en el proyecto
 Then el arranque se ejecuta una sola vez
 And es el del proyecto
 ```
+
+### Requirement: La regla de comentarios global solo actúa donde actúa el arranque global
+Instalado de forma global, el plugin `response-comments` DEBE entregar la regla de comentarios solo en los proyectos en los que actúa el arranque global: los que declaran `schema: intent-driven` y no tienen su propio plugin `response-comments`.
+
+#### Scenario Outline: Dónde entrega la regla el plugin global
+
+```gherkin
+Given el plugin `response-comments` instalado de forma global
+And un proyecto <situación>
+When se abre una sesión de OpenCode en el proyecto y el usuario envía un comentario
+Then la regla de comentarios <entrega>
+
+Examples:
+  | situación                                                   | entrega                               |
+  | creado desde la variante adelgazada                         | llega una vez, del plugin global      |
+  | sin `openspec/config.yaml`                                  | no llega                              |
+  | de la plantilla completa, con su propio `response-comments` | llega una vez, del plugin del proyecto |
+```
