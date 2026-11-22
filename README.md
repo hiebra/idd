@@ -162,7 +162,7 @@ Hay dos formas del ciclo, y las dos se admiten ([ADR-0015](adr/0015-git-discipli
 
 El squash también se admite: ningún paso del ciclo depende de que los commits de la rama lleguen a la rama de origen, y las citas del wiki se resuelven por el blob que guardan sus manifiestos.
 
-**Quién hace los commits.** En local, la rama temporal la puede crear el modelo, siempre desde la rama de origen y con el nombre del change, y los commits y las fusiones los hace el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit. En un contenedor efímero (una sesión en la nube, donde el contenedor se pierde), el agente hace commit y push en la rama de la sesión, sin preguntar, en esos momentos y cuando el entorno avisa al final de un turno, con commits provisionales si hace falta. Antes de cada commit ejecuta la puerta `check commit`, y nunca fusiona, crea ramas ni toca otras ramas. Ningún commit mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la de código.
+**Quién hace los commits.** En local, la rama temporal la puede crear el modelo fuera del autopilot de OpenCode, siempre desde la rama de origen y con el nombre del change, y los commits y las fusiones los hace el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit. En un contenedor efímero (una sesión en la nube, donde el contenedor se pierde), el agente hace commit y push en la rama de la sesión, sin preguntar, en esos momentos y cuando el entorno avisa al final de un turno, con commits provisionales si hace falta. Antes de cada commit ejecuta la puerta `check commit`, y nunca fusiona, crea ramas ni toca otras ramas. Ningún commit mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la de código.
 
 **Números de ADR.** El número de un ADR nuevo es uno más que el más alto de `adr/` en `origin/<rama de origen>` y en todas las ramas remotas, tras un `git fetch` (`rules.adr` de `openspec/config.yaml`). Si dos ramas eligen el mismo, `check archive` lo detecta y pide renumerar los de la rama.
 
@@ -180,19 +180,35 @@ El squash también se admite: ningún paso del ciclo depende de que los commits 
   ```
 
 - **Las puertas** (proponer, apply, archive y commit) las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit> [<change>]`, que admite las dos formas del ciclo, dice cómo seguir cuando no deja y la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es una copia del origen reescrita a propósito: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
-- **Las ramas temporales** las maneja el modelo con el mismo módulo, nunca con git a mano, y nunca con el árbol sucio (en un contenedor efímero, el agente no las crea ni cambia de rama):
+- **Las ramas temporales** las maneja el modelo con el mismo módulo, nunca con git a mano, y nunca con el árbol sucio (en un contenedor efímero, el agente no las crea ni cambia de rama, y en el autopilot de OpenCode tampoco, [ADR-0022](adr/0022-autopilot-session-owns-its-branch-and-worktrees.md)):
 
   ```bash
   node .agents/openspec/branch-change.mjs list            # las ramas temporales con su change
   node .agents/openspec/branch-change.mjs start <change>  # crea la rama del change desde la rama de origen
   node .agents/openspec/branch-change.mjs switch <rama>   # cambia a una rama temporal
+  node .agents/openspec/branch-change.mjs origin          # vuelve a la rama de origen
   ```
 
 ## Automatizar el ciclo en OpenCode
 
-En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` recorre el change de la rama paso a paso, cada paso en una sesión nueva con el workflow y el agente que tocan, y archiva la anterior ([ADR-0014](adr/0014-autopilot-verifies-product-and-closes-reviews-with-git.md), que sustituye a ADR-0008). Lo que se ha producido y cuándo se cierra una revisión no lo decide el modelo: lo decide el plugin con el CLI de OpenSpec y con git.
+En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` recorre el change de la rama paso a paso, cada paso en una sesión nueva con el workflow y el agente que tocan, y archiva la anterior ([ADR-0022](adr/0022-autopilot-session-owns-its-branch-and-worktrees.md), que sustituye a ADR-0014). Lo que se ha producido y cuándo se cierra una revisión no lo decide el modelo: lo decide el plugin con el CLI de OpenSpec y con git.
 
-- **La sesión operativa.** En cada rama hay una sola sesión viva en autopilot. Al abrir OpenCode en la TUI sin ella, el plugin la crea y la arranca solo: con el paso que diga `openspec status` si la rama tiene change, o con `openspec-new-change` si no lo tiene (también en una rama permanente: el modelo te pide la descripción y crea la rama del change). Cualquier otra ventana (la pantalla de inicio, `/new`, otra sesión, o cualquiera de ellas al volver al terminal) muestra un modal de un botón que lleva a la sesión operativa. Con HEAD separado no hace nada; con varios changes en la rama, avisa y tampoco.
+- **La sesión operativa.** En cada rama temporal hay una sola sesión viva en autopilot. Al abrir OpenCode en la TUI sin ella, el plugin la crea y la arranca solo: con el paso que diga `openspec status` si la rama tiene change, o con `openspec-new-change` si no lo tiene. En una rama permanente no arranca ni orquesta nada: sus sesiones son libres y puede haber varias, por ejemplo para preguntar algo en `main`. Con HEAD separado no hace nada; con varios changes en la rama, avisa y tampoco.
+- **Cada sesión tiene su rama.** Es la que tenía HEAD en su directorio al crearla, y el plugin la guarda en su metadata. Si el modelo hace un checkout dentro de la sesión (por ejemplo, para un merge asistido en `main`), la sesión pasa a ser de esa rama, y si era la operativa deja de serlo, sin archivarse; cuando el directorio vuelve a la rama, otra sesión operativa retoma el paso donde se quedó. En los pasos del autopilot el modelo no crea ramas ni cambia de rama: la de un change nuevo la dan el worktree o tú.
+- **Pasar a una sesión es pasar a su rama.** Si la sesión es de otro worktree (u otro repositorio), la TUI salta a él y el plugin solo te dice en qué rama y en qué directorio estás. Si es del mismo directorio y de otra rama, el plugin hace el checkout de su rama (con `branch-change.mjs`, que solo cambia a una rama temporal o a la rama de origen) y te avisa. Con cambios sin commit, o con otra sesión de ese directorio trabajando, no lo hace: vuelve a la ventana anterior (o a la pantalla de inicio) y te dice por qué; con cambios sin commit, haz el commit o usa un worktree.
+- **`/new` en una rama temporal que ya tiene sesión operativa** abre un modal. «Crear un worktree nuevo» abre el diálogo de nombre de worktree de OpenCode, en el que escribes el nombre o lo generas con `tab`; con el árbol limpio, «Cambiar a la rama de origen» deja el directorio en ella (la sesión operativa del change sigue siéndolo). Si lo cierras sin elegir, vuelves a la sesión de la que venías.
+- **Los worktrees de OpenCode nacen en una rama.** El plugin registra su propia estrategia de worktree, que usan «Manage workspaces» de la TUI, el modal de `/new`, el botón de la web y el modelo. La rama se llama como el worktree, se haya escrito el nombre o lo haya generado OpenCode:
+  - si la rama existe, el worktree se abre en ella; si ya está sacada en otro directorio, no se crea y se dice en cuál;
+  - si no existe, se crea desde la rama de origen del remoto, tras un `git fetch`, sin seguirla (`--no-track`) y con su push hacia `origin/<rama>`: el primer `git push` sin argumentos la publica, sin cambiar la configuración de tu clon. Si el `fetch` falla, no se crea, y se dice por qué;
+  - se ignora la referencia de partida que manda la web, y al quitar el worktree la rama se conserva.
+
+  Al entrar en un worktree nuevo, el plugin arranca en él la sesión operativa de su rama, con `openspec-new-change`. Cada worktree instala sus dependencias; para compartirlas con el clon, añade a tu `opencode.json`:
+
+  ```json
+  {
+    "worktree": { "symlinkDirectories": ["node_modules", "acceptance-tests/node_modules"] }
+  }
+  ```
 - **El producto de cada paso.** Al empezar un paso, el plugin guarda qué artefactos están hechos y qué tasks marcadas. Cuando la sesión queda en reposo, compara: lo que ha cambiado es el producto. Sin producto no pasa nada (la tool `openspec_handoff` lo dice). Con producto, el plugin lo pasa al stage de git y sigue, aunque el modelo no haya llamado a la tool o haya hecho más de lo que tocaba.
 - **La revisión, en el modo normal.** Tras cada artefacto, cada task, el verify y cada `openspec-update-change` se abre una sesión de revisión, una por producto, en la que el modelo te guía sin tocar archivos. La revisión la cierras tú con git, y se cierra cuando envías tu siguiente mensaje:
   - **haz el commit** de lo que hay en el stage: revisión satisfactoria, y se sigue con el paso siguiente;
@@ -201,15 +217,16 @@ En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` recorre e
 
   La revisión del verify empieza con el árbol limpio: para darla por buena sin cambiar nada, haz un commit vacío (`git commit --allow-empty -m "verify revisado"`).
 - **Los commits.** Ningún modelo te pide commits. Además de las revisiones, el plugin espera tu commit tras el archive y tras la resincronización del wiki, que van en commits separados.
-- **Al volver a la sesión operativa** (al entrar o al recuperar el foco), el plugin la comprueba. Si HEAD cambió de rama, sigue las reglas de la rama actual. Si su change ya no está en la rama, la archiva y empieza uno nuevo. Si esperaba tu commit y ya está hecho, arranca el paso. Si su paso no encaja con `openspec status`, te lo explica en un modal y no lo arregla.
+- **Al volver a la sesión operativa** (al entrar o al recuperar el foco), si no está trabajando y su directorio está en su rama, el plugin la comprueba. Si su change ya no está en la rama, la archiva y empieza uno nuevo. Si esperaba tu commit y ya está hecho, arranca el paso. Si su paso no encaja con `openspec status`, te lo explica en un modal y no lo arregla.
 - Las lecciones candidatas de cada sesión quedan en su metadata, nunca en el repositorio, y llegan a la resincronización del wiki tras el archive, que solo registra las que confirmes.
 - El estado (qué sesión es la operativa y qué paso hizo cada una) vive solo en la metadata de las sesiones de OpenCode.
 
 ### Con la UI web, OpenCode Desktop y `opencode run`
 
-La lógica vive en la parte de servidor del plugin y funciona con cualquier cliente: el producto, el stage, el cierre de las revisiones por git, el encadenado de sesiones y la validación. La interfaz (el modal, el foco, navegar a una sesión y archivarla) solo existe en la TUI, porque OpenCode 2.3.2 no ejecuta en la UI web (`opencode pair`, `opencode serve`) la interfaz de los plugins de un proyecto, y OpenCode Desktop solo con una API experimental que el plugin no usa. Sin TUI:
+La lógica vive en la parte de servidor del plugin y funciona con cualquier cliente: el producto, el stage, el cierre de las revisiones por git, el encadenado de sesiones, la validación y la estrategia de worktree. La interfaz (los modales, el foco, el checkout al pasar de sesión, navegar a una sesión y archivarla) solo existe en la TUI, porque OpenCode 2.3.2 no ejecuta en la UI web (`opencode pair`, `opencode serve`) la interfaz de los plugins de un proyecto, y OpenCode Desktop solo con una API experimental que el plugin no usa. Sin TUI:
 
-- en una sesión que no es la operativa, el modelo sabe que ahí no se opera y te dice cuál es la operativa;
+- en una sesión que no es la operativa de una rama temporal, el modelo sabe que ahí no se opera, te dice cuál es la operativa y te ofrece crear un worktree nuevo;
+- el worktree lo creas con el botón de la web o pidiéndoselo al modelo, que usa la tool `openspec_worktree`: crea el worktree con las reglas de arriba y, en él, una sesión que pasa a ser la operativa de su rama y arranca `openspec-new-change` sola. Como el plugin no puede llevar la web a otra sesión, el modelo te da su enlace si el plugin conoce la dirección del servidor, o su título y su id. OpenCode no le da esa dirección; dásela con la opción `serverUrl` del plugin en tu configuración global (por ejemplo, `{ "package": "/ruta/a/tu/clon/.opencode/plugins/openspec-autopilot", "options": { "serverUrl": "http://localhost:4096" } }`);
 - la sesión del paso siguiente se crea y se pone a trabajar, pero tienes que abrirla tú desde la lista; su título dice el paso;
 - las sesiones terminadas no se archivan: quedan marcadas y se archivan la próxima vez que abras la TUI;
 - el autopilot no arranca solo: escribe `autopilot` como primer mensaje de una sesión nueva en una rama sin sesión operativa;

@@ -7,7 +7,7 @@ compatibility: Requires git, Node.js and OpenSpec workflow artifacts.
 
 # OpenSpec Git Discipline
 
-<!-- Copia del origen (intent-driven-dev/intent-driven-template) reescrita a propósito con el ciclo de este proyecto: ADR-0015, que sustituye a ADR-0007, y ADR-0013, que deja al modelo crear las ramas temporales. No la sobrescribas al actualizar desde el origen sin revisarlo. -->
+<!-- Copia del origen (intent-driven-dev/intent-driven-template) reescrita a propósito con el ciclo de este proyecto: ADR-0015, que sustituye a ADR-0007; ADR-0013, que deja al modelo crear las ramas temporales; y ADR-0022, que se lo quita en el autopilot de OpenCode. No la sobrescribas al actualizar desde el origen sin revisarlo. -->
 
 ## Regla central
 
@@ -21,9 +21,13 @@ Un change sigue una de las dos formas del ciclo de abajo. Las dos son válidas y
 - Las ramas temporales las manejas solo con `branch-change.mjs`, nunca con git a mano:
   - `node .agents/openspec/branch-change.mjs list` lista las ramas temporales con su change (`--json` para leerlo);
   - `node .agents/openspec/branch-change.mjs start <change>` crea la rama del change desde la rama de origen, con el nombre del change, y cambia a ella;
-  - `node .agents/openspec/branch-change.mjs switch <rama>` cambia a una rama temporal que ya existe.
+  - `node .agents/openspec/branch-change.mjs switch <rama>` cambia a una rama temporal que ya existe;
+  - `node .agents/openspec/branch-change.mjs origin` vuelve a la rama de origen, la única rama permanente a la que se cambia así.
 
-  Los dos últimos imprimen `{ ok, message }` y no hacen nada con el árbol de trabajo sucio. En un contenedor efímero no los uses: trabaja solo en la rama de la sesión (ver «Commits»).
+  Los tres últimos imprimen `{ ok, message }` y no hacen nada con el árbol de trabajo sucio. En un contenedor efímero no los uses: trabaja solo en la rama de la sesión (ver «Commits»).
+
+<!-- lifecycle:autopilot-branches -->
+- **En una sesión del autopilot de OpenCode** (su instrucción empieza por `[openspec-autopilot]`), no crees ramas ni cambies de rama, ni con `branch-change.mjs` ni con git (ADR-0022). Cada sesión tiene su rama, y la de un change nuevo la dan el worktree o el usuario: si una puerta no deja seguir porque la rama es permanente o ya tiene otro change, explícaselo al usuario y dile que cree un worktree nuevo o que cambie él a una rama temporal. Fuera de esas sesiones, por ejemplo cuando el usuario te pide un merge asistido, puedes cambiar de rama como de costumbre; esa sesión pasa entonces a ser de la otra rama.
 
 <!-- lifecycle:forms -->
 ## Las dos formas del ciclo
@@ -45,6 +49,7 @@ Ejecuta `node .agents/openspec/branch-change.mjs check propose`.
 - Si no sale con 0 porque la rama temporal ya tiene otro change, crea igual la rama del change nuevo con `start`. En cualquier otro caso, explica al usuario su `message` y pregúntale cómo seguir.
 - Si `start` no sale con 0 (por ejemplo, porque el árbol tiene cambios sin commit), avisa al usuario con su `message` y espera: no hagas tú el commit ni guardes sus cambios.
 - En un contenedor efímero no uses `start`: si hace falta otra rama, explícaselo al usuario y espera.
+- En una sesión del autopilot de OpenCode tampoco uses `start`: el autopilot nunca propone en una rama permanente, y si la puerta no deja seguir, el usuario crea un worktree o cambia de rama.
 
 Para seguir con un change que ya tiene rama, cambia a ella con `switch`; búscala con `list`.
 
@@ -77,7 +82,7 @@ Los momentos de commit del ciclo son:
 
 Un commit, provisional o no, no mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la zona de código (todo lo demás). Las fusiones las hace siempre el usuario.
 
-**Fuera de un contenedor efímero**, nunca hagas commits ni fusiones: los hace siempre el usuario. Las únicas operaciones de ramas que haces son las de `branch-change.mjs` (`start` y `switch`).
+**Fuera de un contenedor efímero**, nunca hagas commits ni fusiones: los hace siempre el usuario. Las únicas operaciones de ramas que haces son las de `branch-change.mjs` (`start`, `switch` y `origin`), y ninguna en una sesión del autopilot.
 
 - **En una sesión del autopilot de OpenCode** (su instrucción empieza por `[openspec-autopilot]`), no pidas commits ni pases nada al stage: al terminar el paso, el plugin pasa lo producido al stage, y el usuario lo revisa y hace el commit.
 - **En cualquier otro caso**, en cada momento de commit, pide al usuario el commit y espera a que lo haga o te diga que sigas sin él.
@@ -106,7 +111,7 @@ La forma canónica y el squash también se admiten. El squash se admite porque n
 - Más de un change en la misma rama temporal.
 - Crear o cambiar de rama con git a mano, o una rama que no salga de la rama de origen.
 - Hacer commit sin `check commit`, o hacer commits o fusiones fuera de un contenedor efímero sin que el usuario lo pida.
-- Pedir commits en una sesión del autopilot.
+- Pedir commits en una sesión del autopilot, o crear o cambiar de rama en uno de sus pasos.
 - Fusionar, cambiar de rama, crear ramas o hacer push a otra rama en un contenedor efímero.
 - Numerar un ADR sin mirar `adr/` en todas las ramas remotas.
 

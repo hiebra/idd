@@ -49,15 +49,15 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 5. Documentación (zona de código)
 
-- [ ] 5.1 `.agents/skills/openspec-git-discipline/SKILL.md` (copia reescrita a propósito), a mano: en una sesión del autopilot, el modelo no crea ramas ni cambia de rama; fuera de él, como antes.
-- [ ] 5.2 `README.md`: «Automatizar el ciclo en OpenCode», con:
+- [x] 5.1 `.agents/skills/openspec-git-discipline/SKILL.md` (copia reescrita a propósito), a mano: en una sesión del autopilot, el modelo no crea ramas ni cambia de rama; fuera de él, como antes.
+- [x] 5.2 `README.md`: «Automatizar el ciclo en OpenCode», con:
   - la rama de cada sesión;
   - los worktrees y su estrategia;
   - el modal de `/new`;
   - la web;
   - la recomendación de `worktree.symlinkDirectories`;
   - ADR-0022.
-- [ ] 5.3 `acceptance-tests/README.md`: lo nuevo del simulador y de `core-tests`.
+- [x] 5.3 `acceptance-tests/README.md`: lo nuevo del simulador y de `core-tests`.
 
 ## 6. Suite completa
 
