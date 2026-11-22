@@ -538,6 +538,10 @@ Then('indica hacer el commit del wiki después del commit del archive', function
   assertIn(section(this, 'commits'), /wiki[^\n]*(después|posterior)[^\n]*archive/i, 'the commits section');
 });
 
+Then('indica que el commit del wiki solo existe con el wiki del proyecto habilitado', function () {
+  assertIn(section(this, 'commits'), /commit del wiki solo existe con el wiki del proyecto habilitado/, 'the commits section');
+});
+
 Then('indica ejecutar la puerta `check commit` antes de cada commit', function () {
   assertIn(section(this, 'agent-commits'), /branch-change\.mjs check commit`? antes de cada commit/, 'the agent commits section');
 });

@@ -63,7 +63,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 - [x] 7.1 `openspec-autopilot: El ciclo termina en el archive` y `Con el wiki habilitado sigue el paso del wiki`: pasos `una rama temporal con el change \`exportar-datos\` en un proyecto con el wiki habilitado|deshabilitado`, `la sesión operativa ha terminado el archive de \`exportar-datos\``, `el usuario hace el commit del archive`, `no se crea ninguna sesión para resincronizar el wiki`, `se avisa de que el ciclo de \`exportar-datos\` ha terminado y de que queda fusionar la rama`, `el aviso no menciona el commit del wiki` y `se crea una sesión nueva con el control para resincronizar el wiki`. Implementar en `lib/next-step.mjs` (`archive` → `wiki` o `end` según el ajuste al terminar el archive) y el aviso final de `server.js`
 - [x] 7.2 `openspec-autopilot: La resincronización del wiki recibe las candidatas del change`, con su nuevo `Given`. Añadir a `core-tests/autopilot-next-step.test.js` los casos del paso siguiente con el wiki encendido y apagado, y de la espera de commit tras el archive
-- [ ] 7.3 Redactar en condicional ("con el wiki del proyecto habilitado") lo que dicen del wiki `lib/prompts.mjs` y la skill `openspec-git-discipline`; paso `indica que el commit del wiki solo existe con el wiki del proyecto habilitado` → commit
+- [x] 7.3 Redactar en condicional ("con el wiki del proyecto habilitado") lo que dicen del wiki `lib/prompts.mjs` y la skill `openspec-git-discipline`; paso `indica que el commit del wiki solo existe con el wiki del proyecto habilitado` → commit
 
 ## 8. Documentación
 

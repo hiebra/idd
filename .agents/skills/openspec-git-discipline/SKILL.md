@@ -28,8 +28,8 @@ Un change sigue una de las dos formas del ciclo de abajo. Las dos son válidas y
 <!-- lifecycle:forms -->
 ## Las dos formas del ciclo
 
-- **Forma recomendada: una rama y una sola fusión.** Propuesta, implementación, archive y resincronización del wiki van en una rama temporal; el archive se hace en ella, y la rama llega a la rama de origen en una única fusión con `--no-ff`. La forma recomendada conviene casi siempre: el plan, el código, el archive y el wiki llegan juntos en una sola fusión, y la rama permanente no recibe commits directos.
-- **Forma canónica de intent-driven: admitida.** La propuesta se fusiona con la rama de origen antes de implementar; la implementación se hace en otra rama y se fusiona; y el archive y la resincronización del wiki se hacen en la rama de origen, cuando todas las tasks están hechas. La forma canónica conviene cuando el plan se quiere revisar y fusionar aparte, o cuando hay que reservar pronto los números de ADR; a cambio, son tres fusiones y el archive y el wiki llevan commits en la rama permanente. Es una forma admitida, no un error: no la cuestiones si el usuario la sigue.
+- **Forma recomendada: una rama y una sola fusión.** Propuesta, implementación, archive y, con el wiki del proyecto habilitado, resincronización del wiki van en una rama temporal; el archive se hace en ella, y la rama llega a la rama de origen en una única fusión con `--no-ff`. La forma recomendada conviene casi siempre: el plan, el código, el archive y, si lo hay, el wiki llegan juntos en una sola fusión, y la rama permanente no recibe commits directos.
+- **Forma canónica de intent-driven: admitida.** La propuesta se fusiona con la rama de origen antes de implementar; la implementación se hace en otra rama y se fusiona; y el archive (y, con el wiki del proyecto habilitado, la resincronización del wiki) se hacen en la rama de origen, cuando todas las tasks están hechas. La forma canónica conviene cuando el plan se quiere revisar y fusionar aparte, o cuando hay que reservar pronto los números de ADR; a cambio, son tres fusiones y el archive (y el wiki, si está habilitado) llevan commits en la rama permanente. Es una forma admitida, no un error: no la cuestiones si el usuario la sigue.
 
 Sigue la forma que use el usuario; si no dice nada, la recomendada.
 
@@ -63,7 +63,7 @@ Haz antes `git fetch`, si puedes, para que la puerta vea los ADRs de la rama de 
 - En la forma recomendada, el archive se hace en la rama temporal del change, antes de su fusión con la rama de origen.
 - En la forma canónica, se hace en la rama de origen, y la puerta solo deja si todas las tasks del change están hechas.
 
-Tras el archive, la resincronización del wiki de las indicaciones de archivado de `openspec/config.yaml` se hace en la misma rama, después del commit del archive.
+Con el wiki del proyecto habilitado, tras el archive, la resincronización del wiki de las indicaciones de archivado de `openspec/config.yaml` se hace en la misma rama, después del commit del archive. Con el wiki deshabilitado, las indicaciones de archivado no la incluyen y el ciclo termina en el archive.
 
 <!-- lifecycle:commits -->
 ## Commits
@@ -73,7 +73,7 @@ Los momentos de commit del ciclo son:
 - tras cada artefacto del plan (proposal, specs, design, adr, tasks);
 - tras cada task implementada;
 - tras el archive, en un commit aparte;
-- tras la resincronización del wiki, en un commit aparte y posterior al del archive.
+- con el wiki del proyecto habilitado, tras la resincronización del wiki, en un commit aparte y posterior al del archive. El commit del wiki solo existe con el wiki del proyecto habilitado (`"enabled": true` en `.agents/wiki/engine.json`).
 
 Un commit, provisional o no, no mezcla la zona de specs (`openspec/`, salvo los `tasks.md` y `openspec/config.yaml`) con la zona de código (todo lo demás). Los `tasks.md` y `openspec/config.yaml` son neutros: pueden ir en un commit de cualquiera de las dos zonas. Las fusiones las hace siempre el usuario.
 
@@ -93,7 +93,7 @@ Un commit, provisional o no, no mezcla la zona de specs (`openspec/`, salvo los 
 <!-- lifecycle:merge -->
 ## La fusión con la rama de origen
 
-La forma recomendada es fusionar la rama temporal con `git merge --no-ff`: con `git log --first-parent`, cada change es una entrada cuyo diff junta el plan, el código, el archive y el wiki, sin perder los commits provisionales. Recomiéndasela al usuario cuando vaya a fusionar.
+La forma recomendada es fusionar la rama temporal con `git merge --no-ff`: con `git log --first-parent`, cada change es una entrada cuyo diff junta el plan, el código, el archive y, si lo hay, el wiki, sin perder los commits provisionales. Recomiéndasela al usuario cuando vaya a fusionar.
 
 La forma canónica y el squash también se admiten. El squash se admite porque ningún paso del ciclo depende de que los commits de la rama lleguen a la rama de origen: las citas del wiki a commits de la rama se resuelven entonces por su blob, que guardan los manifiestos de las fuentes. Tras un squash, el change fusionado deja de contar en la rama temporal.
 
