@@ -1,77 +1,59 @@
 ## Context
 
-`openspec-autopilot` guarda en la metadata de cada sesión su `worktree` y su `branch`, y en cada rama hay como mucho una sesión operativa (ADR-0014). La TUI pregunta al servidor qué hacer (`screen`) cada vez que cambia de ruta o recupera el foco (`tui.js`, `report`). Hoy, en `onScreen` (`server.js`), si la ruta es la dueña no archivada de otra rama y la rama actual no tiene sesión operativa, el plugin aplica las reglas de la rama actual (`ensureOperational`). Si la rama actual sí la tiene, la sesión de la ruta es una ventana ajena y sale el modal que lleva a la sesión operativa de la rama actual. En ninguno de los dos casos cambia de rama.
+`autopilot-rama-por-sesion` (ADR-0022) dejó el checkout al entrar en una sesión en `enterSession` (`lib/screen.mjs`), una función pura que recibe `{ target, fromDir, head, clean, working, permanent, origin }` y devuelve la acción: sin cambio si ya está en la rama, `back` con cambios sin commit o con otra sesión trabajando, `checkout` hacia la rama de origen (`via: 'origin'`) o hacia una rama temporal (`via: 'switch'`), y un aviso si la rama es otra rama permanente. `server.js` (`enter`) calcula esos datos, ejecuta el cambio con `switchTo` (`lib/project.mjs`), que llama a `originBranch` o `switchBranch` de `.agents/openspec/branch-change.mjs`, y registra el checkout como hecho por el plugin (`pluginCheckout`).
 
-Quien cambia de rama hoy es el modelo, con `branch-change.mjs switch`, que solo cambia entre ramas temporales y nunca con el árbol sucio (ADR-0013). En un contenedor efímero, `start` y `switch` no actúan (ADR-0016). Las ramas permanentes son la lista `x-main` de `openspec/config.yaml`, o `main`, y las lee `readPermanent` en `branch-change.mjs`.
+`switchBranch` rechaza las ramas permanentes y el árbol sucio; `originBranch` rechaza el árbol sucio. Las dos son las reglas del modelo (ADR-0013, ADR-0020) y no cambian. `branchChange` ya expone `permanent` y `protected` (ADR-0020: `x-main-protected: true` declara el veto; cualquier otro valor, o sin clave, no hay veto), y `readProtected` es la única lectura de la clave.
 
-La proposal explica por qué, con un `main` protegido, el árbol sucio no debe impedir volver a una rama de `x-main`.
+La proposal explica por qué, con el veto, el árbol sucio no debe impedir entrar en la sesión de una rama de `x-main`.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Que entrar en la sesión operativa de otra rama del mismo directorio deje el clon en esa rama, sin pasos a mano, cuando es seguro.
-- Con `x-main-protected: true`, que el árbol sucio no impida volver a una rama de `x-main`.
-- Que un checkout que no se hace, o que git rechaza, deje el repositorio exactamente como estaba y lo diga.
+- Con `x-main-protected: true`, entrar en la sesión de una rama de `x-main` deja el directorio en esa rama aunque tenga cambios sin commit.
+- Que lo que no es esa excepción se comporte igual que hoy, y que un checkout que git rechaza deje el repositorio como estaba.
 
 **Non-Goals:**
 
-- Cambiar `branch-change.mjs switch` o las reglas del modelo: el modelo sigue sin cambiar de rama con el árbol sucio ni a una rama permanente.
-- Hacer checkout en Claude Code: allí no hay plugin ni sesiones atadas a una rama (ADR-0006).
-- Resolver conflictos de los cambios locales: ni `--force`, ni `--merge`, ni stash.
-- Sesiones de otros worktrees: cada worktree tiene su propia parte de servidor y su propio HEAD.
+- Cambiar las reglas del modelo: `switchBranch`, `originBranch` y `start` siguen sin actuar con el árbol sucio ni hacia ramas permanentes (salvo `origin`).
+- Hacer checkout con otra sesión trabajando en el directorio, forzar el cambio o usar un stash.
+- Cambiar a una rama permanente sin el veto, o a una rama temporal con cambios sin commit.
 
 ## Decisions
 
-### D1. Solo la sesión operativa de otra rama provoca el checkout
+### D1. La excepción vive en un cambio de rama nuevo de `branch-change.mjs`
 
-La sesión de la ruta tiene que ser dueña (`role: "owner"`), no archivada, de `meta.worktree === directory`, con `meta.branch` distinta de la rama de HEAD, y no estar trabajando. Las sesiones libres ya terminaron su paso y quedan para archivarse; las ajenas no tienen rama en la metadata.
+Se añade `permanentBranch(dir, name, env)` junto a `originBranch`. Comprueba, dentro, que `readProtected(dir)` es `true` y que `name` está en `readPermanent(dir).permanent`; si no, sale con `ok: false` y un mensaje que nombra la clave. No actúa en un contenedor efímero (`isEphemeral`, como `originBranch`: ADR-0016). No comprueba el árbol: es la excepción. Cambia con `git switch -q <rama>`, creando la rama local desde `origin/<rama>` si solo existe en el remoto, sin `--force`, `--merge` ni `--discard-changes`. Si git lo rechaza, devuelve el `stderr` de git.
 
-- *Alternativa*: cualquier sesión con rama en la metadata, archivadas incluidas. Se descarta: entrar a leer el historial de una sesión archivada no debe mover el clon.
+Así la regla de la excepción tiene un solo lugar, el módulo neutral que ya lee `x-main` y `x-main-protected` y que prueba `node --test`, y el plugin no puede abrirla por error con un argumento mal pasado.
 
-### D2. El checkout va antes de cualquier otra regla de `onScreen`
+- *Alternativa*: un parámetro `{ dirty: true }` en `switchBranch` o `originBranch`. Se descarta: abre en las reglas del modelo una puerta que no tiene que existir, y `switchBranch` rechaza las ramas permanentes por diseño.
+- *Alternativa*: que `enterSession` ejecute git. Se descarta: es una función pura con pruebas de núcleo, y el resto de cambios de rama están en el módulo neutral.
 
-`onScreen` lee primero la sesión de la ruta. Si cumple D1, intenta el checkout y vuelve a leer `branchChange(directory)` antes de calcular la sesión operativa y la directiva. Con el checkout hecho, la sesión de la ruta es la operativa de la rama nueva y la directiva da `validate`, así que se aplican la validación de siempre y su arranque si esperaba el árbol limpio. Si el checkout no se hace, `onScreen` sigue como hoy con la rama actual: modal de ventana ajena o `ensureOperational`.
+### D2. `enterSession` decide con el veto y las ramas permanentes
 
-Se intenta aunque la rama actual no sea `actionable` (por ejemplo, con varios changes), porque esa condición es de la rama de la que se sale, no de la de destino. Con HEAD separado no se intenta (spec). Si la rama de destino ya no existe, git lo rechaza y se avisa como en D5.
+`enterSession` recibe además `protected`. Cuando `protected` es `true` y `permanent.includes(target.branch)`, la acción es `checkout` con `via: 'permanent'`, **antes** de la comprobación del árbol sucio y de la que rechaza las demás ramas permanentes, pero **después** de la de la sesión trabajando: con otra sesión de ese directorio trabajando sigue sin haber checkout. En cualquier otro caso, el orden de hoy no cambia (la rama de origen con el árbol limpio sigue siendo `via: 'origin'`; con el veto, una rama de origen limpia también pasa por `via: 'permanent'`, que es lo mismo con otra comprobación).
 
-### D3. La decisión y el checkout viven en `branch-change.mjs`
+`server.js` pasa `protected` desde `branchChange(directory)`, que ya se lee en `enter` para `permanent` y `origin`. `switchTo` gana la vía `permanent`.
 
-Se añaden dos funciones exportadas al módulo neutral:
+### D3. El aviso lleva los cambios
 
-- `readProtected(dir)` → `{ protected, warning }`, que lee `x-main-protected` con el mismo analizador de líneas que `parsePermanent`. Acepta `true`/`True`/`TRUE` y `false`/`False`/`FALSE` (booleanos del esquema core de YAML 1.2). Cualquier otro valor da `false` con el aviso `openspec/config.yaml: 'x-main-protected' no es un booleano; se trata como false`.
-- `checkoutForSession(dir, branch, env)` → `{ ok, message }`. No actúa en un contenedor efímero (`isEphemeral`). Comprueba el árbol con `git status --porcelain`, que cuenta los archivos sin seguimiento, como `treeClean`. Permite el árbol sucio solo si `readProtected` es `true` y `branch` está en `readPermanent(dir).permanent`. Ejecuta `git switch -q <branch>`, sin `--force`, `--merge` ni `--discard-changes`.
+Tras un checkout `permanent` con el árbol sucio, el aviso es el de `checkedOut(branch, dir)` más «; tus cambios sin commit han pasado a esa rama». `enterSession` no sabe si el árbol estaba sucio tras el checkout, pero sí `clean` de antes, así que devuelve `carried: !clean` y el aviso lo usa. Si git rechaza el checkout, vale el camino de hoy: `back` con `reason: 'checkout'` y el error de git.
 
-Así, `x-main` y `x-main-protected` se leen en un solo sitio, y la regla queda probada con `node --test` como el resto del módulo. El plugin la llama a través de `lib/project.mjs`, como hace con `branchChange`.
+### D4. `pluginCheckout` no cambia
 
-- *Alternativa*: reutilizar `switchBranch`. Se descarta porque rechaza las ramas permanentes y el árbol sucio, que son justo los casos nuevos, y porque es la regla del modelo, que no cambia.
-- *Alternativa*: ponerlo en `lib/git.mjs` del plugin. Se descarta: duplicaría la lectura del config y la detección del contenedor efímero.
-
-`git switch` y `git checkout <rama>` hacen lo mismo con una rama. Se usa `switch` como en `startBranch` y `switchBranch`, porque no confunde una rama con una ruta.
-
-### D4. Ningún checkout mientras trabaja una sesión de la rama actual
-
-Antes del checkout, el plugin mira las sesiones del autopilot de la rama actual en este directorio (`branchSessions`). Si alguna está trabajando (`isWorking`), no hace el checkout y avisa. Cambiar de rama bajo un modelo que está escribiendo mezclaría sus cambios con otra rama.
-
-### D5. Los avisos son toasts, uno por entrada
-
-Si el checkout no se hace (árbol sucio, sesión trabajando o git lo rechaza), el plugin avisa con `ui.toast` de tipo `warning`, con el motivo y, si lo hay, las primeras líneas del error de git (`stderr`, recortado a 200 caracteres, como en `lib/git.mjs`). El aviso de `x-main-protected` no booleano sale en el mismo toast. La TUI solo pregunta al cambiar de ruta o recuperar el foco, así que hay un aviso por entrada, sin bucle. No se usa el modal de un botón: el usuario no tiene que decidir nada, y la sesión sigue disponible para leerla.
-
-### D6. Sin TUI no hay checkout
-
-El checkout solo ocurre en `onScreen`, que solo llama la TUI. En la UI web y con `opencode run` no hay pantalla que observar, y el comportamiento no cambia (requisito "Funcionamiento sin TUI").
+El checkout `permanent` se registra con `pluginCheckout(head, branch)` como el resto, para que el cambio de rama no se interprete como un checkout hecho por el modelo (`branchMoved`).
 
 ## Risks / Trade-offs
 
-- [El usuario entra en una sesión de otra rama solo para mirarla, y el clon cambia de rama] → Solo ocurre con la sesión operativa (D1), que es la que se usa para operar. Las sesiones archivadas no mueven nada, y el modelo ve en su contexto la rama de la sesión.
-- [Con `x-main-protected: true`, los cambios sin commit de una rama temporal pasan a `main`] → Es lo que se pide: en un `main` protegido nada se publica sin PR, y desde allí el siguiente change se lleva esos cambios a su rama temporal con el árbol sucio. El toast no avisa del traslado; queda documentado en el README.
-- [Carrera: el usuario hace commit o cambia de rama a mano entre la comprobación y el checkout] → `git switch` es atómico respecto al árbol: si algo choca, falla sin tocar nada y se avisa (D5).
-- [Varios clientes TUI en el mismo directorio] → Cada uno pregunta por su ruta. El último checkout gana, y el otro cliente valida su sesión en la siguiente pregunta con la rama que haya.
+- [Con el veto, los cambios sin commit de una rama temporal pasan a `main`, donde no se pueden commitear] → Es lo pedido, y el aviso lo dice. El usuario los puede llevar de vuelta entrando en la sesión de la rama temporal, y `git checkout` normal no los pierde ni los fuerza.
+- [Un cambio local que choca con un archivo distinto en la rama de destino] → git rechaza el cambio sin tocar nada, la TUI vuelve atrás y avisa con el error (D1, D3).
+- [Un proyecto declara `x-main-protected: true` sin tener el veto] → Es el aviso de ADR-0020: la clave la declara el proyecto, y quita la excepción con borrarla.
 
 ## Migration Plan
 
-Sin migración: sin `x-main-protected`, el único cambio es el checkout con el árbol limpio. Para volver atrás, se revierte el commit del código; la clave del config deja de tener efecto y OpenSpec la sigue aceptando (`x-*`).
+Sin migración: sin la clave, `enterSession` se comporta igual. Para volver atrás, se revierte el commit del código.
 
 ## Open Questions
 
-- **ADR-0013** dice que "no se crea ni se cambia con el árbol sucio" y descartó que el plugin cree la rama, para que el ciclo sea el mismo en los dos agentes (ADR-0006). Aquí el plugin cambia de rama, con el árbol sucio si `x-main-protected` lo permite, y solo en OpenCode. La regla de ADR-0013 sigue valiendo para el modelo. Propongo un ADR nuevo que la matice para el plugin y registre la asimetría, sin sustituir ADR-0013, que sigue en vigor entero para el modelo. Lo decide el paso `adr`.
+- Ninguna. ADR-0022 queda matizado, no sustituido (lo decide el paso `adr`): su regla de no cambiar de rama con cambios sin commit sigue valiendo, salvo en la excepción.
