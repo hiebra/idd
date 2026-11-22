@@ -237,3 +237,5 @@
 ## [2026-11-22] ll | "contadores del wiki al resolver una fusión" → raw/notes/2026-11-22-ll-fusion-wiki-contadores.md (1 lesson, 1 article updated)
 
 ## [2026-11-22] ll | "lint --fix y librarian scan del motor 1.0.0" → raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md (2 lessons, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, reorder-wiki-resync @fc31fe5): 1 manifest, 11 paths pinned, 0 skipped
