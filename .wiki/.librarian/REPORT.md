@@ -1,34 +1,36 @@
 # Librarian Report
 
-Scan: 2026-11-22 · wiki `.wiki` · passes: staleness, quality · threshold 70
+Scan: 2026-11-22 · wiki `.wiki` · passes: staleness, quality · threshold 70 · tras fusionar `origin/main` en la rama de `autopilot-plan-explore`
 
 | Metric | Value |
 |---|---|
-| Articles | 10 |
+| Articles | 13 |
 | Below staleness threshold | 0 |
 | Low quality (< 50) | 0 |
 | Average staleness | 100/100 |
-| Average quality | 67/100 |
+| Average quality | 68/100 |
 
 ## Articles
 
 | Article | Staleness | Quality | Sources | Words | Flags |
 |---|---|---|---|---|---|
-| `wiki/concepts/proveedor-falso-para-verificar-contexto.md` | 100 | 55 | 3/3 | 370 | thin-coverage |
-| `wiki/concepts/regla-de-comentarios.md` | 100 | 60 | 2/2 | 638 | - |
-| `wiki/concepts/una-sola-copia-de-las-skills.md` | 99 | 60 | 2/2 | 400 | - |
-| `wiki/concepts/hook-context-opencode.md` | 100 | 65 | 4/4 | 528 | - |
-| `wiki/topics/arranque-de-sesion.md` | 100 | 65 | 6/6 | 1125 | - |
+| `wiki/concepts/conflictos-entre-deltas-concurrentes.md` | 100 | 60 | 3/3 | 627 | - |
+| `wiki/concepts/una-sola-copia-de-las-skills.md` | 100 | 60 | 3/3 | 469 | - |
+| `wiki/concepts/worktrees-de-opencode.md` | 100 | 60 | 2/2 | 595 | - |
+| `wiki/concepts/hook-context-opencode.md` | 100 | 65 | 5/5 | 666 | - |
+| `wiki/concepts/proveedor-falso-para-verificar-contexto.md` | 100 | 65 | 5/5 | 501 | - |
 | `wiki/topics/carga-en-la-misma-sesion-por-agente.md` | 100 | 65 | 4/4 | 667 | - |
-| `wiki/concepts/origen-de-openspec-git-discipline.md` | 100 | 70 | 9/9 | 1072 | - |
-| `wiki/topics/flujo-wiki-first.md` | 100 | 75 | 10/10 | 1361 | - |
-| `wiki/topics/suite-de-aceptacion-y-spec-as-source.md` | 100 | 75 | 14/14 | 1609 | - |
-| `wiki/topics/ciclo-de-un-change-y-autopilot.md` | 100 | 80 | 12/12 | 3366 | - |
+| `wiki/topics/soporte-de-windows.md` | 100 | 65 | 2/2 | 1490 | - |
+| `wiki/concepts/regla-de-comentarios.md` | 100 | 70 | 6/6 | 1295 | - |
+| `wiki/concepts/origen-de-openspec-git-discipline.md` | 100 | 75 | 13/13 | 1550 | - |
+| `wiki/topics/arranque-de-sesion.md` | 100 | 75 | 9/9 | 1373 | - |
+| `wiki/topics/flujo-wiki-first.md` | 100 | 75 | 16/16 | 1728 | - |
+| `wiki/topics/suite-de-aceptacion-y-spec-as-source.md` | 100 | 75 | 23/23 | 2320 | - |
+| `wiki/topics/ciclo-de-un-change-y-autopilot.md` | 100 | 80 | 23/23 | 4571 | - |
 
-## Coherence findings (tras el archivado de autopilot-plan-explore)
+## Coherence findings
 
-1. `wiki/topics/ciclo-de-un-change-y-autopilot.md`, sección «Las restricciones de OpenCode 2.3.2»: el punto «El hook de servidor `prompt`» dice que llega «también cuando el mensaje queda pendiente detrás del turno en curso». Lo contradice la task 1.4 de `autopilot-plan-explore` (`idd@9eae630:openspec/changes/archive/2026-11-22-autopilot-plan-explore/tasks.md`): el mensaje no espera detrás del turno, entra en el mismo bucle, y el hook llega una sola vez, al entrar. Además duplica el punto nuevo sobre el hook `prompt` de la misma sección. Acción propuesta: fusionar los dos puntos.
-2. `wiki/topics/ciclo-de-un-change-y-autopilot.md` tiene ya 3366 palabras: el artículo cubre el ciclo y todo el plugin. Acción opcional: separar el plugin en un artículo propio en una compilación futura.
-3. `wiki/concepts/proveedor-falso-para-verificar-contexto.md`: `thin-coverage` por la heurística de palabras (370). Fue el banco de todas las comprobaciones de `autopilot-plan-explore` (tasks 1.1 a 1.4 y 7.2: TUI `--standalone` en un pseudoterminal, `opencode serve` propio con `--server`, proveedor que tarda). Acción opcional: ampliarlo con lo aprendido, vía lecciones del paso 4.
-
-Las dos entradas del inventario creadas en la sesión (`puente-del-autopilot-sigue-con-una-tui-cerrada`, `dos-sesiones-que-toman-el-control-a-la-vez`) citan `idd@48ca630:openspec/changes/autopilot-plan-explore/tasks.md`, la ruta anterior al archivado; la cita sigue siendo válida en ese commit.
+1. Corregido: `wiki/topics/ciclo-de-un-change-y-autopilot.md` decía que el hook `prompt` llega «también cuando el mensaje queda pendiente detrás del turno en curso», contra la task 1.4 de `autopilot-plan-explore`. Se fundió con el punto nuevo.
+2. Corregido al fusionar con `main`: el punto de `guiar-revision-con-tests` sobre la revisión guiada decía que «el agente `plan` de la revisión ejecuta el runner». Desde `autopilot-plan-explore` la revisión nace con build; el punto lo dice ahora.
+3. Unido al fusionar con `main`: los registros del inventario `dos-sesiones-que-toman-el-control-a-la-vez` (rama) y `corregir-prueba-intermitente-dos-sesiones-autopilot` (`main`) trataban la misma carrera. Queda el de `main`, con el diagnóstico de la rama.
+4. Opcional: `wiki/topics/ciclo-de-un-change-y-autopilot.md` tiene 4571 palabras y cubre el ciclo y todo el plugin; se podría separar el plugin en un artículo propio.

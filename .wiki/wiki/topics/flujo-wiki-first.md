@@ -3,6 +3,11 @@ title: "El flujo wiki-first"
 category: topic
 sources:
   - raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md
+  - raw/notes/2026-11-22-ll-fusion-wiki-contadores.md
+  - raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md
+  - raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md
+  - raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md
+  - raw/repos/2026-11-22-idd-cac0041-allow-user-requested-merges.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-f2be907-readme.md
@@ -71,14 +76,18 @@ Lo que cambia fuera de un change no lo recoge este paso.
 
 Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 
-- la resincronización se hace en la rama donde se archiva, después del commit del archivado: en la forma recomendada, la rama temporal del change, antes de fusionarla; en la forma canónica, la rama de origen (ADR-0015, que sustituye a ADR-0007; `idd@5d7f5b0:openspec/config.yaml`);
+- la resincronización se hace en la rama donde se archiva, después del commit del archivado: según la regla, la rama de origen; con la única excepción (`x-main-protected: true`), la rama temporal del change, antes de fusionarla (ADR-0020, que sustituye a ADR-0015 y ADR-0013; `idd@e9fced13c91f96140ab9058110551d9ea29db385:openspec/config.yaml`);
 - las rutas que tocó el change salen del diff entre el merge-base de la rama con la rama de origen y el commit del archivado, más sus specs y sus ADRs; si se archiva en la rama de origen, del diff desde el primer padre del commit que trajo su `proposal.md` a esa rama hasta el commit del archivado;
-- las lecciones del paso 4 parten de las lecciones candidatas que haya recibido la sesión de las sesiones del change (en OpenCode, de su metadata) y, si no hay, de la sesión en curso.
+- las lecciones del paso 4 parten de las lecciones candidatas que haya recibido la sesión de las sesiones del change (en OpenCode, de su metadata) y, si no hay, de la sesión en curso;
+- desde `allow-user-requested-merges`, un paso 8: tras el commit del wiki, el agente propone fusionar la rama del change con cada rama de `x-main`, en el orden de la lista, solo con las que da `branch-change.mjs merge-targets`; el usuario puede saltarse cualquiera, y en un contenedor efímero la fusión con una rama permanente se hace por PR (ADR-0016; `idd@cac00417c033f58d9a3298d4c7ff7e16f563f570:openspec/config.yaml`).
 
 - **Antes de mover el change**, revisa los enlaces relativos de sus artefactos que salen del change: el archive lo baja un nivel y necesitan un `../` más. Citar por la ruta desde la raíz del repositorio lo evita ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 1).
-- **Las rutas que tocó el change** salen de sus propios commits si la rama lleva más de un change; el diff de la rama contra `main` mezcla los de ambos. Con la forma recomendada (ADR-0015, que sustituye a ADR-0007) una rama temporal lleva un solo change, y el plugin no actúa en una rama con varios ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 2).
+- **Las rutas que tocó el change** salen de sus propios commits si la rama lleva más de un change; el diff de la rama contra `main` mezcla los de ambos. Con la excepción de ADR-0020 una rama temporal lleva un solo change, y el plugin no actúa en una rama con varios ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 2).
 - **La task del archive no se puede marcar dentro del change**: vive en el `tasks.md` que el archive mueve, y la resincronización del wiki va en un commit posterior. En `autopilot-plan-explore`, la 7.5 dejó el change en 32 de 33 tasks y el workflow avisó de tasks incompletas. La última task de un change no debe ser un checkbox del archive ni de lo que viene después; si lo es, se archiva confirmando el aviso ([lecciones del archivado de autopilot-plan-explore](../../raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md), lección 1; ver [la tarea del inventario](../../inventory/candidates/la-task-del-archive-no-es-un-checkbox.md)).
 - **La guidance de archivado solo añade pasos**: el workflow de archive no le deja saltarse su pregunta sobre el sync de specs ni cambiar sus flags, así que no puede forzar el sync (`idd@a62cf14:.claude/skills/openspec-archive-change/SKILL.md`). Con deltas aplicables se sincroniza siempre; archivar sin sincronizar es para changes sin cambios de comportamiento, mejor declarados con `skip_specs: true` en su `.openspec.yaml`, o para syncs bloqueados ([lecciones sobre la guidance de archivado](../../raw/notes/2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md); [docs/cli.md de OpenSpec](../../raw/articles/2026-11-22-openspec-docs-cli-archive.md); si las specs ya se sincronizaron con `/opsx:sync`, el archive ofrece archivar sin más: [docs/opsx.md](../../raw/articles/2026-11-22-openspec-docs-opsx-sync.md), [docs/commands.md](../../raw/articles/2026-11-22-openspec-docs-commands-sync-archive.md)).
+- **`openspec archive --yes` no avisa de tasks pendientes**: la advertencia la da el workflow, que cuenta las tasks con `openspec list --json`. Compruébalas antes de usar la CLI con `--yes` ([lecciones de git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md), lección 3).
+- **Al resolver una fusión con conflictos en el wiki**, busca antes en el lado que llega lecciones equivalentes a las propias: dos changes concurrentes pueden registrar lo mismo. Conserva una sola viñeta, cita las dos notas y quédate con la versión mejor comprobada ([lecciones de la fusión en el wiki](../../raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md), lección 1).
+- **Los contadores del wiki en una fusión**: si chocan las estadísticas de `.wiki/_index.md` o `inventory/_index.md`, no elijas un lado: cuéntalas sobre el disco tras la fusión, y los activos del inventario por su `status:`. En las dos fusiones de `windows-support` con `main`, ningún lado acertaba, y el lint del motor no compara esos contadores con el disco ([lección de los contadores en una fusión](../../raw/notes/2026-11-22-ll-fusion-wiki-contadores.md), lección 1).
 
 ## El motor
 
@@ -95,10 +104,16 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 - [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](carga-en-la-misma-sesion-por-agente.md))
 - [[una-sola-copia-de-las-skills|Una sola copia de las skills]] ([Una sola copia de las skills](../concepts/una-sola-copia-de-las-skills.md))
 - [[ciclo-de-un-change-y-autopilot|El ciclo de un change y su automatización en OpenCode]] ([El ciclo de un change y su automatización en OpenCode](ciclo-de-un-change-y-autopilot.md))
+- [[regla-de-comentarios|La regla de comentarios]] ([La regla de comentarios](../concepts/regla-de-comentarios.md))
 
 ## Sources
 
 - [Lessons Learned: el archivado de autopilot-plan-explore](../../raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md): lección 1.
+- [Lessons Learned: lecciones equivalentes al resolver una fusión en el wiki](../../raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md): lección 1.
+- [Lessons Learned: los contadores del wiki al resolver una fusión](../../raw/notes/2026-11-22-ll-fusion-wiki-contadores.md): lección 1.
+- [Lessons Learned: git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md): lección 3.
+- [Collection: archivado de git-discipline-standard-with-exception (idd@e9fced1)](../../raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md): `openspec/config.yaml`.
+- [Collection: archivado de allow-user-requested-merges (idd@cac0041)](../../raw/repos/2026-11-22-idd-cac0041-allow-user-requested-merges.md): `openspec/config.yaml`.
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `adr/0004-wiki-first-project-knowledge.md`, `adr/0005-wiki-engine-through-session-bootstrap.md`, `openspec/specs/llm-wiki/spec.md`, `openspec/specs/wiki-first-knowledge/spec.md`, `.agents/wiki/guide.md`, `.agents/wiki/reminder.md`, `openspec/config.yaml`, `acceptance-tests/step-definitions/wiki.steps.js`, `openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`.
 - [Lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md): enlaces relativos al archivar y rutas que tocó un change.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.

@@ -334,6 +334,35 @@ Then(/^se crea una sesión operativa que arranca (`openspec-new-change`|el paso 
   this.created = owner.id;
 });
 
+// --- El CLI de OpenSpec del proyecto en cualquier sistema (windows-support) ----------------
+
+// The project's dependencies: its own node_modules/ with the real OpenSpec
+// package of the repository, and a .bin/openspec that is not an executable,
+// as on Windows, where it is a shell script
+Given('un proyecto con un change en la rama y sus dependencias instaladas', async function () {
+  await ap.prepareChange(this, { artifacts: ['proposal'] });
+  const modules = this.project.path('node_modules');
+  fs.mkdirSync(path.join(modules, '.bin'), { recursive: true });
+  fs.symlinkSync(path.join(require('../support/project').REPO_ROOT, 'node_modules', '@fission-ai'), path.join(modules, '@fission-ai'));
+  fs.symlinkSync(path.join('..', '@fission-ai', 'openspec', 'bin', 'openspec.js'), path.join(modules, '.bin', 'openspec'));
+});
+
+Given('`node_modules\\/.bin\\/openspec` del proyecto no es un ejecutable', function () {
+  const bin = this.project.path('node_modules', '.bin', 'openspec');
+  fs.rmSync(bin, { force: true });
+  fs.writeFileSync(bin, '#!/bin/sh\n# como en Windows: un script de shell que no se puede ejecutar directamente\nexit 1\n', { mode: 0o644 });
+});
+
+When('se abre OpenCode en el proyecto con la TUI', async function () {
+  await this.startOpenCode({ alreadyOpen: false });
+  await this.opencodeCall('waitScreen');
+});
+
+Then('la sesión operativa arranca con el paso que dice `openspec status`', function () {
+  const owner = ap.onlyOwner(this);
+  assert.deepEqual(ap.metaOf(owner).step, stepFromStatus(this), detail(this));
+});
+
 Then('la TUI pasa a esa sesión', function () {
   assert.deepEqual(this.opencode.route, { type: 'session', sessionID: this.created }, detail(this));
 });
@@ -647,17 +676,23 @@ Then('el prompt llega al modelo de la sesión de revisión', function () {
   assert.equal(ap.onlyOwner(this).id, this.owner, detail(this));
 });
 
+// The verify ends clean and the plugin opens its review, with the tree clean
+async function reachVerifyReview(world) {
+  await ap.prepareChange(world, { tasks: [1, 2, 3, 4].map((id) => ({ id: String(id), done: true })) });
+  if (!world.sim) await startMode(world, 'normal');
+  await seedOperational(world, { kind: 'verify' }, { zone: 'code' });
+  world.stepSession = world.owner;
+  await script(world, world.owner, [{ tool: { name: HANDOFF, input: { result: 'clean', conclusions: 'Sin problemas.' } } }, { text: 'Informe terminado.' }]);
+  await say(world, world.owner);
+  const review = newOwnerAfter(world, world.owner);
+  assert.deepEqual(ap.metaOf(review).step, { kind: 'review', id: 'verify', of: 'verify' }, detail(world));
+  assert.deepEqual(world.project.gitStatus(), []);
+  world.owner = review.id;
+  return review;
+}
+
 Given('una sesión de revisión del verify de `exportar-datos`, con el árbol limpio, en modo normal', async function () {
-  await ap.prepareChange(this, { tasks: [1, 2, 3, 4].map((id) => ({ id: String(id), done: true })) });
-  await startMode(this, 'normal');
-  await seedOperational(this, { kind: 'verify' }, { zone: 'code' });
-  this.stepSession = this.owner;
-  await script(this, this.owner, [{ tool: { name: HANDOFF, input: { result: 'clean', conclusions: 'Sin problemas.' } } }, { text: 'Informe terminado.' }]);
-  await say(this, this.owner);
-  const review = newOwnerAfter(this, this.owner);
-  assert.deepEqual(ap.metaOf(review).step, { kind: 'review', id: 'verify', of: 'verify' }, detail(this));
-  assert.deepEqual(this.project.gitStatus(), []);
-  this.owner = review.id;
+  await reachVerifyReview(this);
 });
 
 When('el usuario hace un commit y envía un prompt', async function () {
@@ -1303,4 +1338,54 @@ Then('el terminal no muestra ningún error del plugin', function () {
   // Nor in the TUI's log: no RPC call of the plugin failed
   const errors = (this.opencode.logs ?? []).filter((l) => /\[openspec-autopilot\] (hello|screen|reply|rpc|modal|notice):/.test(l));
   assert.deepEqual(errors, [], errors.join('\n'));
+});
+
+// --- Revisión guiada con los tests de aceptación --------------------------------------
+
+// A ko review of the task 3 leads to an update-change whose plan changes get their own review
+async function reachPlanReview(world) {
+  await reachReview(world, 'la task 3');
+  GIT_ACTIONS['saca todo del stage'](world);
+  await say(world, world.owner, CONCLUSIONS);
+  const update = newOwnerAfter(world, world.owner);
+  assert.equal(ap.metaOf(update).step.kind, 'update', detail(world));
+  world.owner = update.id;
+  await produce(world, { [rel('design.md')]: '## Context\n\nPrueba, con el formato de las fechas.\n' });
+  const review = newOwnerAfter(world, update.id);
+  assert.deepEqual(ap.metaOf(review).step, { kind: 'review', id: 'plan', of: 'plan' }, detail(world));
+  return review;
+}
+
+When(/^el plugin abre la revisión (?:de |del )(la task 3|el verify|artefacto `design`|los cambios en el plan)$/, async function (what) {
+  const reach = {
+    'la task 3': () => reachReview(this, 'la task 3'),
+    'el verify': () => reachVerifyReview(this),
+    'artefacto `design`': () => reachReview(this, 'el artefacto `design`'),
+    'los cambios en el plan': () => reachPlanReview(this),
+  }[what];
+  const review = await reach();
+  this.reviewInstruction = ap.instructionOf(this, review.id);
+});
+
+Then('la instrucción de la revisión pide guiar la verificación con los escenarios de aceptación del change y ejecutarlos', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /escenarios de aceptación/, text);
+  assert.ok(text.includes(`openspec/changes/${ap.CHANGE}/specs/`), text);
+  assert.match(text, /ejecútalos/i, text);
+});
+
+Then('la instrucción pide que las ejecuciones no dejen archivos que git no ignore', function () {
+  assert.match(this.reviewInstruction, /no dejen .*archivos que git no ignore/, this.reviewInstruction);
+});
+
+Then('la instrucción pide ofrecer al usuario la orden para ejecutar en modo depuración el código generado, si lo hay', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /modo depuración/, text);
+  assert.match(text, /código fuente que se puede ejecutar/, text);
+  assert.match(text, /la ejecuta el usuario/, text);
+});
+
+Then('la instrucción de la revisión no pide ejecutar los tests de aceptación ni el código', function () {
+  const text = this.reviewInstruction;
+  assert.doesNotMatch(text, /escenarios de aceptación|modo depuración|ejecútalos/i, text);
 });

@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-opencode-2-worktrees.md](2026-11-22-opencode-2-worktrees.md) | OpenCode 2.3.2: estrategias de worktree en plugins, --detach sobre HEAD por defecto y commands.start | opencode, worktree, plugins | 2026-11-22 |
 | [2026-11-22-openspec-docs-cli-archive.md](2026-11-22-openspec-docs-cli-archive.md) | docs/cli.md de OpenSpec 2.1.1: openspec archive, --skip-specs y skip_specs | openspec, archive, skip-specs | 2026-11-22 |
 | [2026-11-22-openspec-docs-opsx-sync.md](2026-11-22-openspec-docs-opsx-sync.md) | docs/opsx.md de OpenSpec 2.1.1: /opsx:sync y cuándo abrir otro change | openspec, opsx, sync | 2026-11-22 |
 | [2026-11-22-openspec-docs-commands-sync-archive.md](2026-11-22-openspec-docs-commands-sync-archive.md) | docs/commands.md de OpenSpec 2.1.1: /opsx:sync y /opsx:archive | openspec, opsx, archive | 2026-11-22 |
@@ -17,6 +18,8 @@ Last updated: 2026-11-22
 ## Categories
 
 ## Recent Changes
+
+- 2026-11-22: Worktrees de OpenCode 2.3.2 (docs de plugins y código)
 
 - 2026-11-22: Documentación de archive y sync de OpenSpec 2.1.1 (cli, opsx, commands)
 
