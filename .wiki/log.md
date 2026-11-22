@@ -132,3 +132,17 @@
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ll | "modo auto e instalación de OpenCode" → raw/notes/2026-11-22-ll-modo-auto-instalar-opencode.md (1 lesson, 1 article updated)
+
+## [2026-11-22] ingest | OpenSpec docs/cli.md (raw/articles/2026-11-22-openspec-docs-cli-archive.md)
+
+## [2026-11-22] ingest | OpenSpec docs/opsx.md (raw/articles/2026-11-22-openspec-docs-opsx-sync.md)
+
+## [2026-11-22] ingest | OpenSpec docs/commands.md (raw/articles/2026-11-22-openspec-docs-commands-sync-archive.md)
+
+## [2026-11-22] ll | "alcance de operations.archive.guidance y archivar sin sincronizar" → raw/notes/2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md (2 lessons, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] inventory | tema abierto: declarar skip_specs al proponer un change sin specs (inventory/candidates/declarar-skip-specs-al-proponer-un-change-sin-specs.md)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
