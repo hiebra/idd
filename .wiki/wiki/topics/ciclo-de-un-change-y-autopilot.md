@@ -2,11 +2,13 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md
+  - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
   - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
   - raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md
 created: 2026-11-21
-updated: 2026-11-21
-verified: 2026-11-21
+updated: 2026-11-22
+verified: 2026-11-22
 tags: [openspec, git, opencode, plugins, openspec-autopilot, adr, spec]
 confidence: high
 volatility: warm
@@ -51,6 +53,7 @@ Lo común al ciclo va en una pieza neutral, y por eso `branch-change.mjs` está 
 - **Revisión humana guiada** (modo normal): tras cada artefacto, cada task y el verify. El cierre lo propone el modelo, pero lo confirma el usuario en un diálogo de la TUI. Una revisión no satisfactoria lleva a `openspec-update-change`, que recibe un índice de las sesiones del change (tool `openspec_session`), y después a una revisión del plan.
 - **Árbol limpio**: antes de empezar un paso, el árbol de trabajo tiene que estar limpio. Si no, la sesión espera el commit (`waiting-commit`). En el modo auto, solo se comprueba en el primer paso tras un cambio de zona (D11).
 - **Modo auto**: sin revisiones. Se para cuando un workflow pregunta y en cada cambio entre la zona de specs y la de código. El verify termina llamando a la tool con su veredicto: sin problemas críticos pasa al archive sin pedir confirmación; con ellos, la sesión queda esperando al usuario, que la cierra como una revisión. Sin veredicto (`clean` o `critical`), la tool no traspasa y le pide al modelo que vuelva a llamarla con uno (`idd@772d0f0:.opencode/plugins/openspec-autopilot/server.js`). Es una opción de cada usuario (`options.auto` en su configuración global de OpenCode), no del proyecto.
+- **Libera sus suscripciones al descargarse**: la parte de TUI ata sus dos `events.on` a un `AbortSignal` y `setup` devuelve la función que lo aborta, que OpenCode ejecuta antes de cada recarga en caliente y al cerrar. Así, tras una recarga solo atiende los eventos la carga nueva, y al cerrar con `--standalone` no deja trazas `ECONNRESET` en el terminal. ADR-0010 lo exige a todos los plugins de OpenCode del proyecto (`idd@99bdccd:adr/0010-opencode-plugins-release-what-they-register.md`, `idd@99bdccd:.opencode/plugins/openspec-autopilot/tui.js`).
 - **Nunca bloquea OpenCode**: ante un fallo, avisa y deja la sesión libre, sin lanzar excepciones hacia OpenCode (D12).
 
 ## Las restricciones de OpenCode 2.3.2 que lo moldean
@@ -60,14 +63,15 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - **Archivar solo desde la TUI**: el `ctx.session.update` del servidor ignora `archived` sin dar error. Por eso `tui.js` archiva con `context.client.session.update`, pedido por RPC (lección 1).
 - **La metadata se sustituye entera**: se escribe siempre leyendo, combinando y volviendo a escribir (lección 2).
 - **Las tools solo llegan al modelo con `options: { codemode: false }`** (lección 3). Una sesión con el agente plan también las ve y las llama (task 1.2 del change).
-- **Recargas en caliente**: también se recarga al cambiar `options`, sin reiniciar (lección 4). Pero los escuchadores RPC de la TUI anterior siguen vivos, y por eso cada petición lleva identificador, una generación y una sola respuesta (lección 5, D13). Los hooks del servidor anterior no sobreviven (task 1.4).
+- **Recargas en caliente**: también se recarga al cambiar `options`, sin reiniciar (lección 4). OpenCode ejecuta antes de cada recarga, y al cerrar, la función que devolvió el `setup` de cada parte, de servidor y de TUI; `events.on(nombre, manejador, { signal })` deja de entregar eventos al abortarse el `signal`. Los escuchadores RPC de la TUI anterior solo seguían vivos (lección 5) porque el plugin no los liberaba ([lecciones 1 y 2 de la limpieza](../../raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md)): con la limpieza, tras dos recargas solo recibe eventos la carga nueva, comprobado con OpenCode 2.3.2 real (`idd@99bdccd:openspec/changes/archive/2026-11-22-fix-tui-subscription-cleanup/tasks.md`, task 5.2). El identificador, la generación y la respuesta única de D13 se mantienen como defensa ante carreras durante una recarga (ADR-0010). Los hooks del servidor anterior no sobreviven (task 1.4).
+- **Cerrar con `--standalone` corta las suscripciones vivas**: cada `events.on` de la TUI es una suscripción a `/api/event`, y si el servidor propio de la TUI se apaga con ella viva, el cliente imprime una traza `ClientError: Transport … ECONNRESET`. Sin `--standalone` no ocurre, porque el servidor sigue vivo (`idd@99bdccd:openspec/changes/archive/2026-11-22-fix-tui-subscription-cleanup/design.md`, Context).
 - **Encadenar desde `experimental.idle`**: crear la sesión, `prompt`, navegar y archivar la anterior tarda menos de 200 ms. Tras una interrupción o una compactación no se ejecuta `idle` (lección 6).
 - **`ctx.session.list()` devuelve `{ data, cursor }` por páginas**, no un array. Se descubrió en la prueba final con OpenCode real, y se corrigió en el plugin y en el simulador (`idd@772d0f0:openspec/changes/archive/2026-11-21-add-openspec-autopilot/tasks.md`, task 12.2).
 - **El modelo no decide por el usuario**: un modelo real cerró con `ok` una revisión ante "Gracias, lo miro luego.". De ahí la confirmación en la TUI (lección 10).
 
 ## Cómo se verifica
 
-- **La suite** prueba el plugin en un OpenCode simulado con varias sesiones (`idd@772d0f0:acceptance-tests/support/agents/opencode-sim.mjs`). Es un proceso hijo que el World maneja por IPC, con un modelo guionizado por escenario y fallos inyectables. Lo que no está en las specs va en `core-tests/autopilot-next-step.test.js` y `core-tests/autopilot-plugin.test.js` (`idd@772d0f0:acceptance-tests/README.md`).
+- **La suite** prueba el plugin en un OpenCode simulado con varias sesiones (`idd@772d0f0:acceptance-tests/support/agents/opencode-sim.mjs`). Es un proceso hijo que el World maneja por IPC, con un modelo guionizado por escenario y fallos inyectables. Lo que no está en las specs va en `core-tests/autopilot-next-step.test.js` y `core-tests/autopilot-plugin.test.js` (`idd@772d0f0:acceptance-tests/README.md`). El simulador ejecuta en cada recarga, y al cerrar, la limpieza que devuelve cada `setup`, respeta el `signal` de `events.on` y deja una traza en el terminal por cada suscripción viva al cerrar (`idd@99bdccd:acceptance-tests/support/agents/opencode-sim.mjs`).
 - **El simulador no detecta un cambio real de OpenCode**: al subir de versión hay que repetir las pruebas en el banco de la lección 9, fuera del repositorio (ver [el registro de vigilancia](../../inventory/candidates/volver-a-comprobar-apis-de-sesion-al-subir-opencode.md)).
 
 ## Lo que no se sabe
@@ -86,3 +90,5 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `adr/0006-agent-asymmetry-policy.md`, `adr/0007-single-branch-change-lifecycle.md`, `adr/0008-openspec-autopilot-plugin.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `openspec/specs/openspec-autopilot/spec.md`, `.agents/openspec/branch-change.mjs`, `.opencode/plugins/openspec-autopilot/`, `README.md`, `acceptance-tests/README.md`, `openspec/changes/archive/2026-11-21-add-openspec-autopilot/tasks.md`.
 - [Lessons Learned: APIs de sesión de OpenCode 2.3.2 para orquestar un change](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md): lecciones 1 a 10.
+- [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `adr/0010-opencode-plugins-release-what-they-register.md`, `.opencode/plugins/openspec-autopilot/tui.js`, `acceptance-tests/support/agents/opencode-sim.mjs`, `openspec/changes/archive/2026-11-22-fix-tui-subscription-cleanup/design.md` y `tasks.md`.
+- [Lessons Learned: suscripciones de la TUI de OpenCode y su limpieza](../../raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md): lecciones 1, 2 y 4 (las trazas al cerrar con `--standalone`, el contrato de limpieza que corrige la regla de la lección 5, y la prueba en OpenCode real sin tmux).

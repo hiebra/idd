@@ -69,3 +69,15 @@
 ## [2026-11-21] librarian | scanned 9 articles, 0 stale, 0 low-quality, 1 suggestion (hook-context-opencode cites opencode-host.mjs at idd@1cf0792; generalized in idd@772d0f0, claim still holds)
 
 ## [2026-11-21] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed (the uncited lessons note is now compiled)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, 99bdccd, fix-tui-subscription-cleanup): 20 new, 0 skipped, 20 total candidates
+
+## [2026-11-22] refresh | 4 articles checked against raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md: 4 updated (ciclo-de-un-change-y-autopilot, carga-en-la-misma-sesion-por-agente, suite-de-aceptacion-y-spec-as-source, arranque-de-sesion), 0 flagged, 0 retracted; hook-context-opencode unaffected
+
+## [2026-11-22] librarian | scanned 9 articles, 0 stale, 0 low-quality, 1 suggestion (inventory watch volver-a-comprobar-apis-de-sesion-al-subir-opencode still lists the surviving RPC listeners; ADR-0010 replaces it with the cleanup contract)
+
+## [2026-11-22] ll | "suscripciones de la TUI de OpenCode y su limpieza (fix-tui-subscription-cleanup)" → raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md (5 lessons, 2 articles updated)
+
+## [2026-11-22] inventory | volver-a-comprobar-apis-de-sesion-al-subir-opencode → updated (cleanup contract replaces the surviving RPC listeners; last_checked 2026-11-22)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed

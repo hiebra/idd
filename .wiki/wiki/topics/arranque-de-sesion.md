@@ -2,12 +2,13 @@
 title: "El arranque de sesión: núcleo neutral y un adaptador por agente"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-f2be907-readme.md
   - raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md
 created: 2026-11-21
-updated: 2026-11-21
-verified: 2026-11-21
+updated: 2026-11-22
+verified: 2026-11-22
 tags: [session-bootstrap, claude-code, opencode, adr, spec]
 confidence: high
 volatility: warm
@@ -49,6 +50,7 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - **Los requisitos**: sin npm o con un Node inferior al de `engines.node`, se avisa y no se instala nada. Un fallo de instalación avisa, no bloquea la sesión y se reintenta en la siguiente.
 - **El motor del wiki**: se instala en la versión fijada, se sustituye si hay otra y no se versiona. Un fallo avisa con la instalación manual y se reintenta.
 - **Guía y recordatorio**: los entrega el adaptador del arranque, nunca un archivo de instrucciones que el agente cargue siempre.
+- **En OpenCode, la parte de TUI libera su suscripción a los avisos** al recargarse y al cerrarse: tras una recarga, cada aviso nuevo se muestra una sola vez, y al cerrar con `--standalone` no queda ningún error en el terminal (`idd@99bdccd:openspec/specs/session-bootstrap/spec.md`). Sin esa limpieza, cada carga anterior viva repetía el toast (`idd@99bdccd:.opencode/plugins/session-bootstrap/tui.js`).
 
 ## Consecuencias que recogen los ADRs
 
@@ -69,3 +71,4 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `adr/0001-session-bootstrap-hook.md`, `adr/0002-agent-neutral-session-bootstrap.md`, `adr/0005-wiki-engine-through-session-bootstrap.md`, `openspec/specs/session-bootstrap/spec.md`, `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/session-start.sh`, `.claude/hooks/user-prompt-submit.sh`, `.opencode/plugins/session-bootstrap/server.js`.
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `.agents/hooks/session-bootstrap.sh`.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
+- [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `openspec/specs/session-bootstrap/spec.md`, `.opencode/plugins/session-bootstrap/tui.js`.
