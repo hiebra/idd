@@ -145,6 +145,107 @@
 
 ## [2026-11-22] inventory | tema abierto: declarar skip_specs al proponer un change sin specs (inventory/candidates/declarar-skip-specs-al-proponer-un-change-sin-specs.md)
 
+## [2026-11-22] ll | "fusión con --no-ff y trazabilidad" → raw/notes/2026-11-22-ll-fusion-no-ff-y-trazabilidad.md (3 lessons, 1 article updated)
+
+## [2026-11-22] inventory | task nombrar-el-change-en-el-titulo-de-la-fusion (active, p3)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, update-comment-closing-and-quotes @ c4d6b27): 1 manifest, 13 files pinned
+
+## [2026-11-22] ll | "update-comment-closing-and-quotes" → raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md (3 lessons, 2 articles updated)
+
+## [2026-11-22] ll | "allow-user-requested-merges" → raw/notes/2026-11-22-ll-allow-user-requested-merges.md (3 lessons, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, allow-user-requested-merges @cac0041): 1 manifest, 16 paths pinned, 0 skipped
+
+## [2026-11-22] compile | archivado de allow-user-requested-merges (idd@cac0041) en ciclo-de-un-change-y-autopilot, origen-de-openspec-git-discipline y flujo-wiki-first; librarian scan sin hallazgos
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, update-comment-phrase-and-opencode-marker @ 1657745): 1 manifest, 18 files pinned
+
+## [2026-11-22] refresh | update-comment-phrase-and-opencode-marker @ 1657745: 4 articles refreshed (regla-de-comentarios, hook-context-opencode, arranque-de-sesion, suite-de-aceptacion-y-spec-as-source)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "update-comment-phrase-and-opencode-marker" → raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md (3 lessons, 3 articles updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest | OpenCode 2.3.2: worktrees (raw/articles/2026-11-22-opencode-2-worktrees.md)
+
+## [2026-11-22] ll | "worktrees de OpenCode desde origin/main" → raw/notes/2026-11-22-ll-worktrees-opencode-desde-main.md (3 lessons)
+
+## [2026-11-22] compile | 2 sources → 1 new article, 2 updated (worktrees-de-opencode; See Also en ciclo-de-un-change-y-autopilot, hook-context-opencode)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed; contadores de fuentes corregidos a mano (35)
+
+## [2026-11-22] ll | "allow-user-requested-merges (fusiones con main)" → raw/notes/2026-11-22-ll-allow-user-requested-merges-2.md (2 lessons, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest | Opinión del usuario: la spec en la rama de origen y las dos formas del ciclo (raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md)
+
+## [2026-11-22] ll | "conflictos entre deltas de changes concurrentes" → raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md (3 lessons, 0 articles updated)
+
+## [2026-11-22] compile | 2 sources → 1 new article, 2 updated (conflictos-entre-deltas-concurrentes, origen-de-openspec-git-discipline, ciclo-de-un-change-y-autopilot)
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, idd@e9fced1): 16 new, 0 skipped, 16 total candidates (raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md)
+## [2026-11-22] compile | 1 source → 0 new articles, 4 updated (ciclo-de-un-change-y-autopilot, origen-de-openspec-git-discipline, flujo-wiki-first, conflictos-entre-deltas-concurrentes)
+
+## [2026-11-22] ll | "git-discipline-standard-with-exception" → raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md (5 lessons, 4 articles updated)
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "lecciones equivalentes al resolver una fusión en el wiki" → raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md (1 lesson, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, 288741b): archivado de guiar-revision-con-tests, 9 new, 0 skipped, 9 total candidates
+
+## [2026-11-22] compile | wiki/topics/ciclo-de-un-change-y-autopilot.md: la revisión de una task y del verify se guía con los tests de aceptación (guiar-revision-con-tests, idd@288741b)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "guiar-revision-con-tests (agente plan y sesión operativa)" → raw/notes/2026-11-22-ll-guiar-revision-con-tests.md (2 lessons, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "soporte de Windows (windows-support)" → raw/notes/2026-11-22-ll-windows-support.md (7 lessons, 3 articles updated, 1 inventory record)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, windows-support @3d2d8fe): 1 manifest, 22 paths pinned, 0 skipped
+
+## [2026-11-22] compile | soporte-de-windows desde el archivado de windows-support (idd@3d2d8fe)
+
+## [2026-11-22] refresh | arranque-de-sesion, ciclo-de-un-change-y-autopilot y suite-de-aceptacion-y-spec-as-source con el archivado de windows-support (idd@3d2d8fe)
+
+## [2026-11-22] librarian | scanned 11 articles against windows-support (idd@3d2d8fe): 0 stale, 0 low-quality, 0 contradicted, 2 suggestions (gaps in soporte-de-windows and una-sola-copia-de-las-skills)
+
+## [2026-11-22] ll | "archivado de windows-support" → raw/notes/2026-11-22-ll-archive-windows-support.md (3 lessons, 2 articles updated)
+
+## [2026-11-22] compile | correcciones del librarian: lo que deja fuera windows-support en soporte-de-windows y los symlinks en Windows en una-sola-copia-de-las-skills (idd@3d2d8fe)
+
+## [2026-11-22] ll | "check commit mira todo el árbol de trabajo" → raw/notes/2026-11-22-ll-check-commit-arbol-entero.md (1 lesson, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed; manual: 0 broken links, 0 uncited sources, 4 pre-existing one-way See Also links (hook-context-opencode, flujo-wiki-first, suite-de-aceptacion-y-spec-as-source do not link back)
+
+## [2026-11-22] lint | See Also completados: hook-context-opencode → ciclo-de-un-change-y-autopilot y regla-de-comentarios; flujo-wiki-first y suite-de-aceptacion-y-spec-as-source → regla-de-comentarios (0 one-way links left)
+
+## [2026-11-22] ll | "contadores del wiki al resolver una fusión" → raw/notes/2026-11-22-ll-fusion-wiki-contadores.md (1 lesson, 1 article updated)
+
+## [2026-11-22] ll | "lint --fix y librarian scan del motor 1.0.0" → raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md (2 lessons, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, reorder-wiki-resync @fc31fe5): 1 manifest, 11 paths pinned, 0 skipped
+
+## [2026-11-22] refresh | flujo-wiki-first checked against raw/repos/2026-11-22-idd-fc31fe5-reorder-wiki-resync.md: 1 updated (the resync in three phases, without librarian); ciclo-de-un-change-y-autopilot and suite-de-aceptacion-y-spec-as-source unchanged
+
+## [2026-11-22] ll | "reorder-wiki-resync" → raw/notes/2026-11-22-ll-reorder-wiki-resync.md (1 lesson, 1 article updated)
+
+## [2026-11-22] compile | lección de reorder-wiki-resync en suite-de-aceptacion-y-spec-as-source; inventario sin cambios
+
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ll | "autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md (2 lessons, 1 articles updated)

@@ -28,9 +28,14 @@
 // console.error while closing.
 //
 // Usage: node opencode-host.mjs <project dir> <options JSON> <result file>
-// Options: { plugin, shell, frozenEnv, message, frozenMessages, tuiReloads, emit, close }
+// Options: { plugin, plugins, shell, frozenEnv, message, frozenMessages, tuiReloads, emit, close }
 //   plugin: the directory name of the plugin under .opencode/plugins/
-//   (default: session-bootstrap);
+//   (default: session-bootstrap); plugins: several of them, loaded in order on
+//   the same session, as OpenCode loads every local plugin (D5 of
+//   update-comment-phrase-and-opencode-marker). The first one is the plugin
+//   that the reloads, the emitted event and the setup time are about; the
+//   others are set up after it, their context hooks run on the same request,
+//   and their cleanups run at close;
 //   shell: "ok" | "none" (a server context without `shell`) | "throws" (its
 //   hook() throws); frozenEnv: the command's environment cannot be changed;
 //   message: the user message to send; frozenMessages: the request's
@@ -50,7 +55,9 @@ import { pathToFileURL } from 'node:url';
 
 const [projectDir, optionsJson, resultFile] = process.argv.slice(2);
 const options = JSON.parse(optionsJson);
-const PLUGIN_DIR = path.join(projectDir, '.opencode', 'plugins', options.plugin ?? 'session-bootstrap');
+const PLUGINS = options.plugins ?? [options.plugin ?? 'session-bootstrap'];
+const pluginDir = (name) => path.join(projectDir, '.opencode', 'plugins', name);
+const PLUGIN_DIR = pluginDir(PLUGINS[0]);
 
 const result = { error: null, setupMs: null, env: null, toasts: [], logs: [], request: null, terminal: [], subscriptions: [] };
 const done = () => {
@@ -186,8 +193,8 @@ function tuiContext(load) {
 
 // A part the plugin directory does not have is skipped, as OpenCode does;
 // the server part is required, since it is what the session needs
-async function loadPart(name, { required, load = 1 }) {
-  const file = path.join(PLUGIN_DIR, `${name}.js`);
+async function loadPart(name, { required, load = 1, dir = PLUGIN_DIR }) {
+  const file = path.join(dir, `${name}.js`);
   if (!required && !fs.existsSync(file)) return null;
   const plugin = (await import(`${pathToFileURL(file).href}?load=${load}`)).default;
   if (!plugin || typeof plugin.id !== 'string' || typeof plugin.setup !== 'function') {
@@ -237,6 +244,21 @@ try {
   if (tui) keep('tui', await tui.setup(tuiContext(1)));
 } catch (error) {
   fail('tui setup', error);
+}
+
+// The session's other plugins, set up after the first one
+const otherCleanups = [];
+for (const name of PLUGINS.slice(1)) {
+  try {
+    for (const [part, context] of [['server', serverContext], ['tui', () => tuiContext(1)]]) {
+      const plugin = await loadPart(part, { required: part === 'server', dir: pluginDir(name) });
+      if (!plugin) continue;
+      const returned = await plugin.setup(context());
+      if (typeof returned === 'function') otherCleanups.push({ part: `${name} ${part}`, fn: returned });
+    }
+  } catch (error) {
+    fail(`${name} setup`, error);
+  }
 }
 
 // The first command of the session: OpenCode runs the create.before hooks on
@@ -332,6 +354,13 @@ if (options.close) {
   try {
     await cleanup('tui');
     await cleanup('server');
+    for (const { part, fn } of otherCleanups) {
+      try {
+        await fn();
+      } catch (error) {
+        result.toasts.push({ variant: 'error', title: 'Plugin', message: `${part}: cleanup failed: ${error?.message ?? error}` });
+      }
+    }
     for (const sub of subscriptions()) {
       result.terminal.push(`ClientError: Transport: ECONNRESET: The socket connection was closed unexpectedly (rpc event ${sub.event}, TUI load ${sub.load})`);
     }

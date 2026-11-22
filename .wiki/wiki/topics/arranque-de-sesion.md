@@ -4,6 +4,9 @@ category: topic
 sources:
   - raw/repos/2026-11-22-idd-812f22d-autopilot-rama-por-sesion.md
   - raw/notes/2026-11-22-ll-pruebas-opencode-real-autopilot.md
+  - raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md
+  - raw/notes/2026-11-22-ll-windows-support.md
+  - raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
   - raw/repos/2026-11-21-idd-1cf0792.md
@@ -21,7 +24,7 @@ summary: "Qué hace el arranque de sesión de la plantilla, por qué se divide e
 
 # El arranque de sesión: núcleo neutral y un adaptador por agente
 
-> Al abrir una sesión de Claude Code u OpenCode 2, el proyecto se prepara solo: instala sus dependencias, deja el `openspec` del proyecto en el `PATH`, instala el motor del wiki y entrega al agente las instrucciones del proyecto: la guía y el recordatorio del wiki, y la regla de comentarios con su recordatorio. Todo lo de esta página sale de los archivos citados, fijados en `idd@1cf0792` (el README, en `idd@f2be907`).
+> Al abrir una sesión de Claude Code u OpenCode 2, el proyecto se prepara solo: instala sus dependencias, deja el `openspec` del proyecto en el `PATH`, instala el motor del wiki y entrega al agente las instrucciones del proyecto: la guía y el recordatorio del wiki y, en Claude Code, la regla de comentarios con su recordatorio. En OpenCode, la regla de comentarios la entrega su propio plugin, `response-comments`, desde `update-comment-phrase-and-opencode-marker` (`idd@1657745:adr/0018-opencode-optional-instructions-own-plugin.md`). Todo lo de esta página sale de los archivos citados, fijados en `idd@1cf0792` (el README, en `idd@f2be907`).
 
 ## Por qué existe
 
@@ -56,15 +59,21 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - **El motor del wiki**: se instala en la versión fijada, se sustituye si hay otra y no se versiona. Un fallo avisa con la instalación manual y se reintenta.
 - **Guía y recordatorio**: los entrega el adaptador del arranque, nunca un archivo de instrucciones que el agente cargue siempre. ADR-0010 extiende esa regla a toda instrucción que la plantilla dé al agente, cada una con su fuente en `.agents/` y su desactivación en local (`idd@16e4617:adr/0010-agent-instructions-through-session-bootstrap.md`); la primera tras el wiki es [[regla-de-comentarios|la regla de comentarios]] ([la regla de comentarios](../concepts/regla-de-comentarios.md)).
 - **En OpenCode, la parte de TUI libera su suscripción a los avisos** al recargarse y al cerrarse: tras una recarga, cada aviso nuevo se muestra una sola vez, y al cerrar con `--standalone` no queda ningún error en el terminal (`idd@99bdccd:openspec/specs/session-bootstrap/spec.md`). Sin esa limpieza, cada carga anterior viva repetía el toast (`idd@99bdccd:.opencode/plugins/session-bootstrap/tui.js`).
+- **Finales de línea LF en cualquier clon** (desde `windows-support`): el repositorio fija LF en todos sus archivos de texto, entre ellos los scripts del arranque y los textos que entrega o procesa, para que un clon con `core.autocrlf=true`, el valor por defecto de Git for Windows, los extraiga con LF; con CRLF, la guía del wiki llegaría con sus identificadores de sección (`idd@3d2d8fe:openspec/specs/session-bootstrap/spec.md`, `idd@3d2d8fe:.gitattributes`). El arranque en Windows aún no existe: lo trae el change `windows-global-distro` (`idd@3d2d8fe:README.md`, «Windows»; ver [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](soporte-de-windows.md))).
 
 ## Consecuencias que recogen los ADRs
 
 - La primera sesión de cada clon tarda más. El arranque impone `npm install` en local, y el proyecto queda ligado a Node.js con npm y a bash (ADR-0001 y ADR-0002).
 - En OpenCode, el primer comando de la primera sesión espera a la instalación. En OpenCode Desktop y en `opencode run`, sin TUI, los avisos solo quedan en el log (ADR-0002).
-- Para desactivarlo todo en local: `disableAllHooks` en `.claude/settings.local.json`, o `"plugins": ["-session-bootstrap"]` en la configuración global de OpenCode. Solo el wiki: `PROJECT_WIKI=off` (`idd@f2be907:README.md`). Solo la regla de comentarios: `PROJECT_COMMENTS=off` (`idd@16e4617:README.md`).
+- Para desactivarlo todo en local: `disableAllHooks` en `.claude/settings.local.json`, o `"plugins": ["-session-bootstrap", "-response-comments"]` en la configuración global de OpenCode: desde `update-comment-phrase-and-opencode-marker`, la regla de comentarios tiene su propio plugin, y quitar solo `session-bootstrap` la deja activa (`idd@1657745:adr/0018-opencode-optional-instructions-own-plugin.md`). Solo el wiki: `PROJECT_WIKI=off` (`idd@f2be907:README.md`). Solo la regla de comentarios: `PROJECT_COMMENTS=off` (`idd@16e4617:README.md`).
+
+## Instalación del motor sin red
+
+El núcleo trata `repo` de `.agents/wiki/engine.json` como una URL de git cuando no tiene la forma `owner/name`, así que puede apuntar a un git bundle local con el tag fijado: `git clone --depth 1 --branch <ref>` funciona desde un bundle, sin cambiar el núcleo (comprobado el 2026-11-22; [lecciones de windows-support](../../raw/notes/2026-11-22-ll-windows-support.md), lección 1). El diagnóstico de Windows lo da por presente («OK (vendor)»), y da `FALTA` si el motor no está instalado y `engine.json` apunta a GitHub (`idd@3d2d8fe:openspec/specs/windows-readiness/spec.md`, «Motor del wiki disponible sin red»).
 
 ## See Also
 
+- [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](soporte-de-windows.md))
 - [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](carga-en-la-misma-sesion-por-agente.md))
 - [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md))
 - [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](flujo-wiki-first.md))
@@ -75,6 +84,7 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 ## Sources
 
 - [Collection: archivado de autopilot-rama-por-sesion (idd@812f22d)](../../raw/repos/2026-11-22-idd-812f22d-autopilot-rama-por-sesion.md): `openspec/specs/session-bootstrap/spec.md`, `.agents/hooks/session-bootstrap.sh`.
+- [Collection: archivado de update-comment-phrase-and-opencode-marker](../../raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md): `adr/0018-opencode-optional-instructions-own-plugin.md`.
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `adr/0001-session-bootstrap-hook.md`, `adr/0002-agent-neutral-session-bootstrap.md`, `adr/0005-wiki-engine-through-session-bootstrap.md`, `openspec/specs/session-bootstrap/spec.md`, `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/session-start.sh`, `.claude/hooks/user-prompt-submit.sh`, `.opencode/plugins/session-bootstrap/server.js`.
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `.agents/hooks/session-bootstrap.sh`.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
@@ -82,3 +92,5 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `.agents/hooks/session-bootstrap.sh`, `openspec/specs/session-bootstrap/spec.md`.
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `openspec/specs/session-bootstrap/spec.md`, `.opencode/plugins/session-bootstrap/tui.js`.
 - [Lessons Learned: pruebas de autopilot-rama-por-sesion en OpenCode 2.3.2 real](../../raw/notes/2026-11-22-ll-pruebas-opencode-real-autopilot.md): lección 2.
+- [Collection: archivado de windows-support (idd@3d2d8fe)](../../raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md): `openspec/specs/session-bootstrap/spec.md`, `openspec/specs/windows-readiness/spec.md`, `.gitattributes`, `README.md`.
+- [Lessons Learned: soporte de Windows (windows-support)](../../raw/notes/2026-11-22-ll-windows-support.md): lección 1.

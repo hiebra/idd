@@ -26,19 +26,36 @@ export async function branchChange(directory) {
 // Los cambios de rama del plugin (design D3 y D7 de autopilot-rama-por-sesion),
 // con las reglas de branch-change.mjs: a una rama temporal con `switch`, a la
 // rama de origen con `origin`; ninguno con el árbol sucio. { ok, message }
+// Se llaman sin las variables del entorno: el rechazo en un contenedor
+// efímero (ADR-0016) protege la rama de la sesión del agente, y estos cambios
+// los pide el usuario al entrar en una sesión desde OpenCode, no el modelo.
 export async function switchTo(directory, branch, via = 'switch') {
   const m = await module(directory);
-  return via === 'origin' ? m.originBranch(directory) : m.switchBranch(directory, branch);
+  return via === 'origin' ? m.originBranch(directory, {}) : m.switchBranch(directory, branch, {});
 }
 
-// El CLI de OpenSpec del proyecto, el mismo que el arranque pone en el PATH
-function openspecBin(directory) {
-  const local = path.join(directory, 'node_modules', '.bin', 'openspec');
-  return fs.existsSync(local) ? local : 'openspec';
+// El CLI de OpenSpec del proyecto, el mismo que el arranque pone en el PATH,
+// como { command, prefix }. Se ejecuta su script con `node`, sin pasar por
+// node_modules/.bin/, que en Windows es un script de shell, y sin el
+// openspec.cmd, que Node.js no lanza sin shell (design D6 de
+// windows-support). No es process.execPath: en OpenCode es el binario de
+// OpenCode. Sin el CLI del proyecto, el `openspec` del PATH
+function openspecCommand(directory) {
+  try {
+    const dir = path.join(directory, 'node_modules', '@fission-ai', 'openspec');
+    const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.openspec;
+    const script = bin ? path.join(dir, bin) : null;
+    if (script && fs.existsSync(script)) return { command: 'node', prefix: [script] };
+  } catch {
+    // sin el paquete del proyecto
+  }
+  return { command: 'openspec', prefix: [] };
 }
 
 async function openspecJson(directory, args) {
-  const result = await run(openspecBin(directory), [...args, '--json'], { cwd: directory });
+  const { command, prefix } = openspecCommand(directory);
+  const result = await run(command, [...prefix, ...args, '--json'], { cwd: directory });
   try {
     return JSON.parse(result.stdout);
   } catch {

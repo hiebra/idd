@@ -25,7 +25,7 @@ const MARKER = /fake-engine-ref: (\S+)/;
 // The engine's paths used by design D1, per tag
 const SKILL_MANAGER = path.join('claude-plugin', 'skills', 'wiki-manager', 'SKILL.md');
 const COMMANDS_DIR = path.join('claude-plugin', 'commands');
-const COMMANDS = ['query', 'ingest', 'll', 'compile', 'refresh', 'librarian', 'lint', 'ingest-collection'];
+const COMMANDS = ['query', 'ingest', 'll', 'compile', 'refresh', 'inventory', 'lint', 'ingest-collection'];
 const HELPER = path.join('claude-plugin', 'bin', 'llm-wiki');
 const SKILL_QUERY = path.join('plugins', 'llm-wiki-opencode', 'skills', 'wiki-query', 'SKILL.md');
 
