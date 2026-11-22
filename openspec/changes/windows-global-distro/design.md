@@ -129,7 +129,7 @@ No valida el schema con `openspec schema validate`: el contenido sale de una rel
 
 ### D7. La suite separa lo que solo se puede comprobar en Windows
 
-Los escenarios de `windows-global-install` y `slim-template` que ejecutan el `.bat` llevan la etiqueta `@windows`:
+Los escenarios de `windows-global-install` y `slim-template` que ejecutan el `.bat` se eligen por nombre, en una lista de la suite (`acceptance-tests/windows-scenarios.cjs`), porque un escenario extraído de un `spec.md` no puede llevar etiquetas:
 - el perfil por defecto, que corre en Linux, no los incluye;
 - el job de Windows del workflow solo ejecuta esos.
 
