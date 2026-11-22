@@ -13,5 +13,5 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 3. Cierre
 
-- [ ] 3.1 Ejecutar la suite completa con los deltas del change y `npm run test:core`: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado.
+- [x] 3.1 Ejecutar la suite completa con los deltas del change y `npm run test:core`: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado.
 - [ ] 3.2 Comprobar con OpenCode real que el agente `plan` de una revisión de task puede ejecutar el runner de aceptación tras el permiso del usuario. Anotar aquí el resultado.
