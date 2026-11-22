@@ -67,8 +67,8 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 8. Documentación
 
-- [ ] 8.1 README: el wiki viene deshabilitado; cómo encenderlo y apagarlo con `/toggle-wiki`, y que el cambio vale para todo el proyecto; quitar "Desactivar el wiki en local" y la mención a `PROJECT_WIKI` en "Desactivar el arranque en local"; la migración (quitar `PROJECT_WIKI`, y ejecutar `/toggle-wiki` en un proyecto anterior que use el wiki); enlazar ADR-0021 → commit
-- [ ] 8.2 `acceptance-tests/README.md`: la desactivación pasa a ser el ajuste del clon (D7) → commit
+- [x] 8.1 README: el wiki viene deshabilitado; cómo encenderlo y apagarlo con `/toggle-wiki`, y que el cambio vale para todo el proyecto; quitar "Desactivar el wiki en local" y la mención a `PROJECT_WIKI` en "Desactivar el arranque en local"; la migración (quitar `PROJECT_WIKI`, y ejecutar `/toggle-wiki` en un proyecto anterior que use el wiki); enlazar ADR-0021 → commit
+- [x] 8.2 `acceptance-tests/README.md`: la desactivación pasa a ser el ajuste del clon (D7) → commit
 
 ## 9. Estado de este repositorio (D2, D10)
 

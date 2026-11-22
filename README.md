@@ -13,7 +13,7 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 - **Suite de aceptación** en `acceptance-tests/`, montada según la skill `acceptance-test-authoring`, con los escenarios del arranque de sesión y de las skills en cada agente ya cubiertos.
 - **Workflows de OpenSpec como skills** (sin comandos), en `.claude/skills/`: `openspec-explore`, `openspec-new-change`, `openspec-continue-change`, `openspec-apply-change`, `openspec-update-change`, `openspec-verify-change`, `openspec-sync-specs` y `openspec-archive-change`. Claude Code los ofrece como `/openspec-explore`, etc., y OpenCode 2 los lee de la misma carpeta.
 - **Skills del schema** en `.agents/skills/`, su única copia: `acceptance-test-authoring`, `architectural-decision-records`, `c4-diagrams`, `gherkin-authoring`, `glossary`, `grill-me`, `openspec-git-discipline` y `spec-as-source`. Claude Code las ve a través de sus enlaces en `.claude/skills/` y OpenCode 2 las lee directamente de `.agents/skills/` ([ADR-0003](adr/0003-single-source-for-schema-skills.md)).
-- **LLM wiki**: una base de conocimiento del proyecto que el agente consulta antes de responder y amplía con lo que descubre, con el motor [nvk/llm-wiki](https://github.com/nvk/llm-wiki) instalado en los dos agentes (ver abajo).
+- **LLM wiki**: una base de conocimiento del proyecto que el agente consulta antes de responder y amplía con lo que descubre, con el motor [nvk/llm-wiki](https://github.com/nvk/llm-wiki) en los dos agentes. Viene **deshabilitado**: se enciende para todo el proyecto con `/toggle-wiki` (ver abajo).
 - **Regla de comentarios**: comentas partes de una respuesta del agente sin que conteste a cada comentario, y luego le pides que los responda todos o que reformule la respuesta (ver abajo).
 - **Arranque de sesión** que prepara el proyecto en los dos agentes (ver abajo).
 - **El ciclo de un change en una rama y una sola fusión con `--no-ff`** como forma recomendada, con la forma canónica de intent-driven también admitida, igual en los dos agentes, y en OpenCode 2 un plugin que lo automatiza con una sesión por paso (ver abajo).
@@ -31,13 +31,13 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 Cada vez que se abre una sesión de Claude Code o de OpenCode en el proyecto, local o en la nube, el adaptador de ese agente ejecuta el núcleo del arranque de sesión, `.agents/hooks/session-bootstrap.sh`, que no depende de ningún agente:
 
 1. Prepara git: si el clon es superficial, lo completa; en un contenedor efímero (una sesión en la nube), trae las referencias de `origin` con `git fetch`; pone al día cada rama permanente local atrasada respecto a `origin/<rama>`, salvo la rama en la que está el clon, y avisa de las que han divergido; y en un contenedor efímero guarda la rama de la sesión en `git config idd.sessionBranch`. No toca el árbol de trabajo. Fuera de la nube solo usa la red para completar un clon superficial.
-1. Instala el motor del wiki en la versión fijada en `.agents/wiki/engine.json`, si falta o hay otra (ver [El wiki del proyecto](#el-wiki-del-proyecto)). No depende de Node.js.
-2. Si `.wiki/` está ignorado por git, quita del `.gitignore` la línea `.wiki` o `.wiki/` y avisa.
+1. Con el wiki del proyecto habilitado, instala el motor del wiki en la versión fijada en `.agents/wiki/engine.json`, si falta o hay otra (ver [El wiki del proyecto](#el-wiki-del-proyecto)), y avisa si los pasos del wiki de `openspec/config.yaml` no coinciden con su fuente. Con el wiki deshabilitado, retira los symlinks del motor. No depende de Node.js.
+2. Con el wiki habilitado, si `.wiki/` está ignorado por git, quita del `.gitignore` la línea `.wiki` o `.wiki/` y avisa.
 3. Si no hay npm, o la versión de Node.js es inferior a `engines.node`, avisa y no instala dependencias.
 4. Para la raíz y para `acceptance-tests/`, por separado: si su `package.json`, su `package-lock.json` o el propio núcleo han cambiado desde la última instalación correcta (o nunca se instaló), ejecuta `npm install` con **todas** sus dependencias.
 5. Devuelve al adaptador la ruta de `node_modules/.bin` de la raíz, y el adaptador la pone por delante en el `PATH` de la sesión, así que `openspec` es siempre la versión del proyecto. También le devuelve la ruta del motor, que el adaptador exporta como `CLAUDE_PLUGIN_ROOT`.
 
-Además, el adaptador entrega al agente la guía del wiki al empezar la sesión y el recordatorio con cada mensaje, que también prepara el núcleo.
+Además, con el wiki habilitado, el adaptador entrega al agente la guía del wiki al empezar la sesión y el recordatorio con cada mensaje, que también prepara el núcleo.
 
 Lo que cambia según el agente es cómo se dispara, cómo se ajusta el `PATH` y dónde aparecen los avisos:
 
@@ -58,7 +58,7 @@ El comportamiento exacto está en las specs [`openspec/specs/session-bootstrap/s
 
 ## El wiki del proyecto
 
-Un *LLM wiki* es una base de conocimiento en Markdown que el propio agente consulta, amplía y mantiene. Aquí recoge lo que no cabe en specs ni ADRs: investigación de dominio, fuentes, comparativas y lo que se comprueba trabajando. Así no se pierde entre sesiones ni queda en la memoria del modelo sin fuente ([ADR-0004](adr/0004-wiki-first-project-knowledge.md), [ADR-0005](adr/0005-wiki-engine-through-session-bootstrap.md)). Hay dos ámbitos:
+Un *LLM wiki* es una base de conocimiento en Markdown que el propio agente consulta, amplía y mantiene. Aquí recoge lo que no cabe en specs ni ADRs: investigación de dominio, fuentes, comparativas y lo que se comprueba trabajando. Así no se pierde entre sesiones ni queda en la memoria del modelo sin fuente ([ADR-0004](adr/0004-wiki-first-project-knowledge.md), [ADR-0005](adr/0005-wiki-engine-through-session-bootstrap.md), y [ADR-0021](adr/0021-project-wiki-disabled-by-default-with-project-switch.md), que los sustituye en el estado por defecto y en cómo se apaga). Viene deshabilitado: todo lo de esta sección vale con el wiki habilitado (ver [Habilitar y deshabilitar el wiki](#habilitar-y-deshabilitar-el-wiki)). Hay dos ámbitos:
 
 - **El wiki del proyecto**, en `.wiki/`, versionado con el repositorio: lo específico del proyecto y lo externo que le concierne.
 - **El hub del usuario**, fuera del repositorio y opcional: tus topics personales. Si no lo tienes (por ejemplo, en la nube), no pasa nada.
@@ -69,7 +69,7 @@ La **guía del wiki** (`.agents/wiki/guide.md`) es la única fuente del flujo, y
 - si el wiki no responde, te pregunte si prefieres que responda con su conocimiento interno, investigue y lo registre, o lo deje;
 - te proponga registrar lo que descubre y servirá en otra ocasión (lecciones aprendidas para lo comprobado, ingesta de la fuente para lo encontrado en internet).
 
-Las specs, los ADRs y el código entran en el wiki como fuentes fijadas a un commit. Al archivar un change, las indicaciones de archivado de OpenSpec (`operations.archive.guidance` en `openspec/config.yaml`) resincronizan el wiki con lo que tocó el change, y escriben solo lo que confirmes. Un recordatorio breve del flujo (`.agents/wiki/reminder.md`, 600 caracteres como máximo) acompaña cada mensaje. No hay `AGENTS.md` ni `CLAUDE.md`: los agentes los cargarían siempre, y no se podrían desactivar. Lo mismo vale para cualquier instrucción que la plantilla dé al agente ([ADR-0010](adr/0010-agent-instructions-through-session-bootstrap.md)).
+Las specs, los ADRs y el código entran en el wiki como fuentes fijadas a un commit. Al archivar un change, las indicaciones de archivado de OpenSpec (`operations.archive.guidance` en `openspec/config.yaml`) resincronizan el wiki con lo que tocó el change, y escriben solo lo que confirmes. Esos pasos tienen una sola fuente, `.agents/wiki/archive-guidance.yaml`: `/toggle-wiki` los copia en `config.yaml` entre `# wiki:archive-guidance:begin` y `# wiki:archive-guidance:end` al habilitar el wiki, y los quita al deshabilitarlo, sin tocar el resto del archivo. Un recordatorio breve del flujo (`.agents/wiki/reminder.md`, 600 caracteres como máximo) acompaña cada mensaje. No hay `AGENTS.md` ni `CLAUDE.md`: los agentes los cargarían siempre, y no se podrían desactivar. Lo mismo vale para cualquier instrucción que la plantilla dé al agente ([ADR-0010](adr/0010-agent-instructions-through-session-bootstrap.md)).
 
 El motor se instala en `.agents/wiki-engine/` y cada agente lo ve con symlinks, todo ignorado por git. Si ya tienes una skill o un comando con esos nombres que no es del motor, el arranque no lo toca y avisa.
 
@@ -83,25 +83,26 @@ No se usa el plugin de Claude Code del motor: instalado desde el arranque, solo 
 
 Los comandos del motor que usan su helper lo llaman con `${CLAUDE_PLUGIN_ROOT}/bin/llm-wiki`. Fuera de un plugin, su `allowed-tools` no se resuelve como en un plugin, así que Claude Code te pedirá permiso para ejecutar el helper la primera vez. Puedes concederlo para el proyecto.
 
-### Desactivar el wiki en local
+### Habilitar y deshabilitar el wiki
 
-Con `PROJECT_WIKI=off`, el arranque no instala el motor, retira sus symlinks y no entrega ni la guía ni el recordatorio. No cambia ningún archivo versionado, y `.wiki/` se conserva.
+El wiki es del proyecto: si está habilitado lo decide un ajuste versionado, `"enabled"` en `.agents/wiki/engine.json`, que vale para todos los que usan el repositorio. La plantilla lo trae a `false`. Solo el literal `true` lo habilita: si falta el campo o tiene otro valor, está deshabilitado.
 
-- **Claude Code**, en `.claude/settings.local.json`:
+Con el wiki deshabilitado, el arranque no instala el motor (y retira sus symlinks si estaban), el agente no recibe la guía ni el recordatorio, las indicaciones de archivado no mencionan el wiki y el autopilot termina el ciclo en el archive, sin paso del wiki. `.wiki/`, si existe, se conserva.
 
-  ```json
-  {
-    "env": { "PROJECT_WIKI": "off" }
-  }
-  ```
+Para cambiarlo, ejecuta `/toggle-wiki` en Claude Code o en OpenCode (`.claude/commands/toggle-wiki.md` y `.opencode/commands/toggle-wiki.md`). Lo pasa al estado contrario:
 
-- **OpenCode**, en el entorno desde el que lo lanzas:
+- **Al habilitarlo**, pone `"enabled": true`, añade los pasos de resincronización a `openspec/config.yaml`, e instala y expone el motor. Si no existe `.wiki/`, antes te propone inicializar el wiki y hacer la ingesta inicial del repositorio, fijada al commit actual, con la lista de lo que entra como fuente y lo que se excluye (lo generado, informes, lockfiles, la copia del motor, enlaces, archivos vacíos o de configuración trivial). No escribe nada hasta que lo confirmes; si no lo confirmas, no cambia nada.
+- **Al deshabilitarlo**, pone `"enabled": false`, quita esos pasos de `config.yaml` y retira los symlinks del motor. `.wiki/` se conserva, y al volver a habilitarlo no se propone ingesta.
 
-  ```bash
-  PROJECT_WIKI=off opencode
-  ```
+No hace commits: deja `engine.json`, `config.yaml` (y `.wiki/`, tras la ingesta) en el stage, y haz tú el commit para que valga para todos. Al terminar te dice qué vale ya en la sesión y qué desde la siguiente: en Claude Code, `/wiki:*` y `wiki-manager` se pueden usar en la misma sesión y el recordatorio llega desde el mensaje siguiente, pero la guía y `CLAUDE_PLUGIN_ROOT` llegan en la sesión siguiente; en OpenCode, las skills llegan con el mensaje siguiente y la guía y el recordatorio al volver a abrirlo.
 
-Para quitar el wiki del proyecto para todos, borra `.agents/wiki/engine.json`: el arranque deja de instalar el motor y de entregar la guía y el recordatorio.
+La parte determinista la hace el núcleo, también a mano: `bash .agents/hooks/session-bootstrap.sh wiki <status|on|off> .`.
+
+**Migración desde una versión anterior de la plantilla:**
+
+- `PROJECT_WIKI` ya no tiene efecto: quítalo de `.claude/settings.local.json` y del entorno desde el que lanzas OpenCode. Nadie puede apagar para sí el wiki de un proyecto que lo tiene habilitado, porque sus archives se saltarían la resincronización y el wiki quedaría desfasado para todos.
+- Un proyecto que ya usaba el wiki queda deshabilitado al actualizar, porque su `engine.json` no tiene `"enabled"`. Para seguir con él, ejecuta `/toggle-wiki`: encuentra `.wiki/`, lo habilita sin ingesta y pone los pasos en `config.yaml`. Si tu `config.yaml` tenía esos pasos escritos a mano, quítalos antes, para no tenerlos dos veces.
+- Si el arranque avisa de que los pasos del wiki de `config.yaml` no coinciden con su fuente, ejecuta `/toggle-wiki` dos veces y haz el commit.
 
 ### Instalar el motor a mano
 
@@ -137,7 +138,7 @@ La regla la entrega el arranque de sesión al empezar. Además, cuando un mensaj
 
 ### Desactivar la regla de comentarios en local
 
-Con `PROJECT_COMMENTS=off`, el agente no recibe ni la regla ni el recordatorio. Es independiente de `PROJECT_WIKI`, y no cambia ningún archivo versionado.
+Con `PROJECT_COMMENTS=off`, el agente no recibe ni la regla ni el recordatorio. Es independiente del wiki del proyecto, y no cambia ningún archivo versionado.
 
 - **Claude Code**, en `.claude/settings.local.json`:
 
@@ -157,12 +158,12 @@ Con `PROJECT_COMMENTS=off`, el agente no recibe ni la regla ni el recordatorio. 
 
 Hay dos formas del ciclo, y las dos se admiten ([ADR-0015](adr/0015-git-discipline-two-forms-and-ephemeral-commits.md), que sustituye a ADR-0007 junto con [ADR-0013](adr/0013-model-creates-change-branches-plugin-stages.md)):
 
-- **La forma recomendada:** el change se hace entero en **una rama temporal** (propuesta, implementación, archive y resincronización del wiki), se archiva en ella y llega a la rama de origen en **una sola fusión con `--no-ff`**. Con `git log --first-parent`, cada change es una entrada cuyo diff junta el plan, el código, el archive y el wiki, y la rama permanente no recibe commits directos.
+- **La forma recomendada:** el change se hace entero en **una rama temporal** (propuesta, implementación, archive y, con el wiki habilitado, resincronización del wiki), se archiva en ella y llega a la rama de origen en **una sola fusión con `--no-ff`**. Con `git log --first-parent`, cada change es una entrada cuyo diff junta el plan, el código, el archive y, si lo hay, el wiki, y la rama permanente no recibe commits directos.
 - **La forma canónica de intent-driven:** la propuesta se fusiona con la rama de origen antes del apply, y el change se archiva en la rama de origen después de fusionar la implementación, con todas sus tasks hechas. Conviene para revisar el plan aparte o reservar pronto los números de ADR, a cambio de tres fusiones.
 
 El squash también se admite: ningún paso del ciclo depende de que los commits de la rama lleguen a la rama de origen, y las citas del wiki se resuelven por el blob que guardan sus manifiestos.
 
-**Quién hace los commits.** En local, la rama temporal la puede crear el modelo, siempre desde la rama de origen y con el nombre del change, y los commits y las fusiones los hace el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit. En un contenedor efímero (una sesión en la nube, donde el contenedor se pierde), el agente hace commit y push en la rama de la sesión, sin preguntar, en esos momentos y cuando el entorno avisa al final de un turno, con commits provisionales si hace falta. Antes de cada commit ejecuta la puerta `check commit`, y nunca fusiona, crea ramas ni toca otras ramas. Ningún commit mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la de código.
+**Quién hace los commits.** En local, la rama temporal la puede crear el modelo, siempre desde la rama de origen y con el nombre del change, y los commits y las fusiones los hace el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y, con el wiki habilitado, la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit. En un contenedor efímero (una sesión en la nube, donde el contenedor se pierde), el agente hace commit y push en la rama de la sesión, sin preguntar, en esos momentos y cuando el entorno avisa al final de un turno, con commits provisionales si hace falta. Antes de cada commit ejecuta la puerta `check commit`, y nunca fusiona, crea ramas ni toca otras ramas. Ningún commit mezcla la zona de specs (`openspec/`, salvo los `tasks.md` y `openspec/config.yaml`, que son neutros) con la de código.
 
 **Números de ADR.** El número de un ADR nuevo es uno más que el más alto de `adr/` en `origin/<rama de origen>` y en todas las ramas remotas, tras un `git fetch` (`rules.adr` de `openspec/config.yaml`). Si dos ramas eligen el mismo, `check archive` lo detecta y pide renumerar los de la rama.
 
@@ -200,9 +201,9 @@ En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` recorre e
   - mientras quede algo en el stage sin commit, la revisión sigue y tus mensajes llegan al modelo.
 
   La revisión del verify empieza con el árbol limpio: para darla por buena sin cambiar nada, haz un commit vacío (`git commit --allow-empty -m "verify revisado"`).
-- **Los commits.** Ningún modelo te pide commits. Además de las revisiones, el plugin espera tu commit tras el archive y tras la resincronización del wiki, que van en commits separados.
+- **Los commits.** Ningún modelo te pide commits. Además de las revisiones, el plugin espera tu commit tras el archive y, con el wiki habilitado, tras la resincronización del wiki, que van en commits separados. Con el wiki deshabilitado, el ciclo termina en el archive y solo queda fusionar la rama.
 - **Al volver a la sesión operativa** (al entrar o al recuperar el foco), el plugin la comprueba. Si HEAD cambió de rama, sigue las reglas de la rama actual. Si su change ya no está en la rama, la archiva y empieza uno nuevo. Si esperaba tu commit y ya está hecho, arranca el paso. Si su paso no encaja con `openspec status`, te lo explica en un modal y no lo arregla.
-- Las lecciones candidatas de cada sesión quedan en su metadata, nunca en el repositorio, y llegan a la resincronización del wiki tras el archive, que solo registra las que confirmes.
+- Las lecciones candidatas de cada sesión quedan en su metadata, nunca en el repositorio, y, con el wiki habilitado, llegan a la resincronización del wiki tras el archive, que solo registra las que confirmes.
 - El estado (qué sesión es la operativa y qué paso hizo cada una) vive solo en la metadata de las sesiones de OpenCode.
 
 ### Con la UI web, OpenCode Desktop y `opencode run`
@@ -263,7 +264,7 @@ En Claude Code, desactiva los hooks en `.claude/settings.local.json`:
 }
 ```
 
-Esto desactiva también el wiki (y su recordatorio, que es otro hook). Para desactivar solo el wiki, ver [Desactivar el wiki en local](#desactivar-el-wiki-en-local).
+Esto desactiva también la entrega de la guía y del recordatorio del wiki, que van por los mismos hooks. El wiki no se apaga en local: es del proyecto (ver [Habilitar y deshabilitar el wiki](#habilitar-y-deshabilitar-el-wiki)).
 
 En OpenCode, quita el plugin en tu configuración global, `~/.config/opencode/opencode.json`:
 
@@ -300,7 +301,7 @@ Además de los archivos de arriba, un proyecto creado desde la plantilla hereda 
 - **Changes archivados** en `openspec/changes/archive/`: la historia de la plantilla. La suite no los ejecuta nunca.
 - **La regla de comentarios** en `.agents/comments/`, que cada usuario puede desactivar con `PROJECT_COMMENTS=off`.
 - **La suite de aceptación**, que ejecuta los escenarios heredados junto a los del proyecto y debe seguir en verde.
-- **El wiki**: la guía, el recordatorio y la versión fijada del motor en `.agents/wiki/`, y las indicaciones de archivado de `openspec/config.yaml`. También hereda `.wiki/`, el wiki de la plantilla: su ingesta inicial (las specs, los ADRs y el código fijados a un commit) y lo comprobado al construirla. Es conocimiento de la plantilla, como los changes archivados. Un proyecto puede conservarlo o vaciarlo; si lo vacía, la guía indica hacer la ingesta inicial de su propio repositorio cuando vuelva a crearlo. El hub de cada usuario no se hereda: es suyo.
+- **El wiki**, deshabilitado: la guía, el recordatorio, los pasos de resincronización (`archive-guidance.yaml`) y la versión fijada del motor en `.agents/wiki/`, con `"enabled": false`. Se habilita con `/toggle-wiki`. También hereda `.wiki/`, el wiki de la plantilla: su ingesta inicial (las specs, los ADRs y el código fijados a un commit) y lo comprobado al construirla. Es conocimiento de la plantilla, como los changes archivados. Un proyecto puede conservarlo o vaciarlo; si lo vacía, la guía indica hacer la ingesta inicial de su propio repositorio cuando vuelva a crearlo. El hub de cada usuario no se hereda: es suyo.
 
 ## Subir de versión OpenSpec
 
