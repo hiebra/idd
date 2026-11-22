@@ -119,7 +119,7 @@ La siguiente sesión crea los symlinks.
 Cambia `ref` en `.agents/wiki/engine.json`; desde la siguiente sesión, los dos agentes usan la nueva versión. Antes del commit, revisa en la nueva versión del motor:
 
 - que siguen existiendo las rutas que se enlazan: `claude-plugin/skills/wiki-manager`, `claude-plugin/commands/`, `claude-plugin/bin/llm-wiki` y `plugins/llm-wiki-opencode/skills/wiki-query`. Si cambian, hay que cambiar el núcleo (`ENGINE_LINKS`), la suite (`acceptance-tests/support/engine.js`) y el design del change que las fijó;
-- que las operaciones que citan la guía, el recordatorio y las indicaciones de archivado (`/wiki:ll`, `/wiki:ingest`, `/wiki:ingest-collection --manifest-only`, `/wiki:refresh`, `/wiki:compile`, `/wiki:librarian scan`, `/wiki:lint`) siguen existiendo con esas opciones;
+- que las operaciones que citan la guía, el recordatorio y las indicaciones de archivado (`/wiki:ll`, `/wiki:ingest`, `/wiki:ingest-collection --manifest-only`, `/wiki:refresh`, `/wiki:compile`, `/wiki:inventory list`, `/wiki:inventory update`, `/wiki:lint`) siguen existiendo con esas opciones;
 - su licencia y su changelog.
 
 Después, pasa la suite de aceptación.

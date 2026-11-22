@@ -6,7 +6,7 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 54 raw documents
+- Sources: 57 raw documents
 - Articles: 13 compiled wiki articles
 - Inventory records: 6 tracked items
 - Datasets: 0 manifests
@@ -29,6 +29,10 @@ Last updated: 2026-11-22
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: Resincronizado con reorder-wiki-resync (idd@fc31fe5): manifiesto, flujo-wiki-first con la secuencia nueva y 1 lección en suite-de-aceptacion-y-spec-as-source
+
+- 2026-11-22: 2 lecciones del motor 1.0.0 (lint --fix y librarian scan) en raw/notes; flujo-wiki-first actualizado
 
 - 2026-11-22: 7 lecciones de windows-support en raw/notes; 3 artículos actualizados y una tarea en el inventario (la prueba intermitente del autopilot)
 

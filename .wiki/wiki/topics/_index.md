@@ -19,6 +19,10 @@ Last updated: 2026-11-22
 
 ## Recent Changes
 
+- 2026-11-22: flujo-wiki-first refrescado con reorder-wiki-resync (idd@fc31fe5); suite-de-aceptacion-y-spec-as-source con la lección de pwsh en la nube
+
+- 2026-11-22: flujo-wiki-first con dos lecciones del motor 1.0.0 (lint --fix y librarian scan)
+
 - 2026-11-22: lecciones del archivado de windows-support en ciclo-de-un-change-y-autopilot y suite-de-aceptacion-y-spec-as-source; correcciones del librarian en soporte-de-windows
 
 - 2026-11-22: soporte-de-windows compilado del archivado de windows-support; arranque-de-sesion, ciclo-de-un-change-y-autopilot y suite-de-aceptacion-y-spec-as-source refrescados (idd@3d2d8fe)

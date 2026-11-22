@@ -236,6 +236,18 @@
 
 ## [2026-11-22] ll | "contadores del wiki al resolver una fusión" → raw/notes/2026-11-22-ll-fusion-wiki-contadores.md (1 lesson, 1 article updated)
 
+## [2026-11-22] ll | "lint --fix y librarian scan del motor 1.0.0" → raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md (2 lessons, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, reorder-wiki-resync @fc31fe5): 1 manifest, 11 paths pinned, 0 skipped
+
+## [2026-11-22] refresh | flujo-wiki-first checked against raw/repos/2026-11-22-idd-fc31fe5-reorder-wiki-resync.md: 1 updated (the resync in three phases, without librarian); ciclo-de-un-change-y-autopilot and suite-de-aceptacion-y-spec-as-source unchanged
+
+## [2026-11-22] ll | "reorder-wiki-resync" → raw/notes/2026-11-22-ll-reorder-wiki-resync.md (1 lesson, 1 article updated)
+
+## [2026-11-22] compile | lección de reorder-wiki-resync en suite-de-aceptacion-y-spec-as-source; inventario sin cambios
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
 ## [2026-11-22] inventory | added task puente-del-autopilot-sigue-con-una-tui-cerrada (inventory/candidates/puente-del-autopilot-sigue-con-una-tui-cerrada.md)
 
 ## [2026-11-22] inventory | added task dos-sesiones-que-toman-el-control-a-la-vez (inventory/candidates/dos-sesiones-que-toman-el-control-a-la-vez.md)
@@ -263,3 +275,5 @@
 ## [2026-11-22] merge | origin/main en la rama de autopilot-plan-explore: conflictos del wiki resueltos; la revisión guiada con tests ya no dice que corre con plan; dos-sesiones-que-toman-el-control-a-la-vez unido a corregir-prueba-intermitente-dos-sesiones-autopilot; contadores recontados (54 fuentes, 13 artículos, 8 registros, 7 activos)
 
 ## [2026-11-22] librarian | scanned 13 articles, 0 stale, 0 low-quality
+
+## [2026-11-22] merge | origin/main (reorder-wiki-resync) en la rama de autopilot-plan-explore: conflictos del wiki unidos, sin lecciones equivalentes; contadores recontados (57 fuentes, 13 artículos, 8 registros, 7 activos)
