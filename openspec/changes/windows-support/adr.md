@@ -7,9 +7,9 @@
 
 ADR review completed for this change.
 
-El design contiene una decisión duradera: cómo se soporta Windows. Solo con OpenCode 2, con Git Bash como shell del núcleo del arranque, LF en todo el repositorio, un diagnóstico en PowerShell y `pwsh` como requisito de la suite (design D1, D2, D3, D4, D5 y D7). Afecta a cualquier change futuro que toque el arranque, los plugins de OpenCode o la suite. Mantiene el núcleo bash neutral de ADR-0002, así que no se sustituye ningún ADR en vigor.
+El design contiene una decisión duradera: cómo se soporta Windows en lo que no depende del núcleo del arranque. Solo con OpenCode 2, LF en todo el repositorio, un diagnóstico en PowerShell y `pwsh` como requisito de la suite (design D1, D2 y D4). Afecta a cualquier change futuro que toque Windows o la suite. No decide nada sobre el núcleo del arranque, que fija ADR-0023 en `windows-global-distro`, así que no se sustituye ningún ADR en vigor.
 
-El resto del design no requiere ADR, porque son detalles de implementación: cómo ejecuta el autopilot el CLI de OpenSpec (D6) y cómo simula la suite Windows en Linux (D8).
+El resto del design no requiere ADR, porque son detalles de implementación: cómo ejecuta el autopilot el CLI de OpenSpec (D3) y cómo simula la suite Windows en Linux.
 
 ## In-Force ADRs Reviewed
 
@@ -25,8 +25,8 @@ El resto del design no requiere ADR, porque son detalles de implementación: có
 - ADR-0013: Un change, una rama temporal que puede crear el modelo, y commits solo del usuario
 - ADR-0014: El autopilot decide por el producto y por git, con la lógica en el servidor y una sesión operativa por rama (supersedes ADR-0008)
 - ADR-0015: Dos formas del ciclo de un change y commits del agente en contenedores efímeros (supersedes ADR-0007)
-- ADR-0016 (en `origin/claude/epic-hawking-sawijv`, no en la rama de origen): se ha tenido en cuenta solo para numerar
+- ADR-0016 (en `origin/claude/epic-hawking-sawijv`) y ADR-0018, ADR-0023 y ADR-0024 (en `origin/claude/friendly-shannon-kg3rbc`, de `windows-global-distro`), que no están en la rama de origen: se han tenido en cuenta para numerar y, ADR-0023, para no decidir nada sobre el núcleo del arranque
 
 ## New Durable ADRs Created
 
-- [ADR-0017](../../../adr/0017-windows-support-opencode-git-bash.md): En Windows se soporta solo OpenCode 2, con Git Bash como shell del arranque y un diagnóstico en PowerShell
+- [ADR-0017](../../../adr/0017-windows-support-opencode-lf-diagnostic.md): En Windows se soporta solo OpenCode 2, con LF en el repositorio y un diagnóstico en PowerShell

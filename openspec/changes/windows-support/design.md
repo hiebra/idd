@@ -1,14 +1,11 @@
 ## Context
 
-El arranque de sesión es un núcleo bash (`.agents/hooks/session-bootstrap.sh`) con un adaptador por agente (ADR-0002): el hook `SessionStart` de Claude Code y el plugin `session-bootstrap` de OpenCode 2. ADR-0002 deja el proyecto «ligado a Node.js con npm y a bash». En Windows solo se soporta OpenCode 2 (decisión del usuario, 2026-11-22), y el único bash nativo que puede lanzar es el de Git for Windows (Git Bash).
+El arranque de sesión es un núcleo bash (`.agents/hooks/session-bootstrap.sh`) con un adaptador por agente (ADR-0002). En Windows solo se soporta OpenCode 2 (decisión del usuario, 2026-11-22).
 
-Revisando el código para este change (2026-11-22), el proyecto no funciona en Windows con OpenCode aunque estén instalados Git for Windows, Node.js y Python, por cinco causas:
+Revisando el código para este change (2026-11-22), el proyecto no funciona en Windows con OpenCode aunque estén instalados Git for Windows, Node.js y Python. Hay causas en el núcleo del arranque (bash con CRLF, `ln -s` de Git Bash que copia, rutas `/c/...` frente a `C:\...`, el `bash` de WSL antes en el `PATH`). El change `windows-global-distro` las resuelve portando el núcleo a Node (ADR-0023, por decisión del usuario del 2026-11-22). Este change se reduce a lo que no depende de ese núcleo:
 
-1. **Finales de línea.** No hay `.gitattributes`, y Git for Windows extrae con `core.autocrlf=true`. Bash falla con un `.sh` con CRLF (`$'\r': command not found`). Además, el núcleo filtra la guía y la regla con `sed '/^<!-- ... -->$/d'`, que no casa con un `\r` final, y mide el recordatorio con `wc -m`, que lo cuenta.
-2. **Symlinks del motor.** El núcleo crea los enlaces del motor con `ln -s` y los reconoce con `readlink`. En Git Bash, sin `MSYS=winsymlinks:...`, `ln -s` hace una copia, así que en la sesión siguiente `is_engine_link` falla y el núcleo avisa de que «ya existe» algo que no es del motor.
-3. **Rutas.** El núcleo devuelve `bin=$PWD/node_modules/.bin` y `wiki-engine=$PWD/...`. En Git Bash `$PWD` es `/c/Users/...`, y el plugin de OpenCode lo antepone tal cual al `PATH` de Windows, separado con `;`.
-4. **Qué bash lanza OpenCode.** El plugin hace `spawn("bash", ...)`. En Windows, ese `bash` es el primero del `PATH`, que puede ser `C:\Windows\System32\bash.exe` (WSL).
-5. **El CLI en el autopilot.** `lib/project.mjs` ejecuta `node_modules/.bin/openspec` con `spawn` sin shell. En Windows ese archivo es un script sh. Su `openspec.cmd` tampoco sirve: desde Node.js 18.20.2 y 20.12.2, `spawn` rechaza los `.cmd` y `.bat` sin `shell: true`.
+1. **Finales de línea.** No hay `.gitattributes`, y Git for Windows extrae con `core.autocrlf=true`. Bash falla con un `.sh` con CRLF (`$'\r': command not found`). Además, el núcleo filtra la guía y la regla con `sed '/^<!-- ... -->$/d'`, que no casa con un `\r` final. Cualquier otro texto versionado que el proyecto lea o ejecute tiene el mismo riesgo.
+2. **El CLI en el autopilot.** `lib/project.mjs` ejecuta `node_modules/.bin/openspec` con `spawn` sin shell. En Windows ese archivo es un script sh. Su `openspec.cmd` tampoco sirve: desde Node.js 18.20.2 y 20.12.2, `spawn` rechaza los `.cmd` y `.bat` sin `shell: true`.
 
 También hace falta saber qué le falta a una máquina concreta, sobre todo sin internet. Para eso está el diagnóstico `scripts/windows/Test-OfflineInstall.ps1`, cuya primera versión ya está en la rama y no se ha probado en Windows.
 
@@ -16,128 +13,90 @@ También hace falta saber qué le falta a una máquina concreta, sobre todo sin 
 
 **Goals:**
 
-- Que el proyecto funcione en Windows 11 con OpenCode 2 si la máquina tiene Node.js con npm, Git for Windows y Python 3, sin cambiar su comportamiento en Linux y macOS.
-- Que, con el motor del wiki y las dependencias npm ya instalados, nada del arranque necesite red, como ya ocurre en Linux.
+- Que el repositorio se extraiga con LF en cualquier sistema.
+- Que el autopilot ejecute el CLI del proyecto en cualquier sistema.
 - Un diagnóstico que diga qué falta en una máquina Windows, con la alternativa en el repositorio y la global, cubierto por la suite en lo que se puede probar fuera de Windows.
+- Todo sin cambiar el comportamiento en Linux y macOS.
 
 **Non-Goals:**
 
-- Incorporar binarios o datos al repositorio (`vendor/windows/`). El diagnóstico los nombra, pero montar el vendor y hacer que el arranque lo use irá en otro change.
-- Claude Code en Windows: ni su adaptador ni la suite se adaptan para él, y el diagnóstico no lo da por bueno.
-- WSL, PowerShell o `cmd` como shell del arranque.
+- El núcleo del arranque en Windows: Git Bash, symlinks, rutas y el bash que lanza OpenCode. Lo resuelve `windows-global-distro`.
+- Incorporar binarios o datos al repositorio (`vendor/windows/`). El diagnóstico los nombra, pero montar el vendor irá en otro change.
+- Claude Code en Windows: el diagnóstico no lo da por bueno.
 - Ejecutar la suite de aceptación en Windows.
-- Windows 10, aunque probablemente funcione igual.
+- La verificación en Windows 11 real: se hace una vez, con este change y `windows-global-distro` fusionados, en el que se fusione el último.
 
 ## Decisions
 
-### D1. Git Bash es el único shell soportado en Windows
+### D1. Este change no toca el núcleo del arranque
 
-El núcleo sigue siendo bash, y en Windows se ejecuta con Git Bash, que el plugin de OpenCode localiza (D5). En Windows solo se soporta OpenCode 2. Es una restricción de plataforma, no una capacidad de un solo agente (ADR-0006): en Linux y macOS los dos agentes siguen igual.
+En Windows solo se soporta OpenCode 2. Es una restricción de plataforma, no una capacidad de un solo agente (ADR-0006): en Linux y macOS los dos agentes siguen igual. Cómo se ejecuta el arranque en Windows lo decide `windows-global-distro` con un núcleo en Node (ADR-0023).
 
-Alternativas:
+Una primera versión de este change resolvía el núcleo en Windows con Git Bash: symlinks nativos con `MSYS=winsymlinks:nativestrict`, rutas relativas en la salida del núcleo y la búsqueda de Git Bash en el plugin de OpenCode. Se implementó (tasks 2.2 a 2.7 de la primera versión) y se ha revertido al decidir el núcleo en Node, para que los dos changes no se pisen.
 
-- **Portar el núcleo a PowerShell.** Daría dos implementaciones de la lógica de instalación, justo lo que ADR-0002 evita.
-- **Escribir el núcleo en Node.** ADR-0002 ya lo descartó: el núcleo no podría avisar de que falta Node o de que la versión es inferior a la requerida.
-- **Soportar WSL como shell de Windows.** Dentro de WSL el proyecto ya funciona como en Linux, pero un agente nativo de Windows que lanza bash de WSL ve otro sistema de archivos, otro Node y otra caché de npm.
+Orden de integración, acordado con la sesión de `windows-global-distro`:
+
+1. Primero se fusiona y archiva este change.
+2. Después, `windows-global-distro` hace `git merge` de la rama de origen y rehace sus deltas de `session-bootstrap` y `openspec-autopilot` sobre las specs ya archivadas. Si el requisito de LF ya no le sirve, lo retira con REMOVED y su motivo. También adapta el diagnóstico a su instalación global y hace la verificación en Windows 11 real.
 
 ### D2. LF en todo el repositorio con `.gitattributes`
 
 Se añade `.gitattributes` con `* text=auto eol=lf`: todo archivo de texto se extrae con LF en cualquier sistema, y git sigue detectando los binarios. El script PowerShell no necesita CRLF; lo que necesita para Windows PowerShell 5.1 es el BOM UTF-8, que ya tiene y que `eol` no toca.
 
-Alternativa: fijar LF solo en `*.sh` y en los textos que procesa el núcleo. Cada texto nuevo que entregue el arranque obligaría a acordarse de añadirlo, y el fallo solo se vería en Windows.
+Alternativa: fijar LF solo en `*.sh` y en los textos que procesa el núcleo. Cada texto nuevo obligaría a acordarse de añadirlo, y el fallo solo se vería en Windows.
 
-### D3. El núcleo pide symlinks nativos a Git Bash
+La suite lo prueba con un clon real de la copia del proyecto con `core.autocrlf=true`, sobre el que se abre una sesión de OpenCode.
 
-El núcleo exporta `MSYS=winsymlinks:nativestrict` antes de `ln -s`. En Git Bash, `ln -s` crea entonces un symlink de Windows, o falla si el usuario no tiene permiso (sin el Modo de desarrollador), y ese fallo ya lo avisa el núcleo («no se ha podido crear ...»). Fuera de MSYS la variable no tiene efecto. Con `nativestrict`, y no con `native`, nunca vuelve a crear copias en silencio.
-
-Alternativa: una rama solo para Windows con `cmd /c mklink`. Daría otro camino de código y otra forma de reconocer los enlaces, cuando `readlink` ya entiende los symlinks nativos.
-
-### D4. El núcleo devuelve rutas relativas al proyecto, y cada adaptador las completa
-
-Hoy el núcleo devuelve `bin=` y `wiki-engine=` como rutas absolutas en formato bash. Pasa a devolverlas relativas al proyecto (`bin=node_modules/.bin`, `wiki-engine=.agents/wiki-engine/claude-plugin`), y cada adaptador las completa con el proyecto tal como lo nombra su entorno:
-
-- **Claude Code** (solo Linux y macOS): el adaptador es bash, escribe en `CLAUDE_ENV_FILE` y completa la ruta con `$project`, con el mismo resultado que hoy.
-- **OpenCode:** el plugin es Node y antepone la ruta al `PATH` del proceso. La completa con `path.join(directory, rel)`, que en Windows es `C:\...`.
-
-Esto cambia un contrato interno entre el núcleo y sus adaptadores, no un comportamiento de las specs vigentes. Se actualizan los dos adaptadores y las pruebas del núcleo que lean esas líneas.
-
-Alternativas:
-
-- **Convertir la ruta en el plugin con `cygpath -w`.** El plugin dependería de una herramienta de MSYS y de lanzar otro proceso.
-- **Que el núcleo devuelva rutas Windows (`pwd -W`) en Git Bash.** Funcionaría para OpenCode, pero el núcleo tendría que saber qué formato quiere cada adaptador.
-- **Que el plugin ignore la ruta del núcleo y construya la suya.** Duplica en el plugin dónde instala el núcleo cada cosa.
-
-La suite lo prueba fuera de Windows haciendo que bash vea el proyecto con otra ruta que el agente: por ejemplo, el agente recibe la ruta de un symlink al proyecto y bash, con `cd -P`, la ruta real. Así se comprueba que las rutas de la sesión salen de la ruta del agente y no de la de bash.
-
-### D5. En Windows, el plugin de OpenCode localiza Git Bash
-
-En `process.platform === "win32"`, el plugin `session-bootstrap` busca el bash en este orden:
-
-1. la instalación de Git que da `git --exec-path` (por ejemplo, `C:\Program Files\Git\mingw64\libexec\git-core`), subiendo hasta la raíz de Git y tomando `bin\bash.exe`;
-2. si `git` no está en el `PATH`, la instalación por defecto, `%ProgramFiles%\Git\bin\bash.exe`.
-
-Si no lo encuentra, avisa de que el arranque necesita Git for Windows y no lanza el núcleo. La sesión arranca igual. Fuera de Windows sigue lanzando `bash`.
-
-Alternativa: tomar el primer `bash.exe` del `PATH` que no esté en `System32` ni en `WindowsApps`. Depende de cómo esté ordenado el `PATH` de cada máquina, y Git for Windows por defecto no pone `bin\` en el `PATH`.
-
-La suite lo prueba simulando Windows en el host de OpenCode: fija `process.platform` a `win32` antes de cargar el plugin, pone un `bash` falso que registra que lo han llamado primero en el `PATH` y un `git` falso cuyo `--exec-path` lleva a un `bin/bash.exe` que es el bash real.
-
-### D6. El autopilot ejecuta el CLI con Node, sin el enlace de binarios
+### D3. El autopilot ejecuta el CLI con Node, sin el enlace de binarios
 
 El plugin pasa a resolver el CLI del proyecto desde `node_modules/@fission-ai/openspec/package.json` (su campo `bin.openspec`) y lo ejecuta con el `node` del `PATH`, es decir, `node <script>`. No usa `process.execPath`: en OpenCode es el propio binario de OpenCode, compilado con Bun, no Node (se vio al implementar la task 3.1). El `node` del `PATH` es el que exige el proyecto. Funciona igual en todos los sistemas y no depende de `node_modules/.bin/`. Si el paquete no está instalado, usa el `openspec` del `PATH`, como hasta ahora.
 
 Alternativa: `spawn` con `shell: true` en Windows. Habría que citar los argumentos (hay rutas y textos del usuario) y el comportamiento sería distinto en cada sistema.
 
-### D7. El diagnóstico separa lo que recoge de lo que evalúa
+La suite lo prueba con un `node_modules/.bin/openspec` que no es ejecutable, como en Windows.
+
+### D4. El diagnóstico separa lo que recoge de lo que evalúa
 
 El script se divide en dos partes:
 
-- **`Get-ReadinessFacts`** recoge los hechos de la máquina: qué ejecutables hay y sus versiones, si es un alias de la Microsoft Store, el registro del Modo de desarrollador, si se pueden crear symlinks con `mklink`, los atributos de los symlinks del clon, los finales de línea de los scripts, el sello del motor, `engine.json`, los lockfiles con lo instalado y lo que hay en las cachés de npm, y la configuración de npm.
+- **`Get-ReadinessFacts`** recoge los hechos de la máquina:
+  - qué ejecutables hay y sus versiones;
+  - si un Python es el alias de la Microsoft Store;
+  - los archivos de texto versionados del clon con CRLF;
+  - el sello del motor y `engine.json`;
+  - los lockfiles, con lo instalado y lo que hay en las cachés de npm;
+  - la configuración de npm.
 - **`Get-ReadinessReport`** convierte esos hechos en el informe (estado, detalle, repo, global, obtener) sin tocar la máquina.
 
 El script recoge, evalúa e imprime. Con `-FactsFile <json>` evalúa unos hechos dados, sin recogerlos. Eso es lo que usa la suite: cada «Given una máquina Windows ...» construye los hechos de esa máquina, y el paso ejecuta el script con `pwsh`. Así se prueban fuera de Windows todas las reglas de `windows-readiness`, y no queda ninguna lógica de decisión sin probar en la recogida.
 
-La recogida solo se puede probar en Windows. Se comprueba a mano, en una máquina Windows 11 real, con Windows PowerShell 5.1 y con PowerShell 7 (tasks de verificación), y se documenta en `acceptance-tests/README.md`, como se hizo con los agentes reales.
+La recogida solo se puede probar en Windows. Se comprueba a mano en una máquina Windows 11 real, con Windows PowerShell 5.1 y con PowerShell 7, en `windows-global-distro` (D1).
 
-El diagnóstico deja de comprobar lo que el arranque resuelve con este change: `MSYS` (D3) y qué bash va primero en el `PATH` (D5). Añade la comprobación de finales de línea CRLF en los scripts del arranque del clon, y como agente solo da por bueno OpenCode 2 (spec `windows-readiness`).
+El diagnóstico deja de comprobar lo que dependía del núcleo bash: Git Bash y sus utilidades, `MSYS`, qué bash va primero en el `PATH`, los symlinks, el Modo de desarrollador y el nombre `python3`. Comprueba los finales de línea del clon, y como agente solo da por bueno OpenCode 2 (spec `windows-readiness`).
 
-La suite ejecuta el script con `pwsh` (PowerShell 7), así que `pwsh` pasa a ser requisito de la suite, como ya lo es el acceso al registro de npm (decisión del usuario, 2026-11-22). Si falta, los escenarios de `windows-readiness` fallan con un mensaje que lo dice, en lugar de saltarse. En la sesión en la nube se instala con el script de configuración del entorno.
+La suite ejecuta el script con `pwsh` (PowerShell 7), así que `pwsh` pasa a ser requisito de la suite, como ya lo es el acceso al registro de npm (decisión del usuario, 2026-11-22). Si falta, los escenarios de `windows-readiness` fallan con un mensaje que lo dice, en lugar de saltarse. En la nube lo instala el script de configuración del entorno `idd`.
 
 Alternativas:
 
 - **Probar el script en Windows con agentes de CI.** El proyecto no tiene CI, y la suite se ejecuta en la sesión del agente.
-- **Un lanzador PowerShell mínimo que solo compruebe Git for Windows y delegue el resto en un diagnóstico bash**, que la suite probaría sin `pwsh`. Seguiría habiendo PowerShell sin probar, el diagnóstico quedaría repartido entre dos lenguajes y dependería de Node para leer los lockfiles. Si de todos modos hay que depender de PowerShell, es mejor que esté todo en PowerShell.
+- **Un lanzador PowerShell mínimo y un diagnóstico bash**, que la suite probaría sin `pwsh`. Seguiría habiendo PowerShell sin probar, y la lógica quedaría en dos lenguajes.
 - **Etiquetar los escenarios y excluirlos cuando no hay `pwsh`.** Habría que cambiar `cucumber.cjs`, que es copia literal de la skill, y la suite quedaría en verde sin haberlos probado.
-
-### D8. Los escenarios de Windows del arranque se simulan en Linux
-
-Siguiendo ADR-0002, la suite no arranca los agentes reales ni necesita Windows:
-
-- **Finales de línea:** un clon real de la copia del proyecto con `-c core.autocrlf=true`, sobre el que se abre la sesión de OpenCode.
-- **Git Bash que copia:** un `ln` falso en la máquina simulada que copia salvo que `MSYS` contenga `winsymlinks:nativestrict`, y en ese caso llama al `ln` real.
-- **Rutas:** D4. **Bash de OpenCode:** D5.
-
-El plugin de OpenCode en Windows se comprueba además con OpenCode 2 real en Windows 11 al final del change, como se hizo con su contrato de plugins en Linux.
 
 ## Risks / Trade-offs
 
 - **[Riesgo] `* text=auto eol=lf` cambia los archivos de los clones Windows que ya existen.** Git renormaliza al hacer commit y puede mostrar cambios de solo finales de línea. → El README y el diagnóstico dan los comandos para volver a extraer el árbol con LF. En Linux y macOS no cambia nada, porque ya es LF.
-- **[Riesgo] `nativestrict` hace fallar `ln -s` donde antes copiaba.** → Es lo buscado: una copia rompía el arranque en silencio en la sesión siguiente. El fallo se avisa, y el diagnóstico dice cómo activar el Modo de desarrollador.
-- **[Riesgo] OpenCode 2 en Windows carga los plugins o entrega `directory` de otra forma que en Linux.** → Se comprueba con OpenCode 2 real en Windows 11 (tasks de verificación). Si difiere, se actualiza el design.
-- **[Compromiso] Quien use Claude Code en Windows no tiene arranque.** → El README y el diagnóstico lo dicen. Soportarlo irá en otro change.
+- **[Riesgo] Los deltas de `windows-global-distro` pisan los de este change al archivarse.** → Orden de integración de D1: ese change rehace sus deltas sobre las specs ya archivadas.
+- **[Compromiso] Hasta que se fusione `windows-global-distro`, el proyecto sigue sin arrancar en Windows.** → Este change no lo promete: el README dice que el arranque en Windows llega con ese change.
 - **[Riesgo] La recogida de hechos del diagnóstico no la cubre la suite.** → Está separada de la evaluación y es lineal (leer, no decidir), y se verifica a mano en Windows con las dos versiones de PowerShell.
-- **[Compromiso] La suite necesita `pwsh`** en la máquina en la que se ejecuta. → Sin él, los escenarios de `windows-readiness` fallan con un mensaje que lo dice. El README de la suite lo pone entre los requisitos, y el entorno de la nube lo instala con su script de configuración.
-- **[Riesgo] Cambiar el formato de `bin=` y `wiki-engine=` rompe a quien lea la salida del núcleo.** → Solo la leen los dos adaptadores del repositorio y sus pruebas, que cambian en el mismo commit.
+- **[Compromiso] La suite necesita `pwsh`** en la máquina en la que se ejecuta. → Sin él, los escenarios de `windows-readiness` fallan con un mensaje que lo dice. El README de la suite lo pone entre los requisitos.
 
 ## Migration Plan
 
 1. Se fusiona el change. Los clones Linux y macOS no notan nada.
-2. En un clon Windows que ya existe: `git config core.symlinks true` (con el Modo de desarrollador activo) y volver a extraer el árbol para que salga con LF y con symlinks (`git rm -r --cached -q . && git reset --hard`, con el árbol limpio). El diagnóstico detecta los dos casos y da el comando.
-3. En una máquina nueva: ejecutar el diagnóstico, instalar lo que falte (con la alternativa global que indique) y abrir la sesión.
+2. En un clon Windows que ya existe, volver a extraer el árbol con LF (`git rm -r --cached -q . && git reset --hard`, con el árbol limpio). El diagnóstico lo detecta y da el comando.
 
 Rollback: revertir los commits del change. `.gitattributes` se puede retirar sin efectos en Linux y macOS.
 
 ## Open Questions
 
-1. **Instalar `pwsh` en la sesión en la nube.** En esta sesión se bloqueó la descarga de PowerShell. Hay que decidir de dónde se instala (el paquete de Microsoft para Linux o el tarball de las releases de GitHub) y añadirlo al script de configuración del entorno, con la aprobación del usuario.
-2. **ADRs vigentes.** Ninguno hay que sustituir. Este change se apoya en ADR-0002 (un núcleo bash y un adaptador por agente) y fija en uno nuevo que en Windows solo se soporta OpenCode 2, con Git Bash (D1).
+1. **ADRs vigentes.** No hay que sustituir ninguno. ADR-0017, de este change, fija que en Windows solo se soporta OpenCode 2, LF en el repositorio y un diagnóstico en PowerShell. No decide nada sobre el núcleo, que fija ADR-0023 en `windows-global-distro`. Por eso ADR-0023 no debe sustituir a ADR-0017; se lo ha pedido a esa sesión.

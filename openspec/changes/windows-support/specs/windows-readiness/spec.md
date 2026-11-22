@@ -1,7 +1,7 @@
 # windows-readiness
 
 ## Purpose
-Diagnóstico de lo que le falta a una máquina Windows para que el proyecto funcione en ella, también sin acceso a internet: `scripts/windows/Test-OfflineInstall.ps1`. La máquina con todo lo necesario es la que tiene OpenCode 2, Node.js con npm, Git for Windows con Git Bash, Python 3, symlinks y, ya instalados, el motor del wiki y las dependencias npm del proyecto (en el proyecto o en una caché de npm que se pueda usar sin red).
+Diagnóstico de lo que le falta a una máquina Windows para que el proyecto funcione en ella, también sin acceso a internet: `scripts/windows/Test-OfflineInstall.ps1`. La máquina con todo lo necesario es la que tiene OpenCode 2, Node.js con npm, git, Python 3 y, ya instalados, el motor del wiki y las dependencias npm del proyecto (en el proyecto o en una caché de npm que se pueda usar sin red).
 
 ## ADDED Requirements
 
@@ -101,8 +101,8 @@ When se ejecuta el diagnóstico en el proyecto
 Then el informe da el motor del wiki en estado OK (vendor)
 ```
 
-### Requirement: Python 3 con el nombre que usa el motor
-El diagnóstico DEBE comprobar que hay un Python 3 que se puede ejecutar, sin contar el alias de la Microsoft Store, que no es un intérprete. Si no hay ninguno llamado `python3`, que es el que invoca el helper del motor del wiki, DEBE dar un `AVISO`.
+### Requirement: Python 3 que se puede ejecutar
+El diagnóstico DEBE comprobar que hay un Python 3 que se puede ejecutar, sin contar el alias de la Microsoft Store, que no es un intérprete.
 
 #### Scenario: Solo el alias de la Microsoft Store
 
@@ -113,33 +113,14 @@ When se ejecuta el diagnóstico en el proyecto
 Then el informe da Python 3 en estado FALTA
 ```
 
-#### Scenario: Python instalado sin `python3`
-
-```gherkin
-Given una máquina Windows con todo lo que necesita el proyecto
-But Python 3 solo se puede ejecutar como `python`
-When se ejecuta el diagnóstico en el proyecto
-Then el informe da el nombre `python3` en estado AVISO
-```
-
-### Requirement: El clon tiene los symlinks y los finales de línea del repositorio
-El diagnóstico DEBE dar en estado `FALTA` un clon cuyos symlinks versionados se extrajeron como archivos de texto, o cuyos scripts del arranque de sesión tienen finales de línea CRLF, y DEBE decir cómo volver a extraerlos. Para los symlinks NO DEBE ofrecer una alternativa en el repositorio, porque no la hay.
-
-#### Scenario: Clon extraído sin symlinks
-
-```gherkin
-Given una máquina Windows con todo lo que necesita el proyecto
-But el clon se extrajo sin symlinks
-When se ejecuta el diagnóstico en el proyecto
-Then el informe da los symlinks del clon en estado FALTA
-And el informe dice cómo volver a extraer los symlinks
-```
+### Requirement: El clon tiene los finales de línea del repositorio
+El diagnóstico DEBE dar en estado `FALTA` un clon con archivos de texto versionados extraídos con finales de línea CRLF, como los deja un clon de Git for Windows anterior a `.gitattributes`, y DEBE decir cómo volver a extraerlos con LF.
 
 #### Scenario: Clon extraído con CRLF antes de fijar los finales de línea
 
 ```gherkin
 Given una máquina Windows con todo lo que necesita el proyecto
-But los scripts del arranque de sesión del clon tienen finales de línea CRLF
+But el clon tiene archivos de texto versionados con finales de línea CRLF
 When se ejecuta el diagnóstico en el proyecto
 Then el informe da los finales de línea del clon en estado FALTA
 And el informe dice cómo volver a extraer los archivos con LF
