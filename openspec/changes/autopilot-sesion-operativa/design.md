@@ -14,7 +14,7 @@ Todo con OpenCode 2.3.2 en esta máquina, el servicio en segundo plano, un clon 
    - `context.ui.router.current()` da `{ type: "home" }` y, tras el primer mensaje, `{ type: "session", sessionID }`; no hay evento de cambio de ruta, así que se consulta periódicamente;
    - `context.renderer.on("focus" | "blur", …)` llega con las secuencias de foco del terminal (`ESC[I`, `ESC[O`);
    - `context.ui.dialog` tiene `show`, `set`, `clear`, `alert`, `confirm`, `prompt` y `select` (sí hay `alert`).
-6. **Los 400 del arranque** [comprobado]: en el log del servicio, `POST /api/rpc/openspec-autopilot/hello` y `/api/rpc/session-bootstrap/warnings` responden 400 `{"type":"rpc.unavailable"}` justo al arrancar la TUI. La TUI llama a la RPC en su `setup` antes de que la parte de servidor de esa ubicación termine el suyo y la registre (OpenCode instancia la ubicación bajo demanda, en paralelo a la reconciliación de plugins de la TUI). Después funciona porque el servidor, al registrarse, emite `hello-request` y la TUI se vuelve a presentar.
+6. **Los 400 del arranque** [comprobado]: en el log del servicio, `POST /api/rpc/openspec-autopilot/hello` y `/api/rpc/session-bootstrap/warnings` responden 400 `{"type":"rpc.unavailable"}` justo al arrancar la TUI. La hipótesis inicial (la TUI llama antes de que la parte de servidor registre su RPC) resultó incompleta en las pruebas end-to-end: con la TUI en la pantalla de inicio, sus llamadas RPC **no llevan la ubicación** del proyecto, y el servidor no sabe a qué parte de servidor dirigirlas; la misma llamada con `?location[directory]=…` responde bien. Después "funcionaba" porque, con una sesión abierta, las llamadas sí llevan la ubicación. Ver D14.
 7. **Tasks** [comprobado]: `openspec instructions apply --change X --json` numera las tasks en orden (`"1"`, `"2"`…) y deja el número de `tasks.md` al principio de `description` (`"1.2 En …"`).
 8. `opencode run -m alibaba/qwen3.8-flash` carga la parte de servidor del plugin y ningún cliente con interfaz [comprobado].
 
@@ -52,7 +52,7 @@ Es la sesión no archivada con `metadata.openspec.role === "owner"` para el `wor
 
 ### D3. Arranque al presentarse un cliente
 
-En `hello`, el servidor guarda la instancia como destino de las peticiones. En `globalThis` (que sobrevive a las recargas del servidor) guarda los PID ya presentados por `worktree`. El identificador de instancia de la TUI lleva su PID. Un PID nuevo es un arranque de la TUI. Una recarga en caliente conserva el PID y no arranca nada. En el arranque:
+En `hello`, el servidor guarda la instancia como destino de las peticiones. En `globalThis` (que sobrevive a las recargas del servidor) guarda los PID ya presentados y la generación de la carga, los dos **por directorio del proyecto**: el servicio de OpenCode carga el plugin una vez por proyecto en el mismo proceso, y una generación única hacía que la carga de un segundo proyecto diera por recargada la del primero, que dejaba de atender sus hooks (encontrado en las pruebas end-to-end). El identificador de instancia de la TUI lleva su PID. Un PID nuevo es un arranque de la TUI. Una recarga en caliente conserva el PID y no arranca nada. En el arranque:
 
 1. archiva las sesiones marcadas con `archivePending` (D13);
 2. con HEAD separado o varios changes, nada (con varios, el aviso de siempre);
@@ -86,7 +86,7 @@ El plugin crea la sesión con su agente y su metadata, y la arranca con `session
 - que no empiece el paso siguiente;
 - que llame a `openspec_handoff` al terminar.
 
-Al empezar el paso, la metadata guarda la foto del change (D7) y la firma de git (D8). Los prompts (`lib/prompts.mjs`) ya no piden commits: dicen que el plugin prepara el stage y el usuario hace el commit. En el paso `new`, sin descripción, el modelo la pide. En una rama permanente, crea la rama con `branch-change.mjs start <change>` (D12).
+Al empezar el paso, la metadata guarda la foto del change (D7) y la firma de git (D8). Lo que el usuario escribe en la sesión del paso `new` (la descripción del change) se guarda en la metadata y acompaña a las instrucciones de los artefactos siguientes; sin ello, en las pruebas end-to-end la sesión del `proposal` no sabía para qué era el change y volvía a preguntar. Los prompts (`lib/prompts.mjs`) ya no piden commits: dicen que el plugin prepara el stage y el usuario hace el commit. En el paso `new`, sin descripción, el modelo la pide. En una rama permanente, crea la rama con `branch-change.mjs start <change>` (D12).
 
 ### D7. El producto evaluable
 
@@ -112,11 +112,13 @@ Al empezar el paso, la metadata guarda la foto del change (D7) y la firma de git
 
 ### D8. El cierre de una revisión, por git
 
-Al empezar una revisión, la metadata guarda la firma de git: HEAD, `git status --porcelain=v1` y un hash de `git diff HEAD` y de los archivos sin seguimiento. En el hook `prompt` de una sesión de revisión, si la firma ha cambiado:
+Al empezar una revisión, la metadata guarda la firma de git: HEAD, `git status --porcelain=v1` y un hash de `git diff HEAD` y de los archivos sin seguimiento. En el hook `prompt` de una sesión de revisión, si la firma ha cambiado y no queda nada en el stage:
 
-- **árbol limpio** → ok;
-- **árbol sucio y nada en el stage** (`git diff --cached --quiet`) → ko;
-- cualquier otro estado → sigue, y el prompt llega al modelo tal cual.
+- **HEAD ha avanzado** (el usuario hizo el commit) → ok;
+- **HEAD no ha cambiado** (el usuario lo sacó todo del stage o lo descartó) → ko;
+- si queda algo en el stage → sigue, y el prompt llega al modelo tal cual.
+
+Es la regla de la spec ("árbol limpio" / "todo fuera del stage") afinada para el stage por producto de D7: tras el commit del primer producto de una cola, los demás siguen en el árbol, fuera del stage, y el árbol no queda limpio. Con un solo producto, las dos reglas coinciden. En las pruebas end-to-end, una revisión del design con el adr pendiente se cerró como ok con esta regla.
 
 En un ok o un ko, el plugin reescribe el prompt para que el modelo de la revisión solo conteste "Revisión cerrada". Después encadena al instante: revisión del producto siguiente de la cola, o paso siguiente, o `openspec-update-change`. En un ko, las conclusiones son el texto del prompt del usuario. Si el prompt está vacío o tiene una sola palabra, son las que dio el modelo de la revisión con `openspec_handoff`, o su último mensaje. Sin firma cambiada no se cierra nada: así una pregunta en una revisión que empezó con el árbol limpio (el verify) no la cierra. Se retira el diálogo de confirmación (`needsConfirmation`). En una revisión, `openspec_handoff` solo guarda conclusiones y lecciones.
 
@@ -164,7 +166,7 @@ Imprimen `{ ok, message }`, como `check`. Cuando el paso `new` termina en otra r
 
 ### D14. La TUI se presenta sin ruido
 
-Si `hello` falla con `rpc.unavailable`, la TUI lo reintenta (a los 200, 400 y 800 ms… hasta 10 s) sin escribir nada. Cualquier otro error se sigue registrando. El `hello-request` del servidor se mantiene. En `session-bootstrap/tui.js` la causa es la misma; se aplica el mismo reintento a `warnings`.
+Cada llamada RPC de la parte de TUI lleva la ubicación del proyecto (`{ location: { directory: context.location.directory } }`): sin ella, en la pantalla de inicio no llega a la parte de servidor (Context, punto 6). Si aun así `hello` falla con `rpc.unavailable` (la parte de servidor todavía no ha registrado su RPC), la TUI lo reintenta (a los 200, 400 y 800 ms… hasta 10 s) sin escribir nada. Cualquier otro error se sigue registrando. El `hello-request` del servidor se mantiene. En `session-bootstrap/tui.js` la causa es la misma; se aplican la ubicación y el reintento a `warnings`. Comprobado en OpenCode real: tras el arreglo, el log del servicio no tiene ningún 400 al arrancar la TUI.
 
 ### D15. La suite
 
@@ -193,6 +195,14 @@ El simulador (`acceptance-tests/support/agents/opencode-sim.mjs`) se amplía con
 
 Las sesiones de versiones anteriores con `handed-off` se tratan como `running` con producto pendiente de evaluar.
 
+## Lo comprobado en las pruebas end-to-end
+
+Con OpenCode 2.3.2, el servicio, `alibaba/qwen3.8-flash` y dos clones desechables (detalle en las tasks 8.x):
+
+- El hook `prompt` llega cuando el mensaje entra en la sesión, aunque quede "pendiente" detrás del turno en curso: una revisión se cerró por git con su modelo todavía trabajando.
+- Las sesiones que crea el plugin usan el modelo por defecto de la configuración, no el que el usuario tiene elegido en la TUI.
+- `qwen3.8-flash` siguió la instrucción del paso en todos los pasos probados, pero tarda (de 1 a 7 minutos por paso con estas skills), y en un `update-change` terminó con una respuesta sin relación (la de la regla de comentarios) tras hacer bien su trabajo: el producto se evaluó igual.
+
 ## Decisiones tomadas en batch
 
 El prompt del usuario pedía no preguntar; estas son las decisiones que en un flujo normal se habrían consultado:
@@ -206,7 +216,8 @@ El prompt del usuario pedía no preguntar; estas son las decisiones que en un fl
 7. **Modo auto**: se mantiene tal como lo pedía el prompt. Se para en las preguntas de un workflow (reposo sin producto), en los cambios de zona hasta el commit, y con un verify crítico. No se ve incoherente.
 8. **OpenCode Desktop**: no se escribe un `gui-experimental` (Non-Goals). Se documenta.
 9. **Wiki**: la consulta del wiki (`.wiki/`, en solo lectura) cubrió el ciclo y las APIs de sesión ya registradas. Lo nuevo de la UI web, el hook `prompt`, el foco y los 400 sale de la investigación descrita en Context, no del wiki.
-10. **ADR**: un ADR nuevo, ADR-0012, sustituye la parte de ADR-0007 sobre ramas y commits pedidos por el modelo, y recoge la separación entre lógica e interfaz. ADR-0008 queda matizado. No se reescribe.
+10. **ADR**: dos ADRs nuevos. ADR-0012 sustituye a ADR-0007 (ramas que crea el modelo y commits) y ADR-0013 sustituye a ADR-0008 (producto, cierre por git, sesión operativa y separación entre lógica e interfaz). Cada uno repite lo que sigue valiendo del anterior, que no se toca.
+11. **Pruebas end-to-end**: las sesiones que crea el plugin llevan el título de su paso, no `e2e:`; se archivaron todas al terminar, junto con las de las sondas. Para que usaran `alibaba/qwen3.8-flash`, cada clon desechable tiene un `opencode.json` con `"model"`. Los arreglos encontrados durante las pruebas se copiaron en caliente a los clones (marcados con `git update-index --assume-unchanged` para no ensuciar su árbol).
 
 ## Risks / Trade-offs
 
