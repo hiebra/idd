@@ -47,8 +47,8 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - las skills, en `intent-driven-dev/skills@15aa678`;
   - las skills propias: `openspec-git-discipline`, `acceptance-test-authoring` y `spec-as-source`.
 - [x] 5.2 Añadir una prueba que compare el schema y las skills no propias con su origen en ese commit. Necesita red, así que corre en el job de release y no en el perfil por defecto → commit
-- [ ] 5.3 Steps de `slim-template` que se pueden comprobar en Linux sobre el zip montado: qué contiene y qué no, y que sale del tag. Rojo
-- [ ] 5.4 Escribir `scripts/release/build.mjs`, que monta desde un árbol dado, con su versión, tres artefactos:
+- [x] 5.3 Steps de `slim-template` que se pueden comprobar en Linux sobre el zip montado: qué contiene y qué no, y que sale del tag. Rojo
+- [x] 5.4 Escribir `scripts/release/build.mjs`, que monta desde un árbol dado, con su versión, tres artefactos:
   - `idd-global-<versión>.zip`, con el motor descargado según `.agents/wiki/engine.json`, las skills del motor `wiki-query` y `wiki-manager`, y el `SKILL.md` de `openspec-git-discipline` en tres piezas;
   - `idd-<versión>.bat`;
   - `idd-slim-<versión>.zip`.
