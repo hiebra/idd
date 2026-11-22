@@ -36,11 +36,23 @@
 //   the terminal, as OpenCode's client prints its ECONNRESET, and so does
 //   whatever the plugin writes to console.error while closing.
 // - Failures can be injected per operation (e.g. "session.create").
+// - autopilot-sesion-operativa (design D15): the `prompt` hook, run with each
+//   user message before the `context` hooks, with a mutable text; the TUI's
+//   screen (ui.router.current(), its own route, changed by navigations, by
+//   opening the home screen and by jumping to a session) and the terminal's
+//   focus (renderer.on/off "focus" | "blur"); dialogs answered with Enter
+//   (the first option) or Esc (undefined), and ui.dialog.alert; the TUI's PID
+//   (a restart is a new process; a reload keeps it); a TUI part that loads
+//   before the server registers its RPC (`rpcLate`); a client without TUI
+//   that writes in sessions; and model responses with effects on the project
+//   (`files`, `git`) before their text or tool call. What the plugin writes to
+//   console.error is kept in `logs`.
 //
 // The model is a script per scenario: rules matched against the session,
 // each with a queue of responses ({ text }, { tool: { name, input } }).
 
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -57,7 +69,15 @@ const now = () => {
 const clone = (value) => (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
 
 export class Host {
-  constructor({ projectDir, plugin, dbFile, tui = true, pluginOptions = {}, failures = {}, tuiSilent = false }) {
+  constructor({ projectDir, plugin, dbFile, tui = true, pluginOptions = {}, failures = {}, tuiSilent = false, rpcLate = false, alreadyOpen = false }) {
+    // OpenCode was already open: this process's TUI has presented itself
+    // before, so loading the plugin is like a hot reload and not a start
+    // (the registry the plugin keeps in globalThis, design D3 of
+    // autopilot-sesion-operativa)
+    if (alreadyOpen) globalThis[Symbol.for('openspec-autopilot.registry')] = { gens: {}, pids: { [projectDir]: [String(process.pid)] } };
+    this.rpcLate = rpcLate;
+    this.route = { type: 'home' };
+    this.focusListeners = { focus: new Set(), blur: new Set() };
     // A TUI that never answers what the server asks it (its event listeners get nothing)
     this.tuiSilent = tuiSilent;
     this.projectDir = projectDir;
@@ -68,7 +88,7 @@ export class Host {
     this.failures = { ...failures };
     this.store = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile, 'utf8')) : { seq: 0, sessions: {} };
     this.generation = 0;
-    this.hooks = { context: [], 'experimental.idle': [], compaction: [] };
+    this.hooks = { prompt: [], context: [], 'experimental.idle': [], compaction: [] };
     this.tools = new Map();
     this.rpc = new Map(); // definition id -> { handlers, listeners: Map(name -> [{ fn, load }]) }
     // What each part's last setup returned to run at reload or close
@@ -81,7 +101,12 @@ export class Host {
     // With dialogWait, a dialog with no queued answer stays open until one arrives
     this.dialogWait = false;
     this.openDialogs = [];
-    this.out = { toasts: [], navigations: [], dialogs: [], archives: [], requests: [], crashes: [], toolErrors: [], logs: [], terminal: [] };
+    this.out = { toasts: [], navigations: [], dialogs: [], archives: [], requests: [], crashes: [], toolErrors: [], logs: [], terminal: [], prompts: [], routes: [] };
+    const original = console.error;
+    console.error = (...args) => {
+      this.out.logs.push(args.map((a) => (a instanceof Error ? a.stack : typeof a === 'string' ? a : JSON.stringify(a))).join(' '));
+      original(...args);
+    };
     this.pending = new Set();
     this.interrupted = new Set();
   }
@@ -173,20 +198,32 @@ export class Host {
   async setup() {
     await this.runCleanups();
     this.generation += 1;
-    this.hooks = { context: [], 'experimental.idle': [], compaction: [] };
+    this.hooks = { prompt: [], context: [], 'experimental.idle': [], compaction: [] };
     this.tools = new Map();
-    try {
-      this.keepCleanup('server', await this.serverPart.setup(this.serverContext()));
-    } catch (error) {
-      this.crash('server setup', error);
-    }
-    if (this.tuiPart) {
+    const server = async () => {
+      try {
+        this.keepCleanup('server', await this.serverPart.setup(this.serverContext()));
+      } catch (error) {
+        this.crash('server setup', error);
+      }
+    };
+    const tui = async () => {
+      if (!this.tuiPart) return;
       this.tuiLoad += 1;
       try {
         this.keepCleanup('tui', await this.tuiPart.setup(this.tuiContext(this.tuiLoad)));
       } catch (error) {
         this.crash('tui setup', error);
       }
+    };
+    if (this.rpcLate) {
+      // The TUI part loads first: its calls find no RPC until the server registers it
+      for (const entry of this.rpc.values()) entry.handlers = null;
+      await tui();
+      await server();
+    } else {
+      await server();
+      await tui();
     }
     await this.settle();
   }
@@ -344,6 +381,10 @@ export class Host {
     return {
       options: clone(this.pluginOptions),
       location: { directory: this.projectDir },
+      renderer: {
+        on: (name, fn) => host.focusListeners[name]?.add(fn),
+        off: (name, fn) => host.focusListeners[name]?.delete(fn),
+      },
       client: {
         rpc: (definition) => {
           const entry = host.rpcEntry(definition.id);
@@ -362,9 +403,15 @@ export class Host {
             },
           };
           for (const name of Object.keys(definition.methods ?? {})) {
-            client[name] = async (input) => {
-              if (!entry.handlers) throw Object.assign(new Error('rpc unavailable'), { type: 'rpc.unavailable' });
-              return clone(await entry.handlers[name](clone(input), { signal: new AbortController().signal, error: (type, data) => ({ type, data }) }));
+            client[name] = (input) => {
+              const call = (async () => {
+                if (!entry.handlers) throw Object.assign(new Error('RPC is unavailable: ' + definition.id), { type: 'rpc.unavailable' });
+                return clone(await entry.handlers[name](clone(input), { signal: new AbortController().signal, error: (type, data) => ({ type, data }) }));
+              })();
+              // A call in flight is work the scenario waits for
+              host.pending.add(call);
+              call.then(() => host.pending.delete(call), () => host.pending.delete(call));
+              return call;
             };
           }
           return client;
@@ -392,8 +439,9 @@ export class Host {
           navigate: (destination) => {
             host.inject('tui.navigate');
             host.out.navigations.push(clone(destination));
+            host.setRoute(destination);
           },
-          current: () => host.out.navigations.at(-1) ?? { type: 'home' },
+          current: () => clone(host.route),
         },
         dialog: {
           select: async (options) => {
@@ -404,9 +452,15 @@ export class Host {
             else if (host.dialogWait) answer = await new Promise((resolve) => host.openDialogs.push(resolve));
             else answer = { value: undefined };
             if (answer.delayMs) await new Promise((resolve) => setTimeout(resolve, answer.delayMs));
-            shown.answer = answer.value ?? null;
+            // Enter chooses the highlighted (first) option; Esc closes without choosing
+            const value = answer.key === 'enter' ? options.options[0]?.value : answer.key === 'esc' ? undefined : answer.value;
+            shown.answer = value ?? null;
+            shown.key = answer.key ?? null;
             shown.open = false;
-            return answer.value;
+            return value;
+          },
+          alert: async (options) => {
+            host.out.dialogs.push({ title: options?.title ?? options?.message ?? '', options: [], answer: null, open: false, alert: true });
           },
         },
       },
@@ -469,6 +523,16 @@ export class Host {
 
   async turn(sessionID, message) {
     const session = this.session(sessionID);
+    const prompt = { sessionID, messageID: `msg_${session.messages.length}`, prompt: { text: message.text }, delivery: 'steer' };
+    for (const hook of [...this.hooks.prompt]) {
+      try {
+        await hook(prompt);
+      } catch (error) {
+        this.crash('prompt hook', error);
+      }
+    }
+    this.out.prompts.push({ sessionID, text: message.text, final: prompt.prompt.text });
+    message = { ...message, text: prompt.prompt.text };
     session.messages.push({ type: 'user', text: message.text, ...(message.skills?.length ? { skills: message.skills } : {}), ...(message.command ? { command: message.command } : {}) });
     this.save();
     for (let i = 0; i < 20; i++) {
@@ -500,6 +564,7 @@ export class Host {
       }
       if (this.interrupted.delete(sessionID)) return this.interrupt(session);
       const response = this.scriptedResponse(session, input);
+      this.applyEffects(response);
       if (response.tool) {
         const tool = this.tools.get(response.tool.name);
         const part = { type: 'tool', name: response.tool.name, state: { status: 'completed', input: clone(response.tool.input ?? {}), content: [] } };
@@ -538,6 +603,39 @@ export class Host {
     }
   }
 
+  // What a scripted response does in the project before answering
+  applyEffects(response) {
+    for (const [rel, content] of Object.entries(response.files ?? {})) {
+      const file = path.join(this.projectDir, rel);
+      if (content === null) fs.rmSync(file, { recursive: true, force: true });
+      else {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, content);
+      }
+    }
+    for (const args of response.git ?? []) {
+      const result = spawnSync('git', args, { cwd: this.projectDir, encoding: 'utf8' });
+      if (result.status !== 0) this.crash('scripted git', new Error(`git ${args.join(' ')}: ${result.stderr}`));
+    }
+  }
+
+  // --- the TUI's screen and the terminal's focus ---------------------------
+
+  setRoute(route) {
+    this.route = route?.type === 'session' ? { type: 'session', sessionID: route.sessionID } : { type: 'home' };
+    this.out.routes.push(clone(this.route));
+  }
+
+  focus(name) {
+    for (const fn of [...this.focusListeners[name]]) {
+      try {
+        fn();
+      } catch (error) {
+        this.crash(`renderer ${name}`, error);
+      }
+    }
+  }
+
   interrupt(session) {
     session.messages.push({ type: 'idle', outcome: 'interrupted' });
     session.outcome = 'interrupted';
@@ -567,6 +665,6 @@ export class Host {
   }
 
   state() {
-    return clone({ sessions: this.store.sessions, ...this.out, generation: this.generation, tuiLoad: this.tuiLoad, subscriptions: this.subscriptions(), closed: this.closed });
+    return clone({ sessions: this.store.sessions, ...this.out, route: this.route, generation: this.generation, tuiLoad: this.tuiLoad, subscriptions: this.subscriptions(), closed: this.closed });
   }
 }

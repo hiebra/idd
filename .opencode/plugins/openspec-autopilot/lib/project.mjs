@@ -1,52 +1,22 @@
 // Lo que el plugin lee del proyecto: el change de la rama (el módulo neutral
-// .agents/openspec/branch-change.mjs, design D1), `openspec status`, el
-// tasks.md del change y si el árbol de trabajo está limpio. Todas las esperas
-// tienen límite (design D12).
+// .agents/openspec/branch-change.mjs), `openspec status`, las tasks según el
+// CLI (`openspec instructions apply`, design D11 de autopilot-sesion-operativa),
+// los errores de `openspec validate` y si el árbol de trabajo está limpio.
+// Todas las esperas tienen límite.
 
-import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { parseTasks } from './next-step.mjs';
+import { parseTasks, taskFromCli } from './next-step.mjs';
+import { run } from './run.mjs';
+
+export { run } from './run.mjs';
+export { treeClean } from './git.mjs';
 
 const BRANCH_CHANGE = path.join('.agents', 'openspec', 'branch-change.mjs');
 
-export function run(command, args, { cwd, timeoutMs = 30000 } = {}) {
-  return new Promise((resolve) => {
-    let stdout = '';
-    let stderr = '';
-    let settled = false;
-    const finish = (result) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(result);
-    };
-    let child;
-    try {
-      child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, OPENSPEC_TELEMETRY: '0', NO_COLOR: '1' } });
-    } catch (error) {
-      resolve({ code: null, stdout, stderr: String(error?.message ?? error) });
-      return;
-    }
-    const timer = setTimeout(() => {
-      try {
-        child.kill();
-      } catch {
-        // already gone
-      }
-      finish({ code: null, stdout, stderr: `${command}: sin respuesta en ${timeoutMs} ms` });
-    }, timeoutMs);
-    timer.unref?.();
-    child.stdout.on('data', (chunk) => (stdout += chunk));
-    child.stderr.on('data', (chunk) => (stderr += chunk));
-    child.on('error', (error) => finish({ code: null, stdout, stderr: String(error?.message ?? error) }));
-    child.on('close', (code) => finish({ code, stdout, stderr }));
-  });
-}
-
 export async function branchChange(directory) {
-  const module = await import(pathToFileURL(path.join(directory, BRANCH_CHANGE)).href);
+  const module = await import(`${pathToFileURL(path.join(directory, BRANCH_CHANGE)).href}`);
   return module.branchChange(directory);
 }
 
@@ -56,16 +26,27 @@ function openspecBin(directory) {
   return fs.existsSync(local) ? local : 'openspec';
 }
 
-export async function openspecStatus(directory, change) {
-  const result = await run(openspecBin(directory), ['status', '--change', change, '--json'], { cwd: directory });
+async function openspecJson(directory, args) {
+  const result = await run(openspecBin(directory), [...args, '--json'], { cwd: directory });
   try {
     return JSON.parse(result.stdout);
   } catch {
-    throw new Error(`openspec status --change ${change} ha fallado: ${(result.stderr || result.stdout).trim().slice(0, 300)}`);
+    throw new Error(`openspec ${args.join(' ')} ha fallado: ${(result.stderr || result.stdout).trim().slice(0, 300)}`);
   }
 }
 
-export function readTasks(directory, change) {
+export async function openspecStatus(directory, change) {
+  return openspecJson(directory, ['status', '--change', change]);
+}
+
+// Las tasks del change como las numera el CLI: { id, label, done }
+export async function readTasks(directory, change) {
+  try {
+    const apply = await openspecJson(directory, ['instructions', 'apply', '--change', change]);
+    if (Array.isArray(apply.tasks)) return apply.tasks.map(taskFromCli);
+  } catch {
+    // sin CLI o sin tasks.md: se lee el archivo
+  }
   try {
     return parseTasks(fs.readFileSync(path.join(directory, 'openspec', 'changes', change, 'tasks.md'), 'utf8'));
   } catch {
@@ -73,14 +54,19 @@ export function readTasks(directory, change) {
   }
 }
 
+// Los errores (no los avisos) de `openspec validate <change> --json`
+export async function validateErrors(directory, change) {
+  try {
+    const result = await openspecJson(directory, ['validate', change]);
+    return (result.items ?? []).flatMap((item) => (item.issues ?? []).filter((i) => i.level === 'ERROR').map((i) => `${i.path ?? item.id}: ${i.message}`));
+  } catch (error) {
+    return [String(error?.message ?? error)];
+  }
+}
+
 // El estado del change que necesita next-step: { change, status, tasks }
 export async function changeState(directory, change) {
   if (!change) return { change: null, status: null, tasks: [] };
-  return { change, status: await openspecStatus(directory, change), tasks: readTasks(directory, change) };
-}
-
-export async function treeClean(directory) {
-  const result = await run('git', ['status', '--porcelain'], { cwd: directory, timeoutMs: 10000 });
-  if (result.code !== 0) throw new Error(`git status ha fallado: ${result.stderr.trim().slice(0, 200)}`);
-  return result.stdout.trim() === '';
+  const status = await openspecStatus(directory, change);
+  return { change, status, tasks: await readTasks(directory, change) };
 }

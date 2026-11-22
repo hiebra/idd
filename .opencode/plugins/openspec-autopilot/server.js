@@ -1,34 +1,40 @@
 // Parte de servidor del plugin openspec-autopilot para OpenCode 2
-// (openspec-autopilot, design D3 a D15 de add-openspec-autopilot): automatiza
-// el ciclo de un change en la TUI, con una sesión nueva por paso.
+// (ADR-0014; design de add-openspec-autopilot y de autopilot-sesion-operativa).
+// Toda la lógica del ciclo vive aquí y funciona con cualquier cliente (TUI,
+// UI web, OpenCode Desktop, `opencode run`); la TUI solo pone la interfaz
+// (tui.js), pedida por el RPC del plugin (D1).
 //
-// - Dónde actúa: solo con la TUI presentada (D13), en una rama temporal con
-//   un change o sin ninguno (.agents/openspec/branch-change.mjs, D1). Con
-//   varios changes avisa y no hace nada.
-// - El estado vive en la clave `openspec` de la metadata de las sesiones
-//   (lib/state.mjs, D4): una sola dueña por rama.
-// - Al abrir el usuario una sesión, el hook `context` de su primera petición
-//   decide si toma el control (D5) y le inyecta la instrucción del paso.
-// - Cada paso termina con la tool `openspec_handoff` (D7); las revisiones y el
-//   verify con problemas críticos del modo auto piden antes la confirmación
-//   del usuario en la TUI (D8). Después, `experimental.idle` crea la sesión
-//   del paso siguiente (lib/next-step.mjs, D6), la arranca si el árbol está
-//   limpio (D11), navega a ella y archiva la anterior desde la TUI.
-// - `openspec_session` da a update-change el contenido de una sesión del
-//   índice del change (D9); las lecciones candidatas quedan en la metadata y
-//   llegan a la resincronización del wiki (D10).
+// - Sesión operativa (D2): una sola sesión viva por rama, la dueña del change
+//   en la metadata de OpenCode (lib/state.mjs). Ninguna otra toma el control
+//   mientras sea válida.
+// - Arranque (D3): al presentarse una TUI nueva (otro PID), si la rama no
+//   tiene sesión operativa, se crea y se arranca sola.
+// - Ventanas ajenas (D4) y validación (D5): la TUI informa de cada pantalla
+//   (`screen`) y el servidor responde con la directiva de lib/screen.mjs.
+// - Cada paso empieza con un mensaje en su sesión (D6) y se le recuerda en
+//   cada petición (hook context).
+// - Producto evaluable (D7): al quedar la sesión en reposo, el plugin compara
+//   la foto del change según el CLI y, con producto, lo pasa al stage y abre
+//   la revisión (modo normal) o sigue (modo auto).
+// - Las revisiones las cierra git (D8), en el hook `prompt`: HEAD avanzado y
+//   nada en el stage es ok; HEAD igual, nada en el stage y cambios, ko.
+// - Sin TUI (D13): aviso en el contexto de las sesiones ajenas, archivado
+//   diferido (`archivePending`) y arranque con el mensaje `autopilot`.
 // - Nunca lanza una excepción hacia OpenCode ni bloquea una petición: un
-//   fallo se avisa en la TUI y deja la sesión libre (D12). Todas las esperas
-//   tienen límite.
+//   fallo se avisa y deja la sesión libre. Todas las esperas tienen límite.
 //
-// Sin dependencias: objetos literales { id, setup } y solo módulos node:,
-// como session-bootstrap.
+// Sin dependencias: objetos literales { id, setup } y solo módulos node:.
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { RPC, TIMEOUT_MS } from './lib/rpc.mjs';
-import { describe, needsConfirmation, next, zoneOf } from './lib/next-step.mjs';
-import { HANDOFF_TOOL, SESSION_TOOL, WORKFLOW, commitPrompt, resumeCommand, reviewPrompt, stepPrompt } from './lib/prompts.mjs';
-import { branchSessions, changeSessions, isArchived, isWorking, meta, nextSeq, owners, winner, writeMeta } from './lib/state.mjs';
-import { branchChange, changeState, treeClean } from './lib/project.mjs';
+import { describe, discrepancy, next, stepFromState, waitsForCommit, zoneOf } from './lib/next-step.mjs';
+import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, closedPrompt, foreignPrompt, reminderPrompt, resumeCommand, stepPrompt } from './lib/prompts.mjs';
+import { allSessions, branchSessions, changeSessions, isArchived, isWorking, meta, nextSeq, owners, winner, writeMeta } from './lib/state.mjs';
+import { branchChange, changeState, validateErrors } from './lib/project.mjs';
+import { gitState, stage, treeClean, verdict } from './lib/git.mjs';
+import { describeProducts, productOf, reviewQueue, snapshotOf, stagePaths } from './lib/product.mjs';
+import { MODAL_BUTTON, directive, modalText } from './lib/screen.mjs';
 
 const ID = RPC.id;
 const REGISTRY = Symbol.for('openspec-autopilot.registry');
@@ -45,12 +51,9 @@ const VERB = {
   review: 'revisando',
 };
 
-const textOf = (content) =>
-  typeof content === 'string' ? content : (Array.isArray(content) ? content : []).filter((p) => p?.type === 'text').map((p) => p.text).join('\n');
+// --- Puente con los clientes con interfaz (D1) ----------------------------------
 
-// --- Puente con la TUI ------------------------------------------------------
-
-function tuiBridge(ctx, gen) {
+function clientBridge(ctx, gen, registry, directory, onFirst) {
   const pending = new Map();
   let target = null;
   let seq = 0;
@@ -81,29 +84,38 @@ function tuiBridge(ctx, gen) {
 
   const toast = (message, variant = 'warning') => {
     log(message);
+    if (!ready()) return;
     request('toast', { message, variant }).catch((error) => log('toast:', error?.message ?? error));
   };
 
-  const handlers = {
-    hello: async (input) => {
-      if (input && typeof input.instance === 'string') target = input.instance;
-      return { ok: true };
-    },
-    reply: async (input) => {
-      const waiting = pending.get(input?.id);
-      // Una sola respuesta por petición, la de la instancia destinataria
-      if (!waiting || waiting.instance !== input.instance) return { ok: false };
-      pending.delete(input.id);
-      clearTimeout(waiting.timer);
-      if (input.error) waiting.reject(new Error(input.error));
-      else waiting.resolve(input.value ?? null);
-      return { ok: true };
-    },
-  };
-
-  const start = async () => {
+  const start = async (handlers) => {
+    const all = {
+      hello: async (input) => {
+        const instance = typeof input?.instance === 'string' ? input.instance : null;
+        if (!instance) return { ok: false };
+        target = instance;
+        const pid = String(input?.pid ?? /^tui-(\d+)-/.exec(instance)?.[1] ?? '');
+        // Un PID nuevo es un arranque de la TUI; el mismo, una recarga (D3)
+        const seen = (registry.pids[directory] ??= []);
+        const first = pid !== '' && !seen.includes(pid);
+        if (first) seen.push(pid);
+        await onFirst({ first });
+        return { ok: true, first };
+      },
+      reply: async (input) => {
+        const waiting = pending.get(input?.id);
+        // Una sola respuesta por petición, la de la instancia destinataria
+        if (!waiting || waiting.instance !== input.instance) return { ok: false };
+        pending.delete(input.id);
+        clearTimeout(waiting.timer);
+        if (input.error) waiting.reject(new Error(input.error));
+        else waiting.resolve(input.value ?? null);
+        return { ok: true };
+      },
+      ...handlers,
+    };
     try {
-      registration = await ctx.rpc.register(RPC, handlers);
+      registration = await ctx.rpc.register(RPC, all);
       // Tras una recarga del servidor, la TUI ya cargada se vuelve a presentar
       Promise.resolve(registration.events.emit('hello-request', { gen })).catch((error) => log('hello-request:', error));
     } catch (error) {
@@ -114,22 +126,20 @@ function tuiBridge(ctx, gen) {
   return { ready, request, toast, start };
 }
 
-// --- El plugin -------------------------------------------------------------
+// --- El plugin --------------------------------------------------------------------
 
 async function start(ctx) {
-  const registry = (globalThis[REGISTRY] ??= { gen: 0 });
-  const gen = ++registry.gen;
-  const alive = () => registry.gen === gen;
+  // Un mismo proceso (el servicio de OpenCode) carga el plugin una vez por
+  // proyecto: la generación, que descarta las cargas anteriores tras una
+  // recarga en caliente, y los PID ya presentados van por directorio
   const directory = ctx.location.directory;
+  const registry = (globalThis[REGISTRY] ??= { gens: {}, pids: {} });
+  registry.gens ??= {};
+  registry.pids ??= {};
+  const gen = (registry.gens[directory] = (registry.gens[directory] ?? 0) + 1);
+  const alive = () => registry.gens[directory] === gen;
   const mode = ctx.options?.auto === true ? 'auto' : 'normal';
   const api = ctx.session;
-  const tui = tuiBridge(ctx, gen);
-  await tui.start();
-
-  // Instrucciones que se repiten en las peticiones del mismo turno (tras una
-  // tool), porque el hook context no guarda lo que añade
-  const injecting = new Map(); // sessionID -> { users, text }
-  const deciding = new Set();
   const chaining = new Set();
 
   const guard = (name, fn) => async (...args) => {
@@ -142,9 +152,10 @@ async function start(ctx) {
     }
   };
 
-  // Un fallo de una operación: aviso y la sesión, libre (design D12)
+  // --- Utilidades ---
+
   const failed = async (what, error, sessionID) => {
-    tui.toast(`openspec-autopilot: ${what} (${error?.message ?? error}). La sesión queda libre; abre una sesión nueva para seguir con el change.`);
+    ui.toast(`openspec-autopilot: ${what} (${error?.message ?? error}). La sesión queda libre.`);
     if (!sessionID) return;
     try {
       await writeMeta(api, sessionID, { role: 'free', phase: 'failed' });
@@ -153,22 +164,67 @@ async function start(ctx) {
     }
   };
 
-  const indexOf = async (m) => {
-    const sessions = changeSessions(await branchSessions(api, m), m.change);
-    return sessions;
+  const actionable = (bc) => Boolean(bc?.branch) && ['none', 'active', 'archived', 'permanent'].includes(bc.kind);
+
+  // Si una dueña sigue siendo válida en el estado de la rama (D2)
+  const validFor = (bc) => (session) => {
+    const m = meta(session);
+    if (!m) return false;
+    // Encadenando, sigue siendo la operativa hasta que pase el control
+    if (m.phase === 'chaining') return true;
+    if (m.change) return bc.change === m.change && (bc.kind === 'active' || bc.kind === 'archived');
+    // El paso new: el change que acaba de crear es su producto
+    return bc.kind === 'none' || bc.kind === 'permanent' || (m.step?.kind === 'new' && bc.kind === 'active');
   };
+
+  const opOf = async (bc) => {
+    const sessions = await branchSessions(api, { worktree: directory, branch: bc.branch });
+    const live = owners(sessions);
+    const valid = live.filter(validFor(bc));
+    const invalid = live.filter((s) => !validFor(bc)(s));
+    return { op: winner(valid), invalid, sessions };
+  };
+
+  const archiveOrMark = async (sessionID) => {
+    if (ui.ready()) {
+      try {
+        await ui.request('archive', { sessionID });
+        if (isArchived(await api.get({ sessionID }))) return;
+      } catch (error) {
+        log('archive:', error?.message ?? error);
+      }
+    }
+    // Sin TUI, el servidor no puede archivar: se archiva cuando llegue una (D13)
+    await writeMeta(api, sessionID, { archivePending: true });
+  };
+
+  const navigate = async (sessionID) => {
+    if (!ui.ready()) return;
+    try {
+      await ui.request('navigate', { sessionID });
+    } catch (error) {
+      log('navigate:', error?.message ?? error);
+    }
+  };
+
+  const release = async (session, phase = 'abandoned') => {
+    await writeMeta(api, session.id, { role: 'free', phase });
+    await archiveOrMark(session.id);
+  };
+
+  const indexOf = async (m) => changeSessions(await branchSessions(api, m), m.change);
 
   const indexText = (sessions) =>
     sessions
       .map((s) => {
         const m = meta(s);
-        const review = m.review ? ` — ${m.review.result}${m.review.conclusions ? `: ${m.review.conclusions}` : ''}` : '';
+        const review = m.review?.result ? ` — ${m.review.result === 'ko' ? 'no ok' : m.review.result}${m.review.conclusions ? `: ${m.review.conclusions}` : ''}` : '';
         return `- #${m.seq} ${s.id}: ${describe(m.step, null)}${review}`;
       })
       .join('\n');
 
   const promptFor = async (m) => {
-    const base = { step: m.step, change: m.change, description: m.description ?? '' };
+    const base = { step: m.step, change: m.change, description: m.description ?? '', review: m.review ?? null };
     if (m.step.kind === 'update') return stepPrompt({ ...base, conclusions: m.conclusions ?? '', index: indexText(await indexOf(m)) });
     if (m.step.kind === 'wiki') {
       const lessons = (await indexOf(m)).flatMap((s) => (Array.isArray(meta(s).lessons) ? meta(s).lessons : []));
@@ -177,117 +233,383 @@ async function start(ctx) {
     return stepPrompt(base);
   };
 
-  // --- Al abrir una sesión (design D5) ---
-
-  // La zona del último paso que escribió, antes de `step`, según las sesiones
-  // del change: la de la última sesión, o la anterior a ella si hacía el mismo paso
-  const zoneBefore = (sessions, change, step) => {
-    const last = changeSessions(sessions, change).at(-1);
-    const lm = last ? meta(last) : null;
-    if (!lm) return null;
-    const same = lm.step?.kind === step.kind && String(lm.step?.id ?? '') === String(step.id ?? '');
-    return same ? lm.zone ?? null : zoneOf(lm.step) ?? lm.zone ?? null;
+  const lastAssistantText = async (sessionID) => {
+    try {
+      const messages = await api.context({ sessionID });
+      for (const msg of [...(Array.isArray(messages) ? messages : [])].reverse()) {
+        if (msg?.type !== 'assistant') continue;
+        const text = (msg.content ?? []).filter((p) => p?.type === 'text').map((p) => p.text).join('\n').trim();
+        if (text) return text;
+      }
+    } catch (error) {
+      log('context:', error?.message ?? error);
+    }
+    return '';
   };
 
-  // Si hay que comprobar el árbol antes de empezar `step` (design D11): en el
-  // modo normal, siempre; en el auto, solo en el primer paso tras un cambio de
-  // zona, o si no se sabe en qué zona se escribió por última vez
-  const mustCheckTree = (step, lastZone) => {
-    if (mode === 'normal') return true;
-    const zone = zoneOf(step);
-    if (!zone) return false;
-    return !lastZone || zone !== lastZone;
+  // --- Empezar un paso (D6, D7) ---
+
+  const takeSnapshot = async (m) => {
+    const git = await gitState(directory);
+    let state = null;
+    if (m.change && ['artifact', 'task', 'archive', 'verify'].includes(m.step.kind)) {
+      try {
+        state = await changeState(directory, m.change);
+      } catch (error) {
+        log('snapshot:', error?.message ?? error);
+      }
+    }
+    return { snapshot: { ...snapshotOf(state ?? { change: m.change }, git.signature) }, git };
   };
 
-  const takeControl = async (session, branch, { change, step, description = '', zone = undefined }) => {
-    const sessions = await branchSessions(api, { worktree: directory, branch });
-    const lastZone = zone !== undefined ? zone : change ? zoneBefore(sessions.filter((s) => s.id !== session.id), change, step) : null;
-    zone = lastZone;
-    const clean = mustCheckTree(step, lastZone) ? await treeClean(directory) : true;
-    const m = {
-      worktree: directory,
-      branch,
-      change,
-      role: 'owner',
-      step,
-      seq: nextSeq(sessions.filter((s) => s.id !== session.id)),
-      phase: clean ? 'running' : 'waiting-commit',
-      zone,
-      injected: clean,
-      description,
-    };
-    await writeMeta(api, session.id, m);
-    // Escribir y comprobar: si otra sesión ha tomado el control a la vez, gana la más antigua
-    const contenders = owners(await branchSessions(api, { worktree: directory, branch }));
-    const first = winner(contenders);
-    if (first && first.id !== session.id) {
-      await writeMeta(api, session.id, { role: 'free', phase: 'lost' });
-      tui.toast(`openspec-autopilot: la sesión «${first.title}» tiene el control de ${change ?? 'esta rama'}; esta queda libre.`);
-      return null;
-    }
-    for (const other of contenders) {
-      if (other.id === session.id) continue;
-      await writeMeta(api, other.id, { role: 'free', phase: 'lost' });
-      tui.toast(`openspec-autopilot: la sesión «${other.title}» queda libre; «${session.title}» tiene el control de ${change ?? 'esta rama'}.`);
-    }
-    if (!clean) {
-      tui.toast(`openspec-autopilot: haz el commit de los cambios pendientes; ${describe(step, change)} empezará en cuanto escribas en esta sesión con el árbol limpio.`);
-      return commitPrompt({ step, change });
-    }
-    return promptFor(m);
+  // Deja la sesión lista para su paso y devuelve la instrucción; con `send`, la envía
+  const startStep = async (sessionID, m, { send = true } = {}) => {
+    const { snapshot, git } = await takeSnapshot(m);
+    const isReview = m.step.kind === 'review';
+    const review = isReview ? { ...(m.review ?? {}), git: { head: git.head, signature: git.signature } } : m.review;
+    const patch = { phase: isReview ? 'review' : 'running', snapshot, handoff: null, ...(isReview ? { review } : {}) };
+    await writeMeta(api, sessionID, patch);
+    const text = await promptFor({ ...m, review });
+    if (!send) return text;
+    const skill = WORKFLOW[m.step.kind]?.skill;
+    await api.prompt({ sessionID, text, ...(skill ? { skills: [{ id: skill }] } : {}) });
+    return text;
   };
 
-  const decideOpen = async (session, text) => {
+  const createStep = async ({ branch, change, step, seq, zone, wait, extra = {} }) => {
+    const nm = { worktree: directory, branch, change: change ?? null, role: 'owner', step, seq, phase: wait ? 'waiting-commit' : 'starting', zone: zone ?? null, ...extra };
+    const created = await api.create({
+      title: `${describe(step, change)}${wait ? ' (esperando commit)' : ''}`,
+      agent: WORKFLOW[step.kind]?.agent ?? 'build',
+      metadata: { openspec: { v: 1, ...nm } },
+    });
+    if (!wait) await startStep(created.id, nm);
+    return created;
+  };
+
+  // La sesión operativa de la rama, creándola si no hay ninguna válida (D3)
+  const ensureOperational = async (bc, { go = false } = {}) => {
+    if (!actionable(bc) || bc.kind === 'archived') return null;
+    const { op, invalid, sessions } = await opOf(bc);
+    for (const s of invalid) {
+      if (isWorking(s)) continue;
+      await release(s);
+    }
+    if (op) return { session: op, created: false };
+    const state = bc.kind === 'active' ? await changeState(directory, bc.change) : null;
+    const step = bc.kind === 'active' ? stepFromState(state) : { kind: 'new' };
+    if (step.kind === 'blocked') throw new Error(`openspec status no da ningún artefacto listo para ${bc.change}`);
+    const clean = await treeClean(directory);
+    const created = await createStep({ branch: bc.branch, change: bc.change ?? null, step, seq: nextSeq(sessions), zone: null, wait: !clean });
+    // Escribir y comprobar: si otra TUI ha creado otra a la vez, gana la más antigua
+    const { op: first } = await opOf(bc);
+    if (first && first.id !== created.id) {
+      await release(await api.get({ sessionID: created.id }), 'lost');
+      return { session: first, created: false };
+    }
+    if (!clean) ui.toast(`openspec-autopilot: haz el commit de los cambios pendientes; ${describe(step, bc.change)} empezará con el árbol limpio.`);
+    if (go) await navigate(created.id);
+    return { session: created, created: true };
+  };
+
+  // --- Arranque (D3) ---
+
+  const archivePending = async () => {
+    if (!ui.ready()) return;
+    const sessions = (await allSessions(api).catch(() => [])).filter((s) => meta(s)?.worktree === directory);
+    for (const s of sessions) {
+      if (!meta(s)?.archivePending || isArchived(s)) continue;
+      try {
+        await ui.request('archive', { sessionID: s.id });
+        await writeMeta(api, s.id, { archivePending: false });
+      } catch (error) {
+        log('archivePending:', error?.message ?? error);
+      }
+    }
+  };
+
+  const onFirst = guard('hello', async ({ first }) => {
+    await archivePending();
+    if (!first) return;
     const bc = await branchChange(directory);
-    if (bc.kind === 'permanent') return null;
-    if (bc.kind === 'unknown') {
-      tui.toast(`openspec-autopilot: no actúa en esta rama: ${bc.warnings.at(-1) ?? 'no se puede leer su change'}.`);
-      return null;
-    }
     if (bc.kind === 'several') {
       const names = [...new Set(bc.changes.map((c) => c.name))];
-      tui.toast(`openspec-autopilot: la rama ${bc.branch} tiene varios changes (${names.join(', ')}); no orquesta nada hasta que quede uno solo.`);
-      return null;
+      ui.toast(`openspec-autopilot: la rama ${bc.branch} tiene varios changes (${names.join(', ')}); no orquesta nada hasta que quede uno solo.`);
+      return;
     }
-    if (bc.kind === 'archived') return null;
-    if (bc.kind === 'none') return takeControl(session, bc.branch, { change: null, step: { kind: 'new' }, description: text });
-
-    const change = bc.change;
-    const current = owners(await branchSessions(api, { worktree: directory, branch: bc.branch })).filter((s) => s.id !== session.id);
-    if (current.length === 0) {
-      const { step } = next({ mode, finished: null, state: await changeState(directory, change) });
-      return takeControl(session, bc.branch, { change, step });
+    if (bc.kind === 'unknown') {
+      ui.toast(`openspec-autopilot: no actúa en esta rama: ${bc.warnings.at(-1) ?? 'no se puede leer su change'}.`);
+      return;
     }
-    const owner = await api.get({ sessionID: winner(current).id });
-    if (isWorking(owner)) {
-      tui.toast(`openspec-autopilot: la sesión «${owner.title}» tiene el control de ${change} y está trabajando; esta sesión queda libre.`, 'info');
-      return null;
-    }
-    let choice = null;
     try {
-      choice = await tui.request('select', {
-        title: `La sesión «${owner.title}» tiene el control de ${change} y está parada. ¿Qué quieres hacer?`,
-        options: [
-          { title: 'Ir a la sesión dueña', value: 'go', description: 'Esta sesión queda libre.' },
-          { title: 'Archivarla y seguir aquí', value: 'take', description: 'Esta sesión toma el control del change.' },
-        ],
-      });
+      await ensureOperational(bc, { go: true });
     } catch (error) {
-      log('select:', error);
+      await failed('no se ha podido crear la sesión operativa', error, null);
     }
-    if (choice === 'go') {
-      await tui.request('navigate', { sessionID: owner.id });
-      return null;
+  });
+
+  // --- Pantallas y validación (D4, D5) ---
+
+  const validate = async (op, bc) => {
+    const session = await api.get({ sessionID: op.id });
+    if (isWorking(session)) return { action: 'none' };
+    const m = meta(session);
+    if (m.phase === 'waiting-commit') {
+      if (await treeClean(directory)) {
+        try {
+          await api.update({ sessionID: op.id, title: describe(m.step, m.change) });
+        } catch (error) {
+          log('title:', error);
+        }
+        await startStep(op.id, m);
+      }
+      return { action: 'none' };
     }
-    if (choice !== 'take') return null;
-    await tui.request('archive', { sessionID: owner.id });
-    const archived = await api.get({ sessionID: owner.id });
-    if (!isArchived(archived)) throw new Error(`la sesión «${owner.title}» no ha quedado archivada`);
-    const was = meta(owner);
-    await writeMeta(api, owner.id, { role: 'free', phase: 'abandoned' });
-    const { step } = was?.step ? { step: was.step } : next({ mode, finished: null, state: await changeState(directory, change) });
-    return takeControl(session, bc.branch, { change, step, zone: was?.zone ?? null });
+    if (['new', 'artifact', 'task'].includes(m.step?.kind) && ['running', 'starting'].includes(m.phase)) {
+      const state = m.change ? await changeState(directory, m.change) : { change: bc.change ?? null };
+      const d = discrepancy(m.step, state);
+      if (d) {
+        return {
+          action: 'notice',
+          message: `El paso de la sesión operativa («${describe(m.step, m.change)}») no encaja con openspec status, que da como siguiente «${describe(d.expected, m.change)}». El plugin no lo arregla: revisa el change o sigue a mano en la sesión.`,
+          button: 'Entendido',
+        };
+      }
+    }
+    return { action: 'none' };
   };
+
+  const onScreen = guard('screen', async (input) => {
+    const route = input?.route ?? { type: 'home' };
+    const bc = await branchChange(directory);
+    if (!actionable(bc)) return { action: 'none' };
+    const { op, invalid } = await opOf(bc);
+    // Una dueña cuyo change ya no está en la rama: se libera y se actúa como al arrancar
+    if (!op && invalid.some((s) => !isWorking(s))) {
+      const ensured = await ensureOperational(bc);
+      return ensured?.created ? { action: 'navigate', sessionID: ensured.session.id } : { action: 'none' };
+    }
+    let routeSession = null;
+    if (route.type === 'session' && route.sessionID) {
+      try {
+        const s = await api.get({ sessionID: route.sessionID });
+        routeSession = { id: s.id, archived: isArchived(s), meta: meta(s), working: isWorking(s) };
+      } catch {
+        routeSession = null;
+      }
+    }
+    // La sesión operativa de otra rama tras cambiar HEAD: las reglas de la rama actual
+    if (!op && routeSession?.meta?.role === 'owner' && !routeSession.archived && routeSession.meta.branch !== bc.branch && !routeSession.working) {
+      const ensured = await ensureOperational(bc);
+      return ensured?.created ? { action: 'navigate', sessionID: ensured.session.id } : { action: 'none' };
+    }
+    const d = directive({ route, operational: op ? { id: op.id, title: op.title, change: meta(op).change } : null, routeSession });
+    if (d.action === 'modal') return { ...d, message: modalText(d), button: MODAL_BUTTON };
+    if (d.action === 'validate') return validate(op, bc);
+    return d;
+  });
+
+  const ui = clientBridge(ctx, gen, registry, directory, onFirst);
+
+  // --- Evaluar el producto y encadenar (D7, D9) ---
+
+  const evaluate = async (m) => {
+    const bc = await branchChange(directory);
+    const change = m.change ?? (bc.kind === 'active' ? bc.change : null);
+    let state = null;
+    if (['new', 'artifact', 'task'].includes(m.step.kind) && change && bc.kind === 'active') state = await changeState(directory, change);
+    const git = ['update', 'wiki'].includes(m.step.kind) ? await gitState(directory) : null;
+    const before = { ...(m.snapshot ?? {}), change: m.change ?? m.snapshot?.change ?? null };
+    return { products: productOf({ step: m.step, before, branch: bc, state, handoff: m.handoff, git }), bc, state };
+  };
+
+  const chainTo = async ({ from, m, step, wait, lastZone, extra = {} }) => {
+    await writeMeta(api, from.id, { role: 'free', phase: 'done' });
+    if (step.kind === 'end') {
+      ui.toast(`openspec-autopilot: el ciclo de ${m.change} ha terminado. Haz el commit del wiki, aparte del commit del archive, y fusiona la rama.`, 'info');
+      await archiveOrMark(from.id);
+      return;
+    }
+    if (step.kind === 'blocked') throw new Error(`openspec status no da ningún artefacto listo para ${m.change}`);
+    // Solo se espera el commit si queda algo por hacer en el árbol (D9)
+    if (wait) wait = !(await treeClean(directory));
+    let created;
+    try {
+      created = await createStep({ branch: m.branch, change: m.change, step, seq: (m.seq ?? 0) + 1, zone: lastZone, wait, extra: { ...(m.description ? { description: m.description } : {}), ...extra } });
+    } catch (error) {
+      await failed(`no se ha podido crear la sesión del paso siguiente (${describe(step, m.change)})`, error, from.id);
+      return;
+    }
+    await navigate(created.id);
+    await archiveOrMark(from.id);
+    if (wait) ui.toast(`openspec-autopilot: haz el commit de lo que hay en el stage; ${describe(step, m.change)} empezará con el árbol limpio.`);
+  };
+
+  const openReview = async ({ from, m, queue, lastZone }) => {
+    const [first, ...rest] = queue;
+    const changeDir = m.change ? path.join(directory, 'openspec', 'changes', m.change) : null;
+    if (first.product.kind !== 'verdict') await stage(directory, stagePaths(first.product, { last: rest.length === 0, changeDir }));
+    const hasSpecs = changeDir && fs.existsSync(path.join(changeDir, 'specs'));
+    const errors = hasSpecs && ['artifact', 'plan'].includes(first.step.of) ? await validateErrors(directory, m.change) : [];
+    const review = { errors, report: first.product.kind === 'verdict' ? m.handoff?.conclusions ?? '' : '', product: first.product };
+    await chainTo({ from, m, step: first.step, wait: false, lastZone, extra: { queue: rest, review } });
+  };
+
+  // Lo que el usuario escribió en una sesión: la descripción del change en el paso new
+  const userText = async (sessionID) => {
+    try {
+      const messages = await api.context({ sessionID });
+      return (Array.isArray(messages) ? messages : [])
+        .filter((msg) => msg?.type === 'user' && typeof msg.text === 'string' && !msg.text.startsWith(MARK))
+        .map((msg) => msg.text.trim())
+        .filter(Boolean)
+        .join('\n\n');
+    } catch (error) {
+      log('context:', error?.message ?? error);
+      return '';
+    }
+  };
+
+  const finishStep = async (session, m, { products, bc }) => {
+    let { change, branch, description } = m;
+    if (m.step.kind === 'new') {
+      change = bc.change;
+      branch = bc.branch;
+      // La descripción que dio el usuario viaja a los pasos siguientes
+      description = [description, await userText(session.id)].filter(Boolean).join('\n\n');
+    }
+    const mm = { ...m, change, branch, description: description ?? '' };
+    await writeMeta(api, session.id, { phase: 'chaining', change, branch });
+    const lastZone = zoneOf(m.step) ?? m.zone ?? null;
+    if (mode === 'normal') {
+      const queue = reviewQueue(products, m.step);
+      if (queue.length > 0) return openReview({ from: session, m: mm, queue, lastZone });
+    }
+    if (m.step.kind === 'verify' && m.handoff?.result === 'critical') {
+      // Modo auto: la sesión de verify pasa a ser la revisión del verify (D10)
+      const git = await gitState(directory);
+      const step = { kind: 'review', id: 'verify', of: 'verify' };
+      await writeMeta(api, session.id, { step, phase: 'review', review: { result: null, conclusions: '', report: m.handoff?.conclusions ?? '', git: { head: git.head, signature: git.signature } } });
+      ui.toast(`openspec-autopilot: el verify de ${change} tiene problemas críticos; el ciclo se para. Revísalos en esta sesión y ciérrala con git: commit (ok) o cambios fuera del stage (ko).`);
+      return;
+    }
+    if (!products.every((p) => p.kind === 'verdict')) await stage(directory);
+    const state = change && (bc.kind === 'active' || m.step.kind === 'new') ? await changeState(directory, change).catch(() => null) : null;
+    const { step, zoneChange } = next({ mode, finished: m.step, result: m.handoff?.result, state, lastZone });
+    await chainTo({ from: session, m: mm, step, wait: waitsForCommit({ mode, finished: m.step, step, zoneChange }), lastZone });
+  };
+
+  const onIdle = guard('idle', async ({ sessionID }) => {
+    if (chaining.has(sessionID)) return;
+    const session = await api.get({ sessionID });
+    const m = meta(session);
+    if (!m || m.role !== 'owner' || isArchived(session) || !['running', 'handed-off'].includes(m.phase) || !m.step) return;
+    chaining.add(sessionID);
+    try {
+      const evaluated = await evaluate(m);
+      if (evaluated.products.length === 0) return;
+      await finishStep(session, { ...m, phase: 'running' }, evaluated);
+    } catch (error) {
+      await failed('no se ha podido encadenar el paso siguiente', error, sessionID);
+    } finally {
+      chaining.delete(sessionID);
+    }
+  });
+
+  // --- Cerrar una revisión por git (D8) ---
+
+  const closeReview = async (session, m, result, conclusions) => {
+    const lastZone = m.zone ?? null;
+    if (result === 'ok' && Array.isArray(m.queue) && m.queue.length > 0) return openReview({ from: session, m, queue: m.queue, lastZone });
+    const bc = await branchChange(directory);
+    const state = m.change && bc.kind === 'active' ? await changeState(directory, m.change) : null;
+    const { step } = next({ mode, finished: m.step, result, state, lastZone });
+    await chainTo({ from: session, m, step, wait: false, lastZone, extra: step.kind === 'update' ? { conclusions } : {} });
+  };
+
+  const reviewPrompted = async (session, m, input) => {
+    const now = await gitState(directory);
+    const result = verdict(m.review?.git, now);
+    if (result === 'continue') return;
+    const userText = String(input.prompt?.text ?? '').trim();
+    input.prompt.text = closedPrompt(result);
+    let conclusions = '';
+    if (result === 'ko') {
+      const words = userText.split(/\s+/).filter(Boolean);
+      conclusions = words.length > 1 ? userText : m.review?.conclusions || (await lastAssistantText(session.id));
+    }
+    const review = { ...(m.review ?? {}), result, conclusions };
+    await writeMeta(api, session.id, { phase: 'chaining', review });
+    try {
+      await closeReview(session, { ...m, review }, result, conclusions);
+    } catch (error) {
+      await failed('no se ha podido cerrar la revisión', error, session.id);
+    }
+  };
+
+  // --- Cada mensaje que entra en una sesión (hook prompt) ---
+
+  const onPrompt = guard('prompt', async (input) => {
+    const sessionID = input?.sessionID;
+    const text = String(input?.prompt?.text ?? '');
+    if (!sessionID || text.startsWith(MARK)) return;
+    const session = await api.get({ sessionID });
+    if (isArchived(session)) return;
+    const m = meta(session);
+    if (m?.role === 'owner') {
+      if (m.phase === 'review') return reviewPrompted(session, m, input);
+      if (m.phase === 'waiting-commit') {
+        if (!(await treeClean(directory))) return;
+        try {
+          await api.update({ sessionID, title: describe(m.step, m.change) });
+        } catch (error) {
+          log('title:', error);
+        }
+        const instruction = await startStep(sessionID, m, { send: false });
+        input.prompt.text = `${instruction}\n\nMensaje del usuario: ${text}`;
+        return;
+      }
+      // Validación con cualquier cliente (D5): el change ya no está en la rama
+      const bc = await branchChange(directory);
+      if (m.change && bc.branch === m.branch && actionable(bc) && !validFor(bc)(session)) {
+        await release(session);
+        const ensured = await ensureOperational(bc, { go: true });
+        input.prompt.text = `${MARK} El change \`${m.change}\` ya no está en la rama, así que esta sesión ha dejado de ser la operativa${ensured ? `; la nueva es «${ensured.session.title}» (${ensured.session.id})` : ''}. No hagas nada: díselo al usuario.`;
+      }
+      return;
+    }
+    // Una sesión que no es la operativa: solo pasa a serlo con `autopilot` si la rama no tiene ninguna (D13)
+    if (text.trim().toLowerCase() !== START_WORD) return;
+    const bc = await branchChange(directory);
+    if (!actionable(bc) || bc.kind === 'archived') return;
+    const { op, sessions } = await opOf(bc);
+    if (op) return;
+    const state = bc.kind === 'active' ? await changeState(directory, bc.change) : null;
+    const step = bc.kind === 'active' ? stepFromState(state) : { kind: 'new' };
+    if (step.kind === 'blocked') return;
+    const nm = { worktree: directory, branch: bc.branch, change: bc.change ?? null, role: 'owner', step, seq: nextSeq(sessions), phase: 'starting', zone: null };
+    await writeMeta(api, sessionID, nm);
+    // Escribir y comprobar: si otra sesión ha tomado el control a la vez, gana la más antigua
+    const { op: first } = await opOf(bc);
+    if (first && first.id !== sessionID) {
+      await writeMeta(api, sessionID, { role: 'free', phase: 'lost' });
+      input.prompt.text = foreignPrompt({ change: meta(first).change, title: first.title, sessionID: first.id });
+      return;
+    }
+    try {
+      await api.update({ sessionID, title: describe(step, bc.change) });
+    } catch (error) {
+      log('title:', error);
+    }
+    if (!(await treeClean(directory))) {
+      await writeMeta(api, sessionID, { phase: 'waiting-commit' });
+      input.prompt.text = reminderPrompt({ step, change: bc.change, phase: 'waiting-commit' });
+      return;
+    }
+    input.prompt.text = await startStep(sessionID, nm, { send: false });
+  });
+
+  // --- Recordatorio y aviso en cada petición (hook context, D6, D13) ---
 
   const inject = (input, text) => {
     const messages = input.messages;
@@ -302,209 +624,59 @@ async function start(ctx) {
   };
 
   const onContext = guard('context', async (input) => {
-    if (!tui.ready()) return;
     const sessionID = input.sessionID;
-    const users = input.messages.filter((m) => m?.role === 'user').length;
-    const remembered = injecting.get(sessionID);
-    if (remembered && remembered.users === users) {
-      inject(input, remembered.text);
+    const session = await api.get({ sessionID });
+    if (isArchived(session)) return;
+    const m = meta(session);
+    if (m?.role === 'owner') {
+      if (m.step) inject(input, reminderPrompt({ step: m.step, change: m.change, phase: m.phase }));
       return;
     }
-    injecting.delete(sessionID);
-    const session = await api.get({ sessionID });
-    const m = meta(session);
-    let text = null;
-    if (!m) {
-      // Solo la primera petición de una sesión abierta por el usuario
-      const answered = input.messages.some((msg) => msg?.role === 'assistant');
-      if (users !== 1 || answered || deciding.has(sessionID)) return;
-      deciding.add(sessionID);
-      try {
-        const last = [...input.messages].reverse().find((msg) => msg?.role === 'user');
-        text = await decideOpen(session, textOf(last?.content));
-      } catch (error) {
-        await failed('no se ha podido decidir quién tiene el control del change', error, sessionID);
-        return;
-      } finally {
-        deciding.delete(sessionID);
-      }
-    } else if (m.role === 'owner' && !isArchived(session) && m.phase === 'waiting-commit') {
-      // La sesión espera un commit (design D11): se comprueba en cada mensaje
-      if (await treeClean(directory)) {
-        await writeMeta(api, sessionID, { phase: 'running', injected: true });
-        try {
-          await api.update({ sessionID, title: describe(m.step, m.change) });
-        } catch (error) {
-          log('title:', error);
-        }
-        text = await promptFor(m);
-      } else {
-        text = commitPrompt({ step: m.step, change: m.change });
-      }
-    }
-    if (!text) return;
-    inject(input, text);
-    injecting.set(sessionID, { users, text });
+    const bc = await branchChange(directory);
+    if (!actionable(bc)) return;
+    const { op } = await opOf(bc);
+    if (!op || op.id === sessionID) return;
+    inject(input, foreignPrompt({ change: meta(op).change, title: op.title, sessionID: op.id }));
   });
 
-  // --- Cerrar un paso (design D7, D8) ---
-
-  const stepDone = async (m) => {
-    const step = m.step;
-    if (step.kind === 'new') {
-      const bc = await branchChange(directory);
-      return bc.kind === 'active' ? null : 'todavía no hay ningún change en curso en la rama';
-    }
-    if (step.kind === 'artifact') {
-      const state = await changeState(directory, m.change);
-      const artifact = (state.status?.artifacts ?? []).find((a) => a.id === step.id);
-      return artifact?.status === 'done' ? null : `openspec status no da el artefacto ${step.id} como terminado`;
-    }
-    if (step.kind === 'task') {
-      const state = await changeState(directory, m.change);
-      const task = state.tasks.find((t) => t.id === String(step.id));
-      return task?.done ? null : `la task ${step.id} no está marcada en tasks.md`;
-    }
-    if (step.kind === 'archive') {
-      const bc = await branchChange(directory);
-      return bc.kind === 'archived' ? null : `${m.change} no está archivado en la rama`;
-    }
-    return null;
-  };
+  // --- La tool del paso (D7) ---
 
   const handoff = guard('handoff', async (input, context) => {
-    if (!tui.ready()) return { content: 'openspec-autopilot solo orquesta el change en la TUI de OpenCode; aquí no hay nada que traspasar.' };
     const sessionID = context.sessionID;
     const session = await api.get({ sessionID });
     const m = meta(session);
     if (!m || m.role !== 'owner' || isArchived(session)) {
-      return { content: 'Esta sesión no tiene el control de ningún change: no hay ningún paso que cerrar.' };
+      return { content: 'Esta sesión no es la sesión operativa de ningún change: no hay ningún paso que cerrar.' };
     }
-    if (m.phase !== 'running') return { content: 'Este paso ya está cerrado, o todavía no ha empezado.' };
     const result = typeof input?.result === 'string' ? input.result.trim().toLowerCase() : null;
     const conclusions = typeof input?.conclusions === 'string' ? input.conclusions.trim() : '';
-    const lessons = Array.isArray(input?.lessons) ? input.lessons.filter((l) => typeof l === 'string' && l.trim() !== '').map((l) => l.trim()) : [];
-
-    const missing = await stepDone(m);
-    if (missing) {
-      tui.toast(`openspec-autopilot: el modelo ha cerrado ${describe(m.step, m.change)}, pero ${missing}; no se encadena el paso siguiente.`);
-      return { content: `El paso no ha terminado: ${missing}. No se traspasa el control: termínalo y vuelve a llamar a la tool.` };
+    const given = Array.isArray(input?.lessons) ? input.lessons.filter((l) => typeof l === 'string' && l.trim() !== '').map((l) => l.trim()) : [];
+    const lessons = [...new Set([...(Array.isArray(m.lessons) ? m.lessons : []), ...given])];
+    if (m.phase === 'review') {
+      await writeMeta(api, sessionID, { review: { ...(m.review ?? {}), conclusions: conclusions || m.review?.conclusions || '' }, lessons });
+      return { content: 'Conclusiones registradas. La revisión no la cierras tú: la cierra el usuario con git (commit si es satisfactoria; todo fuera del stage si no lo es) al enviar su siguiente mensaje.' };
     }
-    if (m.step.kind === 'review' && result !== 'ok' && result !== 'no ok') {
-      return { content: 'Falta el resultado de la revisión: llama a la tool con result "ok" o "no ok".' };
-    }
-    if (mode === 'auto' && m.step.kind === 'verify' && result !== 'clean' && result !== 'critical') {
-      // Sin veredicto no se pasa al archive (openspec-autopilot, Modo auto)
-      return { content: 'Falta el veredicto del verify: llama a la tool con result "clean" si no hay ningún problema CRITICAL, o "critical" si hay alguno.' };
-    }
-    if (mode === 'auto' && m.step.kind === 'verify' && result === 'critical') {
-      // Se para: la sesión pasa a ser la revisión del verify (design D8)
-      const step = { kind: 'review', id: 'verify', of: 'verify' };
-      await writeMeta(api, sessionID, { step, review: { result: 'critical', conclusions } });
-      tui.toast(`openspec-autopilot: el verify de ${m.change} tiene problemas críticos; revísalos en esta sesión.`);
-      return { content: `El verify tiene problemas críticos, así que el ciclo se para aquí. ${reviewPrompt({ step, change: m.change })}` };
-    }
-    if (needsConfirmation({ mode, step: m.step, result })) {
-      let choice = null;
-      try {
-        choice = await tui.request('select', {
-          title: `¿Cerrar la ${describe(m.step, m.change)}? Resultado: ${result}${conclusions ? `. Conclusiones: ${conclusions}` : ''}`,
-          options: [
-            { title: 'Sí, cerrar la revisión', value: 'confirm', description: `Resultado: ${result}` },
-            { title: 'No, seguir con la revisión', value: 'continue' },
-          ],
-        });
-      } catch (error) {
-        log('select:', error);
+    if (m.phase !== 'running') return { content: 'Este paso todavía no ha empezado (espera el commit del usuario) o ya está cerrado.' };
+    if (m.step.kind === 'verify') {
+      if (result !== 'clean' && result !== 'critical') {
+        return { content: 'Falta el veredicto del verify: llama a la tool con result "clean" si no hay ningún problema CRITICAL, o "critical" si hay alguno.' };
       }
-      if (choice !== 'confirm') {
-        return { content: 'El usuario no ha dado por terminada la revisión: sigue con ella y no la cierres hasta que el usuario lo diga.' };
-      }
+      await writeMeta(api, sessionID, { handoff: { result, conclusions }, lessons });
+      return { content: 'Veredicto registrado. Al terminar esta respuesta, el plugin sigue con el ciclo: no hagas nada más.' };
     }
-    const patch = { phase: 'handed-off', handoff: { result, conclusions }, lessons };
-    if (m.step.kind === 'review') patch.review = { result, conclusions };
-    await writeMeta(api, sessionID, patch);
-    return { content: 'Paso cerrado. Al terminar esta respuesta, el plugin abre la sesión del paso siguiente; no hagas nada más.' };
+    const { products } = await evaluate(m);
+    if (products.length === 0) {
+      return { content: `No hay producto evaluable: ${describe(m.step, m.change)} todavía no ha producido nada que el CLI de OpenSpec reconozca. Termina el paso y vuelve a llamar a la tool.` };
+    }
+    await writeMeta(api, sessionID, { handoff: { result, conclusions }, lessons });
+    return { content: `Producto registrado: ${describeProducts(products)}. Al terminar esta respuesta, el plugin lo pasa al stage y sigue con el ciclo: no hagas nada más.` };
   });
 
-  // --- Encadenar el paso siguiente (design D7, D11, D12) ---
-
-  const onIdle = guard('idle', async ({ sessionID }) => {
-    if (!tui.ready() || chaining.has(sessionID)) return;
-    const session = await api.get({ sessionID });
-    const m = meta(session);
-    if (!m || m.role !== 'owner' || m.phase !== 'handed-off' || isArchived(session)) return;
-    chaining.add(sessionID);
-    try {
-      // Idempotente (design D7): se marca con el seq de la sesión siguiente antes de crearla
-      await writeMeta(api, sessionID, { phase: 'chaining', nextSeq: (m.seq ?? 0) + 1 });
-      const change = m.change ?? (await branchChange(directory)).change;
-      const lastZone = zoneOf(m.step) ?? m.zone ?? null;
-      const state = await changeState(directory, change);
-      const { step, zoneChange } = next({ mode, finished: m.step, result: m.handoff?.result, state, lastZone });
-
-      if (step.kind === 'end') {
-        await writeMeta(api, sessionID, { role: 'free', phase: 'done' });
-        tui.toast(`openspec-autopilot: el ciclo de ${change} ha terminado. Haz el commit del wiki, aparte del commit del archive, y fusiona la rama.`, 'info');
-        await tui.request('archive', { sessionID });
-        return;
-      }
-      if (step.kind === 'blocked') throw new Error(`openspec status no da ningún artefacto listo para ${change}`);
-
-      const clean = mode === 'normal' || zoneChange ? await treeClean(directory) : true;
-      const nm = {
-        worktree: m.worktree,
-        branch: m.branch,
-        change,
-        role: 'owner',
-        step,
-        seq: (m.seq ?? 0) + 1,
-        phase: clean ? 'running' : 'waiting-commit',
-        zone: lastZone,
-        injected: clean,
-        ...(step.kind === 'update' ? { conclusions: m.handoff?.conclusions ?? '' } : {}),
-      };
-      let created;
-      try {
-        created = await api.create({
-          title: `${describe(step, change)}${clean ? '' : ' (esperando commit)'}`,
-          agent: WORKFLOW[step.kind]?.agent ?? 'build',
-          metadata: { ...{}, openspec: { v: 1, ...nm } },
-        });
-      } catch (error) {
-        await failed(`no se ha podido crear la sesión del paso siguiente (${describe(step, change)})`, error, sessionID);
-        return;
-      }
-      await writeMeta(api, sessionID, { role: 'free', phase: 'done' });
-      try {
-        await tui.request('navigate', { sessionID: created.id });
-        await tui.request('archive', { sessionID });
-        if (!isArchived(await api.get({ sessionID }))) throw new Error('la sesión anterior no ha quedado archivada');
-      } catch (error) {
-        tui.toast(`openspec-autopilot: no se ha podido pasar a la sesión nueva o archivar la anterior (${error?.message ?? error}).`);
-      }
-      if (!clean) {
-        tui.toast(`openspec-autopilot: haz el commit de los cambios pendientes; ${describe(step, change)} empezará en cuanto escribas en su sesión con el árbol limpio.`);
-        return;
-      }
-      const skill = WORKFLOW[step.kind]?.skill;
-      try {
-        await api.prompt({ sessionID: created.id, text: await promptFor(nm), ...(skill ? { skills: [{ id: skill }] } : {}) });
-      } catch (error) {
-        await failed(`no se ha podido arrancar ${describe(step, change)}`, error, created.id);
-      }
-    } catch (error) {
-      await failed('no se ha podido encadenar el paso siguiente', error, sessionID);
-    } finally {
-      chaining.delete(sessionID);
-    }
-  });
-
-  // --- Índice: el contenido de una sesión del change (design D9) ---
+  // --- Índice: el contenido de una sesión del change ---
 
   const readSession = guard('session', async (input, context) => {
     const caller = meta(await api.get({ sessionID: context.sessionID }));
-    if (!caller?.change) return { content: 'Esta sesión no tiene el control de ningún change.' };
+    if (!caller?.change) return { content: 'Esta sesión no es la operativa de ningún change.' };
     const target = typeof input?.sessionID === 'string' ? input.sessionID : '';
     const inChange = (await indexOf(caller)).some((s) => s.id === target);
     if (!inChange) return { content: `La sesión ${target || '(sin identificador)'} no es del change ${caller.change}: solo se leen sesiones de su índice.` };
@@ -523,16 +695,16 @@ async function start(ctx) {
     return { content: text || '(la sesión no tiene mensajes de texto)' };
   });
 
-  // --- Compactación (design D15) ---
+  // --- Compactación ---
 
   const onCompaction = guard('compaction', async (input) => {
     const session = await api.get({ sessionID: input.sessionID });
     const m = meta(session);
     if (!m || m.role !== 'owner' || isArchived(session)) return;
     const command = resumeCommand(m.step, m.change);
-    tui.toast(
+    ui.toast(
       `openspec-autopilot: la sesión se ha compactado; estaba ${VERB[m.step?.kind] ?? 'trabajando en'} \`${m.change ?? 'el change'}\` (${describe(m.step, m.change)}).` +
-        (command ? ` Para retomarlo, escribe ${command}${m.step?.kind === 'task' ? ` (task ${m.step.id})` : ''}.` : ' Para retomarlo, pide al modelo que siga con el paso.')
+        (command ? ` Para retomarlo, escribe ${command}${m.step?.kind === 'task' ? ` (task ${m.step.label ?? m.step.id})` : ''}.` : ' Para retomarlo, pide al modelo que siga con el paso.')
     );
   });
 
@@ -542,12 +714,12 @@ async function start(ctx) {
     editor.add({
       name: HANDOFF_TOOL,
       description:
-        'Cierra el paso del ciclo de OpenSpec que hace esta sesión y pasa el control a la sesión del paso siguiente. Llámala una sola vez, al terminar el paso. En una revisión, solo cuando el usuario la dé por terminada.',
+        'Cierra el paso del ciclo de OpenSpec que hace esta sesión: el plugin comprueba lo producido y sigue con el ciclo al terminar la respuesta. Llámala una sola vez, al terminar el paso. En el verify, con el veredicto. En una revisión, solo para dar conclusiones: la revisión la cierra el usuario con git.',
       options: { codemode: false },
       input: {
         type: 'object',
         properties: {
-          result: { type: 'string', description: 'Revisión: "ok" o "no ok". Verify: "clean" o "critical".' },
+          result: { type: 'string', description: 'Verify: "clean" o "critical".' },
           conclusions: { type: 'string', description: 'Conclusiones de la revisión o resumen del verify.' },
           lessons: { type: 'array', items: { type: 'string' }, description: 'Lecciones candidatas, una frase cada una.' },
         },
@@ -562,6 +734,8 @@ async function start(ctx) {
       execute: async (input, context) => (await readSession(input, context)) ?? { content: 'openspec-autopilot no ha podido leer la sesión.' },
     });
   });
+  await ui.start({ screen: async (input) => (await onScreen(input)) ?? { action: 'none' } });
+  await api.hook('prompt', onPrompt);
   await api.hook('context', onContext);
   await api.hook('experimental.idle', onIdle);
   await api.hook('compaction', onCompaction);

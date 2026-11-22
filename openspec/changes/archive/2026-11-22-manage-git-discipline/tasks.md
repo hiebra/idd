@@ -88,7 +88,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
 ## 6. Documentación y cierre
 
-- [x] 6.1 README: las dos formas del ciclo, la fusión con `--no-ff` recomendada, los commits del agente en un contenedor efímero y la preparación de git del arranque, y enlazar ADR-0013 (numerado 0011 al planificar) en lugar de ADR-0007 donde describa el ciclo → commit
+- [x] 6.1 README: las dos formas del ciclo, la fusión con `--no-ff` recomendada, los commits del agente en un contenedor efímero y la preparación de git del arranque, y enlazar ADR-0015 (numerado 0011 al planificar y 0013 al archivar) en lugar de ADR-0007 donde describa el ciclo → commit
 - [x] 6.2 Ejecutar la suite efectiva entera (`npm test` en `acceptance-tests/`): todos los escenarios de este change y de las specs vigentes pasan, sin pasos pendientes ni sin definir de este change, y se genera el informe HTML. Ejecutar también `npm run test:core` y `npm run lint:specs`
 - [x] 6.3 Comprobar en esta sesión en la nube, con el núcleo real:
   - que el arranque completa el clon, pone al día `main` y guarda la rama de la sesión;

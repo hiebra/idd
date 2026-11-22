@@ -1,10 +1,12 @@
 'use strict';
 
-// Steps of openspec-autopilot (add-openspec-autopilot, design D16). The
-// plugin runs in the simulated OpenCode with several sessions
-// (support/agents/opencode-sim.mjs); the model is a script per scenario, and
-// what a workflow writes in the project the steps write themselves before the
-// model calls the plugin's tool.
+// Steps of openspec-autopilot (add-openspec-autopilot, design D16;
+// autopilot-sesion-operativa, design D15). The plugin runs in the simulated
+// OpenCode with several sessions (support/agents/opencode-sim.mjs); the model
+// is a script per scenario, and what a workflow writes in the project the
+// model's scripted responses write (`files`) before answering. Reviews are
+// reached as the plugin reaches them: a step produces something, the session
+// goes idle and the plugin opens the review with the product in git's stage.
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -13,36 +15,43 @@ const { Given, When, Then } = require('@cucumber/cucumber');
 const ap = require('../support/autopilot');
 
 const HANDOFF = 'openspec_handoff';
-const OWNER_TITLE = 'Sesión dueña';
+const OWNER_TITLE = 'Sesión operativa';
 const CHANGES = { '`exportar-datos`': 'exportar-datos', '`importar-datos`': 'importar-datos' };
+const CHANGE_DIR = path.join('openspec', 'changes', ap.CHANGE);
+const CONCLUSIONS = 'Falta validar el formato de las fechas.';
 
 function detail(world) {
   return ap.describeSessions(world);
 }
 
-// The step the real `openspec status` and tasks.md of the copy give
+const rel = (...parts) => path.join(CHANGE_DIR, ...parts).split(path.sep).join('/');
+
+// What a workflow writes for each artifact (the same as support/branches.js)
+const ARTIFACT_FILES = {
+  proposal: () => ({
+    [rel('proposal.md')]: '## Why\n\nPrueba de exportar-datos.\n\n## What Changes\n\n- Exportar los datos.\n\n## Capabilities\n\n### New Capabilities\n- `prueba-exportar-datos`: prueba.\n\n### Modified Capabilities\n\n## Impact\n\n- Ninguno.\n',
+  }),
+  specs: () => ({
+    [rel('specs', 'prueba-exportar-datos', 'spec.md')]: '# prueba-exportar-datos\n\n## ADDED Requirements\n\n### Requirement: Prueba\nEl sistema DEBE probar.\n\n#### Scenario: Prueba\n\n- **WHEN** se prueba\n- **THEN** funciona\n',
+  }),
+  design: () => ({ [rel('design.md')]: '## Context\n\nPrueba.\n' }),
+  adr: () => ({ [rel('adr.md')]: '# ADR Review Manifest\n\n- Status: completed\n' }),
+  tasks: () => ({ [rel('tasks.md')]: '## 1. Prueba\n\n- [ ] 1 Tarea 1\n' }),
+};
+
+function tasksFile(tasks) {
+  return { [rel('tasks.md')]: `## 1. Prueba\n\n${tasks.map((t) => `- [${t.done ? 'x' : ' '}] ${t.id} Tarea ${t.id}`).join('\n')}\n` };
+}
+
+// The step the real `openspec status` and the CLI's tasks of the copy give
 function stepFromStatus(world) {
   const status = world.branches.openspecStatus(world.project, ap.CHANGE);
-  const tasksFile = world.project.path('openspec', 'changes', ap.CHANGE, 'tasks.md');
-  const tasks = fs.existsSync(tasksFile)
-    ? fs.readFileSync(tasksFile, 'utf8').split('\n').map((l) => /^\s*-\s+\[([ xX])\]\s+(\S+)/.exec(l)).filter(Boolean).map((m) => ({ id: m[2], done: m[1] !== ' ' }))
-    : [];
   if (!(status.isPlanningComplete ?? status.isComplete)) {
     return { kind: 'artifact', id: status.artifacts.find((a) => a.status === 'ready').id };
   }
-  const pending = tasks.find((t) => !t.done);
-  return pending ? { kind: 'task', id: pending.id } : { kind: 'verify' };
-}
-
-function assertNothingOrchestrated(world, opened) {
-  const all = ap.sessions(world);
-  assert.equal(all.length, 1, detail(world));
-  assert.equal(all[0].id, opened);
-  assert.equal(ap.metaOf(all[0]), null, detail(world));
-  assert.equal(Boolean(all[0].time.archived), false);
-  assert.deepEqual(world.opencode.navigations, []);
-  assert.deepEqual(ap.injected(world, opened), [], detail(world));
-  assert.deepEqual(world.opencode.crashes, [], detail(world));
+  const apply = JSON.parse(world.branches.openspec(world.project, ['instructions', 'apply', '--change', ap.CHANGE, '--json']).stdout);
+  const pending = apply.tasks.find((t) => !t.done);
+  return pending ? { kind: 'task', id: String(pending.id), label: /^(\d+(?:\.\d+)*)/.exec(pending.description)?.[1] ?? String(pending.id) } : { kind: 'verify' };
 }
 
 function newOwnerAfter(world, previous) {
@@ -51,21 +60,67 @@ function newOwnerAfter(world, previous) {
   return owner;
 }
 
-async function startMode(world, mode) {
+async function startMode(world, mode, options = {}) {
+  world.mode = mode;
   world.pluginOptions = mode === 'auto' ? { auto: true } : {};
-  await world.startOpenCode({ pluginOptions: world.pluginOptions });
+  await world.startOpenCode({ pluginOptions: world.pluginOptions, alreadyOpen: true, ...options });
 }
 
-// The owner session finishes its step: the model calls the tool in reply to the user's message
-async function finishStep(world, sessionID, input = {}, { wait = true } = {}) {
-  await ap.scriptTool(world, sessionID, HANDOFF, input);
-  if (wait) return world.opencodeCall('message', { sessionID, text: 'Ya está.' });
-  await world.opencodeCall('dialogWait', { on: true });
-  await world.opencodeCall('messageAsync', { sessionID, text: 'Ya está.' });
-  return world.opencodeCall('waitDialog', {});
+// The model of a session answers the next message with these responses
+async function script(world, sessionID, responses) {
+  await world.opencodeCall('script', { rules: [{ match: { sessionID }, responses }] });
 }
 
-// --- Dónde actúa ---------------------------------------------------------------
+async function say(world, sessionID, text = 'Sigue.') {
+  return world.opencodeCall('message', { sessionID, text });
+}
+
+// An operational session already doing a step (OpenCode already open)
+async function seedOperational(world, step, meta = {}) {
+  await ap.ensureOpenCode(world);
+  world.owner = await ap.seed(world, { title: OWNER_TITLE, step, meta });
+  return world.owner;
+}
+
+// The operational session produces with these files and goes idle; returns the review session
+async function produce(world, files, { tool = null } = {}) {
+  const responses = [];
+  if (tool) responses.push({ files, tool: { name: HANDOFF, input: tool } }, { text: 'Hecho.' });
+  else responses.push({ files, text: 'Hecho.' });
+  await script(world, world.owner, responses);
+  await say(world, world.owner);
+}
+
+const TASKS_1_2_DONE = [{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: false }, { id: '4', done: false }];
+
+// A review reached by the plugin: the step produces, and the review opens with the product in the stage
+async function reachReview(world, what) {
+  if (!world.sim) await startMode(world, world.mode ?? 'normal');
+  if (what === 'el artefacto `design`') {
+    await ap.prepareChange(world, { artifacts: ['proposal', 'specs'] });
+    await seedOperational(world, { kind: 'artifact', id: 'design' });
+    await produce(world, ARTIFACT_FILES.design());
+  } else if (what === 'la task 3') {
+    await ap.prepareChange(world, { tasks: TASKS_1_2_DONE });
+    await seedOperational(world, { kind: 'task', id: '3', label: '3' }, { zone: 'code' });
+    await produce(world, { ...tasksFile([{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: true }, { id: '4', done: false }]), 'src/exportar.js': 'export const exportar = () => {};\n' });
+  } else if (what === 'la última task') {
+    await ap.prepareChange(world, { tasks: [{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: true }, { id: '4', done: false }] });
+    await seedOperational(world, { kind: 'task', id: '4', label: '4' }, { zone: 'code' });
+    await produce(world, { ...tasksFile([1, 2, 3, 4].map((id) => ({ id: String(id), done: true }))), 'src/ultima.js': 'export {};\n' });
+  } else throw new Error(`unknown review: ${what}`);
+  const review = newOwnerAfter(world, world.owner);
+  assert.equal(ap.metaOf(review).step.kind, 'review', detail(world));
+  world.stepSession = world.owner;
+  world.owner = review.id;
+  return review;
+}
+
+function toolResults(world, sessionID) {
+  return ap.session(world, sessionID).messages.flatMap((m) => (m.content ?? []).filter((p) => p.type === 'tool').map((p) => p.state.content?.[0]?.text ?? ''));
+}
+
+// --- Dónde actúa -------------------------------------------------------------------
 
 Given(/^un clon del proyecto en (la rama de origen|un commit con HEAD separado)$/, function (where) {
   const project = this.lifecycleProject();
@@ -79,7 +134,14 @@ When('se abre una sesión de OpenCode en la TUI', async function () {
 });
 
 Then('el plugin no crea, archiva ni encadena ninguna sesión', function () {
-  assertNothingOrchestrated(this, this.opened);
+  const all = ap.sessions(this);
+  assert.equal(all.length, 1, detail(this));
+  assert.equal(all[0].id, this.opened);
+  assert.equal(ap.metaOf(all[0]), null, detail(this));
+  assert.equal(Boolean(all[0].time.archived), false);
+  assert.deepEqual(this.opencode.navigations, []);
+  assert.deepEqual(ap.injected(this, this.opened), [], detail(this));
+  assert.deepEqual(this.opencode.crashes, [], detail(this));
 });
 
 Given(/^una rama temporal con los changes en curso (`[^`]+`) e (`[^`]+`)$/, function (a, b) {
@@ -112,214 +174,437 @@ Then('no hay ningún hook, skill ni comando del plugin', function () {
   assert.deepEqual(found, [], `.claude/ has something of the plugin: ${found.join(', ')}`);
 });
 
-// --- El control del change -------------------------------------------------------
+// --- Una sola sesión operativa ------------------------------------------------------
 
-Given('una rama temporal cuyo change tiene una sesión dueña parada', async function () {
+Given(/^una rama temporal cuyo change tiene una sesión (?:operativa|dueña) parada$/, async function () {
   await ap.prepareChange(this, { artifacts: ['proposal'] });
-  this.owner = await ap.seed(this, { title: OWNER_TITLE, step: { kind: 'artifact', id: 'specs' } });
+  await seedOperational(this, { kind: 'artifact', id: 'specs' });
 });
 
 When('se cierra OpenCode y se vuelve a abrir en el proyecto', async function () {
   this.opencode = await this.sim.restart();
+  await this.opencodeCall('waitScreen');
 });
 
-Then('esa sesión sigue siendo la dueña del change', async function () {
+Then(/^esa sesión sigue siendo la (?:operativa|dueña) del change$/, function () {
   const owner = ap.onlyOwner(this);
   assert.equal(owner.id, this.owner, detail(this));
-  // The plugin, started again, sees it as the owner: a new session asks about it
-  await this.opencodeCall('open', { text: 'hola' });
-  assert.ok(this.opencode.dialogs.some((d) => d.title.includes(OWNER_TITLE)), detail(this));
+  // Started again, the plugin sees it as the operational session: it creates no other
+  assert.equal(ap.sessions(this).length, 1, detail(this));
 });
 
 Then('el repositorio no tiene ningún archivo nuevo que lo registre', function () {
   assert.deepEqual(this.project.gitStatus(), []);
 });
 
-// --- Abrir una sesión a mano --------------------------------------------------------
-
-Given(/^una rama temporal (sin change|con un change en curso sin sesión dueña|con un change en curso cuya dueña está trabajando|con un change archivado)$/, async function (state) {
-  const project = this.lifecycleProject();
-  if (state === 'sin change') {
-    this.branches.branch(project, ap.BRANCH);
-    return;
-  }
-  if (state === 'con un change archivado') {
-    await ap.prepareChange(this, { tasks: [{ id: '1', done: true }] });
-    this.branches.archiveChange(project, ap.CHANGE);
-    this.branches.commitAll(project, 'archive');
-    return;
-  }
+Given('una rama temporal con el change en curso `exportar-datos` y su sesión operativa parada', async function () {
   await ap.prepareChange(this, { artifacts: ['proposal'] });
-  if (state.includes('trabajando')) this.owner = await ap.seed(this, { title: OWNER_TITLE, step: { kind: 'artifact', id: 'specs' }, busy: true });
+  await seedOperational(this, { kind: 'artifact', id: 'specs' });
 });
 
-When(/^el usuario escribe el primer mensaje de una sesión nueva en la TUI( con el agente plan)?$/, async function (plan) {
-  await ap.ensureOpenCode(this);
-  const text = 'Quiero poder exportar los datos a CSV';
-  if (this.waitForDialog) {
-    await this.opencodeCall('dialogWait', { on: true });
-    this.opened = await this.opencodeCall('openAsync', { text, agent: plan ? 'plan' : 'build' });
-    await this.opencodeCall('waitDialog', {});
-    return;
-  }
-  const { sessionID } = await this.opencodeCall('open', { text, agent: plan ? 'plan' : 'build' });
+When('el usuario escribe el primer mensaje de una sesión nueva', async function () {
+  const { sessionID } = await this.opencodeCall('openHome', { text: 'Quiero poder exportar los datos a CSV' });
   this.opened = sessionID;
 });
 
-Then('la sesión toma el control y arranca `openspec-new-change`', function () {
-  const owner = ap.onlyOwner(this);
-  assert.equal(owner.id, this.opened, detail(this));
-  assert.equal(ap.metaOf(owner).step.kind, 'new');
-  const instruction = ap.instructionOf(this, owner.id);
-  assert.match(instruction, /openspec-new-change/, detail(this));
-  assert.match(instruction, /exportar los datos a CSV/, 'the user message is the description of the change');
+Then('la sesión operativa conserva el control', function () {
+  assert.equal(ap.onlyOwner(this).id, this.owner, detail(this));
 });
 
-Then('la sesión toma el control y sigue por el paso de `openspec status`', function () {
-  const owner = ap.onlyOwner(this);
-  assert.equal(owner.id, this.opened, detail(this));
-  const expected = stepFromStatus(this);
-  assert.deepEqual(ap.metaOf(owner).step, expected, detail(this));
-  const instruction = ap.instructionOf(this, owner.id);
-  assert.match(instruction, /openspec-continue-change/, detail(this));
-  assert.match(instruction, new RegExp(`\`${expected.id}\``));
+Then('la sesión nueva no toma el control', function () {
+  assert.notEqual(ap.metaOf(ap.session(this, this.opened))?.role, 'owner', detail(this));
+  assert.equal(ap.onlyOwner(this).id, this.owner, detail(this));
 });
 
-Then('la sesión queda libre y se avisa de qué sesión tiene el control', function () {
-  const opened = ap.session(this, this.opened);
-  assert.notEqual(ap.metaOf(opened)?.role, 'owner', detail(this));
-  assert.deepEqual(ap.injected(this, this.opened), []);
-  assert.equal(ap.onlyOwner(this).id, this.owner);
-  assert.match(ap.toasts(this), new RegExp(OWNER_TITLE), detail(this));
-});
-
-Then('la sesión queda libre', function () {
-  assertNothingOrchestrated(this, this.opened);
-});
-
-Given('una rama temporal con un change en curso cuya sesión dueña está parada sin haber terminado su paso', async function () {
-  await ap.prepareChange(this, { artifacts: ['proposal'] });
-  this.owner = await ap.seed(this, { title: OWNER_TITLE, step: { kind: 'artifact', id: 'specs' } });
-  this.waitForDialog = true;
-});
-
-Then('se le pregunta si quiere ir a la sesión dueña o archivarla y seguir en la nueva', function () {
-  const dialog = this.opencode.dialogs.at(-1);
-  assert.ok(dialog?.open, detail(this));
-  assert.match(dialog.title, new RegExp(OWNER_TITLE));
-  assert.deepEqual(dialog.options.map((o) => o.value), ['go', 'take']);
-});
-
-const ANSWERS = { 'elige ir a la dueña': 'go', 'elige archivarla y seguir aquí': 'take', 'cierra la pregunta sin elegir': undefined };
-
-Then(/^si (elige ir a la dueña|elige archivarla y seguir aquí|cierra la pregunta sin elegir), (.+)$/, async function (answer, result) {
-  await this.opencodeCall('answers', { answers: [{ value: ANSWERS[answer] }], settle: true });
-  const opened = ap.session(this, this.opened);
-  const owner = ap.session(this, this.owner);
-  if (result === 'la TUI pasa a la sesión dueña y la nueva queda libre') {
-    assert.deepEqual(this.opencode.navigations.at(-1), { type: 'session', sessionID: this.owner }, detail(this));
-    assert.notEqual(ap.metaOf(opened)?.role, 'owner');
-    assert.equal(ap.onlyOwner(this).id, this.owner);
-  } else if (result === 'la dueña queda archivada y la nueva toma el control') {
-    assert.ok(owner.time.archived, detail(this));
-    assert.equal(ap.onlyOwner(this).id, this.opened, detail(this));
-    assert.match(ap.instructionOf(this, this.opened), /\[openspec-autopilot\]/);
-  } else if (result === 'la dueña conserva el control y la nueva queda libre') {
-    assert.equal(Boolean(owner.time.archived), false);
-    assert.equal(ap.onlyOwner(this).id, this.owner, detail(this));
-    assert.notEqual(ap.metaOf(opened)?.role, 'owner');
-  } else throw new Error(`unknown result: ${result}`);
-});
-
-// --- Una sesión por paso -------------------------------------------------------------
+// --- Verificación por producto ---------------------------------------------------------
 
 Given(/^una rama temporal con el change en curso `exportar-datos`, en modo (normal|auto)$/, async function (mode) {
-  this.mode = mode;
-  await ap.prepareChange(this, { tasks: [{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: false }, { id: '4', done: false }] });
+  await ap.prepareChange(this, { tasks: TASKS_1_2_DONE });
   await startMode(this, mode);
 });
 
-Given('la sesión dueña está creando el artefacto `proposal`', async function () {
-  await ap.prepareChange(this, { artifacts: [] });
-  this.owner = await ap.seed(this, { title: OWNER_TITLE, step: { kind: 'artifact', id: 'proposal' } });
+Given(/^la sesión operativa está creando el artefacto `(design|specs|proposal|tasks)`$/, async function (artifact) {
+  const before = { design: ['proposal', 'specs'], specs: ['proposal'], proposal: [], tasks: ['proposal', 'specs', 'design', 'adr'] }[artifact];
+  await ap.prepareChange(this, { artifacts: before });
+  await seedOperational(this, { kind: 'artifact', id: artifact }, { zone: 'specs' });
 });
 
-When('la sesión termina el artefacto `proposal`', async function () {
-  this.branches.writeArtifact(this.project, ap.CHANGE, 'proposal');
-  await finishStep(this, this.owner);
+When('la sesión queda en reposo sin haber escrito el artefacto `design`', async function () {
+  await ap.refresh(this);
+  this.sessionsBefore = ap.sessions(this).length;
+  await say(this, this.owner);
 });
 
-Then('se crea una sesión nueva con el control, para el siguiente artefacto que indique `openspec status`', function () {
-  const owner = newOwnerAfter(this, this.owner);
-  const expected = stepFromStatus(this);
-  assert.equal(expected.kind, 'artifact');
-  assert.deepEqual(ap.metaOf(owner).step, expected, detail(this));
-  assert.match(ap.instructionOf(this, owner.id), /openspec-continue-change/);
-  this.next = owner.id;
+Then('no se crea ninguna sesión nueva', function () {
+  assert.equal(ap.sessions(this).length, this.sessionsBefore ?? 1, detail(this));
 });
 
-Then('la sesión anterior queda archivada', function () {
-  assert.ok(ap.session(this, this.owner).time.archived, detail(this));
+When('el modelo llama a `openspec_handoff` sin haber escrito el artefacto `design`', async function () {
+  await script(this, this.owner, [{ tool: { name: HANDOFF, input: {} } }, { text: 'Hecho.' }]);
+  await say(this, this.owner);
 });
 
-Then('la sesión archivada conserva en su metadata que hizo el artefacto `proposal`', function () {
-  assert.deepEqual(ap.metaOf(ap.session(this, this.owner)).step, { kind: 'artifact', id: 'proposal' });
+Then('la tool responde que no hay producto evaluable', function () {
+  assert.ok(toolResults(this, this.owner).some((t) => /No hay producto evaluable/.test(t)), detail(this));
+  assert.equal(ap.onlyOwner(this).id, this.owner);
 });
 
-Given('una sesión dueña que trabaja con el agente build', async function () {
-  await ap.prepareChange(this, { tasks: [{ id: '1', done: false }] });
-  this.owner = await ap.seed(this, { title: OWNER_TITLE, step: { kind: 'task', id: '1' } });
+When(/^el modelo escribe el artefacto `(design|tasks)` y la sesión queda en reposo(?: sin llamar a `openspec_handoff`)?$/, async function (artifact) {
+  this.stepSession = this.owner;
+  await produce(this, ARTIFACT_FILES[artifact]());
 });
 
-When('el usuario cambia esa sesión al agente plan y después de vuelta a build', async function () {
-  await this.opencodeCall('switchAgent', { sessionID: this.owner, agent: 'plan' });
-  await this.opencodeCall('message', { sessionID: this.owner, text: '¿Qué queda por hacer?' });
-  await this.opencodeCall('switchAgent', { sessionID: this.owner, agent: 'build' });
-  await this.opencodeCall('message', { sessionID: this.owner, text: 'Sigue.' });
+Then(/^el artefacto `(design|tasks)` queda en el stage de git$/, function (artifact) {
+  assert.ok(ap.staged(this).includes(rel(`${artifact}.md`)), `${ap.staged(this).join('\n')}\n${detail(this)}`);
 });
 
-Then('el plugin no añade ningún mensaje ni instrucción a la sesión', function () {
-  const requests = ap.requestsOf(this, this.owner);
-  assert.equal(requests.length, 2, detail(this));
-  for (const request of requests) {
-    assert.deepEqual(request.system, ['You are OpenCode (simulated system prompt).'], JSON.stringify(request));
-    assert.deepEqual(request.messages.filter((m) => m.role === 'user').map((m) => m.text), ap.session(this, this.owner).messages.filter((m) => m.type === 'user').map((m) => m.text).slice(0, request.messages.filter((m) => m.role === 'user').length));
+Then(/^se crea una sesión de revisión del artefacto `(design|proposal)` con el control$/, function (artifact) {
+  const owner = newOwnerAfter(this, this.stepSession ?? this.owner);
+  assert.deepEqual(ap.metaOf(owner).step, { kind: 'review', id: artifact, of: 'artifact' }, detail(this));
+  assert.equal(ap.metaOf(owner).phase, 'review');
+  assert.equal(owner.agent, 'plan');
+  this.review = owner.id;
+});
+
+Given('una rama sin change, en modo normal', async function () {
+  const project = this.lifecycleProject();
+  this.branches.branch(project, ap.BRANCH);
+  await startMode(this, 'normal');
+});
+
+Given('la sesión operativa está creando el change', async function () {
+  await seedOperational(this, { kind: 'new' }, { change: null, snapshot: { change: null, artifacts: [], tasks: [], git: null } });
+});
+
+When('el modelo crea el change `exportar-datos` y escribe los artefactos `proposal` y `specs` en la misma respuesta', async function () {
+  this.stepSession = this.owner;
+  await produce(this, { [rel('.openspec.yaml')]: 'schema: intent-driven\ncreated: 2026-11-21\n', ...ARTIFACT_FILES.proposal(), ...ARTIFACT_FILES.specs() });
+});
+
+Then('la revisión del artefacto `specs` queda pendiente para después de la del `proposal`', function () {
+  const queue = ap.metaOf(ap.session(this, this.review)).queue;
+  assert.deepEqual(queue.map((q) => q.step), [{ kind: 'review', id: 'specs', of: 'artifact' }], detail(this));
+  // Only the proposal is in the stage; the specs wait in the tree
+  const staged = ap.staged(this);
+  assert.ok(staged.includes(rel('proposal.md')), staged.join('\n'));
+  assert.ok(!staged.some((f) => f.includes('/specs/')), staged.join('\n'));
+});
+
+When('el modelo escribe unas specs que `openspec validate` da por inválidas y la sesión queda en reposo', async function () {
+  this.stepSession = this.owner;
+  await produce(this, { [rel('specs', 'prueba-exportar-datos', 'spec.md')]: '# prueba-exportar-datos\n\n## ADDED Requirements\n\n### Requirement: Prueba sin escenarios\nEl sistema DEBE probar.\n' });
+});
+
+Then('la sesión de revisión del artefacto `specs` recibe los errores de `openspec validate`', function () {
+  const review = newOwnerAfter(this, this.stepSession);
+  assert.deepEqual(ap.metaOf(review).step, { kind: 'review', id: 'specs', of: 'artifact' }, detail(this));
+  const instruction = ap.instructionOf(this, review.id);
+  assert.match(instruction, /openspec validate/, instruction);
+  assert.ok(ap.metaOf(review).review.errors.length > 0, detail(this));
+});
+
+// --- Arranque de la sesión operativa ----------------------------------------------------
+
+Given(/^(una rama temporal sin change|la rama de origen|una rama temporal con el change en curso `exportar-datos`) sin sesión operativa$/, async function (where) {
+  const project = this.lifecycleProject();
+  if (where === 'una rama temporal sin change') this.branches.branch(project, ap.BRANCH);
+  else if (where.includes('exportar-datos')) await ap.prepareChange(this, { artifacts: ['proposal'] });
+  this.where = where;
+});
+
+When('el usuario abre OpenCode en la TUI', async function () {
+  if (this.sim) this.opencode = await this.sim.restart();
+  else await this.startOpenCode({ alreadyOpen: false });
+  await this.opencodeCall('waitScreen');
+});
+
+Then(/^se crea una sesión operativa que arranca (`openspec-new-change`|el paso que indique `openspec status`) sin que el usuario escriba nada$/, function (what) {
+  const owner = ap.onlyOwner(this);
+  const m = ap.metaOf(owner);
+  const instruction = ap.instructionOf(this, owner.id);
+  if (what === '`openspec-new-change`') {
+    assert.equal(m.step.kind, 'new', detail(this));
+    assert.match(instruction, /openspec-new-change/);
+  } else {
+    assert.deepEqual(m.step, stepFromStatus(this), detail(this));
+    assert.match(instruction, /openspec-continue-change/);
   }
-  assert.equal(ap.sessions(this).length, 1, detail(this));
+  // The instruction is the session's first message, sent by the plugin
+  assert.match(owner.messages.find((x) => x.type === 'user')?.text ?? '', /\[openspec-autopilot\]/, detail(this));
+  this.created = owner.id;
 });
 
-// --- Revisión humana guiada -------------------------------------------------------------
+Then('la TUI pasa a esa sesión', function () {
+  assert.deepEqual(this.opencode.route, { type: 'session', sessionID: this.created }, detail(this));
+});
 
-const REVIEWED = {
-  'el artefacto `design`': { step: { kind: 'review', id: 'design', of: 'artifact' }, artifacts: ['proposal', 'specs', 'design'] },
-  'la task 3': { step: { kind: 'review', id: '3', of: 'task' }, tasks: [{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: true }, { id: '4', done: false }] },
-  'el verify': { step: { kind: 'review', id: 'verify', of: 'verify' }, tasks: [{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: true }, { id: '4', done: true }] },
+Given('OpenCode abierto en la TUI en una rama temporal sin change ni sesión operativa', async function () {
+  const project = this.lifecycleProject();
+  this.branches.branch(project, ap.BRANCH);
+  await this.startOpenCode({ alreadyOpen: true });
+});
+
+When('OpenCode recarga el plugin', async function () {
+  await this.opencodeCall('reload');
+  await this.opencodeCall('waitScreen');
+});
+
+Then('no se crea ninguna sesión', function () {
+  assert.equal(ap.sessions(this).length, 0, detail(this));
+});
+
+// --- Validación al volver a la sesión operativa -----------------------------------------------
+
+Given('una rama temporal con el change en curso `exportar-datos` y su sesión operativa', async function () {
+  await ap.prepareChange(this, { artifacts: ['proposal', 'specs'] });
+  await startMode(this, 'normal');
+  await seedOperational(this, { kind: 'artifact', id: 'design' });
+});
+
+Given('el usuario borra el change `exportar-datos` de la rama', function () {
+  fs.rmSync(this.project.path(CHANGE_DIR), { recursive: true, force: true });
+  this.branches.commitAll(this.project, 'borra el change');
+});
+
+When('la TUI recupera el foco en la sesión operativa', async function () {
+  if (this.opencode.route?.sessionID !== this.owner) await this.opencodeCall('goto', { sessionID: this.owner });
+  await this.opencodeCall('blur');
+  await this.opencodeCall('focus');
+});
+
+Then('la sesión deja de ser la operativa y queda archivada', function () {
+  const old = ap.session(this, this.owner);
+  assert.notEqual(ap.metaOf(old).role, 'owner', detail(this));
+  assert.ok(old.time.archived, detail(this));
+});
+
+Then('se crea una sesión operativa que arranca `openspec-new-change`', function () {
+  const owner = newOwnerAfter(this, this.owner);
+  assert.equal(ap.metaOf(owner).step.kind, 'new', detail(this));
+  assert.match(ap.instructionOf(this, owner.id), /openspec-new-change/);
+});
+
+Given('una sesión operativa que espera el commit del usuario para empezar el artefacto `design` de `exportar-datos`', async function () {
+  await ap.prepareChange(this, { artifacts: ['proposal', 'specs'] });
+  await startMode(this, 'normal');
+  fs.appendFileSync(this.project.path('README.md'), '\nCambio sin commit.\n');
+  await seedOperational(this, { kind: 'artifact', id: 'design' }, { phase: 'waiting-commit' });
+  await this.opencodeCall('goto', { sessionID: this.owner });
+});
+
+Given('el usuario hace el commit', function () {
+  this.branches.commitAll(this.project, 'commit del usuario');
+});
+
+Then('la sesión empieza el artefacto `design` sin que el usuario escriba nada', function () {
+  const owner = ap.session(this, this.owner);
+  assert.equal(ap.metaOf(owner).phase, 'running', detail(this));
+  const first = owner.messages.find((m) => m.type === 'user')?.text ?? '';
+  assert.match(first, /\[openspec-autopilot\]/, detail(this));
+  assert.match(first, /`design`/);
+});
+
+Given(/^una sesión operativa parada que hace el artefacto `(tasks|design)` de `exportar-datos`$/, async function (artifact) {
+  await ap.prepareChange(this, { artifacts: artifact === 'tasks' ? ['proposal'] : ['proposal', 'specs'] });
+  await startMode(this, 'normal');
+  await seedOperational(this, { kind: 'artifact', id: artifact });
+  await ap.refresh(this);
+  this.sessionsBefore = ap.sessions(this).length;
+});
+
+Given('`openspec status` da como siguiente el artefacto `specs`', function () {
+  assert.deepEqual(stepFromStatus(this), { kind: 'artifact', id: 'specs' });
+});
+
+Given('el artefacto `design` ya está escrito', function () {
+  this.branches.writeArtifact(this.project, ap.CHANGE, 'design');
+});
+
+Then('se muestra un modal que explica que el paso de la sesión no encaja con `openspec status`', function () {
+  const dialog = this.opencode.dialogs.at(-1);
+  assert.ok(dialog, detail(this));
+  assert.match(dialog.title, /no encaja con openspec status/, dialog.title);
+  assert.equal(dialog.options.length, 1);
+});
+
+Then('no se crea ni se archiva ninguna sesión', function () {
+  assert.equal(ap.sessions(this).length, this.sessionsBefore, detail(this));
+  assert.deepEqual(this.opencode.archives, []);
+});
+
+Then('no se muestra ningún modal', function () {
+  assert.deepEqual(this.opencode.dialogs, [], detail(this));
+});
+
+// --- Funcionamiento sin TUI ----------------------------------------------------------------------
+
+Given('una rama temporal con el change en curso `exportar-datos`, en modo normal, sin ninguna TUI', async function () {
+  await ap.prepareChange(this, { tasks: TASKS_1_2_DONE });
+  await startMode(this, 'normal', { tui: false });
+});
+
+Then('la sesión anterior queda marcada para archivarse', function () {
+  const old = ap.session(this, this.stepSession);
+  assert.equal(ap.metaOf(old).archivePending, true, detail(this));
+  assert.equal(Boolean(old.time.archived), false);
+});
+
+Given('una rama temporal con el change en curso `exportar-datos` y su sesión operativa, sin ninguna TUI', async function () {
+  await ap.prepareChange(this, { artifacts: ['proposal', 'specs'] });
+  await startMode(this, 'normal', { tui: false });
+  await seedOperational(this, { kind: 'artifact', id: 'design' });
+});
+
+When('el usuario escribe en una sesión nueva', async function () {
+  const { sessionID } = await this.opencodeCall('open', { text: 'Hola, ¿qué tal?' });
+  this.opened = sessionID;
+});
+
+Then('el contexto del modelo dice que esa sesión no es la operativa y nombra la sesión operativa', function () {
+  const notes = ap.injected(this, this.opened);
+  assert.ok(notes.length > 0, detail(this));
+  assert.match(notes[0], /no es la sesión operativa/);
+  assert.ok(notes[0].includes(OWNER_TITLE) && notes[0].includes(this.owner), notes[0]);
+});
+
+Given('una rama temporal sin change ni sesión operativa, sin ninguna TUI', async function () {
+  this.branches.branch(this.lifecycleProject(), ap.BRANCH);
+  await this.startOpenCode({ tui: false });
+});
+
+When('el usuario escribe `autopilot` como primer mensaje de una sesión nueva', async function () {
+  const { sessionID } = await this.opencodeCall('open', { text: 'autopilot' });
+  this.opened = sessionID;
+});
+
+Then('la sesión pasa a ser la operativa y arranca `openspec-new-change`', function () {
+  const owner = ap.onlyOwner(this);
+  assert.equal(owner.id, this.opened, detail(this));
+  assert.equal(ap.metaOf(owner).step.kind, 'new');
+  assert.match(owner.messages.find((m) => m.type === 'user').text, /openspec-new-change/, detail(this));
+});
+
+Given('una sesión de un change marcada para archivarse mientras no había ninguna TUI', async function () {
+  await ap.prepareChange(this, { artifacts: ['proposal'] });
+  await seedOperational(this, { kind: 'artifact', id: 'specs' });
+  this.marked = await ap.seed(this, { title: 'artefacto proposal', step: { kind: 'artifact', id: 'proposal' }, meta: { role: 'free', phase: 'done', archivePending: true } });
+});
+
+Then('esa sesión queda archivada', function () {
+  assert.ok(ap.session(this, this.marked).time.archived, detail(this));
+});
+
+// --- La TUI se presenta sin errores ---------------------------------------------------------------
+
+Given('OpenCode arranca la parte de TUI del plugin antes de que la parte de servidor registre su RPC', function () {
+  this.branches.branch(this.lifecycleProject(), ap.BRANCH);
+});
+
+When('la parte de servidor registra su RPC', async function () {
+  await this.startOpenCode({ rpcLate: true });
+  await this.opencodeCall('waitScreen');
+});
+
+Then('la TUI queda presentada al servidor', function () {
+  // Presented as a start: the plugin created the operational session and the TUI went to it
+  const owner = ap.onlyOwner(this);
+  assert.deepEqual(this.opencode.route, { type: 'session', sessionID: owner.id }, detail(this));
+});
+
+// --- Ventanas ajenas -------------------------------------------------------------------------------
+
+const ENTER = {
+  'muestra la pantalla de inicio tras `/new`': async (world) => {
+    await world.opencodeCall('goto', { sessionID: world.owner });
+    await world.opencodeCall('dialogWait', { on: true });
+    await world.opencodeCall('home');
+  },
+  'salta a una sesión libre': async (world) => {
+    const free = await ap.seed(world, { title: 'Sesión libre', step: null });
+    await world.opencodeCall('dialogWait', { on: true });
+    await world.opencodeCall('goto', { sessionID: free });
+  },
+  'recupera el foco en la pantalla de inicio': async (world) => {
+    await world.opencodeCall('dialogWait', { on: true });
+    await world.opencodeCall('blur');
+    await world.opencodeCall('focus');
+  },
+  'entra en la sesión operativa': async (world) => {
+    await world.opencodeCall('goto', { sessionID: world.owner });
+  },
+  'salta a una sesión archivada del change': async (world) => {
+    const archived = await ap.seed(world, { title: 'artefacto specs', step: { kind: 'artifact', id: 'specs' }, archived: true, meta: { role: 'free', phase: 'done' } });
+    await world.opencodeCall('goto', { sessionID: archived });
+  },
+  'pasa sola a la sesión del paso siguiente al encadenar': async (world) => {
+    await world.opencodeCall('goto', { sessionID: world.owner });
+    world.stepSession = world.owner;
+    await produce(world, ARTIFACT_FILES.design());
+    await world.opencodeCall('waitScreen');
+    const review = newOwnerAfter(world, world.stepSession);
+    assert.deepEqual(world.opencode.route, { type: 'session', sessionID: review.id }, detail(world));
+  },
 };
 
-async function seedReview(world, what) {
-  const reviewed = REVIEWED[what];
-  assert.ok(reviewed, `unknown review: ${what}`);
-  await ap.prepareChange(world, { ...(reviewed.artifacts ? { artifacts: reviewed.artifacts } : {}), ...(reviewed.tasks ? { tasks: reviewed.tasks } : {}) });
-  world.owner = await ap.seed(world, { title: 'Revisión', step: reviewed.step, agent: 'plan' });
-}
-
-Given(/^una sesión de revisión de (el artefacto `design`|la task 3|el verify)$/, async function (what) {
-  await seedReview(this, what);
+When(/^la TUI (muestra la pantalla de inicio tras `\/new`|salta a una sesión libre|recupera el foco en la pantalla de inicio|entra en la sesión operativa|salta a una sesión archivada del change|pasa sola a la sesión del paso siguiente al encadenar)$/, async function (how) {
+  await ENTER[how](this);
 });
 
-const RESULTS = { satisfactoria: 'ok', 'no satisfactoria': 'no ok' };
-const CONCLUSIONS = 'Falta validar el formato de las fechas.';
-
-When(/^la revisión termina con la tool y el resultado (satisfactoria|no satisfactoria)$/, async function (result) {
-  this.reviewResult = RESULTS[result];
-  await finishStep(this, this.owner, { result: this.reviewResult, ...(this.reviewResult === 'no ok' ? { conclusions: CONCLUSIONS } : {}) }, { wait: false });
+Then('se muestra el modal de un solo botón que nombra `exportar-datos` y la sesión operativa', function () {
+  const dialog = this.opencode.dialogs.at(-1);
+  assert.ok(dialog?.open, detail(this));
+  assert.match(dialog.title, /exportar-datos/);
+  assert.ok(dialog.title.includes(OWNER_TITLE), dialog.title);
+  assert.deepEqual(dialog.options.map((o) => o.title), ['Ir a la sesión del change']);
 });
 
-When('el usuario confirma el cierre en la TUI', async function () {
-  await this.opencodeCall('answers', { answers: [{ value: 'confirm' }], settle: true });
+Then(/^al cerrarlo con (Enter|Esc), la TUI pasa a la sesión operativa$/, async function (key) {
+  await this.opencodeCall('answers', { answers: [{ key: key.toLowerCase() }], settle: true });
+  await this.opencodeCall('waitScreen');
+  assert.deepEqual(this.opencode.route, { type: 'session', sessionID: this.owner }, detail(this));
+  assert.equal(this.opencode.dialogs.filter((d) => d.open).length, 0);
 });
 
-Then(/^se crea una sesión nueva con el control para (el paso que indique `openspec status`|`openspec-update-change`, con las conclusiones de la revisión|el archive|`openspec-verify-change`)$/, function (next) {
+Given('la TUI muestra el modal en la pantalla de inicio', async function () {
+  await this.opencodeCall('fail', { failures: { 'tui.navigate': 100 } });
+  await this.opencodeCall('dialogWait', { on: true });
+  await this.opencodeCall('blur');
+  await this.opencodeCall('focus');
+  assert.equal(this.opencode.dialogs.filter((d) => d.open).length, 1, detail(this));
+});
+
+When('la TUI no consigue pasar a la sesión operativa al cerrar el modal', async function () {
+  await this.opencodeCall('answers', { answers: [{ key: 'enter' }], settle: true });
+  await this.opencodeCall('waitScreen');
+  await this.opencodeCall('waitScreen');
+});
+
+Then('el modal no vuelve a abrirse hasta que la TUI cambie de ventana o recupere el foco', async function () {
+  assert.equal(this.opencode.dialogs.length, 1, detail(this));
+  assert.deepEqual(this.opencode.route, { type: 'home' });
+  await this.opencodeCall('focus');
+  assert.equal(this.opencode.dialogs.length, 2, detail(this));
+});
+
+// --- Revisión cerrada por git ------------------------------------------------------------------------
+
+Given(/^una sesión de revisión de (el artefacto `design`|la task 3), con su producto en el stage$/, async function (what) {
+  await reachReview(this, what);
+  assert.ok(ap.staged(this).length > 0, detail(this));
+});
+
+const GIT_ACTIONS = {
+  'hace el commit': (world) => ap.gitIn(world, 'commit', '-q', '-m', 'revisado'),
+  'saca todo del stage': (world) => ap.gitIn(world, 'restore', '--staged', '.'),
+};
+
+When(/^el usuario (hace el commit|saca todo del stage) y envía un prompt$/, async function (action) {
+  GIT_ACTIONS[action](this);
+  this.reviewResult = action === 'hace el commit' ? 'ok' : 'ko';
+  await say(this, this.owner, CONCLUSIONS);
+});
+
+Then(/^se crea una sesión nueva con el control para (el paso que indique `openspec status`|`openspec-update-change`, con el prompt como conclusiones|el archive|`openspec-verify-change`)$/, function (next) {
   const owner = newOwnerAfter(this, this.owner);
   const step = ap.metaOf(owner).step;
   const instruction = ap.instructionOf(this, owner.id);
@@ -332,8 +617,6 @@ Then(/^se crea una sesión nueva con el control para (el paso que indique `opens
   } else if (next === 'el archive') {
     assert.equal(step.kind, 'archive', detail(this));
     assert.match(instruction, /openspec-archive-change/);
-    // In auto mode, the verdict without critical problems asks for no confirmation
-    if (this.mode === 'auto') assert.equal(this.opencode.dialogs.length, 0, detail(this));
   } else {
     assert.equal(step.kind, 'verify', detail(this));
     assert.match(instruction, /openspec-verify-change/);
@@ -347,76 +630,86 @@ Then('la sesión de revisión queda archivada', function () {
   assert.equal(ap.metaOf(review).review.result, this.reviewResult);
 });
 
-Given('una sesión de revisión del artefacto `design` de `exportar-datos`, en modo normal', async function () {
+Given('una sesión de revisión del artefacto `design` de `exportar-datos`, con su producto en el stage', async function () {
   await startMode(this, 'normal');
-  await seedReview(this, 'el artefacto `design`');
+  await reachReview(this, 'el artefacto `design`');
 });
 
-When('el LLM llama a la tool con el resultado satisfactoria', async function () {
-  await finishStep(this, this.owner, { result: 'ok', conclusions: 'El design está bien.' }, { wait: false });
+When('el usuario envía un prompt sin haber hecho el commit', async function () {
+  await ap.refresh(this);
+  this.sessionsBefore = ap.sessions(this).length;
+  await say(this, this.owner, '¿Qué te parece la sección de contexto?');
 });
 
-Then('se pide al usuario en la TUI que confirme el cierre, con el resultado y las conclusiones', function () {
-  const dialog = this.opencode.dialogs.at(-1);
-  assert.ok(dialog?.open, detail(this));
-  assert.match(dialog.title, /ok/);
-  assert.match(dialog.title, /El design está bien\./);
-  assert.deepEqual(dialog.options.map((o) => o.value), ['confirm', 'continue']);
+Then('el prompt llega al modelo de la sesión de revisión', function () {
+  const prompt = this.opencode.prompts.filter((p) => p.sessionID === this.owner).at(-1);
+  assert.equal(prompt.final, prompt.text, JSON.stringify(prompt));
+  assert.equal(ap.onlyOwner(this).id, this.owner, detail(this));
 });
 
-Then('si el usuario no lo confirma, la sesión de revisión conserva el control', async function () {
-  await this.opencodeCall('answers', { answers: [{ value: 'continue' }], settle: true });
-  const owner = ap.onlyOwner(this);
-  assert.equal(owner.id, this.owner, detail(this));
-  assert.equal(ap.metaOf(owner).phase, 'running');
+Given('una sesión de revisión del verify de `exportar-datos`, con el árbol limpio, en modo normal', async function () {
+  await ap.prepareChange(this, { tasks: [1, 2, 3, 4].map((id) => ({ id: String(id), done: true })) });
+  await startMode(this, 'normal');
+  await seedOperational(this, { kind: 'verify' }, { zone: 'code' });
+  this.stepSession = this.owner;
+  await script(this, this.owner, [{ tool: { name: HANDOFF, input: { result: 'clean', conclusions: 'Sin problemas.' } } }, { text: 'Informe terminado.' }]);
+  await say(this, this.owner);
+  const review = newOwnerAfter(this, this.owner);
+  assert.deepEqual(ap.metaOf(review).step, { kind: 'review', id: 'verify', of: 'verify' }, detail(this));
+  assert.deepEqual(this.project.gitStatus(), []);
+  this.owner = review.id;
 });
 
-Then('el LLM recibe que el usuario no ha dado por terminada la revisión', function () {
-  const results = ap.session(this, this.owner).messages.flatMap((m) => (m.content ?? []).filter((p) => p.type === 'tool').map((p) => p.state.content?.[0]?.text ?? ''));
-  assert.ok(results.some((t) => /no ha dado por terminada la revisión/.test(t)), detail(this));
-});
-
-Then('no se crea ninguna sesión nueva', function () {
-  assert.equal(ap.sessions(this).length, 1, detail(this));
+When('el usuario hace un commit y envía un prompt', async function () {
+  ap.gitIn(this, 'commit', '-q', '--allow-empty', '-m', 'verify revisado');
+  this.reviewResult = 'ok';
+  await say(this, this.owner, 'Todo bien, adelante.');
 });
 
 Given('una sesión de `openspec-update-change` lanzada por una revisión no satisfactoria de la task 3', async function () {
-  await ap.prepareChange(this, { tasks: [{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: true }, { id: '4', done: false }] });
   await startMode(this, 'normal');
-  await ap.seed(this, { title: 'Revisión task 3', step: { kind: 'review', id: '3', of: 'task' }, archived: true, meta: { role: 'free', phase: 'done', seq: 1, review: { result: 'no ok', conclusions: CONCLUSIONS } } });
-  this.owner = await ap.seed(this, { title: 'Update', step: { kind: 'update', id: '3', of: 'task' }, meta: { seq: 2, conclusions: CONCLUSIONS } });
+  await reachReview(this, 'la task 3');
+  GIT_ACTIONS['saca todo del stage'](this);
+  await say(this, this.owner, CONCLUSIONS);
+  const update = newOwnerAfter(this, this.owner);
+  assert.equal(ap.metaOf(update).step.kind, 'update', detail(this));
+  this.owner = update.id;
 });
 
-When('la sesión termina', async function () {
-  await finishStep(this, this.owner);
+When('la sesión cambia el plan y queda en reposo', async function () {
+  this.stepSession = this.owner;
+  await produce(this, { [rel('design.md')]: '## Context\n\nPrueba, con el formato de las fechas.\n' });
+});
+
+Then('los cambios quedan en el stage de git', function () {
+  assert.ok(ap.staged(this).includes(rel('design.md')), ap.staged(this).join('\n'));
 });
 
 Then('se crea una sesión de revisión de los cambios en el plan', function () {
-  const owner = newOwnerAfter(this, this.owner);
+  const owner = newOwnerAfter(this, this.stepSession);
   assert.deepEqual(ap.metaOf(owner).step, { kind: 'review', id: 'plan', of: 'plan' }, detail(this));
   assert.equal(owner.agent, 'plan');
   assert.match(ap.instructionOf(this, owner.id), /los cambios en el plan/);
 });
 
 When('la revisión de la última task termina satisfactoria', async function () {
-  await ap.prepareChange(this, { tasks: [{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: true }, { id: '4', done: true }] });
-  this.owner = await ap.seed(this, { title: 'Revisión task 4', step: { kind: 'review', id: '4', of: 'task' }, agent: 'plan' });
-  await this.opencodeCall('answers', { answers: [{ value: 'confirm' }] });
-  await finishStep(this, this.owner, { result: 'ok' });
+  await reachReview(this, 'la última task');
+  GIT_ACTIONS['hace el commit'](this);
+  await say(this, this.owner, 'Perfecto, adelante.');
 });
 
-// --- Índice de sesiones --------------------------------------------------------------
+// --- Índice de sesiones --------------------------------------------------------------------
 
 const TRANSCRIPT = 'TRANSCRIPCION-QUE-NO-DEBE-LLEGAR';
 const DESIGN_CONCLUSIONS = 'El design no dice cómo se nombran los archivos exportados.';
 
 Given('la revisión del artefacto `design` fue no satisfactoria una vez antes', async function () {
+  await ap.ensureOpenCode(this);
   const earlier = [
     { title: 'design', step: { kind: 'artifact', id: 'design' }, meta: {} },
-    { title: 'Revisión design', step: { kind: 'review', id: 'design', of: 'artifact' }, meta: { review: { result: 'no ok', conclusions: DESIGN_CONCLUSIONS } } },
+    { title: 'Revisión design', step: { kind: 'review', id: 'design', of: 'artifact' }, meta: { review: { result: 'ko', conclusions: DESIGN_CONCLUSIONS } } },
     { title: 'Update', step: { kind: 'update', id: 'design', of: 'artifact' }, meta: {} },
     { title: 'Revisión plan', step: { kind: 'review', id: 'plan', of: 'plan' }, meta: { review: { result: 'ok', conclusions: '' } } },
-    { title: 'task 3', step: { kind: 'task', id: '3' }, meta: {} },
   ];
   this.earlier = [];
   for (const [i, s] of earlier.entries()) {
@@ -424,18 +717,24 @@ Given('la revisión del artefacto `design` fue no satisfactoria una vez antes', 
   }
 });
 
-When('una revisión no satisfactoria de la task 3 lanza `openspec-update-change`', async function () {
-  this.owner = await ap.seed(this, { title: 'Revisión task 3', step: { kind: 'review', id: '3', of: 'task' }, agent: 'plan', meta: { seq: 6 } });
+When(/^el usuario cierra como no satisfactoria la revisión de la task 3 con el prompt "([^"]+)"$/, async function (text) {
+  await ap.prepareChange(this, { tasks: TASKS_1_2_DONE });
+  await seedOperational(this, { kind: 'task', id: '3', label: '3' }, { zone: 'code', seq: 5 });
   this.earlier.push(this.owner);
-  await this.opencodeCall('answers', { answers: [{ value: 'confirm' }] });
-  await finishStep(this, this.owner, { result: 'no ok', conclusions: CONCLUSIONS });
+  this.stepSession = this.owner;
+  await produce(this, { ...tasksFile([{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: true }, { id: '4', done: false }]), 'src/exportar.js': 'export {};\n' });
+  const review = newOwnerAfter(this, this.owner);
+  this.earlier.push(review.id);
+  this.owner = review.id;
+  GIT_ACTIONS['saca todo del stage'](this);
+  await say(this, this.owner, text);
   this.update = newOwnerAfter(this, this.owner);
   this.updateText = ap.instructionOf(this, this.update.id);
 });
 
-Then('la sesión de `openspec-update-change` recibe las conclusiones de la revisión de la task 3', function () {
+Then(/^la sesión de `openspec-update-change` recibe como conclusiones "([^"]+)"$/, function (text) {
   assert.equal(ap.metaOf(this.update).step.kind, 'update', detail(this));
-  assert.ok(this.updateText.includes(CONCLUSIONS), this.updateText);
+  assert.ok(this.updateText.includes(text), this.updateText);
 });
 
 Then('recibe un índice con cada sesión del change, su paso y el resultado de cada revisión', function () {
@@ -457,6 +756,93 @@ Then('no recibe la transcripción de ninguna sesión', function () {
   assert.ok(!this.updateText.includes(TRANSCRIPT));
 });
 
+const MODEL_CONCLUSIONS = 'El modelo concluye que falta probar el caso sin datos.';
+
+Given('una sesión de revisión de la task 3 de `exportar-datos` en la que el modelo ha dado sus conclusiones', async function () {
+  await startMode(this, 'normal');
+  await reachReview(this, 'la task 3');
+  await script(this, this.owner, [{ tool: { name: HANDOFF, input: { conclusions: MODEL_CONCLUSIONS } } }, { text: 'Esas son mis conclusiones.' }]);
+  await say(this, this.owner, '¿Qué opinas?');
+  assert.equal(ap.onlyOwner(this).id, this.owner, detail(this));
+});
+
+When('el usuario saca todo del stage y envía el prompt "no"', async function () {
+  GIT_ACTIONS['saca todo del stage'](this);
+  await say(this, this.owner, 'no');
+  this.update = newOwnerAfter(this, this.owner);
+});
+
+Then('la sesión de `openspec-update-change` recibe como conclusiones las del modelo', function () {
+  assert.ok(ap.instructionOf(this, this.update.id).includes(MODEL_CONCLUSIONS), detail(this));
+});
+
+// --- Una sesión por paso ---------------------------------------------------------------
+
+When('la sesión termina el artefacto `proposal`', async function () {
+  this.stepSession = this.owner;
+  await produce(this, ARTIFACT_FILES.proposal(), { tool: {} });
+});
+
+Then('se crea una sesión nueva con el control, para el siguiente artefacto que indique `openspec status`', function () {
+  const owner = newOwnerAfter(this, this.owner);
+  const expected = stepFromStatus(this);
+  assert.equal(expected.kind, 'artifact');
+  assert.deepEqual(ap.metaOf(owner).step, expected, detail(this));
+  assert.match(ap.instructionOf(this, owner.id), /openspec-continue-change/);
+  this.next = owner.id;
+});
+
+Then('la sesión anterior queda archivada', function () {
+  assert.ok(ap.session(this, this.stepSession ?? this.owner).time.archived, detail(this));
+});
+
+Then('la sesión archivada conserva en su metadata que hizo el artefacto `proposal`', function () {
+  assert.deepEqual(ap.metaOf(ap.session(this, this.stepSession)).step, { kind: 'artifact', id: 'proposal' });
+});
+
+Given('una sesión operativa que crea el artefacto `design` de `exportar-datos`', async function () {
+  await ap.prepareChange(this, { artifacts: ['proposal', 'specs'] });
+  await startMode(this, 'normal');
+  await seedOperational(this, { kind: 'artifact', id: 'design' });
+  await say(this, this.owner, 'Empieza.');
+});
+
+When('el usuario escribe un segundo mensaje en la sesión', async function () {
+  await say(this, this.owner, '¿Cómo vas?');
+});
+
+Then('la petición al modelo incluye el recordatorio del paso', function () {
+  const last = ap.requestsOf(this, this.owner).at(-1);
+  const users = last.messages.filter((m) => m.role === 'user').map((m) => m.text);
+  assert.ok(users.some((t) => /\[openspec-autopilot\] Recordatorio/.test(t) && t.includes('artefacto design')), JSON.stringify(users));
+  // Right before the user's last message
+  assert.equal(users.at(-1), '¿Cómo vas?');
+  assert.match(users.at(-2), /Recordatorio/);
+});
+
+Given('una sesión operativa que trabaja con el agente build', async function () {
+  await ap.prepareChange(this, { tasks: [{ id: '1', done: false }] });
+  await seedOperational(this, { kind: 'task', id: '1', label: '1' });
+});
+
+When('el usuario cambia esa sesión al agente plan y después de vuelta a build', async function () {
+  await this.opencodeCall('switchAgent', { sessionID: this.owner, agent: 'plan' });
+  await say(this, this.owner, '¿Qué queda por hacer?');
+  await this.opencodeCall('switchAgent', { sessionID: this.owner, agent: 'build' });
+  await say(this, this.owner, 'Sigue.');
+});
+
+Then('el plugin no añade ningún mensaje ni instrucción a la sesión', function () {
+  const requests = ap.requestsOf(this, this.owner);
+  assert.equal(requests.length, 2, detail(this));
+  // Only the reminder of the step, the same in every request, whatever the agent
+  const reminders = requests.map((r) => r.messages.filter((m) => m.role === 'user' && m.text.includes('[openspec-autopilot]')).map((m) => m.text));
+  for (const list of reminders) assert.equal(list.length, 1, JSON.stringify(reminders));
+  assert.equal(reminders[0][0], reminders[1][0]);
+  for (const request of requests) assert.deepEqual(request.system, ['You are OpenCode (simulated system prompt).'], JSON.stringify(request));
+  assert.equal(ap.sessions(this).length, 1, detail(this));
+});
+
 // --- Lecciones candidatas -----------------------------------------------------------------
 
 const LESSON = 'El CLI de exportación necesita la ruta absoluta del archivo de salida.';
@@ -464,14 +850,15 @@ const LESSON = 'El CLI de exportación necesita la ruta absoluta del archivo de 
 Given('una sesión dueña que termina el artefacto `design` de `exportar-datos`', async function () {
   await ap.prepareChange(this, { artifacts: ['proposal', 'specs'] });
   await startMode(this, 'normal');
-  this.owner = await ap.seed(this, { title: OWNER_TITLE, step: { kind: 'artifact', id: 'design' } });
+  await seedOperational(this, { kind: 'artifact', id: 'design' });
   this.branches.writeArtifact(this.project, ap.CHANGE, 'design');
   this.branches.commitAll(this.project, 'design');
 });
 
 When('pasa el control con una lección candidata', async function () {
   this.statusBefore = this.project.gitStatus();
-  await finishStep(this, this.owner, { lessons: [LESSON] });
+  await script(this, this.owner, [{ tool: { name: HANDOFF, input: { lessons: [LESSON] } } }, { text: 'Hecho.' }]);
+  await say(this, this.owner, 'Ya está.');
 });
 
 Then('la lección queda en la metadata de la sesión', function () {
@@ -491,13 +878,14 @@ Given('un change `exportar-datos` cuyas sesiones dejaron tres lecciones candidat
   await startMode(this, 'normal');
   await ap.seed(this, { title: 'design', step: { kind: 'artifact', id: 'design' }, archived: true, meta: { role: 'free', phase: 'done', seq: 1, lessons: [LESSONS[0]] } });
   await ap.seed(this, { title: 'task 1', step: { kind: 'task', id: '1' }, archived: true, meta: { role: 'free', phase: 'done', seq: 2, lessons: [LESSONS[1], LESSONS[2]] } });
-  this.owner = await ap.seed(this, { title: 'archive', step: { kind: 'archive' }, meta: { seq: 3 } });
+  await seedOperational(this, { kind: 'archive' }, { seq: 3 });
 });
 
 When('se crea la sesión que resincroniza el wiki tras el archive', async function () {
   this.branches.archiveChange(this.project, ap.CHANGE);
   this.branches.commitAll(this.project, 'archive');
-  await finishStep(this, this.owner);
+  await script(this, this.owner, [{ tool: { name: HANDOFF, input: {} } }, { text: 'Archivado.' }]);
+  await say(this, this.owner, 'Ya está.');
   this.wiki = newOwnerAfter(this, this.owner);
   this.wikiText = ap.instructionOf(this, this.wiki.id);
 });
@@ -512,41 +900,39 @@ Then('el wiki solo registra las que el usuario confirma', function () {
   assert.match(this.wikiText, /indicaciones de archivado/);
 });
 
-// --- Árbol limpio --------------------------------------------------------------------------
+// --- Árbol limpio ----------------------------------------------------------------------------
 
 Given('el árbol de trabajo tiene cambios sin commit', function () {
   this.dirty = true;
 });
 
 const STARTS = {
-  'el artefacto `design`': async (world) => {
-    await ap.prepareChange(world, { artifacts: ['proposal', 'specs'] });
-    world.owner = await ap.seed(world, { title: 'Revisión specs', step: { kind: 'review', id: 'specs', of: 'artifact' }, agent: 'plan', meta: { zone: 'specs' } });
-    await world.opencodeCall('answers', { answers: [{ value: 'confirm' }] });
-    return { result: 'ok' };
-  },
   'el artefacto `design`, tras `specs`': async (world) => {
     await ap.prepareChange(world, { artifacts: ['proposal'] });
-    world.owner = await ap.seed(world, { title: 'specs', step: { kind: 'artifact', id: 'specs' }, meta: { zone: 'specs' } });
-    world.branches.writeArtifact(world.project, ap.CHANGE, 'specs');
-    return {};
+    await seedOperational(world, { kind: 'artifact', id: 'specs' }, { zone: 'specs' });
+    return ARTIFACT_FILES.specs();
   },
   'la task 1, tras el plan': async (world) => {
     await ap.prepareChange(world, { artifacts: ['proposal', 'specs', 'design', 'adr'] });
-    world.owner = await ap.seed(world, { title: 'tasks', step: { kind: 'artifact', id: 'tasks' }, meta: { zone: 'specs' } });
-    world.branches.writeTasks(world.project, ap.CHANGE, [{ id: '1', done: false }]);
-    return {};
+    await seedOperational(world, { kind: 'artifact', id: 'tasks' }, { zone: 'specs' });
+    return ARTIFACT_FILES.tasks();
+  },
+  '`openspec-update-change`, tras una revisión no satisfactoria': async (world) => {
+    await reachReview(world, 'la task 3');
+    GIT_ACTIONS['saca todo del stage'](world);
+    return null;
   },
 };
 
-When(/^una sesión dueña empieza (el artefacto `design`|el artefacto `design`, tras `specs`|la task 1, tras el plan)$/, async function (what) {
-  const input = await STARTS[what](this);
+When(/^una sesión operativa empieza (el artefacto `design`, tras `specs`|la task 1, tras el plan|`openspec-update-change`, tras una revisión no satisfactoria)$/, async function (what) {
+  const files = await STARTS[what](this);
   if (this.dirty) fs.appendFileSync(this.project.path('README.md'), '\nCambio sin commit.\n');
-  await finishStep(this, this.owner, input);
+  if (files) await produce(this, files);
+  else await say(this, this.owner, CONCLUSIONS);
   this.next = newOwnerAfter(this, this.owner);
 });
 
-Then('no empieza y pide al usuario que haga el commit', function () {
+Then(/^no empieza y espera a que el usuario haga el commit$/, function () {
   const next = ap.session(this, this.next.id);
   assert.equal(ap.metaOf(next).phase, 'waiting-commit', detail(this));
   assert.deepEqual(next.messages, [], 'the step started: it got a prompt');
@@ -569,14 +955,12 @@ Given('un usuario sin la opción `auto` en su configuración de OpenCode', async
     if (fs.existsSync(full)) assert.doesNotMatch(fs.readFileSync(full, 'utf8'), /openspec-autopilot|"auto"/, file);
   }
   await ap.prepareChange(this, { artifacts: ['proposal', 'specs'] });
-  await this.startOpenCode({ pluginOptions: {} });
+  await this.startOpenCode({ pluginOptions: {}, alreadyOpen: true });
 });
 
 When('el plugin decide el paso siguiente tras un artefacto', async function () {
-  this.owner = await ap.seed(this, { title: 'design', step: { kind: 'artifact', id: 'design' } });
-  this.branches.writeArtifact(this.project, ap.CHANGE, 'design');
-  this.branches.commitAll(this.project, 'design');
-  await finishStep(this, this.owner);
+  await seedOperational(this, { kind: 'artifact', id: 'design' });
+  await produce(this, ARTIFACT_FILES.design());
 });
 
 Then('crea una sesión de revisión', function () {
@@ -587,25 +971,33 @@ Then('crea una sesión de revisión', function () {
 
 When(/^la sesión de verify termina con la tool y el veredicto (sin problemas críticos|con problemas críticos)$/, async function (verdict) {
   await ap.prepareChange(this, { tasks: [{ id: '1', done: true }] });
-  this.owner = await ap.seed(this, { title: 'verify', step: { kind: 'verify' }, meta: { zone: 'code' } });
-  await finishStep(this, this.owner, { result: verdict === 'con problemas críticos' ? 'critical' : 'clean', conclusions: 'Informe del verify.' });
+  await seedOperational(this, { kind: 'verify' }, { zone: 'code' });
+  await script(this, this.owner, [{ tool: { name: HANDOFF, input: { result: verdict === 'con problemas críticos' ? 'critical' : 'clean', conclusions: 'Informe del verify.' } } }, { text: 'Informe terminado.' }]);
+  await say(this, this.owner, 'Ya está.');
 });
-
 
 Then('la sesión de verify queda parada esperando al usuario', function () {
   const owner = ap.onlyOwner(this);
   assert.equal(owner.id, this.owner, detail(this));
   assert.equal(Boolean(owner.time.archived), false);
   assert.equal(ap.metaOf(owner).step.kind, 'review');
+  assert.equal(ap.metaOf(owner).phase, 'review');
   assert.equal(ap.sessions(this).length, 1);
   assert.equal(this.opencode.dialogs.length, 0);
+});
+
+Then('la sesión de la task 1 espera a que el usuario haga el commit', function () {
+  const next = newOwnerAfter(this, this.stepSession);
+  assert.equal(ap.metaOf(next).step.kind, 'task', detail(this));
+  assert.equal(ap.metaOf(next).phase, 'waiting-commit', detail(this));
+  assert.deepEqual(next.messages, []);
 });
 
 // --- Compactación y fallos ---------------------------------------------------------------------
 
 Given('una sesión dueña que aplica la task 3 de `exportar-datos`', async function () {
   await ap.prepareChange(this, { tasks: [{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: false }] });
-  this.owner = await ap.seed(this, { title: OWNER_TITLE, step: { kind: 'task', id: '3' } });
+  await seedOperational(this, { kind: 'task', id: '3', label: '3' });
 });
 
 When('la sesión se compacta', async function () {
@@ -624,7 +1016,7 @@ Then('el aviso indica el comando para retomarlo', function () {
 
 Given('una sesión dueña que termina su paso', async function () {
   await ap.prepareChange(this, { artifacts: ['proposal'] });
-  this.owner = await ap.seed(this, { title: OWNER_TITLE, step: { kind: 'artifact', id: 'specs' } });
+  await seedOperational(this, { kind: 'artifact', id: 'specs' });
   this.branches.writeArtifact(this.project, ap.CHANGE, 'specs');
   this.branches.commitAll(this.project, 'specs');
 });
@@ -634,7 +1026,8 @@ Given('OpenCode rechaza la creación de la sesión siguiente', async function ()
 });
 
 When('el plugin intenta encadenar la sesión siguiente', async function () {
-  await finishStep(this, this.owner);
+  await script(this, this.owner, [{ tool: { name: HANDOFF, input: {} } }, { text: 'Hecho.' }]);
+  await say(this, this.owner, 'Ya está.');
 });
 
 Then('se avisa al usuario en la TUI de que no se ha podido crear la sesión', function () {
@@ -644,7 +1037,7 @@ Then('se avisa al usuario en la TUI de que no se ha podido crear la sesión', fu
 
 Then('la sesión actual sigue respondiendo al usuario', async function () {
   const before = ap.session(this, this.owner).messages.length;
-  await this.opencodeCall('message', { sessionID: this.owner, text: '¿Sigues ahí?' });
+  await say(this, this.owner, '¿Sigues ahí?');
   const session = ap.session(this, this.owner);
   assert.ok(session.messages.length > before);
   assert.equal(session.messages.at(-1).outcome, 'succeeded', detail(this));
@@ -659,7 +1052,7 @@ Then('la sesión actual sigue respondiendo al usuario', async function () {
 Given(/^OpenCode abierto en la TUI(?: con su propio servidor,)? en una rama temporal$/, async function () {
   const project = this.lifecycleProject();
   if (this.branches.currentBranch(project) !== ap.BRANCH) this.branches.branch(project, ap.BRANCH);
-  await this.startOpenCode();
+  await this.startOpenCode({ alreadyOpen: true });
 });
 
 async function reloadPlugin(world, times) {
@@ -692,4 +1085,7 @@ Then('el terminal no muestra ningún error del plugin', function () {
   assert.deepEqual(this.opencode.terminal, [], `traces in the terminal:\n${this.opencode.terminal.join('\n')}`);
   assert.deepEqual(this.opencode.crashes, [], detail(this));
   assert.equal(ap.toasts(this).match(/cleanup failed/) ?? null, null, ap.toasts(this));
+  // Nor in the TUI's log: no RPC call of the plugin failed
+  const errors = (this.opencode.logs ?? []).filter((l) => /\[openspec-autopilot\] (hello|screen|reply|rpc|modal|notice):/.test(l));
+  assert.deepEqual(errors, [], errors.join('\n'));
 });

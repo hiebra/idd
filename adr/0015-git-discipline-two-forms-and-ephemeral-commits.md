@@ -1,4 +1,4 @@
-# ADR-0013: Dos formas del ciclo de un change y commits del agente en contenedores efímeros
+# ADR-0015: Dos formas del ciclo de un change y commits del agente en contenedores efímeros
 
 - Status: accepted, supersedes ADR-0007
 - Date: 2026-11-22
@@ -65,3 +65,11 @@ El comportamiento está especificado en `openspec/specs/openspec-change-lifecycl
 - `check commit` es una instrucción con puerta, no un bloqueo. El bloqueo efectivo con un hook `PreToolUse` queda abierto.
 - Dos ramas que numeran un ADR casi a la vez siguen chocando, pero el choque se detecta antes de archivar. Renumerar obliga a actualizar las referencias del change.
 - El arranque usa la red para completar un clon superficial y, en la nube, para el `git fetch`. Eso añade latencia, pero un fallo solo avisa.
+
+## Relación con ADR-0013
+
+Este ADR se numeró 0011 y después 0013, y llegó a `main` como 0015: entretanto, `fix-tui-subscription-cleanup` y `replace-gherkin-lint-with-gplint` ocuparon el 0011 y el 0012, y `autopilot-sesion-operativa` el 0013 y el 0014. ADR-0013 (el modelo crea las ramas temporales con `branch-change.mjs start` y `switch`, y el autopilot pasa lo producido al stage) sustituye la parte de ADR-0007 sobre las ramas; este ADR sustituye el resto. Conviven así:
+
+- Fuera de un contenedor efímero rige ADR-0013: el modelo puede crear la rama temporal del change y cambiar entre ramas temporales, y los commits y las fusiones los hace el usuario.
+- En un contenedor efímero, el agente trabaja solo en la rama de la sesión: no usa `start` ni `switch`, y si hace falta otra rama se lo pide al usuario.
+- `start` crea la rama desde la misma referencia de origen que usan las puertas, la más avanzada de la local y `origin/<rama de origen>`.

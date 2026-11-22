@@ -6,8 +6,9 @@ priority: p2
 created: 2026-11-21
 updated: 2026-11-22
 last_checked: 2026-11-22
-next_action: "Al subir de versión OpenCode, repetir con el banco de la lección 9 las pruebas de archivado desde el plugin, de tools con codemode, del contrato de limpieza de los plugins (la función que devuelve setup, ejecutada antes de cada recarga y al cerrar, y el signal de events.on), de que no salgan trazas ECONNRESET al cerrar con --standalone y de que tras dos recargas solo reciba eventos la carga nueva, y del contrato de sesión que simula la suite (list por páginas, context, prompt con skills), y actualizar el plugin y acceptance-tests/support/agents/opencode-sim.mjs si algo cambia."
+next_action: "Al subir de versión OpenCode, repetir con el banco de la lección 9 las pruebas de archivado desde el plugin, de tools con codemode, del contrato de limpieza de los plugins (la función que devuelve setup, ejecutada antes de cada recarga y al cerrar, y el signal de events.on), de que no salgan trazas ECONNRESET al cerrar con --standalone y de que tras dos recargas solo reciba eventos la carga nueva, y del contrato de sesión que simula la suite (list por páginas, context, prompt con skills), y, desde autopilot-sesion-operativa, del hook prompt con el texto mutable, de ui.router.current() y los eventos focus del renderer, de las llamadas RPC de la TUI con la ubicación y de que la web siga sin cargar la interfaz de los plugins; y actualizar el plugin y acceptance-tests/support/agents/opencode-sim.mjs si algo cambia."
 sources:
+  - raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md
   - raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md
   - raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md
 tags: [opencode, watch, plugins, sessions]
@@ -33,6 +34,8 @@ Además, el plugin y el OpenCode simulado de la suite (`acceptance-tests/support
 - Una sesión con el agente plan ve y llama a una tool con `codemode: false`.
 - El hook `context` puede esperar al menos 300 s a un diálogo de la TUI sin que falle la petición.
 - Tras una recarga en caliente solo siguen vivos los hooks, tools y manejadores RPC de la última generación del servidor.
+
+Desde `autopilot-sesion-operativa` (ADR-0014, `idd@6d6e79c:openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md`), el plugin depende también de: el hook `prompt` con el texto mutable, `ui.router.current()` consultado cada 300 ms, los eventos `focus` del renderer, las llamadas RPC de la TUI con `{ location }`, y que la UI web no cargue la interfaz de los plugins de un proyecto.
 
 La suite simula OpenCode, así que no detectaría que cambien.
 
