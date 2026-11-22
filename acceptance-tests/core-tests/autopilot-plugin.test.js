@@ -156,7 +156,8 @@ test('without a TUI, a new session only takes control with `autopilot`', async (
   const { sessionID } = await w.opencodeCall('open', { text: 'Quiero exportar los datos' });
   const all = ap.sessions(w);
   assert.equal(all.length, 1);
-  assert.equal(ap.metaOf(all[0]), null);
+  // Only its working branch, as a free session (D1 of autopilot-rama-por-sesion)
+  assert.deepEqual(ap.metaOf(all[0]), { v: 1, worktree: w.project.dir, branch: ap.BRANCH, role: 'free' });
   assert.deepEqual(ap.injected(w, sessionID), []);
   // The tool says so instead of closing anything
   await ap.scriptTool(w, sessionID, 'openspec_handoff', {});
@@ -370,4 +371,27 @@ test("the user's description in the new step reaches the next steps", async (t) 
   const next = ap.onlyOwner(w);
   assert.deepEqual(ap.metaOf(next).step, { kind: 'artifact', id: 'proposal' }, ap.describeSessions(w));
   assert.match(ap.instructionOf(w, next.id), /exportar los datos a CSV con una cabecera/);
+});
+
+test('the worktree strategy: one registration across reloads and worktree instances, and none once the plugin is unloaded (ADR-0011)', async (t) => {
+  const w = world(t);
+  w.branches.addRemote(w.project, { push: ['main'] });
+  await w.startOpenCode();
+  assert.deepEqual(w.opencode.strategies.map((s) => s.id), ['openspec-autopilot']);
+  await w.opencodeCall('reload');
+  await w.opencodeCall('reload');
+  assert.deepEqual(w.opencode.strategies.map((s) => s.id), ['openspec-autopilot'], JSON.stringify(w.opencode.strategies));
+  const { directory, error } = await w.opencodeCall('createWorktree', { name: 'importar-datos', via: 'web', branch: 'HEAD' });
+  assert.equal(error, null, error);
+  assert.equal(ap.branchAt(directory), 'importar-datos');
+  // The TUI enters the worktree: its instance registers the strategy again, with the same id
+  await w.opencodeCall('home', { directory });
+  assert.ok(w.opencode.instances.includes(directory), JSON.stringify(w.opencode.instances));
+  assert.deepEqual(w.opencode.strategies.map((s) => s.id), ['openspec-autopilot'], JSON.stringify(w.opencode.strategies));
+  // Every TUI call goes to the instance of the directory the TUI is in
+  const screens = w.opencode.rpcCalls.filter((c) => c.method === 'screen');
+  assert.equal(screens.at(-1).directory, directory, JSON.stringify(screens));
+  await w.opencodeCall('close');
+  assert.deepEqual(w.opencode.strategies, []);
+  assert.deepEqual(w.opencode.crashes, []);
 });

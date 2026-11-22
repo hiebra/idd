@@ -311,7 +311,6 @@ export class Host {
     } finally {
       console.error = original;
     }
-    this.strategies = [];
     this.closed = true;
   }
 

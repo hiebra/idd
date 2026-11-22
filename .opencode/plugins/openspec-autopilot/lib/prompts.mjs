@@ -10,6 +10,7 @@ export const HANDOFF_TOOL = 'openspec_handoff';
 export const SESSION_TOOL = 'openspec_session';
 export const MARK = '[openspec-autopilot]';
 export const START_WORD = 'autopilot';
+export const WORKTREE_TOOL = 'openspec_worktree';
 
 // Workflow (skill) y agente de cada paso
 export const WORKFLOW = {
@@ -50,7 +51,7 @@ export function stepPrompt({ step, change, description = '', conclusions = '', i
       return (
         `${header}\n\nUsa la skill \`openspec-new-change\` para crear el change de esta rama. ` +
         (description ? `Descripción del usuario:\n\n${description}\n\n` : 'Pregunta al usuario qué quiere construir o arreglar, y espera su respuesta. ') +
-        'Si la rama es permanente o ya tiene otro change, no crees la rama con git: ejecuta `node .agents/openspec/branch-change.mjs start <nombre-del-change>`, que la crea desde la rama de origen y cambia a ella (y `node .agents/openspec/branch-change.mjs list` para ver las ramas temporales con su change). ' +
+        'La rama del change es la de esta sesión, que ya es una rama temporal: no crees ramas ni cambies de rama. ' +
         `Crea solo el change, sin artefactos. ${CLOSE('el change exista en `openspec/changes/`')}`
       );
     case 'artifact':
@@ -114,11 +115,13 @@ export function reminderPrompt({ step, change, phase }) {
   return `${MARK} Recordatorio: esta sesión hace solo el paso «${describe(step, change)}». No empieces el paso siguiente. ${GIT} Al terminar, llama a \`${HANDOFF_TOOL}\`.`;
 }
 
-// Lo que recibe el modelo en una sesión que no es la operativa (design D13)
+// Lo que recibe el modelo en una sesión que no es la operativa (design D13 de
+// autopilot-sesion-operativa, D6 de autopilot-rama-por-sesion)
 export function foreignPrompt({ change, title, sessionID }) {
   return (
     `${MARK} Esta sesión no es la sesión operativa. Mientras se edita ${change ? `el change \`${change}\`` : 'un change nuevo'} en modo autopilot, solo se opera con su sesión operativa «${title}» (${sessionID}). ` +
-    'No cambies archivos ni hagas nada del change aquí: di al usuario que vaya a esa sesión.'
+    'No cambies archivos ni hagas nada del change aquí: di al usuario que vaya a esa sesión. ' +
+    `Para trabajar en otro change a la vez, ofrécele crear un worktree nuevo: si lo pide, llama a la tool \`${WORKTREE_TOOL}\` con el nombre que dé (será también el de la rama), y dale lo que te devuelva para abrir la sesión operativa del worktree.`
   );
 }
 

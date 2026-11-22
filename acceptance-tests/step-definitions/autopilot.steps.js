@@ -137,7 +137,9 @@ Then('el plugin no crea, archiva ni encadena ninguna sesión', function () {
   const all = ap.sessions(this);
   assert.equal(all.length, 1, detail(this));
   assert.equal(all[0].id, this.opened);
-  assert.equal(ap.metaOf(all[0]), null, detail(this));
+  // At most its working branch, as a free session (autopilot-rama-por-sesion, D1)
+  const m = ap.metaOf(all[0]);
+  assert.ok(m === null || (m.role === 'free' && !m.step), detail(this));
   assert.equal(Boolean(all[0].time.archived), false);
   assert.deepEqual(this.opencode.navigations, []);
   assert.deepEqual(ap.injected(this, this.opened), [], detail(this));
@@ -511,79 +513,10 @@ Then('la TUI queda presentada al servidor', function () {
   assert.deepEqual(this.opencode.route, { type: 'session', sessionID: owner.id }, detail(this));
 });
 
-// --- Ventanas ajenas -------------------------------------------------------------------------------
+// --- Entrar en la sesión operativa -----------------------------------------------------------
 
-const ENTER = {
-  'muestra la pantalla de inicio tras `/new`': async (world) => {
-    await world.opencodeCall('goto', { sessionID: world.owner });
-    await world.opencodeCall('dialogWait', { on: true });
-    await world.opencodeCall('home');
-  },
-  'salta a una sesión libre': async (world) => {
-    const free = await ap.seed(world, { title: 'Sesión libre', step: null });
-    await world.opencodeCall('dialogWait', { on: true });
-    await world.opencodeCall('goto', { sessionID: free });
-  },
-  'recupera el foco en la pantalla de inicio': async (world) => {
-    await world.opencodeCall('dialogWait', { on: true });
-    await world.opencodeCall('blur');
-    await world.opencodeCall('focus');
-  },
-  'entra en la sesión operativa': async (world) => {
-    await world.opencodeCall('goto', { sessionID: world.owner });
-  },
-  'salta a una sesión archivada del change': async (world) => {
-    const archived = await ap.seed(world, { title: 'artefacto specs', step: { kind: 'artifact', id: 'specs' }, archived: true, meta: { role: 'free', phase: 'done' } });
-    await world.opencodeCall('goto', { sessionID: archived });
-  },
-  'pasa sola a la sesión del paso siguiente al encadenar': async (world) => {
-    await world.opencodeCall('goto', { sessionID: world.owner });
-    world.stepSession = world.owner;
-    await produce(world, ARTIFACT_FILES.design());
-    await world.opencodeCall('waitScreen');
-    const review = newOwnerAfter(world, world.stepSession);
-    assert.deepEqual(world.opencode.route, { type: 'session', sessionID: review.id }, detail(world));
-  },
-};
-
-When(/^la TUI (muestra la pantalla de inicio tras `\/new`|salta a una sesión libre|recupera el foco en la pantalla de inicio|entra en la sesión operativa|salta a una sesión archivada del change|pasa sola a la sesión del paso siguiente al encadenar)$/, async function (how) {
-  await ENTER[how](this);
-});
-
-Then('se muestra el modal de un solo botón que nombra `exportar-datos` y la sesión operativa', function () {
-  const dialog = this.opencode.dialogs.at(-1);
-  assert.ok(dialog?.open, detail(this));
-  assert.match(dialog.title, /exportar-datos/);
-  assert.ok(dialog.title.includes(OWNER_TITLE), dialog.title);
-  assert.deepEqual(dialog.options.map((o) => o.title), ['Ir a la sesión del change']);
-});
-
-Then(/^al cerrarlo con (Enter|Esc), la TUI pasa a la sesión operativa$/, async function (key) {
-  await this.opencodeCall('answers', { answers: [{ key: key.toLowerCase() }], settle: true });
-  await this.opencodeCall('waitScreen');
-  assert.deepEqual(this.opencode.route, { type: 'session', sessionID: this.owner }, detail(this));
-  assert.equal(this.opencode.dialogs.filter((d) => d.open).length, 0);
-});
-
-Given('la TUI muestra el modal en la pantalla de inicio', async function () {
-  await this.opencodeCall('fail', { failures: { 'tui.navigate': 100 } });
-  await this.opencodeCall('dialogWait', { on: true });
-  await this.opencodeCall('blur');
-  await this.opencodeCall('focus');
-  assert.equal(this.opencode.dialogs.filter((d) => d.open).length, 1, detail(this));
-});
-
-When('la TUI no consigue pasar a la sesión operativa al cerrar el modal', async function () {
-  await this.opencodeCall('answers', { answers: [{ key: 'enter' }], settle: true });
-  await this.opencodeCall('waitScreen');
-  await this.opencodeCall('waitScreen');
-});
-
-Then('el modal no vuelve a abrirse hasta que la TUI cambie de ventana o recupere el foco', async function () {
-  assert.equal(this.opencode.dialogs.length, 1, detail(this));
-  assert.deepEqual(this.opencode.route, { type: 'home' });
-  await this.opencodeCall('focus');
-  assert.equal(this.opencode.dialogs.length, 2, detail(this));
+When('la TUI entra en la sesión operativa', async function () {
+  await this.opencodeCall('goto', { sessionID: this.owner });
 });
 
 // --- Revisión cerrada por git ------------------------------------------------------------------------
@@ -1088,4 +1021,414 @@ Then('el terminal no muestra ningún error del plugin', function () {
   // Nor in the TUI's log: no RPC call of the plugin failed
   const errors = (this.opencode.logs ?? []).filter((l) => /\[openspec-autopilot\] (hello|screen|reply|rpc|modal|notice):/.test(l));
   assert.deepEqual(errors, [], errors.join('\n'));
+});
+
+// --- autopilot-rama-por-sesion ------------------------------------------------------------------
+
+const ORIGIN_TITLE = 'Sesión de la rama de origen';
+const NEW_WORKTREE = 'importar-datos';
+
+Given('el clon está en la rama de origen con una sesión de OpenCode', async function () {
+  this.lifecycleProject();
+  await this.startOpenCode({ alreadyOpen: true });
+  this.first = (await this.opencodeCall('open', { text: 'Una pregunta sobre main' })).sessionID;
+});
+
+Then('ninguna de las dos sesiones toma el control', function () {
+  assert.ok(ap.sessions(this).length >= 2, detail(this));
+  assert.deepEqual(ap.owners(this), [], detail(this));
+  for (const id of [this.first, this.opened]) assert.notEqual(ap.metaOf(ap.session(this, id))?.role, 'owner', detail(this));
+});
+
+Then('la TUI muestra la pantalla de inicio', function () {
+  assert.equal(this.opencode.route.type, 'home', detail(this));
+});
+
+Given('una rama temporal sin change ni sesión operativa', function () {
+  this.branches.branch(this.lifecycleProject(), ap.BRANCH);
+});
+
+When('el plugin arranca la sesión operativa con `openspec-new-change`', async function () {
+  await this.startOpenCode({ alreadyOpen: false });
+  await this.opencodeCall('waitScreen');
+  const owner = ap.onlyOwner(this);
+  assert.equal(ap.metaOf(owner).step.kind, 'new', detail(this));
+  this.instruction = ap.instructionOf(this, owner.id);
+});
+
+Then('la instrucción del paso no pide crear ni cambiar de rama', function () {
+  assert.match(this.instruction, /openspec-new-change/);
+  assert.doesNotMatch(this.instruction, /branch-change\.mjs (start|switch)|git (switch|checkout|branch)|`(start|switch)`/, this.instruction);
+});
+
+// --- Sin TUI: el aviso de las sesiones ajenas y la tool del worktree ---
+
+Then('el contexto del modelo ofrece crear un worktree nuevo', function () {
+  const note = ap.injected(this, this.opened)[0] ?? '';
+  assert.match(note, /worktree nuevo/, note);
+  assert.match(note, /openspec_worktree/, note);
+});
+
+When(/^el usuario pide al modelo, en una sesión nueva, un worktree nuevo llamado `([^`]+)`$/, async function (name) {
+  ap.ensureRemote(this);
+  await this.opencodeCall('script', { rules: [{ match: { directory: this.project.dir, afterTool: false }, responses: [{ tool: { name: 'openspec_worktree', input: { name } } }] }] });
+  this.opened = (await this.opencodeCall('open', { text: `Crea un worktree nuevo llamado ${name}`, directory: this.project.dir })).sessionID;
+  await this.opencodeCall('settle');
+});
+
+const worktreeOf = (world, branch) => ap.worktrees(world).find((w) => w.branch === branch);
+
+Then(/^existe un worktree en la rama nueva `([^`]+)`$/, function (branch) {
+  const wt = worktreeOf(this, branch);
+  assert.ok(wt, `${JSON.stringify(ap.worktrees(this))}\n${detail(this)}`);
+  assert.ok(wt.directory.startsWith(ap.worktreesDir(this)), wt.directory);
+  this.worktreeDir = wt.directory;
+});
+
+Then(/^una sesión de ese worktree es la operativa de `([^`]+)` y arranca `openspec-new-change`$/, function (branch) {
+  const owner = ap.owners(this).find((s) => s.location?.directory === this.worktreeDir);
+  assert.ok(owner, detail(this));
+  const m = ap.metaOf(owner);
+  assert.deepEqual([m.worktree, m.branch, m.step.kind], [this.worktreeDir, branch, 'new'], detail(this));
+  assert.match(owner.messages.find((x) => x.type === 'user')?.text ?? '', /openspec-new-change/, detail(this));
+  this.worktreeOwner = owner;
+});
+
+Then('el modelo responde con el enlace, o el título y el id, de esa sesión', function () {
+  const results = toolResults(this, this.opened).join('\n');
+  assert.ok(results.includes(this.worktreeOwner.id), results);
+  assert.ok(results.includes(this.worktreeOwner.title) || /\/server\/[^/]+\/session\//.test(results), results);
+});
+
+// --- La rama de trabajo de cada sesión ---
+
+When('el modelo hace checkout de la rama de origen en la sesión operativa para un merge asistido', async function () {
+  await script(this, this.owner, [{ git: [['checkout', '-q', 'main']], text: 'Estoy en main para el merge asistido.' }]);
+  await say(this, this.owner, 'Haz el merge asistido de la rama en main.');
+});
+
+Then('esa sesión pasa a ser de la rama de origen', function () {
+  const session = ap.session(this, this.owner);
+  assert.equal(ap.metaOf(session).branch, 'main', detail(this));
+  assert.notEqual(ap.metaOf(session).role, 'owner', detail(this));
+  assert.equal(Boolean(session.time.archived), false, 'it is not archived');
+});
+
+Then('`exportar-datos` se queda sin sesión operativa', function () {
+  assert.deepEqual(ap.owners(this).filter((s) => ap.metaOf(s).branch === ap.BRANCH), [], detail(this));
+});
+
+Given('una rama temporal `exportar-datos` que se quedó sin sesión operativa a mitad de la task 3', async function () {
+  await ap.prepareChange(this, { tasks: TASKS_1_2_DONE });
+  this.branches.checkout(this.project, 'main');
+  await ap.ensureOpenCode(this);
+  this.left = await ap.seed(this, { title: 'task 3 de exportar-datos', step: { kind: 'task', id: '3', label: '3' }, meta: { branch: 'main', role: 'free', phase: 'left', leftFrom: ap.BRANCH, resumed: false } });
+});
+
+When('el directorio vuelve a la rama `exportar-datos` y la TUI entra en él', async function () {
+  this.branches.checkout(this.project, ap.BRANCH);
+  await this.opencodeCall('home');
+  await this.opencodeCall('blur');
+  await this.opencodeCall('focus');
+});
+
+Then('se crea una sesión operativa que retoma la task 3 de `exportar-datos`', function () {
+  const owner = ap.onlyOwner(this);
+  assert.notEqual(owner.id, this.left);
+  assert.deepEqual(ap.metaOf(owner).step, { kind: 'task', id: '3', label: '3' }, detail(this));
+  assert.match(ap.instructionOf(this, owner.id), /task 3/);
+  assert.equal(ap.metaOf(ap.session(this, this.left)).resumed, true, detail(this));
+});
+
+// --- Pasar a una sesión es pasar a su rama ---
+
+// The change's branch with its operational session in the main directory, which stays on the origin branch
+async function sameDirOperational(world) {
+  await ap.prepareChange(world, { artifacts: ['proposal', 'specs'] });
+  world.branches.checkout(world.project, 'main');
+  await ap.ensureOpenCode(world);
+  world.owner = await ap.seed(world, { title: OWNER_TITLE, step: { kind: 'artifact', id: 'design' }, meta: { snapshot: { change: ap.CHANGE, artifacts: ['proposal', 'specs'], tasks: [], git: null } } });
+  world.ownerDir = world.project.dir;
+}
+
+// The change's branch in a worktree, with its operational session there
+async function worktreeOperational(world) {
+  world.lifecycleProject();
+  const dir = ap.addWorktree(world, ap.BRANCH, ap.CHANGE);
+  await ap.prepareChange(world, { artifacts: ['proposal', 'specs'], project: ap.projectAt(dir) });
+  await ap.ensureOpenCode(world);
+  world.owner = await ap.seed(world, { title: OWNER_TITLE, step: { kind: 'artifact', id: 'design' }, directory: dir });
+  world.ownerDir = dir;
+}
+
+async function originSession(world) {
+  await ap.ensureOpenCode(world);
+  world.originSession = await ap.seed(world, { title: ORIGIN_TITLE, step: null, meta: { branch: 'main', role: 'free' } });
+  await world.opencodeCall('goto', { sessionID: world.originSession });
+}
+
+Given('la TUI está en una sesión de la rama de origen, con el árbol limpio', async function () {
+  this.lifecycleProject();
+  await originSession(this);
+  assert.deepEqual(this.project.gitStatus(), []);
+});
+
+Given(/^la sesión operativa de `exportar-datos` está en (un worktree de `exportar-datos`|el mismo directorio)$/, async function (where) {
+  if (where === 'el mismo directorio') await sameDirOperational(this);
+  else await worktreeOperational(this);
+});
+
+When('la TUI entra en la sesión operativa de `exportar-datos`', async function () {
+  await this.opencodeCall('goto', { sessionID: this.owner });
+  await this.opencodeCall('waitScreen');
+});
+
+Then('el directorio de esa sesión está en la rama `exportar-datos`', function () {
+  assert.equal(ap.branchAt(this.ownerDir), ap.BRANCH, detail(this));
+});
+
+Then(/^se avisa de que se está en la rama `exportar-datos` (en su worktree|tras un checkout)$/, function (how) {
+  const shown = ap.toasts(this);
+  assert.ok(shown.includes(ap.BRANCH), shown);
+  if (how === 'en su worktree') assert.ok(shown.includes(this.ownerDir), shown);
+  else assert.match(shown, /tras un checkout/, shown);
+});
+
+Given(/^la TUI venía de (una sesión de la rama de origen|ninguna sesión), en el mismo directorio que la sesión operativa de `exportar-datos`$/, async function (from) {
+  await sameDirOperational(this);
+  if (from === 'ninguna sesión') await this.opencodeCall('home', { directory: this.project.dir });
+  else await originSession(this);
+});
+
+Given('el directorio está en la rama de origen con cambios sin commit', function () {
+  assert.equal(this.branches.currentBranch(this.project), 'main');
+  fs.appendFileSync(this.project.path('README.md'), '\nCambio sin commit.\n');
+});
+
+Then('el directorio sigue en la rama de origen', function () {
+  assert.equal(ap.branchAt(this.project.dir), 'main', detail(this));
+});
+
+Then(/^la TUI vuelve a (esa sesión de la rama de origen|la pantalla de inicio)$/, function (to) {
+  if (to === 'la pantalla de inicio') assert.equal(this.opencode.route.type, 'home', detail(this));
+  else assert.deepEqual(this.opencode.route, { type: 'session', sessionID: this.originSession }, detail(this));
+});
+
+Then('se avisa de que hay cambios sin commit y de que se puede hacer el commit o usar un worktree', function () {
+  const shown = ap.toasts(this);
+  assert.match(shown, /cambios sin commit/, shown);
+  assert.match(shown, /Haz el commit/, shown);
+  assert.match(shown, /worktree/, shown);
+});
+
+Given('la TUI está en una sesión de la rama de origen, con el árbol limpio, en el mismo directorio que la sesión operativa de `exportar-datos`', async function () {
+  await sameDirOperational(this);
+  await originSession(this);
+});
+
+Given('otra sesión de ese directorio está trabajando', async function () {
+  this.working = await ap.seed(this, { title: 'Sesión que trabaja', step: null, busy: true });
+});
+
+Then('se avisa de que hay una sesión trabajando en ese directorio', function () {
+  assert.match(ap.toasts(this), /sesión trabajando/, ap.toasts(this));
+});
+
+// --- El modal de `/new` ---
+
+async function newFromOperational(world, { dirty = false } = {}) {
+  await ap.prepareChange(world, { artifacts: ['proposal', 'specs'] });
+  await startMode(world, 'normal');
+  await seedOperational(world, { kind: 'artifact', id: 'design' });
+  if (dirty) fs.appendFileSync(world.project.path('README.md'), '\nCambio sin commit.\n');
+  await world.opencodeCall('goto', { sessionID: world.owner });
+  await world.opencodeCall('dialogWait', { on: true });
+  await world.opencodeCall('home');
+}
+
+Given(/^una rama temporal con el change en curso `exportar-datos` y su sesión operativa, con (el árbol sucio|el árbol limpio)$/, async function (tree) {
+  this.dirtyTree = tree === 'el árbol sucio';
+});
+
+When(/^el usuario hace `\/new` desde la sesión operativa$/, async function () {
+  await newFromOperational(this, { dirty: this.dirtyTree });
+});
+
+const optionTitles = (text) => [...text.matchAll(/«([^»]+)»/g)].map((m) => m[1]);
+
+Then(/^se muestra un modal con las opciones (.+)$/, function (options) {
+  const modal = ap.lastModal(this);
+  assert.ok(modal?.open, detail(this));
+  assert.deepEqual(modal.options.map((o) => o.title), optionTitles(options), detail(this));
+});
+
+Given(/^el modal de `\/new` en la rama temporal `exportar-datos`(?:, con el árbol limpio)?$/, async function () {
+  await newFromOperational(this);
+  assert.ok(ap.lastModal(this)?.open, detail(this));
+});
+
+When(/^el usuario elige «([^»]+)»$/, async function (title) {
+  await this.opencodeCall('answers', { answers: [{ choose: title }], settle: true });
+  await this.opencodeCall('waitScreen');
+});
+
+Then('se abre el diálogo de nombre de worktree de OpenCode', function () {
+  assert.deepEqual(this.opencode.keymap, ['session.move', 'dialog.move_session.new'], detail(this));
+  assert.ok(this.opencode.dialogs.some((d) => d.kind === 'name-worktree' && d.open), detail(this));
+});
+
+Then('el directorio queda en la rama de origen', function () {
+  assert.equal(ap.branchAt(this.project.dir), 'main', detail(this));
+});
+
+Then('la sesión operativa de `exportar-datos` sigue siendo la operativa', function () {
+  const owner = ap.onlyOwner(this);
+  assert.equal(owner.id, this.owner, detail(this));
+  assert.equal(ap.metaOf(owner).branch, ap.BRANCH);
+});
+
+Given(/^el usuario hizo `\/new` desde la sesión operativa de `exportar-datos` y se muestra el modal$/, async function () {
+  await newFromOperational(this);
+  assert.ok(ap.lastModal(this)?.open, detail(this));
+});
+
+When('el usuario cierra el modal sin elegir', async function () {
+  await this.opencodeCall('answers', { answers: [{ key: 'esc' }], settle: true });
+  await this.opencodeCall('waitScreen');
+});
+
+Then('la TUI vuelve a la sesión operativa de `exportar-datos`', function () {
+  assert.deepEqual(this.opencode.route, { type: 'session', sessionID: this.owner }, detail(this));
+  assert.equal(this.opencode.dialogs.filter((d) => d.open).length, 0, detail(this));
+});
+
+// --- Los worktrees nacen en una rama ---
+
+async function createWorktree(world, name = NEW_WORKTREE) {
+  await ap.ensureOpenCode(world);
+  world.worktreeResult = await world.opencodeCall('createWorktree', { name, via: 'tui' });
+  return world.worktreeResult;
+}
+
+Given(/^el remoto tiene la rama de origen y (no existe la rama `importar-datos`|existe la rama `importar-datos` sin sacar)$/, async function (branch) {
+  const project = this.lifecycleProject();
+  ap.ensureRemote(this);
+  if (branch.startsWith('existe')) {
+    this.branches.branch(project, NEW_WORKTREE, { from: 'main' });
+    fs.writeFileSync(project.path('propio.txt'), 'commit propio\n');
+    this.branches.commitAll(project, 'commit propio de importar-datos');
+    this.ownCommit = this.branches.revParse(project, 'HEAD');
+    this.branches.checkout(project, 'main');
+  }
+  await ap.ensureOpenCode(this);
+});
+
+When('se crea un worktree llamado `importar-datos`', async function () {
+  await createWorktree(this);
+});
+
+Then('el worktree está en la rama `importar-datos`', function () {
+  const { directory, error } = this.worktreeResult;
+  assert.equal(error, null, error);
+  assert.equal(ap.branchAt(directory), NEW_WORKTREE, detail(this));
+});
+
+Then('la rama `importar-datos` sale de la rama de origen del remoto', function () {
+  const head = ap.gitAt(this.worktreeResult.directory, 'rev-parse', 'HEAD').trim();
+  assert.equal(head, this.branches.revParse(this.project, 'refs/remotes/origin/main'));
+  // It does not follow the origin branch
+  assert.notEqual(ap.gitAt(this.project.dir, 'config', '--get', `branch.${NEW_WORKTREE}.merge`).trim(), 'refs/heads/main');
+});
+
+Then('la rama `importar-datos` conserva sus commits', function () {
+  assert.equal(ap.gitAt(this.worktreeResult.directory, 'rev-parse', 'HEAD').trim(), this.ownCommit);
+});
+
+Given(/^un worktree (?:recién creado en la rama nueva|en la rama) `importar-datos`$/, async function () {
+  this.lifecycleProject();
+  ap.ensureRemote(this);
+  await ap.ensureOpenCode(this);
+  this.configBefore = ap.localConfig(this, NEW_WORKTREE);
+  this.remoteMain = ap.gitAt(this.branches.remoteDir(this.project), 'rev-parse', 'refs/heads/main').trim();
+  await createWorktree(this);
+  assert.equal(this.worktreeResult.error, null, this.worktreeResult.error);
+});
+
+When('el usuario hace un commit y un `git push` sin argumentos en el worktree', function () {
+  const dir = this.worktreeResult.directory;
+  fs.writeFileSync(path.join(dir, 'importar.txt'), 'importar\n');
+  ap.gitAt(dir, 'add', '-A');
+  ap.gitAt(dir, 'commit', '-q', '-m', 'importar-datos: primer commit');
+  ap.gitAt(dir, 'push', '-q');
+});
+
+Then('el remoto tiene la rama `importar-datos`', function () {
+  const remote = this.branches.remoteDir(this.project);
+  assert.equal(ap.gitAt(remote, 'rev-parse', `refs/heads/${NEW_WORKTREE}`).trim(), ap.gitAt(this.worktreeResult.directory, 'rev-parse', 'HEAD').trim());
+});
+
+Then('la rama de origen del remoto no ha cambiado', function () {
+  assert.equal(ap.gitAt(this.branches.remoteDir(this.project), 'rev-parse', 'refs/heads/main').trim(), this.remoteMain);
+});
+
+Then('la configuración git del clon no ha cambiado', function () {
+  assert.deepEqual(ap.localConfig(this, NEW_WORKTREE), this.configBefore);
+});
+
+Given('la rama `importar-datos` está sacada en el directorio principal del clon', async function () {
+  const project = this.lifecycleProject();
+  ap.ensureRemote(this);
+  this.branches.branch(project, NEW_WORKTREE, { from: 'main' });
+  await ap.ensureOpenCode(this);
+});
+
+Then('no se crea ningún worktree', function () {
+  assert.ok(this.worktreeResult.error, JSON.stringify(this.worktreeResult.directory));
+  assert.equal(ap.worktrees(this).length, 1, JSON.stringify(ap.worktrees(this)));
+  assert.equal(fs.existsSync(path.join(ap.worktreesDir(this), NEW_WORKTREE)), false);
+});
+
+Then('se dice que la rama `importar-datos` está sacada en el directorio principal del clon', function () {
+  const { error } = this.worktreeResult;
+  assert.ok(error.includes(NEW_WORKTREE) && error.includes(this.project.dir), error);
+  assert.match(error, /sacada/);
+});
+
+Given('el remoto no está accesible', async function () {
+  this.lifecycleProject();
+  ap.remoteUnreachable(this);
+  await ap.ensureOpenCode(this);
+});
+
+Then('se dice que no se ha podido actualizar la rama de origen del remoto', function () {
+  assert.match(this.worktreeResult.error ?? '', /No se ha podido actualizar la rama de origen del remoto/);
+});
+
+When('se quita ese worktree', async function () {
+  this.removed = await this.opencodeCall('removeWorktree', { directory: this.worktreeResult.directory });
+});
+
+Then('la rama `importar-datos` sigue existiendo', function () {
+  assert.equal(this.removed.error, null, JSON.stringify(this.removed.error));
+  assert.equal(fs.existsSync(this.worktreeResult.directory), false);
+  assert.ok(this.branches.revParse(this.project, `refs/heads/${NEW_WORKTREE}`));
+});
+
+// --- La TUI habla con el plugin del directorio de la ventana ---
+
+Given('la TUI arrancó en el directorio principal, en la rama de origen', async function () {
+  this.lifecycleProject();
+  await this.startOpenCode({ alreadyOpen: true });
+  assert.equal(this.opencode.location, this.project.dir);
+});
+
+Given('la rama temporal `exportar-datos` está en un worktree con su sesión operativa', async function () {
+  await worktreeOperational(this);
+});
+
+Then('el plugin del worktree de `exportar-datos` valida esa sesión', function () {
+  const calls = this.opencode.rpcCalls.filter((c) => c.method === 'screen' && c.route?.sessionID === this.owner);
+  assert.ok(calls.length > 0, JSON.stringify(this.opencode.rpcCalls));
+  assert.deepEqual([...new Set(calls.map((c) => c.directory))], [this.ownerDir], JSON.stringify(calls));
+  assert.ok(this.opencode.instances.includes(this.ownerDir), JSON.stringify(this.opencode.instances));
 });

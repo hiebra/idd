@@ -35,16 +35,17 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 4. Servidor y TUI (zona de código): `openspec-autopilot`
 
-- [ ] 4.1 «Dónde actúa el plugin» y «Arranque de la sesión operativa» (modificados): pasos rojos; quitar `permanent` de `actionable()` para crear y arrancar (D8); verde.
-- [ ] 4.2 «La TUI habla con el plugin del directorio de la ventana»: paso rojo; ubicación por llamada y `hello` por directorio en `tui.js` (D2), con limpieza en `setup` (ADR-0011); verde.
-- [ ] 4.3 «Pasar a una sesión es pasar a su rama» (sus tres escenarios): pasos rojos; implementar D3 en `server.js` y `tui.js` (ruta anterior, checkout con `branch-change.mjs`, `back` y avisos); borrar los pasos del requisito retirado; verde.
-- [ ] 4.4 «Cada sesión tiene una rama de trabajo» (sus dos escenarios): pasos rojos; implementar D1 (detección en `screen`, `prompt` e `idle`, sin contar los checkouts del plugin) y la sesión que retoma el paso; verde.
-- [ ] 4.5 «Validación al volver a la sesión operativa» (modificado) sigue en verde con D1 y D3.
-- [ ] 4.6 «Una sesión nueva en una rama temporal con sesión operativa» (sus cuatro escenarios): pasos rojos; implementar D4 (modal, `keymap.dispatch` y vuelta a la sesión anterior, sin bucle); verde.
-- [ ] 4.7 «Los worktrees de OpenCode nacen en una rama» (sus cinco escenarios): pasos rojos; registrar la estrategia de D5 en `server.js`, con su limpieza (ADR-0011); verde.
-- [ ] 4.8 «En el ciclo del autopilot, el modelo no cambia de rama»: paso rojo; quitar `start` y `switch` del prompt del paso `new` en `lib/prompts.mjs` (D8); verde.
-- [ ] 4.9 «Funcionamiento sin TUI» (modificado): pasos rojos; implementar la tool `openspec_worktree` (D6) y el aviso que la ofrece en el contexto de las sesiones ajenas; verde. Resolver cómo conoce el servidor su dirección para el enlace (Open Questions del design) y anotarlo aquí.
-- [ ] 4.10 Los escenarios que no cambian de comportamiento siguen en verde.
+- [x] 4.1 «Dónde actúa el plugin» y «Arranque de la sesión operativa» (modificados): pasos rojos; quitar `permanent` de `actionable()` para crear y arrancar (D8); verde.
+- [x] 4.2 «La TUI habla con el plugin del directorio de la ventana»: paso rojo; ubicación por llamada y `hello` por directorio en `tui.js` (D2), con limpieza en `setup` (ADR-0011); verde.
+- [x] 4.3 «Pasar a una sesión es pasar a su rama» (sus tres escenarios): pasos rojos; implementar D3 en `server.js` y `tui.js` (ruta anterior, checkout con `branch-change.mjs`, `back` y avisos); borrar los pasos del requisito retirado; verde.
+- [x] 4.4 «Cada sesión tiene una rama de trabajo» (sus dos escenarios): pasos rojos; implementar D1 (detección en `screen`, `prompt` e `idle`, sin contar los checkouts del plugin) y la sesión que retoma el paso; verde.
+- [x] 4.5 «Validación al volver a la sesión operativa» (modificado) sigue en verde con D1 y D3.
+- [x] 4.6 «Una sesión nueva en una rama temporal con sesión operativa» (sus cuatro escenarios): pasos rojos; implementar D4 (modal, `keymap.dispatch` y vuelta a la sesión anterior, sin bucle); verde.
+- [x] 4.7 «Los worktrees de OpenCode nacen en una rama» (sus cinco escenarios): pasos rojos; registrar la estrategia de D5 en `server.js`, con su limpieza (ADR-0011); verde.
+- [x] 4.8 «En el ciclo del autopilot, el modelo no cambia de rama»: paso rojo; quitar `start` y `switch` del prompt del paso `new` en `lib/prompts.mjs` (D8); verde.
+- [x] 4.9 «Funcionamiento sin TUI» (modificado): pasos rojos; implementar la tool `openspec_worktree` (D6) y el aviso que la ofrece en el contexto de las sesiones ajenas; verde. Resolver cómo conoce el servidor su dirección para el enlace (Open Questions del design) y anotarlo aquí.
+  - Resuelto: OpenCode 2.3.2 no da al plugin la dirección con que se conectó el navegador, así que el enlace sale de la opción `serverUrl` del plugin en `opencode.json` (por ejemplo, `http://localhost:4096`). Sin ella, la tool devuelve el título y el id de la sesión. Queda por comprobar en la 7.4 si el contexto del plugin trae alguna dirección.
+- [x] 4.10 Los escenarios que no cambian de comportamiento siguen en verde.
 
 ## 5. Documentación (zona de código)
 

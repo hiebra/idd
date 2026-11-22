@@ -1,5 +1,5 @@
-// Lo que el plugin lee del proyecto: el change de la rama (el módulo neutral
-// .agents/openspec/branch-change.mjs), `openspec status`, las tasks según el
+// Lo que el plugin lee del proyecto: el change de la rama y los cambios de
+// rama (el módulo neutral .agents/openspec/branch-change.mjs), `openspec status`, las tasks según el
 // CLI (`openspec instructions apply`, design D11 de autopilot-sesion-operativa),
 // los errores de `openspec validate` y si el árbol de trabajo está limpio.
 // Todas las esperas tienen límite.
@@ -15,9 +15,20 @@ export { treeClean } from './git.mjs';
 
 const BRANCH_CHANGE = path.join('.agents', 'openspec', 'branch-change.mjs');
 
+async function module(directory) {
+  return import(`${pathToFileURL(path.join(directory, BRANCH_CHANGE)).href}`);
+}
+
 export async function branchChange(directory) {
-  const module = await import(`${pathToFileURL(path.join(directory, BRANCH_CHANGE)).href}`);
-  return module.branchChange(directory);
+  return (await module(directory)).branchChange(directory);
+}
+
+// Los cambios de rama del plugin (design D3 y D7 de autopilot-rama-por-sesion),
+// con las reglas de branch-change.mjs: a una rama temporal con `switch`, a la
+// rama de origen con `origin`; ninguno con el árbol sucio. { ok, message }
+export async function switchTo(directory, branch, via = 'switch') {
+  const m = await module(directory);
+  return via === 'origin' ? m.originBranch(directory) : m.switchBranch(directory, branch);
 }
 
 // El CLI de OpenSpec del proyecto, el mismo que el arranque pone en el PATH

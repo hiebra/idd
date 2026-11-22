@@ -70,23 +70,3 @@ export function newWindow({ route, isNew = false, routeIsOperational = false, op
     (clean ? 'Para empezar otro change, crea un worktree nuevo o cambia a la rama de origen.' : 'Para empezar otro change, crea un worktree nuevo (el árbol tiene cambios sin commit).');
   return { action: 'modal', message, options };
 }
-
-// El modal de un solo botón de autopilot-sesion-operativa, hasta que server.js
-// pase a enterSession y newWindow (task 4.3)
-export function directive({ route, operational, routeSession = null }) {
-  if (!operational) return { action: 'none' };
-  if (route?.type === 'session') {
-    if (route.sessionID === operational.id) return { action: 'validate' };
-    if (routeSession?.archived) return { action: 'none' };
-  } else if (route?.type !== 'home') {
-    return { action: 'none' };
-  }
-  return { action: 'modal', sessionID: operational.id, title: operational.title, change: operational.change ?? null };
-}
-
-export const MODAL_BUTTON = 'Ir a la sesión del change';
-
-export function modalText({ change, title }) {
-  const what = change ? `el change ${change}` : 'un change nuevo';
-  return `Mientras se edita ${what} en modo autopilot, solo se puede operar con su sesión operativa «${title}».`;
-}
