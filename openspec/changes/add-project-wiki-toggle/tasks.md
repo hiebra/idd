@@ -77,16 +77,16 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 10. Pruebas con OpenCode real y con Claude Code real (D9)
 
-- [ ] 10.1 Nivel 1, con el proveedor falso, en la TUI de OpenCode, con un clon de esta rama:
+- [x] 10.1 Nivel 1, con el proveedor falso, en la TUI de OpenCode, con un clon de esta rama:
   - con el wiki apagado, la petición al modelo no lleva la guía, ni el recordatorio, ni las skills `wiki-manager` y `wiki-query`;
   - `/toggle-wiki` está disponible;
   - tras encenderlo, en la sesión siguiente llegan la guía, el recordatorio y las skills, y se ve qué llega ya en la misma sesión.
-- [ ] 10.2 Nivel 2, con un modelo real, en la TUI de OpenCode:
+- [x] 10.2 Nivel 2, con un modelo real, en la TUI de OpenCode:
   - `/toggle-wiki` en los dos sentidos, con y sin `.wiki/`, incluida la propuesta de ingesta inicial y su confirmación o rechazo;
   - consultar con `wiki-query`, con el helper del motor encontrado por `CLAUDE_PLUGIN_ROOT` desde el Bash de OpenCode;
   - ingerir una URL, lecciones en dry-run y el lint con `wiki-manager`;
   - el archive de un change de prueba con el autopilot, con el wiki encendido (paso `wiki` y espera de su commit) y apagado (fin del ciclo).
-- [ ] 10.3 En Claude Code real, `/toggle-wiki` en los dos sentidos y la ingesta inicial con confirmación, y qué queda disponible en la misma sesión
+- [x] 10.3 En Claude Code real, `/toggle-wiki` en los dos sentidos y la ingesta inicial con confirmación, y qué queda disponible en la misma sesión
 - [ ] 10.4 Apuntar como lecciones candidatas lo comprobado en 1.2 a 1.5 y en 10.1 a 10.3, y proponer registrarlas en el wiki del proyecto (`/wiki:ll --dry-run --local`) cuando el wiki esté encendido. Si algo no se pudo probar, decirlo con el motivo y no archivar el change sin la decisión del usuario
 
 ## 11. Cierre
