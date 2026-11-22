@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // El change de la rama (openspec-change-lifecycle, design D1 de
 // add-openspec-autopilot, D1 a D6 de manage-git-discipline, D3 a D7 de
-// allow-user-requested-merges y D1 y D2 de git-discipline-standard-with-exception):
+// allow-user-requested-merges, D1 y D2 de git-discipline-standard-with-exception
+// y D1 a D5 de name-change-in-merge-title):
 // un módulo
 // neutral, común a los dos agentes, que lee de git qué change tiene la rama
 // actual y decide las puertas del ciclo. Lo importa el plugin de OpenCode y lo
@@ -70,6 +71,12 @@
 //   `git push origin <commit>:refs/heads/<destino>`), y dentro, abrir un PR
 //   contra el destino, sin ninguna orden de push a él. No fusiona: da la
 //   orden. Cualquier otro destino, no.
+//   El título de la fusión con una rama permanente nombra los changes de la
+//   rama, `Merge <changes> into <destino>`: todos, en curso o archivados, y
+//   solo los de nombre kebab-case; sin ninguno, la rama. Es el `-m` de la
+//   orden y, si la rama lleva algún change, el título del PR, que se
+//   recomienda también para su commit de fusión; al PR de una rama sin
+//   change la puerta no le da título.
 // Todo rechazo dice cómo seguir.
 //
 // CLI:
