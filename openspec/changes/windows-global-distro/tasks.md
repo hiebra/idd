@@ -96,6 +96,10 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - Con solo eso, gana la que entra primero en la cola, que no siempre es la más antigua. En el run de `v0.0.0-ci2` ganó la más nueva, porque la primera lectura de la rama (`branchChange`, que importa `branch-change.mjs` en frío) tardó más en la primera sesión. Por eso las peticiones del mensaje `autopilot` se juntan durante 150 ms desde que llega el mensaje, antes de leer nada del proyecto (`contend`), y se atienden de una en una de la más antigua a la más nueva (D4).
   - Con el test aislado: sin el arreglo falla 7 de 12 veces y con él 0 de 12. Con la primera lectura de la rama retrasada 400 ms a propósito, para reproducir el orden del runner, la versión solo en serie falla 6 de 6 y la definitiva 0 de 6.
 
+- [x] 6.6 Arreglar la otra carrera del autopilot que hizo fallar el job de Linux en el run de `v0.0.0-ci4`. Fallaba «auto mode: the verify without a verdict does not chain to the archive», con un diálogo que no se esperaba; aquí no se reproduce, ni con la máquina cargada. `chainTo` crea la sesión del paso siguiente y después navega a ella y archiva la anterior. Si la TUI consulta la pantalla entre medias, sigue en la sesión anterior, ya libre y sin archivar, y la trataba como una ventana ajena (`directive` daba `modal`).
+  - En `lib/screen.mjs`, una sesión que acaba de pasar el control (`phase: 'done'`) cuenta como una archivada: no da el modal.
+  - Caso nuevo en `core-tests/autopilot-product.test.js`: rojo sin el arreglo, verde con él.
+
 ## 7. Integración con `windows-support`
 
 `windows-support` (rama `claude/vigilant-cori-oo4t14`) se reduce a lo que no depende del núcleo del arranque: `.gitattributes` con LF y su requisito en `session-bootstrap`, `openspecCommand()` del autopilot (el CLI del proyecto como `node <bin.openspec del paquete>`), la capability `windows-readiness` con el diagnóstico `scripts/windows/Test-OfflineInstall.ps1`, y ADR-0017 reescrito sin decidir nada del núcleo. Se fusiona y archiva antes que este change.

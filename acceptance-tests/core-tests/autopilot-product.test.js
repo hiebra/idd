@@ -144,5 +144,7 @@ test('what the TUI does with each screen', async () => {
   assert.deepEqual(directive({ route: { type: 'session', sessionID: 'ses_op' }, operational: op }), { action: 'validate' });
   assert.deepEqual(directive({ route: { type: 'session', sessionID: 'ses_old' }, operational: op, routeSession: { id: 'ses_old', archived: true } }), { action: 'none' });
   assert.equal(directive({ route: { type: 'session', sessionID: 'ses_free' }, operational: op, routeSession: { id: 'ses_free', archived: false } }).action, 'modal');
+  // The step that has just handed over, before the plugin navigates away from it and archives it
+  assert.deepEqual(directive({ route: { type: 'session', sessionID: 'ses_done' }, operational: op, routeSession: { id: 'ses_done', archived: false, meta: { role: 'free', phase: 'done' } } }), { action: 'none' });
   assert.equal(modalText({ change: 'x', title: 'T' }), 'Mientras se edita el change x en modo autopilot, solo se puede operar con su sesión operativa «T».');
 });

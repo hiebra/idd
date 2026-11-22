@@ -15,6 +15,10 @@ export function directive({ route, operational, routeSession = null }) {
   if (route?.type === 'session') {
     if (route.sessionID === operational.id) return { action: 'validate' };
     if (routeSession?.archived) return { action: 'none' };
+    // El paso que acaba de pasar el control: el plugin navega a la sesión
+    // nueva y lo archiva en seguida. Si la TUI consulta la pantalla entre
+    // medias, no es una ventana ajena
+    if (routeSession?.meta?.phase === 'done') return { action: 'none' };
   } else if (route?.type !== 'home') {
     return { action: 'none' };
   }
