@@ -262,7 +262,7 @@ Then(/^se crea una sesión de revisión del artefacto `(design|proposal)` con el
   const owner = newOwnerAfter(this, this.stepSession ?? this.owner);
   assert.deepEqual(ap.metaOf(owner).step, { kind: 'review', id: artifact, of: 'artifact' }, detail(this));
   assert.equal(ap.metaOf(owner).phase, 'review');
-  assert.equal(owner.agent, 'plan');
+  assert.equal(owner.agent, 'build');
   this.review = owner.id;
 });
 
@@ -688,7 +688,7 @@ Then('los cambios quedan en el stage de git', function () {
 Then('se crea una sesión de revisión de los cambios en el plan', function () {
   const owner = newOwnerAfter(this, this.stepSession);
   assert.deepEqual(ap.metaOf(owner).step, { kind: 'review', id: 'plan', of: 'plan' }, detail(this));
-  assert.equal(owner.agent, 'plan');
+  assert.equal(owner.agent, 'build');
   assert.match(ap.instructionOf(this, owner.id), /los cambios en el plan/);
 });
 
@@ -781,6 +781,23 @@ Then('la sesión de `openspec-update-change` recibe como conclusiones las del mo
 When('la sesión termina el artefacto `proposal`', async function () {
   this.stepSession = this.owner;
   await produce(this, ARTIFACT_FILES.proposal(), { tool: {} });
+});
+
+Given('la sesión operativa está creando la task 3', async function () {
+  await ap.prepareChange(this, { tasks: TASKS_1_2_DONE });
+  await seedOperational(this, { kind: 'task', id: '3', label: '3' }, { zone: 'code' });
+});
+
+When(/^la sesión termina (el artefacto `design`|la task 3)$/, async function (what) {
+  this.stepSession = this.owner;
+  if (what === 'el artefacto `design`') await produce(this, ARTIFACT_FILES.design());
+  else await produce(this, { ...tasksFile([{ id: '1', done: true }, { id: '2', done: true }, { id: '3', done: true }, { id: '4', done: false }]), 'src/exportar.js': 'export const exportar = () => {};\n' });
+});
+
+// autopilot-plan-explore (D1): every session of the cycle, the reviews too, starts with build
+Then('se crea la sesión siguiente con el agente build', function () {
+  const owner = newOwnerAfter(this, this.stepSession);
+  assert.equal(owner.agent, 'build', detail(this));
 });
 
 Then('se crea una sesión nueva con el control, para el siguiente artefacto que indique `openspec status`', function () {
@@ -966,7 +983,7 @@ When('el plugin decide el paso siguiente tras un artefacto', async function () {
 Then('crea una sesión de revisión', function () {
   const owner = newOwnerAfter(this, this.owner);
   assert.deepEqual(ap.metaOf(owner).step, { kind: 'review', id: 'design', of: 'artifact' }, detail(this));
-  assert.equal(owner.agent, 'plan');
+  assert.equal(owner.agent, 'build');
 });
 
 When(/^la sesión de verify termina con la tool y el veredicto (sin problemas críticos|con problemas críticos)$/, async function (verdict) {

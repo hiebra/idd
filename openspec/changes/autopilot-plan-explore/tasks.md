@@ -22,8 +22,10 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 3. openspec-autopilot: las sesiones nacen en build (zona de código)
 
-- [ ] 3.1 "Toda sesión del ciclo nace con el agente build", con sus dos ejemplos: definir los pasos y ver que falla para la revisión, que hoy nace con plan. Implementar D1: `WORKFLOW.review.agent` a `build` en `lib/prompts.mjs`. Cambiar las aserciones de `autopilot.steps.js` que esperan el agente plan en la revisión.
-- [ ] 3.2 "El siguiente paso en una sesión nueva" y "La instrucción del paso sigue en los mensajes siguientes" siguen en verde con el requisito renombrado.
+- [x] 3.1 "Toda sesión del ciclo nace con el agente build", con sus dos ejemplos: definir los pasos y ver que falla para la revisión, que hoy nace con plan. Implementar D1: `WORKFLOW.review.agent` a `build` en `lib/prompts.mjs`. Cambiar las aserciones de `autopilot.steps.js` que esperan el agente plan en la revisión.
+  - Resultado: los dos ejemplos fallaron porque la revisión nacía con `plan`; con `WORKFLOW.review.agent = 'build'` pasan. Se han cambiado a `build` las tres aserciones que esperaban `plan` en la revisión.
+- [x] 3.2 "El siguiente paso en una sesión nueva" y "La instrucción del paso sigue en los mensajes siguientes" siguen en verde con el requisito renombrado.
+  - Resultado: siguen en verde. Suite con los deltas: 215 escenarios, 204 pasan, 11 con pasos sin definir (los de las secciones 4 y 5) y ninguno falla; `npm run test:core`: 110 de 110.
 
 ## 4. openspec-autopilot: el agente plan explora (zona de código)
 

@@ -20,7 +20,7 @@ export const WORKFLOW = {
   archive: { skill: 'openspec-archive-change', agent: 'build' },
   wiki: { skill: null, agent: 'build' },
   update: { skill: 'openspec-update-change', agent: 'build' },
-  review: { skill: null, agent: 'plan' },
+  review: { skill: null, agent: 'build' },
 };
 
 // El comando con el que el usuario retoma un paso a mano (tras compactar)
