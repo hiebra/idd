@@ -134,3 +134,5 @@
 ## [2026-11-22] ll | "modo auto e instalación de OpenCode" → raw/notes/2026-11-22-ll-modo-auto-instalar-opencode.md (1 lesson, 1 article updated)
 
 ## [2026-11-22] ll | "soporte de Windows (windows-support)" → raw/notes/2026-11-22-ll-windows-support.md (7 lessons, 3 articles updated, 1 inventory record)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, windows-support @3d2d8fe): 1 manifest, 22 paths pinned, 0 skipped
