@@ -76,11 +76,14 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - la publicación de la release con los tres artefactos.
 
   → commit
-- [ ] 6.4 Probar el workflow sin publicar, con un disparo manual o un tag de prueba que se borra después, y comprobar que los dos jobs pasan → anotar el resultado aquí
+- [x] 6.4 Probar el workflow sin publicar, con un disparo manual o un tag de prueba que se borra después, y comprobar que los dos jobs pasan → anotar el resultado aquí
   - 2026-11-22, tag `v0.0.0-ci1` sobre `3fcfaab`, ya borrado (run 45050800884). Ninguno de los dos jobs ha publicado nada.
     - **windows:** en verde, con los 8 escenarios de Windows (45 steps) en 1 min 18 s.
     - **linux:** en rojo en `test:core`, por «two sessions taking control at once: the oldest wins and the other is left free» (`core-tests/autopilot-plugin.test.js:168`): quedan dos sesiones operativas en lugar de una. El fallo es intermitente y anterior a este change (falla 2 de cada 4 veces en `2ba326e`). Por eso no llegaron a ejecutarse el lint, la suite, la prueba de origen ni el montaje de los artefactos en el runner.
-  - Falta un run con los dos jobs en verde.
+  - 2026-11-22, tag `v0.0.0-ci2` sobre `368f17a` (run 45063319191). **windows** en verde. **linux** en rojo en el mismo test de `test:core`, pero ya con una sola operativa: ganó la sesión más nueva en vez de la más antigua (6.5).
+  - 2026-11-22, tag `v0.0.0-ci3` sobre `6139514` (run 45067118439). Los dos jobs en verde y `publish` omitido, como corresponde a un tag `-ci`.
+    - **linux:** pasan `test:core`, el lint, la suite (3 min 41 s), la prueba de origen y el montaje de los tres artefactos, que se suben como artefacto del run.
+    - **windows:** pasan los 8 escenarios.
 - [x] 6.5 Arreglar la carrera del autopilot que hace fallar a veces «two sessions taking control at once» y bloquea el job de Linux (6.4). Ocurre en los dos sitios donde una sesión toma el control de una rama: el mensaje `autopilot` y `ensureOperational`. El plugin escribe que es la operativa y después comprueba quién gana por antigüedad. Si la sesión más nueva comprueba antes de que escriba la más antigua, se ve sola y sigue; después la más antigua escribe, gana por antigüedad y sigue también, y la rama queda con dos operativas.
   - En `server.js`, tomar el control de una rama va en serie dentro del proceso (`claim`, con la cola en el registro de `globalThis` para que valga entre recargas): la segunda sesión ve ya escrita a la primera. Entre dos procesos de OpenCode sobre el mismo worktree sigue valiendo solo escribir y comprobar.
   - Con solo eso, gana la que entra primero en la cola, que no siempre es la más antigua. En el run de `v0.0.0-ci2` ganó la más nueva, porque la primera lectura de la rama (`branchChange`, que importa `branch-change.mjs` en frío) tardó más en la primera sesión. Por eso las peticiones del mensaje `autopilot` se juntan durante 150 ms desde que llega el mensaje, antes de leer nada del proyecto (`contend`), y se atienden de una en una de la más antigua a la más nueva (D4).
