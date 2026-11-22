@@ -299,6 +299,53 @@ function activeHere(dir, name) {
   return Boolean(name) && fs.existsSync(path.join(dir, CHANGES, name, 'proposal.md'));
 }
 
+// Un marcador de conflicto al principio de línea (design D3 de
+// allow-user-requested-merges): `<<<<<<<` y `>>>>>>>` solos o seguidos de un
+// espacio, y `=======` como línea entera
+const CONFLICT_MARKER = /^(?:<{7}(?: |$)|={7}$|>{7}(?: |$))/m;
+
+// Los archivos tocados por la fusión en curso (con stage o sin él) que
+// conservan un marcador de conflicto; se saltan los borrados y los binarios
+function filesWithMarkers(dir) {
+  const touched = git(dir, 'diff', '--name-only', 'HEAD').out.split('\n').filter(Boolean);
+  return touched.filter((file) => {
+    let content;
+    try {
+      content = fs.readFileSync(path.join(dir, file));
+    } catch {
+      return false;
+    }
+    if (content.includes(0)) return false;
+    return CONFLICT_MARKER.test(content.toString('utf8'));
+  });
+}
+
+// El commit de una fusión en curso (design D3 de allow-user-requested-merges):
+// no se comprueban las zonas, porque cada commit que trae la fusión ya las
+// respetaba; sí que no quede ningún conflicto sin resolver ni ningún marcador
+function checkMergeCommit(dir, branch, state) {
+  const deny = (message) => ({ ok: false, message, state });
+  const unresolved = git(dir, 'diff', '--name-only', '--diff-filter=U').out.split('\n').filter(Boolean);
+  if (unresolved.length > 0) {
+    return deny(
+      `La fusión en curso tiene conflictos sin resolver en ${unresolved.join(', ')}: resuélvelos, presenta la resolución al usuario y, con su ok, ` +
+        'pásalos al stage (`git add <rutas>`) y vuelve a ejecutar la puerta. Para descartar la fusión: `git merge --abort`.'
+    );
+  }
+  const marked = filesWithMarkers(dir);
+  if (marked.length > 0) {
+    return deny(
+      `La fusión en curso conserva marcadores de conflicto (\`<<<<<<<\`, \`=======\` o \`>>>>>>>\` al principio de línea) en ${marked.join(', ')}: ` +
+        'quita los marcadores, pasa los archivos al stage (`git add <rutas>`) y vuelve a ejecutar la puerta.'
+    );
+  }
+  return {
+    ok: true,
+    message: `Se puede hacer el commit de la fusión en curso en la rama de la sesión '${branch}', si el usuario dio el ok a la resolución: git commit --no-edit; después, el push: git push -u origin ${branch}`,
+    state,
+  };
+}
+
 // La puerta commit (design D4): los commits y el push del agente en la rama
 // de la sesión de un contenedor efímero
 export function checkCommit(dir, env = process.env) {
@@ -319,6 +366,7 @@ export function checkCommit(dir, env = process.env) {
   if (state.permanent.includes(branch)) {
     return deny(`'${branch}' es una rama permanente: los commits del agente van solo a una rama temporal. Pide el commit al usuario.`);
   }
+  if (git(dir, 'rev-parse', '-q', '--verify', 'MERGE_HEAD').ok) return checkMergeCommit(dir, branch, state);
   const zones = { specs: [], code: [] };
   for (const file of pendingPaths(dir)) {
     const zone = zoneOf(file);
