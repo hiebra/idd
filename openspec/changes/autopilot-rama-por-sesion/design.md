@@ -138,7 +138,7 @@ Y, para reproducir lo que mostraron las pruebas en OpenCode real:
 
 ### D10. El primer mensaje de un worktree nuevo
 
-Al presentarse la TUI por primera vez a la instancia de un directorio (`hello`), manda también su ruta. Si la ruta es una sesión de ese directorio que no es de nadie (sin paso en su metadata) y tiene mensajes del usuario, y la rama no tiene sesión operativa, el plugin crea la operativa con el paso `new` y, como `description`, el texto de esos mensajes, igual que al encadenar (`userText`). La sesión de OpenCode se queda libre.
+Al presentarse la TUI por primera vez a la instancia de un directorio (`hello`), manda también su ruta. Si la ruta es una sesión de ese directorio que no es de nadie (sin paso en su metadata) y tiene mensajes del usuario, y la rama no tiene sesión operativa, el plugin crea la operativa con el paso `new` y, como `description`, el texto de esos mensajes, igual que al encadenar (`userText`). La sesión de OpenCode se queda libre. Solo cuenta una sesión creada hace menos de 30 s, para no tomar como descripción la conversación de una sesión anterior en la que arranca la TUI. Y como el mensaje puede guardarse un poco después de que la TUI entre en la sesión, se vuelve a leer unas cuantas veces, durante 1,5 s como mucho.
 
 - *Alternativa*: hacer operativa la propia sesión de OpenCode. Se descarta porque el modelo ya le ha respondido sin el prompt del paso.
 
