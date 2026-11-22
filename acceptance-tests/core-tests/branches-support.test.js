@@ -151,6 +151,8 @@ test('branch-change.mjs run inside an ephemeral container or outside one', async
   const merge = branches.checkGate(p, 'merge', 'exportar-datos', { args: ['main'] });
   assert.equal(typeof merge.ok, 'boolean', 'check merge <target> <permanent> gives { ok, message }');
   assert.equal(typeof merge.message, 'string');
+  const targets = branches.mergeTargets(p, { ephemeral: true });
+  assert.deepEqual(targets.targets, [], 'merge-targets --json from a temporary branch without origin');
   const switched = branches.switchBranch(p, 'no-existe');
   assert.equal(switched.exitCode, 1);
   assert.equal(switched.json.ok, false);

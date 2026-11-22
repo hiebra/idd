@@ -273,3 +273,32 @@ test('check merge: bringing a permanent branch the branch already contains, noth
   git(dir, 'config', 'idd.sessionBranch', 'feature/x');
   assert.equal(checkMerge(dir, 'feature/x', undefined, EPHEMERAL).ok, true);
 });
+
+// --- merge-targets (allow-user-requested-merges, D6) ---
+
+test('merge-targets: bringFirst, a branch of x-main without origin, and none from a permanent branch or a detached HEAD', async (t) => {
+  const { mergeTargets } = await import(MODULE);
+  const dir = repo(t, 'schema: intent-driven\nx-main: [main, release, develop]\n');
+  git(dir, 'branch', 'develop');
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'update-ref', 'refs/remotes/origin/develop', 'develop');
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  write(dir, 'src/a.js', 'a\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'a');
+  // origin/develop moves ahead: the branch has to bring it first
+  git(dir, 'checkout', '-q', 'develop');
+  write(dir, 'src/d.js', 'd\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'd');
+  git(dir, 'update-ref', 'refs/remotes/origin/develop', 'develop');
+  git(dir, 'checkout', '-q', 'feature/x');
+  const result = mergeTargets(dir);
+  assert.deepEqual(result.targets, [{ branch: 'main', bringFirst: false }, { branch: 'develop', bringFirst: true }]);
+  assert.match(result.warnings.join('\n'), /origin\/release/);
+  assert.equal(result.branch, 'feature/x');
+  git(dir, 'checkout', '-q', 'main');
+  assert.deepEqual(mergeTargets(dir).targets, []);
+  git(dir, 'checkout', '-q', '--detach', 'feature/x');
+  assert.deepEqual(mergeTargets(dir).targets, []);
+});

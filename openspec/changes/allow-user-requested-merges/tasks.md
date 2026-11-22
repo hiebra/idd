@@ -32,7 +32,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 ## 4. `merge-targets` (D6): rojo → implementar → verde → commit
 
 - [x] 4.1 `Tras el archive se propone la fusión con las ramas de x-main`: el Scenario Outline `Las ramas que se proponen tras el archive`, con los pasos de las filas de `fusiones`, `se consultan las ramas a las que proponer la fusión` y los de las filas de `propuesta`. Rojo: subcomando desconocido. Implementar `merge-targets [--json]` de D6, con `bringFirst` y el aviso de una rama sin remoto → verde → commit
-- [ ] 4.2 Añadir a `core-tests/branch-change.test.js`: `bringFirst` verdadero y falso, una rama de `x-main` sin `origin/<rama>`, y una rama permanente o HEAD separado sin ninguna propuesta → commit
+- [x] 4.2 Añadir a `core-tests/branch-change.test.js`: `bringFirst` verdadero y falso, una rama de `x-main` sin `origin/<rama>`, y una rama permanente o HEAD separado sin ninguna propuesta → commit
 
 ## 5. `start` y `switch` en un contenedor efímero (D7): rojo → implementar → verde → commit
 
