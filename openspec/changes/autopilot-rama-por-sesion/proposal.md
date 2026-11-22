@@ -47,7 +47,7 @@ Con eso, cada sesión puede tener su rama, y cada change su worktree.
 - `openspec-autopilot`:
   - cambian «Dónde actúa el plugin», «Arranque de la sesión operativa», «Validación al volver a la sesión operativa», «Funcionamiento sin TUI» y «Las ventanas ajenas llevan a la sesión operativa», que se sustituye;
   - se añaden la rama de trabajo de cada sesión, el paso a su rama, el modal de `/new` y la estrategia de worktree.
-- `openspec-change-lifecycle`: en el ciclo del autopilot, el modelo no crea ramas ni cambia de rama; la rama del change la crean el worktree o el usuario.
+- `openspec-change-lifecycle`: `branch-change.mjs` permite volver a la rama de origen con el árbol limpio. La regla de que el modelo no cambia de rama en el ciclo del autopilot va en `openspec-autopilot`.
 
 ## Impact
 
