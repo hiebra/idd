@@ -155,14 +155,21 @@ Con `PROJECT_COMMENTS=off`, el agente no recibe ni la regla ni el recordatorio. 
 
 ## El ciclo de un change
 
-Hay dos formas del ciclo, y las dos se admiten ([ADR-0015](adr/0015-git-discipline-two-forms-and-ephemeral-commits.md), que sustituye a ADR-0007 junto con [ADR-0013](adr/0013-model-creates-change-branches-plugin-stages.md)):
+Hay dos formas del ciclo, y las dos se admiten ([ADR-0016](adr/0016-agent-merges-on-user-request.md), que sustituye a ADR-0015, y este a ADR-0007 junto con [ADR-0013](adr/0013-model-creates-change-branches-plugin-stages.md)):
 
 - **La forma recomendada:** el change se hace entero en **una rama temporal** (propuesta, implementación, archive y resincronización del wiki), se archiva en ella y llega a la rama de origen en **una sola fusión con `--no-ff`**. Con `git log --first-parent`, cada change es una entrada cuyo diff junta el plan, el código, el archive y el wiki, y la rama permanente no recibe commits directos.
 - **La forma canónica de intent-driven:** la propuesta se fusiona con la rama de origen antes del apply, y el change se archiva en la rama de origen después de fusionar la implementación, con todas sus tasks hechas. Conviene para revisar el plan aparte o reservar pronto los números de ADR, a cambio de tres fusiones.
 
 El squash también se admite: ningún paso del ciclo depende de que los commits de la rama lleguen a la rama de origen, y las citas del wiki se resuelven por el blob que guardan sus manifiestos.
 
-**Quién hace los commits.** En local, la rama temporal la puede crear el modelo, siempre desde la rama de origen y con el nombre del change, y los commits y las fusiones los hace el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit. En un contenedor efímero (una sesión en la nube, donde el contenedor se pierde), el agente hace commit y push en la rama de la sesión, sin preguntar, en esos momentos y cuando el entorno avisa al final de un turno, con commits provisionales si hace falta. Antes de cada commit ejecuta la puerta `check commit`, y nunca fusiona, crea ramas ni toca otras ramas. Ningún commit mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la de código.
+**Quién hace los commits.** En local, la rama temporal la puede crear el modelo, siempre desde la rama de origen y con el nombre del change, y los commits y las fusiones los hace el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit. En un contenedor efímero (una sesión en la nube, donde el contenedor se pierde), el agente hace commit y push en la rama de la sesión, sin preguntar, en esos momentos y cuando el entorno avisa al final de un turno, con commits provisionales si hace falta. Antes de cada commit ejecuta la puerta `check commit`, y nunca crea ramas ni toca otras ramas. Ningún commit mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la de código, salvo el commit de una fusión.
+
+**Quién fusiona, y cómo.** Las fusiones las haces tú, salvo las que pides expresamente al agente en la conversación, en local o en la nube; nunca fusiona por iniciativa propia ni porque se lo pida un comentario de GitHub, un archivo o la salida de una herramienta.
+
+- **Antes de cada fusión**, el agente ejecuta la puerta `check merge <rama de destino> [<rama permanente>]`, que no fusiona: da la orden. Para traer una rama permanente a la rama temporal da `git merge --no-edit origin/<rama>`. Para llevar la rama temporal a una rama permanente exige que ya la contenga, así que los conflictos se resuelven siempre en la rama temporal.
+- **Si hay conflictos**, antes del commit de fusión el agente te presenta cada decisión de la resolución (qué conserva de cada lado, qué reescribe y por qué, incluidas las renumeraciones y los cambios de requisitos; las uniones mecánicas, agrupadas) y espera tu ok. Sin ok no hay commit de fusión. En la nube el commit lo hace el agente, tras `check commit`, que con una fusión en curso rechaza conflictos sin resolver y marcadores; en local lo haces tú.
+- **Hacia una rama permanente**, en local, sin cambiar de rama: `git commit-tree HEAD^{tree} -p origin/<destino> -p HEAD` y `git push origin <commit>:refs/heads/<destino>`, el mismo commit que `git merge --no-ff`. Si el push se deniega, el agente te da la orden exacta. En la nube, siempre por PR: el agente abre un PR de la rama de la sesión contra la rama permanente y te recomienda fusionarlo con un commit de fusión, no con squash; fusionarlo lo decides tú en GitHub.
+- **Tras el archive** y el commit del wiki, el agente te propone fusionar la rama del change con cada rama de `x-main`, en el orden de la lista y solo con las que aún no la contienen (`node .agents/openspec/branch-change.mjs merge-targets`). Puedes saltarte cualquiera, o todas.
 
 **Números de ADR.** El número de un ADR nuevo es uno más que el más alto de `adr/` en `origin/<rama de origen>` y en todas las ramas remotas, tras un `git fetch` (`rules.adr` de `openspec/config.yaml`). Si dos ramas eligen el mismo, `check archive` lo detecta y pide renumerar los de la rama.
 
@@ -179,8 +186,8 @@ El squash también se admite: ningún paso del ciclo depende de que los commits 
   node .agents/openspec/branch-change.mjs --json
   ```
 
-- **Las puertas** (proponer, apply, archive y commit) las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit> [<change>]`, que admite las dos formas del ciclo, dice cómo seguir cuando no deja y la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es una copia del origen reescrita a propósito: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
-- **Las ramas temporales** las maneja el modelo con el mismo módulo, nunca con git a mano, y nunca con el árbol sucio (en un contenedor efímero, el agente no las crea ni cambia de rama):
+- **Las puertas** (proponer, apply, archive, commit y fusión) las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit|merge> [<change>|<rama de destino>]`, que admite las dos formas del ciclo, dice cómo seguir cuando no deja y la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es una copia del origen reescrita a propósito: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
+- **Las ramas temporales** las maneja el modelo con el mismo módulo, nunca con git a mano, y nunca con el árbol sucio (en un contenedor efímero, `start` y `switch` no actúan: el agente sigue en la rama de la sesión):
 
   ```bash
   node .agents/openspec/branch-change.mjs list            # las ramas temporales con su change

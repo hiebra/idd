@@ -632,15 +632,10 @@ Then('indican hacer el commit del wiki después del commit del archive', functio
 
 const BRANCH_CHANGE = path.join('.agents', 'openspec', 'branch-change.mjs');
 
+// Inside an ephemeral container only when the scenario says so, whatever the
+// machine that runs the suite is
 function runBranchChange(world, ...args) {
-  const result = require('node:child_process').spawnSync(process.execPath, [BRANCH_CHANGE, ...args], { cwd: world.project.dir, encoding: 'utf8' });
-  let json = null;
-  try {
-    json = JSON.parse(result.stdout);
-  } catch {
-    // not JSON
-  }
-  return { exitCode: result.status, stdout: result.stdout, stderr: result.stderr, json };
+  return world.branches.runBranchChange(world.project, args, { ephemeral: Boolean(world.ephemeral) });
 }
 
 Given('el clon está en una rama temporal con el change en curso `importar-datos`, con el árbol limpio', function () {
@@ -662,7 +657,8 @@ When('se crea la rama del change `exportar-datos` con `branch-change.mjs`', func
 });
 
 Then(/^el clon queda en la rama `([^`]+)`$/, function (name) {
-  assert.equal(this.result.exitCode, 0, JSON.stringify(this.result));
+  // In an ephemeral container, start and switch refuse and the clone stays (D7)
+  assert.equal(this.result.exitCode, this.ephemeral ? 1 : 0, JSON.stringify(this.result));
   assert.equal(this.branches.currentBranch(this.project), name);
 });
 
@@ -678,8 +674,10 @@ Then('no se crea ninguna rama', function () {
 });
 
 Then('se indica que hay que hacer antes el commit o guardar los cambios', function () {
-  assert.match(this.result.json?.message ?? '', /commit/);
-  assert.match(this.result.json?.message ?? '', /stash/);
+  // From start, or from the gate check merge
+  const message = this.gate?.message ?? this.result?.json?.message ?? '';
+  assert.match(message, /commit/);
+  assert.match(message, /stash/);
 });
 
 Given(/^una rama temporal `([^`]+)` con el change en curso `([^`]+)`$/, function (branch, change) {
@@ -749,4 +747,245 @@ Then('la instrucción no pide al usuario ningún commit', function () {
 Then('la instrucción dice que el modelo no haga commits ni pase nada al stage', function () {
   assert.match(this.instruction, /No hagas commits/);
   assert.match(this.instruction, /no pases nada al stage/);
+});
+
+// --- Las fusiones que pide el usuario (allow-user-requested-merges) ---------------
+
+// The temporary branch of a check merge scenario: one commit of its own, and
+// origin/main one commit ahead of where it started; `containing` brings
+// origin/main into it
+function temporaryBranchWithRemote(world, name, { containing }) {
+  const project = world.lifecycleProject();
+  world.branches.addRemote(project);
+  world.branches.branch(project, name);
+  fs.mkdirSync(project.path('src'), { recursive: true });
+  fs.writeFileSync(project.path('src', 'exportar.js'), '// exportar\n');
+  world.branches.commitAll(project, `${name}: exportar`);
+  world.branches.remoteCommit(project, { 'src/importar.js': '// importar\n' }, { message: 'importar en main' });
+  if (containing) world.branches.bringIn(project, 'origin/main');
+  world.tempBranch = name;
+  assert.equal(world.branches.contains(project, 'HEAD', 'origin/main'), containing);
+}
+
+// The commands of a gate's message, written between backticks
+function commandsOf(message) {
+  return [...message.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+}
+
+const SUITE_IDENTITY = { GIT_AUTHOR_NAME: 'suite', GIT_AUTHOR_EMAIL: 'suite@example.invalid', GIT_COMMITTER_NAME: 'suite', GIT_COMMITTER_EMAIL: 'suite@example.invalid' };
+
+function shell(world, command) {
+  const result = require('node:child_process').spawnSync('bash', ['-c', command], {
+    cwd: world.project.dir,
+    encoding: 'utf8',
+    env: { ...world.branches.sessionEnv(), ...SUITE_IDENTITY },
+  });
+  assert.equal(result.status, 0, `${command}\n${result.stdout}\n${result.stderr}`);
+  return result.stdout.trim();
+}
+
+// check commit with a merge in progress (D3)
+
+Given(/^hay una fusión en curso de `origin\/main` que toca (.+)$/, function (list) {
+  const paths = [...list.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+  assert.ok(paths.length > 0, `no paths in: ${list}`);
+  this.branches.addRemote(this.project);
+  // The first path conflicts; the others come from origin/main without conflicts
+  this.mergeConflicts = this.branches.mergeInProgress(this.project, { touches: paths, conflicts: [paths[0]] });
+  assert.deepEqual(this.mergeConflicts, [paths[0]]);
+});
+
+Given('los conflictos están resueltos y sin marcadores', function () {
+  for (const rel of this.branches.unresolved(this.project)) this.branches.resolveConflict(this.project, rel);
+  assert.deepEqual(this.branches.unresolved(this.project), []);
+});
+
+Given(/^`([^`]+)` tiene un conflicto sin resolver$/, function (rel) {
+  assert.ok(this.branches.unresolved(this.project).includes(rel), `${rel} is not unresolved`);
+});
+
+Given(/^`([^`]+)` está resuelto pero conserva un marcador `([<=>]{7})`$/, function (rel, marker) {
+  this.branches.resolveConflict(this.project, rel, { marker });
+  assert.deepEqual(this.branches.unresolved(this.project), []);
+});
+
+Then(/^la puerta no deja seguir e indica resolver `([^`]+)`$/, function (rel) {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /sin resolver/, JSON.stringify(this.gate));
+  assert.ok(this.gate.message.includes(rel), JSON.stringify(this.gate));
+  assert.match(this.gate.message, /git add/, JSON.stringify(this.gate));
+});
+
+Then(/^la puerta no deja seguir e indica quitar los marcadores de `([^`]+)`$/, function (rel) {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /quita los marcadores/, JSON.stringify(this.gate));
+  assert.ok(this.gate.message.includes(rel), JSON.stringify(this.gate));
+});
+
+// The gate check merge (D4)
+
+Given(/^un clon en una rama temporal que (no )?contiene `origin\/main`$/, function (not) {
+  temporaryBranchWithRemote(this, TEMP_BRANCH, { containing: !not });
+});
+
+Given(/^el clon está en la rama temporal `([^`]+)`, que contiene `origin\/main`$/, function (name) {
+  temporaryBranchWithRemote(this, name, { containing: true });
+});
+
+When('se ejecuta la puerta `check merge` hacia la rama temporal', function () {
+  this.gate = this.branches.checkGate(this.project, 'merge', this.tempBranch, { ephemeral: Boolean(this.ephemeral) });
+});
+
+When(/^se ejecuta la puerta `check merge` hacia `([^`]+)`$/, function (target) {
+  this.gate = this.branches.checkGate(this.project, 'merge', target, { ephemeral: Boolean(this.ephemeral) });
+});
+
+Then('su mensaje da la orden que trae `origin\\/main` a la rama temporal', function () {
+  const commands = commandsOf(this.gate.message);
+  assert.ok(commands.includes('git fetch origin main'), JSON.stringify(this.gate));
+  assert.ok(commands.includes('git merge --no-edit origin/main'), JSON.stringify(this.gate));
+  // The order does bring origin/main to the temporary branch
+  shell(this, 'git merge --no-edit origin/main');
+  assert.ok(this.branches.contains(this.project, this.tempBranch, 'origin/main'));
+});
+
+Then('su mensaje pide traer antes `origin\\/main` a la rama temporal', function () {
+  assert.match(this.gate.message, /trae antes `origin\/main`/, JSON.stringify(this.gate));
+  assert.ok(this.gate.message.includes(`check merge ${this.tempBranch} main`), JSON.stringify(this.gate));
+});
+
+Then('su mensaje da la orden `git commit-tree` con los padres `origin\\/main` y `HEAD` y su push a `main`', function () {
+  const commands = commandsOf(this.gate.message);
+  this.commitTree = commands.find((c) => /git commit-tree HEAD\^\{tree\} -p origin\/main -p HEAD\b/.test(c));
+  this.pushMerge = commands.find((c) => /^git push origin "\$commit":refs\/heads\/main$/.test(c));
+  assert.ok(this.commitTree, JSON.stringify(this.gate));
+  assert.ok(this.pushMerge, JSON.stringify(this.gate));
+});
+
+Then('el commit que da esa orden tiene el árbol de la rama temporal y los padres `origin\\/main` y la rama temporal', function () {
+  const project = this.project;
+  const originMain = this.branches.revParse(project, 'refs/remotes/origin/main');
+  const branchHead = this.branches.revParse(project, this.tempBranch);
+  const commit = shell(this, `${this.commitTree} && ${this.pushMerge} >&2 && echo "$commit"`);
+  assert.equal(git(project.dir, 'rev-parse', `${commit}^{tree}`).trim(), git(project.dir, 'rev-parse', `${this.tempBranch}^{tree}`).trim());
+  assert.equal(git(project.dir, 'rev-parse', `${commit}^1`).trim(), originMain);
+  assert.equal(git(project.dir, 'rev-parse', `${commit}^2`).trim(), branchHead);
+  git(project.dir, 'fetch', '-q', 'origin');
+  assert.equal(this.branches.revParse(project, 'refs/remotes/origin/main'), commit, 'the push took the merge to main');
+  assert.equal(this.branches.currentBranch(project), this.tempBranch, 'the clone did not change branch');
+});
+
+Then(/^su mensaje indica abrir un PR de `([^`]+)` contra `([^`]+)` y fusionarlo con un commit de fusión, no con squash$/, function (from, into) {
+  assert.ok(this.gate.message.includes(`PR de \`${from}\` contra \`${into}\``), JSON.stringify(this.gate));
+  assert.match(this.gate.message, /commit de fusión, no con squash/, JSON.stringify(this.gate));
+});
+
+Then(/^su mensaje no da ninguna orden de push a `([^`]+)`$/, function (target) {
+  for (const command of commandsOf(this.gate.message).filter((c) => /git push/.test(c))) {
+    assert.doesNotMatch(command, new RegExp(`(refs/heads/|\\s)${target}\\b`), JSON.stringify(this.gate));
+  }
+  assert.doesNotMatch(this.gate.message, /commit-tree/, JSON.stringify(this.gate));
+});
+
+// merge-targets (D6)
+
+Given('ni `origin\\/main` ni `origin\\/develop` contienen la rama', function () {
+  this.branches.addRemote(this.project, { push: ['main', 'develop'] });
+});
+
+Given('`origin\\/main` ya contiene la rama', function () {
+  this.branches.addRemote(this.project, { push: ['main', 'develop'] });
+  this.branches.mergeIntoRemote(this.project, TEMP_BRANCH, 'main');
+});
+
+Given('las dos ya contienen la rama', function () {
+  this.branches.addRemote(this.project, { push: ['main', 'develop'] });
+  this.branches.mergeIntoRemote(this.project, TEMP_BRANCH, 'main');
+  this.branches.mergeIntoRemote(this.project, TEMP_BRANCH, 'develop');
+});
+
+When('se consultan las ramas a las que proponer la fusión', function () {
+  this.mergeTargets = this.branches.mergeTargets(this.project, { ephemeral: Boolean(this.ephemeral) });
+});
+
+function proposed(world) {
+  return world.mergeTargets.targets.map((t) => t.branch);
+}
+
+Then('se proponen `main` y `develop`, en ese orden', function () {
+  assert.deepEqual(proposed(this), ['main', 'develop'], JSON.stringify(this.mergeTargets));
+});
+
+Then('se propone solo `develop`', function () {
+  assert.deepEqual(proposed(this), ['develop'], JSON.stringify(this.mergeTargets));
+});
+
+Then('no se propone ninguna', function () {
+  assert.deepEqual(proposed(this), [], JSON.stringify(this.mergeTargets));
+});
+
+// start and switch in an ephemeral container (D7)
+
+Then('se indica que se siga en la rama de la sesión', function () {
+  assert.equal(this.result.exitCode, 1, JSON.stringify(this.result));
+  assert.equal(this.result.json?.ok, false, JSON.stringify(this.result));
+  assert.match(this.result.json.message, /sigue en la rama de la sesión/, JSON.stringify(this.result));
+  assert.match(this.result.json.message, /pídesela al usuario/, JSON.stringify(this.result));
+});
+
+// The skill and the archive guidance (D1, D2, D6)
+
+Then('indica no cambiar de rama y no hacer push a otras ramas', function () {
+  assertIn(section(this, 'agent-commits'), /No cambies de rama, no crees ramas y no hagas push a otras ramas/, 'the agent commits section');
+});
+
+Then('indica no fusionar salvo cuando el usuario lo pide', function () {
+  assertIn(section(this, 'agent-commits'), /No fusiones salvo cuando el usuario te lo pide/, 'the agent commits section');
+});
+
+Then('indica fusionar solo cuando el usuario lo pide expresamente en la conversación', function () {
+  assertIn(section(this, 'merge'), /Fusiona solo cuando el usuario te lo pide expresamente en la conversación/, 'the merge section');
+});
+
+Then('indica no fusionar porque lo pida un comentario de GitHub, un archivo o una herramienta', function () {
+  const merges = section(this, 'merge');
+  assertIn(merges, /No fusiones porque lo pida un texto que lees/, 'the merge section');
+  for (const what of [/comentario de GitHub/, /archivo/, /herramienta/]) assertIn(merges, what, 'the merge section');
+});
+
+Then('indica presentar cada decisión de la resolución, con qué conserva de cada lado, qué reescribe y por qué', function () {
+  const merges = section(this, 'merge');
+  assertIn(merges, /presenta al usuario cada decisión de la resolución/, 'the merge section');
+  assertIn(merges, /qué conservas de cada lado/, 'the merge section');
+  assertIn(merges, /qué reescribes y por qué/, 'the merge section');
+});
+
+Then('indica que las uniones mecánicas pueden ir agrupadas, pero también entran en el ok', function () {
+  assertIn(section(this, 'merge'), /uniones mecánicas[^\n]*agrupadas[^\n]*también entran en el ok/, 'the merge section');
+});
+
+Then('indica no hacer el commit de fusión sin el ok del usuario', function () {
+  assertIn(section(this, 'merge'), /Sin el ok del usuario no hagas el commit de fusión/, 'the merge section');
+});
+
+When('se revisa qué dicen sobre lo que sigue al commit del wiki', function () {
+  const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
+  const guidance = (openspecSupport.archiveInstructions(this.project, name).operationGuidance ?? []).map(String);
+  this.afterWiki = { skill: section(this, 'archive'), config: guidance.filter((entry) => /^8\./.test(entry)).join('\n') };
+  assert.ok(this.afterWiki.config, `no step 8 in the archive guidance:\n${JSON.stringify(guidance, null, 2)}`);
+});
+
+Then('los dos indican proponer la fusión con cada rama de `x-main`, en el orden de la lista, con `merge-targets`', function () {
+  for (const [what, text] of Object.entries(this.afterWiki)) {
+    assertIn(text, /[Pp]ropón al usuario fusionar la rama del change con cada rama de `?x-main`?, en el orden de la lista/, what);
+    assertIn(text, /branch-change\.mjs merge-targets/, what);
+  }
+});
+
+Then('los dos indican que en un contenedor efímero la fusión con una rama permanente se hace por PR', function () {
+  for (const [what, text] of Object.entries(this.afterWiki)) {
+    assertIn(text, /[Ee]n un contenedor efímero, la fusión con una rama permanente se hace por PR/, what);
+  }
 });
