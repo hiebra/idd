@@ -135,7 +135,7 @@ El paso nuevo nace en `waiting-commit` (espera a que el árbol esté limpio) en 
 - en el modo auto, en cada cambio de zona;
 - en los dos modos, tras el archive (para que el commit del archive vaya aparte) y tras la resincronización del wiki (para el commit del wiki, antes de terminar).
 
-`update` nunca espera: empieza con el árbol sucio a propósito. En `waiting-commit`, el paso arranca en cuanto el árbol está limpio, al validar (D5) o en el hook `prompt`: el plugin antepone la instrucción del paso al mensaje del usuario y guarda la foto.
+En los tres casos, si el árbol ya está limpio cuando se crea el paso, no hay nada que esperar y el paso empieza enseguida. `update` nunca espera: empieza con el árbol sucio a propósito. En `waiting-commit`, el paso arranca en cuanto el árbol está limpio, al validar (D5) o en el hook `prompt`: el plugin antepone la instrucción del paso al mensaje del usuario y guarda la foto.
 
 ### D10. El verify
 

@@ -88,4 +88,5 @@ Las pruebas usan un clon desechable de esta rama fuera del repositorio, siempre 
 
 ## 9. Cierre
 
-- [ ] 9.1 Revisar que todas las tasks están marcadas y que la suite y `core-tests` siguen en verde.
+- [x] 9.1 Revisar que todas las tasks están marcadas y que la suite y `core-tests` siguen en verde.
+  - Resultado: tras los arreglos de la sección 8, la suite completa da 162 escenarios en verde (840 pasos, 0 pendientes o sin definir) y `core-tests` 94 en verde. El verify no encontró ningún problema CRITICAL; su único aviso (D9 no decía que la espera del commit solo se aplica con el árbol sucio) se corrigió en el design.
