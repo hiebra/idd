@@ -118,7 +118,12 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
     - El requisito de LF sigue sirviendo con el núcleo en Node: los hooks de Claude Code siguen siendo de bash, y el núcleo procesa la guía, el recordatorio y la regla de comentarios. No se retira.
   - `openspec validate` y `lint:specs` sin errores. La suite pasa 268 de 283 escenarios; los 15 restantes son los de `windows-readiness`, que necesitan `pwsh`.
   - En el workflow (run 45079491565, push de `644bd0e` a la rama, sin tag) los dos jobs pasan. En Linux pasan los 283 escenarios, entre ellos los de `windows-readiness`, `test:core` (170), el lint y `test:release`. En Windows pasan los 8 escenarios.
-- [ ] 7.3 Adaptar el diagnóstico `Test-OfflineInstall.ps1` a la instalación global: el schema en `<data>\openspec\schemas`, el motor en `<data>\idd\wiki-engine`, y las skills y los plugins copiados a `<config>\opencode` (`%XDG_CONFIG_HOME%` o `%USERPROFILE%\.config`). Con sus escenarios de `windows-readiness`, rojo → verde → commit
+- [x] 7.3 Adaptar el diagnóstico `Test-OfflineInstall.ps1` a la instalación global: el schema en `<data>\openspec\schemas`, el motor en `<data>\idd\wiki-engine`, y las skills y los plugins copiados a `<config>\opencode` (`%XDG_CONFIG_HOME%` o `%USERPROFILE%\.config`). Con sus escenarios de `windows-readiness`, rojo → verde → commit
+  - Spec `windows-readiness` (requisito nuevo «La instalación global en un proyecto adelgazado», con tres escenarios) y D8 del design, en `f802924`. El diagnóstico y sus steps van en `e33614e`:
+    - la recogida añade `project.ownSchema` y `global` (`<data>` y `<config>` como el `.bat`, `<data>\idd\version` y lo que instala);
+    - la evaluación da el componente `global-install` y, en un proyecto adelgazado, el motor del wiki de la instalación global.
+  - El rojo no se vio: los escenarios no se pueden ejecutar aquí sin `pwsh`, y el diagnóstico se escribió antes de ejecutarlos. En el workflow (run 45080641431) pasan los 286 escenarios, entre ellos los tres nuevos, y los 8 de Windows. Sin el componente `global-install`, los tres fallarían al buscarlo en el informe.
+  - La recogida de hechos en una máquina Windows real se comprueba en la 7.4.
 - [ ] 7.4 Verificar en Windows 11 real, y anotar aquí el resultado:
   - el diagnóstico con PowerShell 5.1 y con PowerShell 7;
   - el `.bat` de una release, en una instalación nueva y en una actualización;
