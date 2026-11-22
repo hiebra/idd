@@ -69,7 +69,7 @@ const now = () => {
 const clone = (value) => (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
 
 export class Host {
-  constructor({ projectDir, plugin, dbFile, tui = true, pluginOptions = {}, failures = {}, tuiSilent = false, rpcLate = false, alreadyOpen = false }) {
+  constructor({ projectDir, plugin, pluginDir = null, dbFile, tui = true, pluginOptions = {}, failures = {}, tuiSilent = false, rpcLate = false, alreadyOpen = false }) {
     // OpenCode was already open: this process's TUI has presented itself
     // before, so loading the plugin is like a hot reload and not a start
     // (the registry the plugin keeps in globalThis, design D3 of
@@ -81,7 +81,9 @@ export class Host {
     // A TUI that never answers what the server asks it (its event listeners get nothing)
     this.tuiSilent = tuiSilent;
     this.projectDir = projectDir;
-    this.pluginDir = path.join(projectDir, '.opencode', 'plugins', plugin);
+    // A plugin of the project, or one installed elsewhere (the global
+    // install's <config>/opencode/plugins/<plugin>)
+    this.pluginDir = pluginDir ?? path.join(projectDir, '.opencode', 'plugins', plugin);
     this.dbFile = dbFile;
     this.withTui = tui;
     this.pluginOptions = pluginOptions;
@@ -665,6 +667,7 @@ export class Host {
   }
 
   state() {
-    return clone({ sessions: this.store.sessions, ...this.out, route: this.route, generation: this.generation, tuiLoad: this.tuiLoad, subscriptions: this.subscriptions(), closed: this.closed });
+    const imported = [...new Set(globalThis[Symbol.for('opencode-sim.imported')] ?? [])];
+    return clone({ sessions: this.store.sessions, ...this.out, imported, route: this.route, generation: this.generation, tuiLoad: this.tuiLoad, subscriptions: this.subscriptions(), closed: this.closed });
   }
 }

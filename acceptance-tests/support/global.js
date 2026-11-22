@@ -44,6 +44,14 @@ class GlobalInstall {
     fs.writeFileSync(skill, fs.readFileSync(skill, 'utf8').replace(SCRIPT_LINE, `El script es: \`${script}\``));
     return dir;
   }
+
+  // A plugin of the template, in <config>/opencode/plugins/<name>
+  installPlugin(name) {
+    const dir = path.join(this.pluginsDir, name);
+    fs.mkdirSync(this.pluginsDir, { recursive: true });
+    fs.cpSync(path.join(REPO_ROOT, '.opencode', 'plugins', name), dir, { recursive: true });
+    return dir;
+  }
 }
 
 // The script path that a SKILL.md of openspec-git-discipline gives, or null

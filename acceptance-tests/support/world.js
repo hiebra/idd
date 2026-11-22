@@ -181,9 +181,9 @@ class SessionWorld extends World {
   }
 
   // Opens the simulated OpenCode on the project copy with the given plugin
-  async startOpenCode({ plugin = 'openspec-autopilot', tui = true, pluginOptions = {}, failures = {}, rpcLate = false, alreadyOpen = false } = {}) {
+  async startOpenCode({ plugin = 'openspec-autopilot', pluginDir = null, tui = true, pluginOptions = {}, failures = {}, rpcLate = false, alreadyOpen = false } = {}) {
     if (this.sim) await this.sim.stop();
-    this.sim = new OpenCodeSim({ projectDir: this.lifecycleProject().dir, workDir: this.workDir, plugin, tui, pluginOptions, failures, rpcLate, alreadyOpen });
+    this.sim = new OpenCodeSim({ projectDir: this.lifecycleProject().dir, workDir: this.workDir, plugin, pluginDir, tui, pluginOptions, failures, rpcLate, alreadyOpen });
     this.opencode = await this.sim.start();
     return this.opencode;
   }

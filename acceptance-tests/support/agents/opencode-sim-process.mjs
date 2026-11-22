@@ -4,7 +4,17 @@
 // over IPC (opencode-sim.js): each message { id, op, args } gets one reply
 // { id, ok, value | error }, after the host has settled.
 
+import { register } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { Host } from './opencode-sim.mjs';
+
+// The branch-change.mjs files the process imports, as paths
+const imported = [];
+const { port1, port2 } = new MessageChannel();
+port1.on('message', (url) => imported.push(fileURLToPath(url.replace(/\?.*$/, ''))));
+port1.unref();
+register('./load-recorder.mjs', { parentURL: import.meta.url, data: { port: port2 }, transferList: [port2] });
+globalThis[Symbol.for('opencode-sim.imported')] = imported;
 
 let host = null;
 

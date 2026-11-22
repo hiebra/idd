@@ -1089,3 +1089,46 @@ Then('el terminal no muestra ningún error del plugin', function () {
   const errors = (this.opencode.logs ?? []).filter((l) => /\[openspec-autopilot\] (hello|screen|reply|rpc|modal|notice):/.test(l));
   assert.deepEqual(errors, [], errors.join('\n'));
 });
+
+// --- Qué branch-change.mjs usa el plugin (windows-global-distro, design D4) ---
+
+const { GlobalInstall, GIT_DISCIPLINE } = require('../support/global');
+
+const PROJECT_SCRIPT = ['.agents', 'skills', GIT_DISCIPLINE, 'scripts', 'branch-change.mjs'];
+
+Given('un proyecto con la skill `openspec-git-discipline`', function () {
+  const project = this.lifecycleProject();
+  this.expectedScript = { file: project.path(...PROJECT_SCRIPT), command: PROJECT_SCRIPT.join('/') };
+});
+
+Given('un proyecto sin skills, con la instalación global en la máquina', function () {
+  const project = this.lifecycleProject();
+  // A project of the slim template: no skills, no plugins of its own
+  for (const dir of [['.agents', 'skills'], ['.claude', 'skills'], ['.opencode']]) {
+    fs.rmSync(project.path(...dir), { recursive: true, force: true });
+  }
+  this.branches.commitAll(project, 'sin skills ni plugins');
+  this.global = this.global ?? new GlobalInstall(this.workDir);
+  const skill = this.global.installGitDiscipline();
+  this.globalPlugin = this.global.installPlugin('openspec-autopilot');
+  const file = path.join(skill, 'scripts', 'branch-change.mjs');
+  this.expectedScript = { file, command: file };
+});
+
+When('el plugin consulta el change de la rama', async function () {
+  this.branches.branch(this.project, ap.BRANCH);
+  await this.startOpenCode({ pluginDir: this.globalPlugin ?? null });
+  await this.opencodeCall('waitScreen');
+});
+
+Then(/^usa el `branch-change\.mjs` (de la skill del proyecto|de la skill instalada de forma global)$/, function (_where) {
+  assert.deepEqual(this.opencode.imported, [this.expectedScript.file], detail(this));
+  assert.equal(ap.metaOf(ap.onlyOwner(this)).step.kind, 'new', detail(this));
+});
+
+Then('el prompt del paso de crear el change da la ruta de ese script', function () {
+  const instruction = ap.instructionOf(this, ap.onlyOwner(this).id);
+  const commands = [...instruction.matchAll(/`node "?([^`"]+?)"? (?:start|list)\b[^`]*`/g)].map((m) => m[1]);
+  assert.ok(commands.length > 0, instruction);
+  for (const command of commands) assert.equal(command, this.expectedScript.command, instruction);
+});

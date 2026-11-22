@@ -32,6 +32,7 @@ import { describe, discrepancy, next, stepFromState, waitsForCommit, zoneOf } fr
 import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, closedPrompt, foreignPrompt, reminderPrompt, resumeCommand, stepPrompt } from './lib/prompts.mjs';
 import { allSessions, branchSessions, changeSessions, isArchived, isWorking, meta, nextSeq, owners, winner, writeMeta } from './lib/state.mjs';
 import { branchChange, changeState, validateErrors } from './lib/project.mjs';
+import { branchScript } from './lib/branch-script.mjs';
 import { gitState, stage, treeClean, verdict } from './lib/git.mjs';
 import { describeProducts, productOf, reviewQueue, snapshotOf, stagePaths } from './lib/product.mjs';
 import { MODAL_BUTTON, directive, modalText } from './lib/screen.mjs';
@@ -224,7 +225,7 @@ async function start(ctx) {
       .join('\n');
 
   const promptFor = async (m) => {
-    const base = { step: m.step, change: m.change, description: m.description ?? '', review: m.review ?? null };
+    const base = { step: m.step, change: m.change, description: m.description ?? '', review: m.review ?? null, script: branchScript(directory).command };
     if (m.step.kind === 'update') return stepPrompt({ ...base, conclusions: m.conclusions ?? '', index: indexText(await indexOf(m)) });
     if (m.step.kind === 'wiki') {
       const lessons = (await indexOf(m)).flatMap((s) => (Array.isArray(meta(s).lessons) ? meta(s).lessons : []));
