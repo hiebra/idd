@@ -2,6 +2,7 @@
 title: "El flujo wiki-first"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md
   - raw/notes/2026-11-22-ll-fusion-wiki-contadores.md
   - raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md
   - raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md
@@ -86,6 +87,8 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 - **`openspec archive --yes` no avisa de tasks pendientes**: la advertencia la da el workflow, que cuenta las tasks con `openspec list --json`. Compruébalas antes de usar la CLI con `--yes` ([lecciones de git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md), lección 3).
 - **Al resolver una fusión con conflictos en el wiki**, busca antes en el lado que llega lecciones equivalentes a las propias: dos changes concurrentes pueden registrar lo mismo. Conserva una sola viñeta, cita las dos notas y quédate con la versión mejor comprobada ([lecciones de la fusión en el wiki](../../raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md), lección 1).
 - **Los contadores del wiki en una fusión**: si chocan las estadísticas de `.wiki/_index.md` o `inventory/_index.md`, no elijas un lado: cuéntalas sobre el disco tras la fusión, y los activos del inventario por su `status:`. En las dos fusiones de `windows-support` con `main`, ningún lado acertaba, y el lint del motor no compara esos contadores con el disco ([lección de los contadores en una fusión](../../raw/notes/2026-11-22-ll-fusion-wiki-contadores.md), lección 1).
+- **Un lint en `PASS` tras `--fix` no prueba que las fuentes nuevas estén compiladas**: el arreglo de cobertura aparca la fuente sin artículo en `wiki/references/uncompiled-source-coverage.md` y el lint pasa. Las notas de lecciones del archivado se compilan antes del lint ([lecciones de lint --fix y librarian 1.0.0](../../raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md), lección 1).
+- **`librarian scan` 1.0.0 no revisa contenido**: solo puntúa antigüedad y forma, y escribe en `.librarian/` y `log.md`. Lo que contradice un change lo clasifica `/wiki:refresh` sobre los artículos que citan las rutas tocadas ([lecciones de lint --fix y librarian 1.0.0](../../raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md), lección 2).
 
 ## El motor
 
@@ -106,6 +109,7 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 
 ## Sources
 
+- [Lessons Learned: lint --fix y librarian scan del motor 1.0.0](../../raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md): lecciones 1 y 2.
 - [Lessons Learned: lecciones equivalentes al resolver una fusión en el wiki](../../raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md): lección 1.
 - [Lessons Learned: los contadores del wiki al resolver una fusión](../../raw/notes/2026-11-22-ll-fusion-wiki-contadores.md): lección 1.
 - [Lessons Learned: git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md): lección 3.
