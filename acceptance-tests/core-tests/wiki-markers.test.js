@@ -21,12 +21,16 @@ const OPERATIONS = {
   opencode: { query: 'la skill `wiki-query`', ingest: 'ingiere la fuente' },
 };
 
-// A project with only what wiki_text reads: engine.json, the guide and the reminder
+// A project with only what wiki_text reads: engine.json, the guide and the
+// reminder, with a copy of the core next to them, because the core looks for
+// the texts next to itself (design D8 of add-project-wiki-toggle)
 function projectWith({ guide, reminder }) {
   const dir = Machine.tmpDir();
   const wiki = path.join(dir, '.agents', 'wiki');
   fs.mkdirSync(wiki, { recursive: true });
-  fs.writeFileSync(path.join(wiki, 'engine.json'), '{ "repo": "owner/engine", "ref": "v1.0.0" }\n');
+  fs.mkdirSync(path.join(dir, '.agents', 'hooks'), { recursive: true });
+  fs.copyFileSync(CORE, path.join(dir, '.agents', 'hooks', 'session-bootstrap.sh'));
+  fs.writeFileSync(path.join(wiki, 'engine.json'), '{ "enabled": true, "repo": "owner/engine", "ref": "v1.0.0" }\n');
   fs.writeFileSync(path.join(wiki, 'guide.md'), guide);
   fs.writeFileSync(path.join(wiki, 'reminder.md'), reminder);
   return dir;
@@ -35,7 +39,7 @@ function projectWith({ guide, reminder }) {
 function wikiText(mode, agent, dir) {
   const env = { ...process.env };
   delete env.PROJECT_WIKI;
-  const result = spawnSync('bash', [CORE, mode, agent, dir], { encoding: 'utf8', env });
+  const result = spawnSync('bash', [path.join(dir, '.agents', 'hooks', 'session-bootstrap.sh'), mode, agent, dir], { encoding: 'utf8', env });
   assert.equal(result.status, 0, result.stderr);
   return result.stdout;
 }

@@ -568,6 +568,10 @@ Then('indica hacer el commit del wiki después del commit del archive', function
   assertIn(section(this, 'commits'), /wiki[^\n]*(después|posterior)[^\n]*archive/i, 'the commits section');
 });
 
+Then('indica que el commit del wiki solo existe con el wiki del proyecto habilitado', function () {
+  assertIn(section(this, 'commits'), /commit del wiki solo existe con el wiki del proyecto habilitado/, 'the commits section');
+});
+
 Then('indica ejecutar la puerta `check commit` antes de cada commit', function () {
   assertIn(section(this, 'agent-commits'), /branch-change\.mjs check commit`? antes de cada commit/, 'the agent commits section');
 });
@@ -1112,11 +1116,13 @@ Then('indica que un PR sin change lo titula el agente, como hasta ahora', functi
   assertIn(section(this, 'merge'), /Si la rama no lleva ningún change, la puerta no da título: titula tú el PR[^\n]*como hasta ahora/, 'the merge section');
 });
 
-When('se revisa qué dicen sobre lo que sigue al commit del wiki', function () {
+// The merge proposal is its own entry of the archive guidance, outside the
+// wiki steps, so that it is there with the wiki disabled too (add-project-wiki-toggle)
+When('se revisa qué dicen sobre lo que sigue al archive', function () {
   const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
   const guidance = (openspecSupport.archiveInstructions(this.project, name).operationGuidance ?? []).map(String);
-  this.afterWiki = { skill: section(this, 'archive'), config: guidance.filter((entry) => /^8\./.test(entry)).join('\n') };
-  assert.ok(this.afterWiki.config, `no step 8 in the archive guidance:\n${JSON.stringify(guidance, null, 2)}`);
+  this.afterWiki = { skill: section(this, 'archive'), config: guidance.filter((entry) => /merge-targets/.test(entry)).join('\n') };
+  assert.ok(this.afterWiki.config, `no merge proposal in the archive guidance:\n${JSON.stringify(guidance, null, 2)}`);
 });
 
 Then('los dos indican proponer la fusión con cada rama de `x-main`, en el orden de la lista, con `merge-targets`', function () {
