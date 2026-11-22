@@ -28,6 +28,7 @@ Fuera de alcance: el `.bat` y la variante adelgazada en sí, que son del change 
 - `wiki-first-knowledge`: la resincronización al archivar solo existe con el wiki encendido, porque sus pasos están en `config.yaml` solo entonces.
 - `openspec-autopilot`: con el wiki apagado, tras el archive no hay paso `wiki` ni espera de su commit.
 - `openspec-change-lifecycle`: la resincronización y el commit del wiki forman parte del ciclo solo con el wiki encendido.
+- `response-comments`: el escenario que comprueba que OpenCode sigue entregando la guía del wiki sin el plugin de comentarios parte de un proyecto con el wiki encendido.
 
 ## Impact
 
