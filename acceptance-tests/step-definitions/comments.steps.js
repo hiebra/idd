@@ -46,14 +46,14 @@ Then(new RegExp(`^el proyecto no tiene archivos de instrucciones que ${AGENT} ca
 
 // --- Contenido de la regla ----------------------------------------------------
 
-const FIXED_REPLY =
-  'Puedes seguir añadiendo comentarios, pedirme que los procese (p) o que reformule (r) el mensaje en base a ellos';
+const FIXED_REPLY = 'Añade más comentarios o pídeme que los procese (p) o reformule (r) en base a ellos';
 
 // Each Then of the rule scenarios names one section of the rule, by its
 // identifier, so that they do not depend on its wording (design D1)
 const RULE_SECTIONS = {
   'indica que es un comentario sobre la intervención anterior del agente': 'es-comentario',
   'indica que una cita de Markdown al principio del mensaje también es una marca de comentario': 'es-comentario-cita',
+  'indica que una cita de la web de OpenCode en el mensaje también lo convierte en un comentario': 'es-comentario-cita-web',
   'indica contestar solo con la frase fija': 'frase-fija',
   'indica contestar en el idioma del comentario': 'idioma',
   'indica acumular el comentario sin investigar ni modificar nada a raíz de él': 'acumular',

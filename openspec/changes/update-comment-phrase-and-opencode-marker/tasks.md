@@ -18,8 +18,8 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 4. Regla y recordatorio (D6)
 
-- [ ] 4.1 Actualizar `comments.steps.js`: la `FIXED_REPLY` nueva y la sección de la cita de la web de OpenCode. Rojo
-- [ ] 4.2 Reescribir `.agents/comments/rule.md` y `reminder.md` (menos de 600 caracteres) con la marca `''así''`, la cita de la web de OpenCode y la frase nueva → verde → commit
+- [x] 4.1 Actualizar `comments.steps.js`: la `FIXED_REPLY` nueva y la sección de la cita de la web de OpenCode. Rojo
+- [x] 4.2 Reescribir `.agents/comments/rule.md` y `reminder.md` (menos de 600 caracteres) con la marca `''así''`, la cita de la web de OpenCode y la frase nueva → verde → commit
 - [x] 4.3 Actualizar la cabecera de uso del núcleo, que aún nombra "ya" y "reformula" → commit
 
 ## 5. Documentación y cierre
