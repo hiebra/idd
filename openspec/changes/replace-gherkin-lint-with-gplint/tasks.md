@@ -31,8 +31,8 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
   - `references/python/SETUP.md` y `references/python/run_acceptance.py`: `.gplintrc` y `npx gplint@2`;
   - `references/EXTRACTION.md`: nombrar `gplint`.
 - [x] 4.2 En `.agents/skills/spec-as-source/references/tasks.md`, la task 1.6 nombra `gplint`.
-- [ ] 4.3 En `acceptance-tests/README.md`: `.gplintrc` en la estructura y una sección de los escenarios de `spec-lint` que explique D4.
-- [ ] 4.4 Ninguna referencia a `gherkin-lint` fuera de `openspec/changes/`, `adr/` y `.wiki/` (que se actualiza en la resincronización del archive).
+- [x] 4.3 En `acceptance-tests/README.md`: `.gplintrc` en la estructura y una sección de los escenarios de `spec-lint` que explique D4.
+- [x] 4.4 Ninguna referencia a `gherkin-lint` fuera de `openspec/changes/`, `adr/` y `.wiki/` (que se actualiza en la resincronización del archive).
 
 ## 5. Cierre
 
