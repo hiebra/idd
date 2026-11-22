@@ -56,6 +56,13 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   → los escenarios de 5.3 en verde → commit
 - [x] 5.5 Steps de `windows-global-install` que se pueden comprobar en Linux sobre el zip: qué instala y que el schema es idéntico al de origen. Rojo → implementar lo que falte en `build.mjs` → verde → commit
 
+- [x] 5.6 La variante adelgazada no hereda las specs de la plantilla, ni su suite, ni sus herramientas de release (decisión del usuario; spec `slim-template` y D5). Steps de «No hereda las specs ni la suite de la plantilla» y «La suite de un proyecto adelgazado empieza en verde» → rojo. En `build.mjs`:
+  - se dejan fuera `openspec/specs/`, todo `openspec/changes/`, `acceptance-tests/`, `scripts/release/` y `.github/workflows/release.yml`;
+  - se monta una suite vacía con las copias de la skill `acceptance-test-authoring` y el paquete de la suite, solo con los scripts `test`, `test:specs` y `lint:specs`;
+  - como sin specs `extract-gherkin.cjs` no crea `.extracted`, `lint:specs` lo crea antes de llamar a gplint.
+
+  → verde → commit
+
 ## 6. El `.bat` y la suite de Windows (D6, D7)
 
 - [x] 6.1 Steps `@windows` de `windows-global-install` y `slim-template`. Ejecutan el `.bat` con `cmd.exe` sobre un `<data>` y un `<config>` temporales, con y sin variables XDG, y con un perfil con espacios en la ruta. Los zips los sirve un servidor local. Rojo en Windows

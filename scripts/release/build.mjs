@@ -21,8 +21,10 @@
 //                                          con la ruta absoluta del script
 // - idd-<versión>.bat, el instalador, con la versión y la URL del zip dentro;
 // - idd-slim-<versión>.zip, la variante adelgazada: el árbol del tag sin
-//   openspec/schemas/, .agents/, .opencode/, .claude/ ni los changes
-//   archivados.
+//   openspec/schemas/, .agents/, .opencode/, .claude/ ni los changes de la
+//   plantilla, en curso o archivados, y sin lo que describe o prueba la plantilla completa: sus
+//   specs, su suite (en su lugar va una vacía, con las copias de la skill
+//   acceptance-test-authoring) y sus herramientas de release.
 //
 // Uso:
 //   node scripts/release/build.mjs --repo <repositorio> --tag v<x.y.z> --out <dir>
@@ -63,7 +65,29 @@ const ENGINE_SKILLS = {
   'wiki-manager': 'claude-plugin/skills/wiki-manager',
 };
 // Lo que no lleva la variante adelgazada (slim-template)
-const NOT_IN_SLIM = [/^openspec\/schemas\//, /^\.agents\//, /^\.opencode\//, /^\.claude\//, /^openspec\/changes\/archive\/./];
+const NOT_IN_SLIM = [
+  /^openspec\/schemas\//,
+  /^\.agents\//,
+  /^\.opencode\//,
+  /^\.claude\//,
+  /^openspec\/changes\/./,
+  /^openspec\/specs\/./,
+  /^acceptance-tests\//,
+  /^scripts\/release\//,
+  /^\.github\/workflows\/release\.yml$/,
+];
+// La suite vacía de la variante adelgazada: las copias de la skill
+// acceptance-test-authoring y, de la suite de la plantilla, sus dependencias
+const SKILL_REFERENCES = '.agents/skills/acceptance-test-authoring/references';
+const EMPTY_SUITE = {
+  'acceptance-tests/cucumber.cjs': `${SKILL_REFERENCES}/javascript/cucumber.cjs`,
+  'acceptance-tests/extract-gherkin.cjs': `${SKILL_REFERENCES}/javascript/extract-gherkin.cjs`,
+  'acceptance-tests/openspec-effective-paths.cjs': `${SKILL_REFERENCES}/javascript/openspec-effective-paths.cjs`,
+  'acceptance-tests/.gplintrc': `${SKILL_REFERENCES}/gplintrc.json`,
+  'acceptance-tests/package-lock.json': 'acceptance-tests/package-lock.json',
+};
+// Los scripts de la suite que no dependen de la plantilla
+const SUITE_SCRIPTS = ['test', 'test:specs', 'lint:specs'];
 
 function args(argv) {
   const out = {};
@@ -193,6 +217,20 @@ function slimZip(tree, file) {
     const source = path.join(tree, ...rel.split('/'));
     entries.file(rel, fs.readFileSync(source), fs.statSync(source).mode & 0o777);
   }
+  // openspec/specs/ sin ninguna spec, y openspec/changes/ sin ningún change
+  entries.file('openspec/specs/.gitkeep', '');
+  entries.file('openspec/changes/archive/.gitkeep', '');
+  for (const [to, from] of Object.entries(EMPTY_SUITE)) entries.file(to, fs.readFileSync(path.join(tree, ...from.split('/'))));
+  const suite = JSON.parse(fs.readFileSync(path.join(tree, 'acceptance-tests', 'package.json'), 'utf8'));
+  suite.scripts = Object.fromEntries(Object.entries(suite.scripts ?? {}).filter(([name]) => SUITE_SCRIPTS.includes(name)));
+  // Sin specs, extract-gherkin.cjs no crea .extracted y gplint no tiene qué revisar
+  if (suite.scripts['lint:specs']) {
+    suite.scripts['lint:specs'] = suite.scripts['lint:specs'].replace(
+      /^node extract-gherkin\.cjs && /,
+      'node extract-gherkin.cjs && node -e "require(\'node:fs\').mkdirSync(\'.extracted\', { recursive: true })" && '
+    );
+  }
+  entries.file('acceptance-tests/package.json', `${JSON.stringify(suite, null, 2)}\n`);
   writeZip(file, entries.list);
 }
 

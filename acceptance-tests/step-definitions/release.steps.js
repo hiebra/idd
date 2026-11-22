@@ -12,7 +12,19 @@ const { git } = require('../support/engine');
 const { tagRelease, buildRelease, unzip, filesUnder, artifactNames } = require('../support/release');
 
 // What the slim template leaves out of the full template's tree (slim-template)
-const NOT_IN_SLIM = [/^openspec\/schemas\//, /^\.agents\//, /^\.opencode\//, /^\.claude\//, /^openspec\/changes\/archive\/./];
+const NOT_IN_SLIM = [
+  /^openspec\/schemas\//,
+  /^\.agents\//,
+  /^\.opencode\//,
+  /^\.claude\//,
+  /^openspec\/changes\/./,
+  // What describes or tests the full template: its specs, its suite (which
+  // the slim template replaces with an empty one) and its release tools
+  /^openspec\/specs\/./,
+  /^acceptance-tests\//,
+  /^scripts\/release\//,
+  /^\.github\/workflows\/release\.yml$/,
+];
 
 function release(world, tag, { laterCommit = false } = {}) {
   const project = world.ensureProject();
@@ -51,7 +63,9 @@ When('se genera su variante adelgazada', function () {
 Then(/^sale de la plantilla completa del tag `(v[^`]+)`$/, function (tag) {
   const tracked = git(this.project.dir, 'ls-tree', '-r', '--name-only', tag).split('\n').filter(Boolean);
   const expected = tracked.filter((file) => !NOT_IN_SLIM.some((re) => re.test(file))).sort();
-  assert.deepEqual(filesUnder(this.slimDir), expected);
+  // The empty suite and the empty directories are not from the tag: their own scenarios check them
+  const generated = (file) => file.startsWith('acceptance-tests/') || ['openspec/specs/.gitkeep', 'openspec/changes/archive/.gitkeep'].includes(file);
+  assert.deepEqual(filesUnder(this.slimDir).filter((file) => !generated(file)), expected);
   for (const file of expected) {
     const atTag = git(this.project.dir, 'show', `${tag}:${file}`);
     assert.equal(fs.readFileSync(path.join(this.slimDir, file), 'utf8'), atTag, file);
@@ -170,4 +184,49 @@ Then('son idénticos', function () {
   for (const file of installed) {
     assert.ok(fs.readFileSync(path.join(this.global.schemaDir, file)).equals(fs.readFileSync(path.join(this.schemaOrigin, file))), file);
   }
+});
+
+// --- Sin las specs ni la suite de la plantilla ----------------------------------------------
+
+const { spawnSync } = require('node:child_process');
+
+When('se buscan en ella las specs, los steps y las herramientas de release de la plantilla', function () {
+  this.slimFiles = filesUnder(this.slimDir);
+});
+
+Then(/^no hay ninguna spec en `openspec\/specs\/`$/, function () {
+  assert.deepEqual(this.slimFiles.filter((file) => file.startsWith('openspec/specs/') && file.endsWith('.md')), []);
+});
+
+Then('la suite de aceptación no tiene steps ni soporte', function () {
+  const suite = this.slimFiles.filter((file) => file.startsWith('acceptance-tests/'));
+  assert.ok(suite.includes('acceptance-tests/cucumber.cjs'), suite.join('\n'));
+  assert.deepEqual(suite.filter((file) => /^acceptance-tests\/(step-definitions|support|core-tests|release-tests)\/.*\.(c|m)?js$/.test(file)), []);
+  // The skill's copies, as they are in the skill
+  const skill = path.join(__dirname, '..', '..', '.agents', 'skills', 'acceptance-test-authoring', 'references');
+  for (const [copy, original] of [
+    ['cucumber.cjs', 'javascript/cucumber.cjs'],
+    ['extract-gherkin.cjs', 'javascript/extract-gherkin.cjs'],
+    ['openspec-effective-paths.cjs', 'javascript/openspec-effective-paths.cjs'],
+    ['.gplintrc', 'gplintrc.json'],
+  ]) {
+    assert.equal(fs.readFileSync(path.join(this.slimDir, 'acceptance-tests', copy), 'utf8'), fs.readFileSync(path.join(skill, ...original.split('/')), 'utf8'), copy);
+  }
+});
+
+Then('no tiene el workflow ni los scripts de release de la plantilla', function () {
+  assert.deepEqual(this.slimFiles.filter((file) => file.startsWith('scripts/release/') || file === '.github/workflows/release.yml'), []);
+});
+
+When('se pasan en ella la suite de aceptación y el lint de las specs', function () {
+  const suite = path.join(this.slimDir, 'acceptance-tests');
+  const npm = (...args) => spawnSync('npm', args, { cwd: suite, encoding: 'utf8', shell: process.platform === 'win32', env: { ...process.env, OPENSPEC_TELEMETRY: '0' } });
+  const install = npm('ci', '--no-audit', '--no-fund');
+  assert.equal(install.status, 0, `${install.stdout}\n${install.stderr}`);
+  this.slimRuns = { test: npm('test'), lint: npm('run', 'lint:specs') };
+});
+
+Then('los dos terminan con éxito, sin ningún escenario', function () {
+  for (const [name, run] of Object.entries(this.slimRuns)) assert.equal(run.status, 0, `${name}:\n${run.stdout}\n${run.stderr}`);
+  assert.match(this.slimRuns.test.stdout, /^0 scenarios/m, this.slimRuns.test.stdout);
 });
