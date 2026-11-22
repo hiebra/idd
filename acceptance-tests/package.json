@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@cucumber/cucumber": "^13.3.0",
+    "ajv": "^8.20.0",
     "cheerio": "^1.2.0",
     "glob": "^14.0.6",
     "gplint": "^2.6.2"
