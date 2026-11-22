@@ -426,7 +426,19 @@ export function checkMerge(dir, target, source, env = process.env) {
           `\`node .agents/openspec/branch-change.mjs check merge ${branch} ${target}\`, para que no haya conflictos que resolver en '${target}', y vuelve a ejecutar esta.`
       );
     }
-    return allow(`Se puede llevar la rama temporal '${branch}' a '${target}'.`);
+    if (isEphemeral(env)) {
+      return allow(
+        `Se puede llevar la rama de la sesión '${branch}' a '${target}' por PR: sube la rama (\`git push -u origin ${branch}\`), ` +
+          `abre un PR de \`${branch}\` contra \`${target}\` con las herramientas de GitHub de la sesión y recomienda al usuario fusionarlo con un commit de fusión, no con squash. ` +
+          `En un contenedor efímero no hagas push a '${target}': el PR lo fusiona el usuario.`
+      );
+    }
+    return allow(
+      `Se puede llevar la rama temporal '${branch}' a '${target}' sin cambiar de rama, con el commit que daría \`git merge --no-ff\` desde '${target}': ` +
+        `\`commit=$(git commit-tree HEAD^{tree} -p origin/${target} -p HEAD -m "Merge ${branch} into ${target}")\` y \`git push origin "$commit":refs/heads/${target}\`; ` +
+        `después, \`git fetch origin ${target}\`. Si el push se deniega, da al usuario la orden exacta, con el commit ya creado, y detente; ` +
+        `si el remoto lo rechaza por no ser un avance rápido, trae otra vez \`origin/${target}\` y repite la puerta.`
+    );
   }
   return deny(
     `check merge no admite el destino '${target}' desde ${branch ? `la rama '${branch}'` : 'un HEAD separado'}: ` +
