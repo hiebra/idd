@@ -18,8 +18,9 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 ## 3. Sustitución (zona de código)
 
 - [x] 3.1 Cambiar el script `lint:specs` a `node extract-gherkin.cjs && gplint .extracted`, `npm uninstall gherkin-lint` y borrar `.gherkin-lintrc`. `npm run lint:specs` termina sin errores.
-- [ ] 3.2 En `core-tests/`, un test que compruebe que `lint:specs` es exactamente `node extract-gherkin.cjs && gplint .extracted` y que `.gplintrc` solo usa los niveles `"error"` y `"off"` (D4 y el riesgo del nivel desconocido).
-- [ ] 3.3 `npm audit` en `acceptance-tests/` no informa de las vulnerabilidades de `gherkin-lint`. Anotar aquí el resultado.
+- [x] 3.2 En `core-tests/`, un test que compruebe que `lint:specs` es exactamente `node extract-gherkin.cjs && gplint .extracted` y que `.gplintrc` solo usa los niveles `"error"` y `"off"` (D4 y el riesgo del nivel desconocido).
+- [x] 3.3 `npm audit` en `acceptance-tests/` no informa de las vulnerabilidades de `gherkin-lint`. Anotar aquí el resultado.
+  - Resultado: `found 0 vulnerabilities`. Antes había 6 (5 altas y 1 moderada), de `protobufjs` y `uuid` a través de `gherkin-lint`.
 
 ## 4. Skills y documentación (zona de código)
 
