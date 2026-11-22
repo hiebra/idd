@@ -37,7 +37,7 @@ Alternativa descartada: dejar las revisiones en plan y no inyectar `openspec-exp
 
 ### D2. El cambio de agente se decide por turno
 
-En el hook `context` de la sesión operativa, el turno es el último mensaje `user` que no lleva la marca del plugin (`[openspec-autopilot]`), identificado por su posición entre los mensajes del usuario y su texto. La metadata guarda `agentTurn: { key, agent, kind }`, donde `kind` es lo que se inyecta en todo el turno:
+En el hook `context` de la sesión operativa, el turno es el último mensaje `user` de la petición, también el que lleva la marca del plugin (`[openspec-autopilot]`), porque el mensaje con el que el plugin arranca cada paso la lleva y es el primer turno. Su clave es el número de mensajes del modelo (asistente y tools) que hay antes de ese mensaje, más un hash de su texto. No cambia entre las peticiones de un turno, aunque otro hook (`session-bootstrap`) inserte sus recordatorios como mensajes `user` antes del mensaje del usuario, y cambia con cada mensaje nuevo, porque entre dos mensajes del usuario siempre hay al menos una respuesta del modelo. La metadata guarda `agentTurn: { key, agent, kind }`, donde `kind` es lo que se inyecta en todo el turno:
 
 | agente del turno anterior | agente de este turno | `kind`                      |
 | ------------------------- | -------------------- | --------------------------- |
@@ -49,6 +49,8 @@ En el hook `context` de la sesión operativa, el turno es el último mensaje `us
 Al empezar un turno nuevo (la clave cambia), el plugin calcula `kind`, lo escribe en la metadata y lo inyecta; en las peticiones siguientes del mismo turno (tras cada tool) lee `kind` y repite la misma inyección, sin volver a calcularla ni a escribir. Si `input.agent` no llega o no es `build` ni `plan`, se trata como build, que es el comportamiento de hoy.
 
 Alternativa descartada: decidir por petición comparando con la petición anterior. Dentro de un turno en plan, la segunda petición (tras una tool) ya vería "plan → plan" y perdería la instrucción completa, que no queda en el historial.
+
+Alternativa descartada: contar los mensajes `user` sin la marca del plugin. Deja sin clave el primer turno de cada paso, y las inserciones de otros hooks cambian la posición del mensaje del usuario.
 
 ### D3. Los textos nuevos, en `lib/prompts.mjs`
 
@@ -86,6 +88,7 @@ Alternativa descartada: la directiva `notice` de `screen` que ya existe. No tien
 - [Calcular el estado de git en el hook `context` retrasa la primera petición de un turno en plan] → Solo una vez por turno en plan, con el límite de tiempo de `lib/git.mjs`; un fallo se registra y el turno sigue sin `planTurn` (sin aviso), sin bloquear la petición.
 - [`input.agent` no llega en OpenCode real] → Todo se trata como build y el plugin se comporta como hoy; la task de comprobación con OpenCode real lo detecta antes de implementar.
 - [La TUI no muestra el modal y la cadena queda en `plan-notice`] → Se vuelve a pedir al presentarse una TUI o volver a la sesión, y un prompt del usuario la libera (D5).
+- [Un turno interrumpido antes de que el modelo responda y un mensaje siguiente con el mismo texto dan la misma clave] → Se tratan como un solo turno, con la inyección del primero. Solo importa si el usuario cambia de agente entre los dos, y el turno siguiente con otro texto vuelve a decidir.
 
 ## Migration Plan
 
