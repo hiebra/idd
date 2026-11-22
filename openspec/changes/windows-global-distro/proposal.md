@@ -46,10 +46,10 @@ Cada proyecto creado desde la plantilla lleva su propia copia del schema `intent
 ### Modified Capabilities
 
 - `session-bootstrap`: el núcleo pasa a Node. Puede instalarse de forma global en OpenCode, y entonces no actúa en proyectos que no sean intent-driven y no instala el motor.
-- `llm-wiki`: en la instalación global, la versión del motor la fija la release, no un archivo del proyecto, y el motor se expone sin symlinks.
-- `openspec-autopilot`: el plugin puede instalarse de forma global y encuentra `branch-change.mjs` junto a la skill `openspec-git-discipline`.
+- `openspec-autopilot`: el plugin puede instalarse de forma global, y entonces solo actúa en proyectos intent-driven, y encuentra `branch-change.mjs` junto a la skill `openspec-git-discipline`, en el proyecto o en la instalación global.
 - `openspec-change-lifecycle`: `branch-change.mjs` deja de estar en una ruta fija del proyecto (`.agents/openspec/`) y va con la skill `openspec-git-discipline`. Los requisitos que lo citan por esa ruta pasan a citarlo por la skill.
-- `agent-skills`: en la variante adelgazada, las skills del schema no están en el proyecto: las aporta la instalación global, y el requisito de una única copia en `.agents/skills/` solo rige para la plantilla completa.
+
+`llm-wiki` y `agent-skills` no cambian: sus requisitos describen la plantilla completa, que sigue igual. Lo que rige en la variante adelgazada y en la instalación global (la versión del motor la fija la release, las skills no están en el proyecto) lo recogen `windows-global-install` y `slim-template`.
 
 ## Impact
 
