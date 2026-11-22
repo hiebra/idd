@@ -22,7 +22,7 @@ Solo las specs vigentes de `openspec/specs/`, tal cual:
 npm run test:specs
 ```
 
-Solo los escenarios con la etiqueta `@windows`, que ejecutan el instalador con `cmd.exe` y solo corren en Windows (en el job de Windows del workflow de release); el perfil por defecto y `test:specs` los dejan fuera:
+Solo los escenarios de Windows, que ejecutan el instalador con `cmd.exe` y solo corren en Windows (en el job de Windows del workflow de release); el perfil por defecto y `test:specs` los dejan fuera. Se eligen por nombre, con la lista de `windows-scenarios.cjs`, porque un escenario extraído de un `spec.md` no puede llevar etiquetas:
 
 ```bash
 npm run test:windows
@@ -50,7 +50,7 @@ Cada ejecución reconstruye `.extracted/` (los `.feature` extraídos de los `spe
 
 ## Estructura
 
-- `cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gplintrc` son copias literales de la skill, salvo los perfiles de `@windows` de `cucumber.cjs`; sus nombres son obligatorios. `.gplintrc` es la configuración del lint con [gplint](https://github.com/gplint/gplint), y solo usa los niveles `"error"` y `"off"`: con otro nivel, gplint sale con 0 sin revisar nada.
+- `cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gplintrc` son copias literales de la skill, salvo los perfiles de Windows de `cucumber.cjs`; sus nombres son obligatorios. `.gplintrc` es la configuración del lint con [gplint](https://github.com/gplint/gplint), y solo usa los niveles `"error"` y `"off"`: con otro nivel, gplint sale con 0 sin revisar nada.
 - `support/` contiene el World y el soporte de los escenarios.
 - `step-definitions/` contiene los pasos, que solo llaman a métodos de intención del World y hacen aserciones.
 

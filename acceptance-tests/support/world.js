@@ -197,6 +197,7 @@ class SessionWorld extends World {
 
   cleanUp() {
     this.sim?.dispose();
+    this.releaseServer?.stop();
     fs.rmSync(this.workDir, { recursive: true, force: true });
   }
 }

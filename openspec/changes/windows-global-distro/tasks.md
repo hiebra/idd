@@ -1,4 +1,4 @@
-Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → commit. Un commit nunca mezcla `openspec/` con la zona de código, salvo este `tasks.md`. Las referencias D1 a D7 son las del `design.md`. Los escenarios con la etiqueta `@windows` solo se ejecutan en el job de Windows del workflow (D7).
+Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → commit. Un commit nunca mezcla `openspec/` con la zona de código, salvo este `tasks.md`. Las referencias D1 a D7 son las del `design.md`. Los escenarios de Windows solo se ejecutan en el job de Windows del workflow (D7). Se eligen por nombre, con la lista de `acceptance-tests/windows-scenarios.cjs`, porque un escenario extraído de un `spec.md` no puede llevar etiquetas: lo que las tasks llaman `@windows` son esos escenarios.
 
 ## 1. Punto de partida
 
@@ -59,6 +59,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 ## 6. El `.bat` y la suite de Windows (D6, D7)
 
 - [ ] 6.1 Steps `@windows` de `windows-global-install` y `slim-template`. Ejecutan el `.bat` con `cmd.exe` sobre un `<data>` y un `<config>` temporales, con y sin variables XDG, y con un perfil con espacios en la ruta. Los zips los sirve un servidor local. Rojo en Windows
+  - Escritos en `step-definitions/windows.steps.js` y `support/windows.js`, sin ejecutar: en Linux solo se comprueba que están todos definidos (`cucumber-js -p windows --dry-run`). El rojo y el verde se ven en el job de Windows (6.4).
 - [ ] 6.2 Escribir el `.bat`, solo con `cmd`, `curl.exe` y `tar.exe`:
   - calcula `<data>` y `<config>`;
   - lee la versión instalada;
@@ -68,7 +69,8 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - escribe al final `installed.txt` y `version`.
 
   → verde en Windows → commit
-- [ ] 6.3 Añadir `.github/workflows/release.yml`, que se dispara con los tags `v*`:
+  - Escrito en `scripts/release/idd.bat` (5.4), sin ejecutar en Windows. No mueve directorios entre volúmenes: descomprime `data/` y `config/` directamente en `<data>` y `<config>` con `tar.exe --strip-components=1`, después de borrar lo de `installed.txt`; la versión se sigue escribiendo al final.
+- [x] 6.3 Añadir `.github/workflows/release.yml`, que se dispara con los tags `v*`:
   - un job de Linux que pasa la suite, monta los artefactos y ejecuta la prueba de 5.2;
   - un job `windows-latest` que pasa el perfil `windows` con los artefactos montados;
   - la publicación de la release con los tres artefactos.

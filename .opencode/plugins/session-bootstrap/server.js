@@ -236,8 +236,10 @@ export default {
               if (!event.env) event.env = {};
               if (engine) event.env.CLAUDE_PLUGIN_ROOT = engine;
               if (!bin) return;
-              const current = event.env.PATH ?? process.env.PATH ?? "";
-              event.env.PATH = current ? `${bin}${path.delimiter}${current}` : bin;
+              // En Windows la variable se llama Path, y una copia del entorno distingue mayúsculas
+              const key = Object.keys(event.env).find((name) => name.toUpperCase() === "PATH") ?? "PATH";
+              const current = event.env[key] ?? process.env.PATH ?? "";
+              event.env[key] = current ? `${bin}${path.delimiter}${current}` : bin;
             } catch (error) {
               log("create.before:", error);
               warnEnv(result);

@@ -33,10 +33,11 @@ const ENGINE_SKILLS = {
 };
 
 class GlobalInstall {
-  constructor(workDir) {
+  // dirs: the <data> and <config> where a real .bat installed it, on Windows
+  constructor(workDir, dirs = null) {
     this.root = path.join(workDir, 'global');
-    this.data = path.join(this.root, 'data');
-    this.config = path.join(this.root, 'config');
+    this.data = dirs?.data ?? path.join(this.root, 'data');
+    this.config = dirs?.config ?? path.join(this.root, 'config');
   }
 
   get skillsDir() {

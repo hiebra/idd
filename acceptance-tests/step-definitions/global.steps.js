@@ -79,8 +79,11 @@ module.exports = { globalInstall };
 
 // --- El motor del wiki de la instalación global -----------------------------------------
 
-Given('una máquina Windows con la instalación global de una release', function () {
-  globalInstall(this).installSession({ engine: this.engine });
+// On Windows, with the release's real .bat (windows.steps.js); elsewhere,
+// laid out as the release installs it
+Given('una máquina Windows con la instalación global de una release', async function () {
+  if (process.platform === 'win32') await require('./windows.steps').installWithBat(this);
+  else globalInstall(this).installSession({ engine: this.engine });
 });
 
 Given('un proyecto creado desde la variante adelgazada de esa release', function () {

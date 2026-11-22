@@ -37,9 +37,11 @@ function buildRelease({ project, tag, outDir, engineUrl = null, baseUrl = 'http:
   return Object.fromEntries(Object.entries(names).map(([kind, name]) => [kind, path.join(outDir, name)]));
 }
 
+// On Windows, with tar.exe, as the .bat does
 function unzip(zip, dir) {
   fs.mkdirSync(dir, { recursive: true });
-  const result = spawnSync('unzip', ['-q', '-o', zip, '-d', dir], { encoding: 'utf8' });
+  const [command, args] = process.platform === 'win32' ? ['tar.exe', ['-xf', zip, '-C', dir]] : ['unzip', ['-q', '-o', zip, '-d', dir]];
+  const result = spawnSync(command, args, { encoding: 'utf8' });
   if (result.status !== 0) throw new Error(`unzip ${zip} failed (${result.status}):\n${result.stderr}`);
   return dir;
 }

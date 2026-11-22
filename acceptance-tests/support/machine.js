@@ -32,6 +32,10 @@ const path = require('node:path');
 const { EPHEMERAL_VARS, EPHEMERAL_ENV } = require('./branches');
 
 const REAL_NODE = process.execPath;
+const WINDOWS = process.platform === 'win32';
+
+// The PATH of an environment, whatever the case of its name
+const pathOf = (env) => env[Object.keys(env).find((key) => /^path$/i.test(key)) ?? 'PATH'] ?? '';
 const OLD_NODE_VERSION = '20.11.0';
 const GLOBAL_OPENSPEC_VERSION = '0.9.0';
 const NPM_FAILURE_LINE = 'npm-simulado: "comillas" \\barras\\ tab\tfin \\n literal y control \u0001 fin';
@@ -100,6 +104,13 @@ class Machine {
     // true: the session runs in an ephemeral container (manage-git-discipline)
     this.ephemeral = false;
 
+    this.spyLog = path.join(workDir, 'npm-calls.log');
+    this.gitLog = path.join(workDir, 'git-calls.log');
+    this.emptyHome = path.join(workDir, 'home-sin-hub');
+    this.npmCache = process.env.npm_config_cache || path.join(os.homedir(), '.npm');
+    // On Windows (the scenarios of the release workflow's Windows job), the
+    // machine is the real one: its PATH, without spies nor simulated tools
+    if (WINDOWS) return;
     const realNpm = which('npm');
     if (!realNpm) throw new Error('the acceptance suite needs npm on the machine that runs it');
     this.realNpm = realNpm;
@@ -107,10 +118,6 @@ class Machine {
     // hold global packages, such as a real global openspec
     this.nodeDir = path.join(workDir, 'bin', 'node');
     this.basePath = [this.nodeDir, '/usr/bin', '/bin'];
-    this.spyLog = path.join(workDir, 'npm-calls.log');
-    this.gitLog = path.join(workDir, 'git-calls.log');
-    this.emptyHome = path.join(workDir, 'home-sin-hub');
-    this.npmCache = process.env.npm_config_cache || path.join(os.homedir(), '.npm');
     this.#buildBins();
   }
 
@@ -194,6 +201,7 @@ class Machine {
   }
 
   path() {
+    if (WINDOWS) return pathOf(process.env);
     if (!this.hasBash) return [this.spyDir, this.nodeDir].join(path.delimiter);
     if (!this.hasNpm) {
       return [this.spyGitOnlyDir(), ...(this.nodeWithoutNpm ? [this.nodeOnlyDir()] : []), this.noNpmDir].join(path.delimiter);
@@ -226,7 +234,10 @@ class Machine {
   }
 
   env(extra = {}) {
-    const env = { ...cleanEnv(), PATH: this.path(), ...extra };
+    const base = cleanEnv();
+    // Windows names it Path, and a copy of the environment is case-sensitive
+    for (const key of Object.keys(base)) if (/^path$/i.test(key)) delete base[key];
+    const env = { ...base, PATH: this.path(), ...extra };
     if (!this.hasUserHub) {
       fs.mkdirSync(this.emptyHome, { recursive: true });
       Object.assign(env, { HOME: this.emptyHome, npm_config_cache: env.npm_config_cache ?? this.npmCache });
@@ -286,4 +297,9 @@ class Machine {
 // itself "in the session", whatever the simulated machine's PATH is
 const BASH = which('bash', ['/usr/bin', '/bin', process.env.PATH || ''].join(path.delimiter)) ?? 'bash';
 
-module.exports = { Machine, which, BASH };
+// A command "in the session": with bash, or on Windows with cmd.exe
+function shellCommand(command) {
+  return WINDOWS ? [process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', command]] : [BASH, ['-c', command]];
+}
+
+module.exports = { Machine, which, BASH, shellCommand, pathOf, WINDOWS };

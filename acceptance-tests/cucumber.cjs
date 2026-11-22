@@ -9,10 +9,13 @@ const common = {
   format: ['progress-bar', ['html', 'reports/cucumber-report.html']],
 };
 
-// Project addition to the skill's copy: the scenarios tagged @windows only
-// run on Windows, in the release workflow's Windows job (design D7 of
-// windows-global-distro)
-const notWindows = { tags: 'not @windows' };
+// Project addition to the skill's copy: the scenarios of windows-scenarios.cjs
+// only run on Windows, in the release workflow's Windows job (design D7 of
+// windows-global-distro); they are chosen by name, since an extracted
+// scenario cannot carry a tag
+const windowsScenarios = require('./windows-scenarios.cjs');
+
+const notWindows = { name: windowsScenarios.notWindows };
 
 const specs = {
   ...common,
@@ -22,7 +25,7 @@ const specs = {
 
 const windows = {
   ...common,
-  tags: '@windows',
+  name: windowsScenarios.onlyWindows,
 };
 
 module.exports = { default: { ...common, ...notWindows }, specs, windows };

@@ -84,8 +84,9 @@ class FakeEngine {
     }
   }
 
+  // A file:// URL, also with a Windows path
   get url() {
-    return `file://${this.dir}`;
+    return require('node:url').pathToFileURL(this.dir).href;
   }
 
   // The machine cannot reach the engine's repository

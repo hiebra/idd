@@ -1,0 +1,111 @@
+# Release de la plantilla (design D5 y D7 de windows-global-distro, ADR-0024).
+#
+# Con cada tag v<x.y.z>:
+# - linux: pasa la suite (sin los escenarios de Windows), las pruebas del
+#   núcleo, el lint de las specs y la prueba de la release, que compara el
+#   schema y las skills no propias con su origen; y monta los tres artefactos
+#   desde el tag con scripts/release/build.mjs;
+# - windows: pasa el perfil `windows` de la suite, que ejecuta el .bat con
+#   cmd.exe sobre releases que monta él mismo desde el tag;
+# - publish: publica la release del tag con los tres artefactos, solo si los
+#   dos jobs anteriores pasan.
+#
+# Un disparo manual (workflow_dispatch) pasa los dos primeros jobs sin
+# publicar nada: monta los artefactos con un tag local, v0.0.0-ci, que no se
+# sube.
+
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'v0.0.0-ci' }}
+  OPENSPEC_TELEMETRY: '0'
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dependencias
+        run: |
+          npm ci --no-audit --no-fund
+          npm ci --no-audit --no-fund --prefix acceptance-tests
+      - name: Identidad de git para los repositorios de la suite
+        run: |
+          git config --global user.name "release"
+          git config --global user.email "release@example.invalid"
+      - name: Pruebas del núcleo
+        working-directory: acceptance-tests
+        run: npm run test:core
+      - name: Lint de las specs
+        working-directory: acceptance-tests
+        run: npm run lint:specs
+      - name: Suite de aceptación
+        working-directory: acceptance-tests
+        run: npm test
+      - name: Schema y skills iguales a su origen
+        working-directory: acceptance-tests
+        run: npm run test:release
+      - name: Tag local del disparo manual
+        if: github.ref_type != 'tag'
+        run: git tag -f "$TAG"
+      - name: Artefactos
+        run: node scripts/release/build.mjs --repo . --tag "$TAG" --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: dist/
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      # Los archivos tal como están en el repositorio, sin CRLF
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dependencias
+        run: |
+          npm ci --no-audit --no-fund
+          npm ci --no-audit --no-fund --prefix acceptance-tests
+      - name: Identidad de git para los repositorios de la suite
+        run: |
+          git config --global user.name "release"
+          git config --global user.email "release@example.invalid"
+      - name: Escenarios de Windows
+        working-directory: acceptance-tests
+        run: npm run test:windows
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: dist
+      - name: Release del tag con sus tres artefactos
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$TAG" dist/* --repo "${{ github.repository }}" --title "$TAG" --notes "Instalador para Windows (idd-*.bat), lo que instala (idd-global-*.zip) y la variante adelgazada de la plantilla (idd-slim-*.zip) de $TAG."
