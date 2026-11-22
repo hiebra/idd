@@ -8,6 +8,9 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-idd-812f22d-autopilot-rama-por-sesion.md](2026-11-22-idd-812f22d-autopilot-rama-por-sesion.md) | Manifiesto de lo que tocó autopilot-rama-por-sesion en el commit del archivado (idd@812f22d) | collection, collection-manifest, git | 2026-11-22 |
+| [2026-11-22-idd-4b8d2b3-name-change-in-merge-title.md](2026-11-22-idd-4b8d2b3-name-change-in-merge-title.md) | Manifiesto de lo que tocó name-change-in-merge-title en el commit del archivado (idd@4b8d2b3) | collection, collection-manifest, git | 2026-11-22 |
+| [2026-11-22-idd-9eae630-autopilot-plan-explore.md](2026-11-22-idd-9eae630-autopilot-plan-explore.md) | Manifiesto de lo que tocó autopilot-plan-explore en el commit del archivado (idd@9eae630) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-f9f014c-apply-one-task-per-session-in-normal-mode.md](2026-11-22-idd-f9f014c-apply-one-task-per-session-in-normal-mode.md) | Manifiesto de lo que tocó apply-one-task-per-session-in-normal-mode en el commit del archivado (idd@f9f014c) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-fc31fe5-reorder-wiki-resync.md](2026-11-22-idd-fc31fe5-reorder-wiki-resync.md) | Manifiesto de lo que tocó reorder-wiki-resync en el commit del archivado (idd@fc31fe5) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-288741b-guiar-revision-con-tests.md](2026-11-22-idd-288741b-guiar-revision-con-tests.md) | Manifiesto de lo que tocó guiar-revision-con-tests en el commit del archivado (idd@288741b) | collection, collection-manifest, git | 2026-11-22 |
@@ -35,6 +38,8 @@ Last updated: 2026-11-22
 
 ## Recent Changes
 
+- 2026-11-22: Manifiesto del archivado de autopilot-rama-por-sesion (idd@812f22d)
+- 2026-11-22: Manifiesto del archivado de autopilot-plan-explore (idd@9eae630)
 - 2026-11-22: Manifiesto del archivado de reorder-wiki-resync (idd@fc31fe5)
 - 2026-11-22: Manifiesto del archivado de guiar-revision-con-tests (idd@288741b)
 - 2026-11-22: Manifiesto del archivado de windows-support (idd@3d2d8fe)
