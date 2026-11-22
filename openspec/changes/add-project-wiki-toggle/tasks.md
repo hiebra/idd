@@ -4,11 +4,13 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 1. Comprobaciones previas en real (antes de implementar lo que dependa de ellas)
 
-- [ ] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core`, `npm run lint:specs`)
-- [ ] 1.2 Montar el banco de OpenCode fuera del repositorio (lección 9 de `.wiki/raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md`), con `XDG_CONFIG_HOME` aislado y la TUI en `tmux`. Pedir antes al usuario que apruebe `npm install @opencode/cli@2.3.2` o añadir reglas `allow` estrechas para ese paquete (`.wiki/raw/notes/2026-11-22-ll-modo-auto-instalar-opencode.md`). Si no se consigue en la nube, avisar al usuario y seguir con lo que no dependa del banco
-- [ ] 1.3 En OpenCode 2.3.2, comprobar en qué ruta del proyecto se cargan los comandos (`.opencode/command/` o `.opencode/commands/`), si admiten argumentos y si un comando añadido a mitad de sesión aparece en la TUI. Fija la ruta del comando de D4
-- [ ] 1.4 En Claude Code 2.1.330, comprobar si una skill y un comando que se enlazan a mitad de sesión (después del hook, desde una herramienta Bash) se pueden usar en esa misma sesión. Decide el aviso de D4 sobre lo que vale desde la sesión siguiente
-- [ ] 1.5 Comprobar que DashScope (`dashscope-intl.aliyuncs.com`, con la credencial que pone el proxy) sirve como proveedor `@ai-sdk/openai-compatible` de OpenCode en el banco, con un modelo que use herramientas. Si no sirve, avisar al usuario: el nivel 2 de D9 necesita otro proveedor
+- [x] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core`, `npm run lint:specs`)
+- [x] 1.2 Montar el banco de OpenCode fuera del repositorio (lección 9 de `.wiki/raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md`), con `XDG_CONFIG_HOME` aislado y la TUI en `tmux`. Pedir antes al usuario que apruebe `npm install @opencode/cli@2.3.2` o añadir reglas `allow` estrechas para ese paquete (`.wiki/raw/notes/2026-11-22-ll-modo-auto-instalar-opencode.md`). Si no se consigue en la nube, avisar al usuario y seguir con lo que no dependa del banco
+- [x] 1.3 En OpenCode 2.3.2, comprobar en qué ruta del proyecto se cargan los comandos (`.opencode/command/` o `.opencode/commands/`), si admiten argumentos y si un comando añadido a mitad de sesión aparece en la TUI. Fija la ruta del comando de D4
+  - Resultado: carga las dos rutas, admite `$ARGUMENTS` y un comando añadido a mitad de sesión aparece y se ejecuta en la TUI. Se fija `.opencode/commands/`, en plural como `plugins/` y `skills/`
+- [x] 1.4 En Claude Code 2.1.330, comprobar si una skill y un comando que se enlazan a mitad de sesión (después del hook, desde una herramienta Bash) se pueden usar en esa misma sesión. Decide el aviso de D4 sobre lo que vale desde la sesión siguiente
+  - Resultado: con `.claude/skills/` y `.claude/commands/` ya existentes al abrir la sesión y symlinks relativos a destinos dentro del proyecto, la skill y el comando enlazados a mitad de sesión se usan en esa misma sesión. Con destinos fuera del proyecto y los directorios creados a mitad de sesión, no; no se ha aislado cuál de las dos cosas lo impide
+- [x] 1.5 Comprobar que DashScope (`dashscope-intl.aliyuncs.com`, con la credencial que pone el proxy) sirve como proveedor `@ai-sdk/openai-compatible` de OpenCode en el banco, con un modelo que use herramientas. Si no sirve, avisar al usuario: el nivel 2 de D9 necesita otro proveedor
 
 ## 2. Zonas: `openspec/config.yaml` neutro (D11)
 
