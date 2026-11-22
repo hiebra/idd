@@ -84,12 +84,16 @@ function skillsIn(projectDir, source) {
 }
 
 // The project skills an agent finds, in the order it loads them
-function discoverSkills(agent, projectDir) {
+// globalSkillsDir: OpenCode's global skills, <config>/opencode/skills
+// (windows-global-distro), after the project's
+function discoverSkills(agent, projectDir, { globalSkillsDir = null } = {}) {
   const sources = SOURCES[agent];
   if (!sources) throw new Error(`no skill discovery rules for agent '${agent}'`);
   const found = new Map();
-  for (const source of sources) {
-    for (const skill of skillsIn(projectDir, source)) {
+  const all = [...sources.map((source) => skillsIn(projectDir, source))];
+  if (agent === 'OpenCode' && globalSkillsDir) all.push(skillsIn(path.dirname(globalSkillsDir), path.basename(globalSkillsDir)));
+  for (const skills of all) {
+    for (const skill of skills) {
       if (!found.has(skill.id)) found.set(skill.id, skill);
     }
   }
@@ -155,10 +159,10 @@ const WIKI_OPERATIONS = {
   OpenCode: { query: { skill: 'wiki-query' }, management: { skill: 'wiki-manager' } },
 };
 
-function wikiOperations(agent, projectDir) {
+function wikiOperations(agent, projectDir, options = {}) {
   const spec = WIKI_OPERATIONS[agent];
   if (!spec) throw new Error(`no wiki operations for agent '${agent}'`);
-  const skills = discoverSkills(agent, projectDir);
+  const skills = discoverSkills(agent, projectDir, options);
   const commands = discoverCommands(agent, projectDir);
   const operations = {};
   for (const [kind, { skill, command }] of Object.entries(spec)) {

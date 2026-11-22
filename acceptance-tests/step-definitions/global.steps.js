@@ -76,3 +76,29 @@ Then('es el del proyecto', function () {
 });
 
 module.exports = { globalInstall };
+
+// --- El motor del wiki de la instalación global -----------------------------------------
+
+Given('una máquina Windows con la instalación global de una release', function () {
+  globalInstall(this).installSession({ engine: this.engine });
+});
+
+Given('un proyecto creado desde la variante adelgazada de esa release', function () {
+  this.ensureProject().slim();
+});
+
+Then('no se descarga ningún motor del wiki', function () {
+  assert.deepEqual(this.engineClones(), [], this.session.log);
+  assert.equal(this.project.hasEngineInstall(), false, this.session.log);
+});
+
+Then('las operaciones del wiki usan el motor de la instalación global', function () {
+  const { operations, refs, helperRef, helper } = this.loadWikiEngine('OpenCode');
+  for (const [kind, operation] of Object.entries(operations)) {
+    assert.ok(operation, `OpenCode has no wiki ${kind}`);
+    assert.ok(operation.file.startsWith(this.global.skillsDir), `${kind}: ${operation.file}`);
+    assert.equal(refs[kind], this.engine.pinnedRef, kind);
+  }
+  assert.equal(this.session.env.CLAUDE_PLUGIN_ROOT, path.join(this.global.engineDir, 'claude-plugin'), this.session.log);
+  assert.equal(helperRef, this.engine.pinnedRef, `${helper?.stdout}\n${helper?.stderr}\n${this.session.log}`);
+});

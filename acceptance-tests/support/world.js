@@ -131,7 +131,7 @@ class SessionWorld extends World {
   // (CLAUDE_PLUGIN_ROOT, design D1)
   loadWikiEngine(agentName) {
     const project = this.ensureProject();
-    const operations = skills.wikiOperations(agentName, project.dir);
+    const operations = skills.wikiOperations(agentName, project.dir, { globalSkillsDir: this.machine.globalInstall?.skillsDir ?? null });
     const refs = Object.fromEntries(Object.entries(operations).map(([kind, op]) => [kind, op ? refIn(op.file) : null]));
     const session = this.sessions[agentName];
     const helper = session ? session.run('"$CLAUDE_PLUGIN_ROOT/bin/llm-wiki"') : null;

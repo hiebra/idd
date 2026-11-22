@@ -26,6 +26,12 @@ const GIT_DISCIPLINE = 'openspec-git-discipline';
 // The single line of the skill's SKILL.md that gives the script's path (design D4)
 const SCRIPT_LINE = /^El script es: `([^`]+)`$/m;
 
+// The wiki engine's skills that OpenCode uses, and where they are in the engine
+const ENGINE_SKILLS = {
+  'wiki-query': ['plugins', 'llm-wiki-opencode', 'skills', 'wiki-query'],
+  'wiki-manager': ['claude-plugin', 'skills', 'wiki-manager'],
+};
+
 class GlobalInstall {
   constructor(workDir) {
     this.root = path.join(workDir, 'global');
@@ -82,12 +88,22 @@ class GlobalInstall {
     fs.rmSync(path.join(this.engineDir, '.git'), { recursive: true, force: true });
   }
 
+  // The engine's skills that OpenCode uses: the read-only query and the management
+  installEngineSkills() {
+    for (const [id, rel] of Object.entries(ENGINE_SKILLS)) {
+      fs.cpSync(path.join(this.engineDir, ...rel), this.skillDir(id), { recursive: true });
+    }
+  }
+
   // The session bootstrap and the comments rule, as the release installs them
   installSession({ engine }) {
     this.installPlugin('session-bootstrap');
     this.installPlugin('response-comments');
     this.installGitDiscipline();
-    if (engine) this.installEngine(engine.url, engine.pinnedRef);
+    if (engine) {
+      this.installEngine(engine.url, engine.pinnedRef);
+      this.installEngineSkills();
+    }
     return this;
   }
 }
