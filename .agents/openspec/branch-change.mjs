@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // El change de la rama (openspec-change-lifecycle, design D1 de
-// add-openspec-autopilot y D1 a D6 de manage-git-discipline): un módulo
+// add-openspec-autopilot, D1 a D6 de manage-git-discipline y D3 a D7 de
+// allow-user-requested-merges): un módulo
 // neutral, común a los dos agentes, que lee de git qué change tiene la rama
 // actual y decide las puertas del ciclo. Lo importa el plugin de OpenCode y lo
 // ejecutan los workflows de OpenSpec desde la skill openspec-git-discipline.
@@ -45,12 +46,30 @@
 //   `git config idd.sessionBranch`, si es temporal y los cambios pendientes
 //   son de una sola zona de spec-as-source (tasks.md es neutro; el resto de
 //   openspec/, specs; todo lo demás, código). No hace commit ni push: los
-//   autoriza, y su mensaje trae la orden de push.
+//   autoriza, y su mensaje trae la orden de push. Con una fusión en curso
+//   (existe MERGE_HEAD) no mira las zonas, porque los commits que trae ya las
+//   respetaban: exige que no quede ningún conflicto sin resolver
+//   (`git diff --diff-filter=U`) ni ningún marcador (`<<<<<<<`, `=======` o
+//   `>>>>>>>` al principio de línea) en los archivos que toca la fusión, y
+//   da `git commit --no-edit` (ADR-0016).
+// - merge <rama de destino> [<rama permanente>]: las fusiones que pide el
+//   usuario (ADR-0016). No deja con el árbol sucio, ni en un contenedor
+//   efímero fuera de la rama de la sesión. Si el destino es la rama temporal
+//   actual, trae `origin/<rama permanente>` (por defecto, la de origen) y da
+//   `git merge --no-edit`. Si es una rama permanente, solo deja si la rama
+//   actual ya contiene `origin/<destino>` (si no, pide traerla antes); fuera
+//   de un contenedor efímero da la fusión sin cambiar de rama
+//   (`git commit-tree HEAD^{tree} -p origin/<destino> -p HEAD` y
+//   `git push origin <commit>:refs/heads/<destino>`), y dentro, abrir un PR
+//   contra el destino, sin ninguna orden de push a él. No fusiona: da la
+//   orden. Cualquier otro destino, no.
 // Todo rechazo dice cómo seguir.
 //
 // CLI:
 //   node .agents/openspec/branch-change.mjs --json
 //   node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit> [<change>]
+//   node .agents/openspec/branch-change.mjs check merge <rama de destino> [<rama permanente>]
+//   node .agents/openspec/branch-change.mjs merge-targets [--json]
 //   node .agents/openspec/branch-change.mjs list [--json]
 //   node .agents/openspec/branch-change.mjs start <change>
 //   node .agents/openspec/branch-change.mjs switch <rama>
@@ -60,8 +79,13 @@
 // change; `start` crea la rama del change desde la referencia de origen
 // (`originRef`) y cambia a ella; `switch` cambia a una rama temporal (ADR-0013,
 // design D12 de autopilot-sesion-operativa). Ni `start` ni `switch` actúan con
-// el árbol sucio. En un contenedor efímero el agente no los usa: trabaja solo
-// en la rama de la sesión (ADR-0015). `env` imprime, para el arranque de
+// el árbol sucio. En un contenedor efímero no actúan: salen con 1, antes de
+// comprobar nada más, y su mensaje dice que se siga en la rama de la sesión
+// (ADR-0016). `merge-targets` da, tras el archive, las ramas de `x-main` a
+// las que proponer la fusión, en el orden de la lista: omite las que no
+// tienen origin/<rama> (con un aviso) y las cuyo origin/<rama> ya contiene
+// HEAD, y marca con `bringFirst` las que hay que traer antes; no hace
+// `git fetch` (ADR-0016). `env` imprime, para el arranque de
 // sesión, `ephemeral=true` o `ephemeral=false` y
 // `permanent=<ramas separadas por espacios>`.
 //
