@@ -6,11 +6,13 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 - [x] 1.1 Dejar `pwsh` (PowerShell 7) disponible en la sesión: proponer al usuario añadir su instalación al script de configuración del entorno de la nube (Open Question 1 del design: paquete de Microsoft o tarball de GitHub) y, aprobada, instalarlo en esta sesión. Comprobar `pwsh -v`. Sin `pwsh` no se puede hacer la sección 4.
   - Resultado: entorno personal `idd` (para `hiebra/idd`) con un script de configuración que instala PowerShell 7.4.6 desde el tarball de las releases de GitHub en `/opt/microsoft/powershell/7`, con `pwsh` en `/usr/local/bin`. El script se probó en esta sesión, y `pwsh -v` da 7.4.6.
-- [ ] 1.2 Ejecutar la suite con el delta del change: los escenarios nuevos de `windows-readiness`, `session-bootstrap` y `openspec-autopilot` salen con pasos sin definir, y el resto pasa. Anotar aquí el resultado.
+- [x] 1.2 Ejecutar la suite con el delta del change: los escenarios nuevos de `windows-readiness`, `session-bootstrap` y `openspec-autopilot` salen con pasos sin definir, y el resto pasa. Anotar aquí el resultado.
+  - Resultado: 227 escenarios, 203 pasan y 24 sin definir (los nuevos del change); ninguno falla.
 
 ## 2. Arranque de sesión en Windows (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 2.1 "Clon con conversión de finales de línea": definir los pasos según D8 (un clon real de la copia con `-c core.autocrlf=true`, sesión de OpenCode). Ver el rojo sin `.gitattributes`. Añadir `.gitattributes` con `* text=auto eol=lf` (D2) y comprobar con `git ls-files --eol` que el índice del repositorio ya está en LF.
+- [x] 2.1 "Clon con conversión de finales de línea": definir los pasos según D8 (un clon real de la copia con `-c core.autocrlf=true`, sesión de OpenCode). Ver el rojo sin `.gitattributes`. Añadir `.gitattributes` con `* text=auto eol=lf` (D2) y comprobar con `git ls-files --eol` que el índice del repositorio ya está en LF.
+  - Resultado: sin `.gitattributes`, el clon con `autocrlf` extrae los cuatro scripts del arranque con CRLF y el paso falla. Con `* text=auto eol=lf`, pasa. `git ls-files --eol` da `i/lf` en todos los archivos de texto del índice; `git add --renormalize .` no cambia ninguno.
 - [ ] 2.2 "Git Bash copia en lugar de enlazar si no se le pide": en la máquina simulada, un `ln` falso que copia salvo que `MSYS` contenga `winsymlinks:nativestrict` (D8). Ver el rojo y exportar `MSYS=winsymlinks:nativestrict` en el núcleo antes de enlazar el motor (D3).
 - [ ] 2.3 "La sesión siguiente reconoce los enlaces": con la máquina de 2.2, dos sesiones seguidas sin aviso de que ya existe algo que no es del motor.
 - [ ] 2.4 "OpenCode nombra el proyecto con otra ruta que bash": el host de OpenCode recibe la ruta de un symlink al proyecto, y bash la resuelve con `cd -P` (D4). Ver el rojo y cambiar el contrato del núcleo: `bin=` y `wiki-engine=` relativas al proyecto, completadas por el plugin con `path.join(directory, …)` y por el adaptador de Claude Code con `$project`. Actualizar las pruebas de `core-tests/` que lean esas líneas. Los escenarios vigentes de Claude Code siguen pasando.

@@ -28,7 +28,7 @@
 // console.error while closing.
 //
 // Usage: node opencode-host.mjs <project dir> <options JSON> <result file>
-// Options: { plugin, shell, frozenEnv, message, frozenMessages, tuiReloads, emit, close }
+// Options: { plugin, shell, frozenEnv, message, frozenMessages, tuiReloads, emit, close, platform }
 //   plugin: the directory name of the plugin under .opencode/plugins/
 //   (default: session-bootstrap);
 //   shell: "ok" | "none" (a server context without `shell`) | "throws" (its
@@ -37,7 +37,8 @@
 //   messages cannot be changed, so a hook that edits them throws;
 //   tuiReloads: how many times to reload the TUI part; emit: { event, data },
 //   an event of the plugin's RPC to emit after the reloads; close: close the
-//   TUI at the end
+//   TUI at the end; platform: what process.platform reports to the plugin
+//   (windows-support: "win32" simulates OpenCode on Windows)
 // Result (JSON): { error, setupMs, env, toasts, logs, request, terminal, subscriptions }
 //   terminal: the traces left in the terminal at close; subscriptions: the
 //   TUI's subscriptions still alive at the end, { event, load }
@@ -51,6 +52,7 @@ import { pathToFileURL } from 'node:url';
 const [projectDir, optionsJson, resultFile] = process.argv.slice(2);
 const options = JSON.parse(optionsJson);
 const PLUGIN_DIR = path.join(projectDir, '.opencode', 'plugins', options.plugin ?? 'session-bootstrap');
+if (options.platform) Object.defineProperty(process, 'platform', { value: options.platform });
 
 const result = { error: null, setupMs: null, env: null, toasts: [], logs: [], request: null, terminal: [], subscriptions: [] };
 const done = () => {
