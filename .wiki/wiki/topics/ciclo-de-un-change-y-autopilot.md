@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md
@@ -37,6 +38,7 @@ Desde `manage-git-discipline`, el ciclo lo fija ADR-0015 (`idd@5d7f5b0:adr/0013-
 - **Quién hace los commits**: fuera de la nube, el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y el modelo no pide commits (`idd@6d6e79c:adr/0012-model-creates-change-branches-plugin-stages.md`, hoy ADR-0013). En un contenedor efímero (`CLAUDE_CODE_CONTAINER_ID` y `CLAUDE_CODE_REMOTE=true`), el agente hace commit y push sin preguntar en la rama de la sesión que guardó el arranque (`git config idd.sessionBranch`), con commits provisionales si hace falta y después de que `check commit` lo autorice. Nunca fusiona ni toca otras ramas. Ningún commit mezcla la zona de specs con la de código.
 - **El modelo crea la rama del change o cambia de rama temporal**, solo con `branch-change.mjs list | start <change> | switch <rama>`: la rama nueva sale siempre de la rama de origen y se llama como el change, y nunca con el árbol sucio (`idd@6d6e79c:.agents/openspec/branch-change.mjs`, `idd@6d6e79c:.agents/skills/openspec-git-discipline/SKILL.md`). En un contenedor efímero el agente no los usa: trabaja solo en la rama de la sesión (ADR-0015). `start` crea la rama desde la misma referencia de origen que usan las puertas.
 - **Números de ADR sin choques**: `rules.adr` de `idd@5d7f5b0:openspec/config.yaml` manda hacer `git fetch` y tomar el número más alto de `adr/` en todas las ramas remotas, y `check archive` detiene el archive si un ADR nuevo de la rama repite un número de la rama de origen. Ocurrió en el propio archive de `manage-git-discipline`: entre tanto habían llegado a `main` un ADR-0011 y un ADR-0012 de otras ramas, y el ADR del change se renumeró de 0011 a 0013 (`idd@5d7f5b0:openspec/changes/archive/2026-11-22-manage-git-discipline/adr.md`).
+- **Deltas de changes concurrentes sobre la misma capability**: si se archivan en la misma rama, como en la forma canónica, OpenSpec 1.17.0 aborta cuando el requirement ya no existe o se perderían escenarios, pero dos MODIFIED con los mismos escenarios se sobrescriben en silencio. En la forma recomendada, ese caso aparece como conflicto de git al fusionar la segunda rama. Ver [[conflictos-entre-deltas-concurrentes|Conflictos entre deltas de changes concurrentes]] ([Conflictos entre deltas de changes concurrentes](../concepts/conflictos-entre-deltas-concurrentes.md)), con las [lecciones](../../raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md).
 - **Probar el módulo en otra rama, con un worktree**: `branch-change.mjs` está versionado, así que al cambiar de rama se ejecuta la versión de esa rama, y la suite copia el árbol que haya en ese momento. Para ver cómo responde el módulo nuevo en `main`, se crea un worktree de `main` y se ejecuta allí el módulo de la rama de trabajo ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 3).
 - **Antes de proponer, busca las decisiones previas**: el schema solo pide leer los ADRs en el paso `design`, pero una propuesta puede chocar con un ADR en vigor sobre el mismo mecanismo. En `add-quote-comment-rule`, la primera propuesta usaba `AGENTS.md`, que ADR-0005 ya había descartado, y hubo que rehacerla al escribir las specs ([lecciones de add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md), lección 3).
 
@@ -98,6 +100,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## See Also
 
+- [[conflictos-entre-deltas-concurrentes|Conflictos entre deltas de changes concurrentes]] ([Conflictos entre deltas de changes concurrentes](../concepts/conflictos-entre-deltas-concurrentes.md))
 - [[origen-de-openspec-git-discipline|openspec-git-discipline: una regla heredada sin justificación registrada]] ([openspec-git-discipline: una regla heredada sin justificación registrada](../concepts/origen-de-openspec-git-discipline.md))
 - [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](suite-de-aceptacion-y-spec-as-source.md))
 - [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md))
@@ -105,6 +108,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## Sources
 
+- [Lessons Learned: conflictos entre deltas de changes concurrentes](../../raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md): lecciones 1 y 2.
 - [Lessons Learned: el cierre de la revisión pasa de la confirmación en la TUI a git (ADR-0014)](../../raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md): lección 1.
 - [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0013-model-creates-change-branches-plugin-stages.md`, `adr/0014-autopilot-verifies-product-and-closes-reviews-with-git.md`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.opencode/plugins/openspec-autopilot/`, `.agents/openspec/branch-change.mjs`, `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md` y `tasks.md`.
 - [Lessons Learned: el lint de las specs con gplint](../../raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md): lección 5.

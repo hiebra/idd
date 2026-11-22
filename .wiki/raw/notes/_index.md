@@ -8,6 +8,8 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-conflictos-entre-deltas-concurrentes.md](2026-11-22-ll-conflictos-entre-deltas-concurrentes.md) | 3 lecciones: el archive aborta con deltas que ya no casan, dos MODIFIED con los mismos escenarios se sobrescriben en silencio en la misma rama (en ramas separadas, conflicto de git) y los ADR en la rama de origen reservan su número | lessons-learned, openspec, archive, delta-specs | 2026-11-22 |
+| [2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md](2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md) | Opinión del usuario: la spec en la rama de origen no choca salvo por los ADR, el apply va en rama si hay concurrencia, y la plantilla mantiene las dos formas porque sus proyectos pueden tener varias ramas permanentes | openspec-git-discipline, opinion-del-usuario | 2026-11-22 |
 | [2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md](2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md) | 2 lecciones: la guidance de archivado no salta la pregunta del sync y cuándo archivar sin sincronizar | lessons-learned, openspec, archive | 2026-11-22 |
 | [2026-11-22-ll-modo-auto-instalar-opencode.md](2026-11-22-ll-modo-auto-instalar-opencode.md) | 1 lección: el modo auto de Claude Code en la nube bloqueó instalar @opencode/cli para el banco; reglas allow sin comprobar | lessons-learned, opencode, claude-code, auto-mode | 2026-11-22 |
 | [2026-11-22-ll-manage-git-discipline.md](2026-11-22-ll-manage-git-discipline.md) | 4 lecciones de manage-git-discipline: firma de commits en la nube, grupos opcionales de cucumber, worktree para probar el módulo y variables del contenedor efímero | lessons-learned, acceptance-tests, cucumber, git | 2026-11-22 |
@@ -23,6 +25,8 @@ Last updated: 2026-11-22
 ## Categories
 
 ## Recent Changes
+
+- 2026-11-22: Lecciones sobre conflictos entre deltas concurrentes y opinión del usuario sobre la spec en la rama de origen
 
 - 2026-11-22: Lecciones sobre la guidance de archivado y archivar sin sincronizar
 

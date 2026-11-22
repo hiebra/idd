@@ -2,6 +2,8 @@
 title: "openspec-git-discipline: una regla heredada sin justificación registrada"
 category: concept
 sources:
+  - raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md
+  - raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md
   - raw/repos/2026-11-21-intent-driven-template-a8b8231-git-discipline.md
@@ -17,7 +19,7 @@ verified: 2026-11-22
 tags: [openspec, openspec-git-discipline, git, procedencia, skills]
 confidence: high
 volatility: warm
-summary: "La skill openspec-git-discipline exige cruzar main dos veces por change (la propuesta antes de apply y la implementación antes de archive) y archivar desde main. Ni este proyecto ni su origen registran por qué; la única discusión es la issue 11 del origen, abierta y sin respuesta. ADR-0007 sustituye esas puertas en este proyecto, y la copia de la skill se reescribió con ellas en add-openspec-autopilot; ADR-0013, que sustituye a ADR-0007 en manage-git-discipline, vuelve a admitir la forma canónica junto a la recomendada."
+summary: "La skill openspec-git-discipline exige cruzar main dos veces por change (la propuesta antes de apply y la implementación antes de archive) y archivar desde main. Ni este proyecto ni su origen registran por qué; la única discusión es la issue 11 del origen, abierta y sin respuesta. ADR-0007 sustituye esas puertas en este proyecto, y la copia de la skill se reescribió con ellas en add-openspec-autopilot; ADR-0013, que sustituye a ADR-0007 en manage-git-discipline, vuelve a admitir la forma canónica junto a la recomendada. El usuario propone, con confianza baja, que el motivo es que la spec no choca entre desarrollos concurrentes y el código sí, con objeciones abiertas."
 ---
 
 # openspec-git-discipline: una regla heredada sin justificación registrada
@@ -63,15 +65,27 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 ## Lo que no se sabe
 
 - **El motivo original.** Puede que exista fuera de los repositorios (conversaciones, otra documentación), pero no consta en ninguna fuente revisada.
+  - **Una hipótesis del usuario, con confianza baja** ([opinión del usuario, 2026-11-22](../../raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md)). No viene del origen; el usuario pidió registrarla como autoridad, aunque sea de baja calidad. Sostiene esto:
+    - La spec puede ir directamente a la rama de origen porque, salvo por los números de ADR, no choca entre desarrollos concurrentes.
+    - El código sí choca, y por eso el apply va en rama cuando hay desarrollos en paralelo.
+    - Eso solo vale con una única rama permanente o con ramas permanentes que se fusionan entre sí.
+    - Los proyectos creados desde la plantilla no lo garantizan, así que la plantilla mantiene las dos formas del ciclo (ADR-0015).
+  - **Objeciones abiertas, de la misma conversación:**
+    - La spec también choca: dos deltas sobre la misma capability, y en un caso sin que nada lo detecte en la rama de origen ([[conflictos-entre-deltas-concurrentes|Conflictos entre deltas de changes concurrentes]] ([Conflictos entre deltas de changes concurrentes](conflictos-entre-deltas-concurrentes.md))).
+    - Con los ADR pasa lo contrario: escribirlos en la rama de origen reserva su número.
+    - Unas ramas permanentes que no se fusionan entre sí afectan igual a la forma recomendada, que también fusiona solo con la rama de origen. El usuario mantuvo su conclusión sin responder a esta objeción.
 - **El estado de la issue después del 2026-11-21.** Es una fuente viva: puede recibir respuesta o cerrarse.
 
 ## See Also
 
+- [[conflictos-entre-deltas-concurrentes|Conflictos entre deltas de changes concurrentes]] ([Conflictos entre deltas de changes concurrentes](conflictos-entre-deltas-concurrentes.md))
 - [[una-sola-copia-de-las-skills|Una sola copia de las skills, vista por cada agente]] ([Una sola copia de las skills, vista por cada agente](una-sola-copia-de-las-skills.md))
 - [[ciclo-de-un-change-y-autopilot|El ciclo de un change y su automatización en OpenCode]] ([El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md))
 
 ## Sources
 
+- [Opinión del usuario: la spec en la rama de origen y las dos formas del ciclo](../../raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md): hipótesis sobre el motivo.
+- [Lessons Learned: conflictos entre deltas de changes concurrentes](../../raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md): lecciones 2 y 3, en las objeciones.
 - [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0013-model-creates-change-branches-plugin-stages.md`, `.agents/skills/openspec-git-discipline/SKILL.md`, `.agents/openspec/branch-change.mjs`.
 
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `.agents/skills/openspec-git-discipline/SKILL.md`, `.agents/openspec/branch-change.mjs`.

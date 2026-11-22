@@ -6,8 +6,8 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 23 raw documents
-- Articles: 10 compiled wiki articles
+- Sources: 25 raw documents
+- Articles: 11 compiled wiki articles
 - Inventory records: 4 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
@@ -29,6 +29,8 @@ Last updated: 2026-11-22
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: Conflictos entre deltas concurrentes (lecciones y concepto nuevo) y la hipótesis del usuario sobre el motivo de la forma canónica
 
 - 2026-11-22: 3 páginas de la documentación de OpenSpec (archive y sync) y 2 lecciones sobre la guidance de archivado; flujo-wiki-first actualizado
 
