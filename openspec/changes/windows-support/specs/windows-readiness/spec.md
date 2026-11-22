@@ -1,7 +1,7 @@
 # windows-readiness
 
 ## Purpose
-Diagnóstico de lo que le falta a una máquina Windows para que el proyecto funcione en ella, también sin acceso a internet: `scripts/windows/Test-OfflineInstall.ps1`. La máquina con todo lo necesario es la que tiene Node.js con npm, Git for Windows con Git Bash, Python 3, symlinks y, ya instalados, el motor del wiki y las dependencias npm del proyecto (en el proyecto o en una caché de npm que se pueda usar sin red).
+Diagnóstico de lo que le falta a una máquina Windows para que el proyecto funcione en ella, también sin acceso a internet: `scripts/windows/Test-OfflineInstall.ps1`. La máquina con todo lo necesario es la que tiene OpenCode 2, Node.js con npm, Git for Windows con Git Bash, Python 3, symlinks y, ya instalados, el motor del wiki y las dependencias npm del proyecto (en el proyecto o en una caché de npm que se pueda usar sin red).
 
 ## ADDED Requirements
 
@@ -140,6 +140,28 @@ But los scripts del arranque de sesión del clon tienen finales de línea CRLF
 When se ejecuta el diagnóstico en el proyecto
 Then el informe da los finales de línea del clon en estado FALTA
 And el informe dice cómo volver a extraer los archivos con LF
+```
+
+### Requirement: OpenCode 2 es el agente de Windows
+En Windows solo se soporta OpenCode 2 o superior. El diagnóstico DEBE dar el agente en estado `FALTA` si no hay un OpenCode 2 o superior, aunque esté Claude Code, y DEBE decir en el detalle que Claude Code no se soporta en Windows.
+
+#### Scenario: Solo Claude Code
+
+```gherkin
+Given una máquina Windows con todo lo que necesita el proyecto
+But el único agente de la máquina es Claude Code
+When se ejecuta el diagnóstico en el proyecto
+Then el informe da el agente en estado FALTA
+And el detalle del agente dice que en Windows solo se soporta OpenCode 2
+```
+
+#### Scenario: OpenCode 1
+
+```gherkin
+Given una máquina Windows con todo lo que necesita el proyecto
+But el único agente de la máquina es OpenCode 1
+When se ejecuta el diagnóstico en el proyecto
+Then el informe da el agente en estado FALTA
 ```
 
 ### Requirement: Código de salida y salida para máquinas

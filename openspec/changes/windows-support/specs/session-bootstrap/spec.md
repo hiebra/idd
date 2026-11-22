@@ -9,7 +9,7 @@ El repositorio DEBE fijar finales de línea LF en los scripts del arranque de se
 
 ```gherkin
 Given un clon del proyecto extraído con `core.autocrlf=true`
-When se abre una sesión de Claude Code en el proyecto
+When se abre una sesión de OpenCode en el proyecto
 Then los scripts del arranque de sesión del clon tienen finales de línea LF
 And la guía del wiki se entrega sin los identificadores de sección
 ```
@@ -22,7 +22,7 @@ En Git Bash, el arranque de sesión DEBE crear los enlaces del motor del wiki co
 ```gherkin
 Given una máquina con Git Bash, cuyo `ln -s` copia salvo que se pidan symlinks nativos
 And un clon del proyecto sin el motor del wiki instalado
-When se abre una sesión de Claude Code en el proyecto
+When se abre una sesión de OpenCode en el proyecto
 Then los enlaces del motor del wiki son symlinks
 ```
 
@@ -31,7 +31,7 @@ Then los enlaces del motor del wiki son symlinks
 ```gherkin
 Given una máquina con Git Bash, cuyo `ln -s` copia salvo que se pidan symlinks nativos
 And una sesión anterior instaló el motor del wiki en el proyecto
-When se abre una sesión de Claude Code en el proyecto
+When se abre una sesión de OpenCode en el proyecto
 Then no se avisa de que ya existe algo que no es del motor del wiki
 ```
 
