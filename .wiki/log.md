@@ -136,3 +136,7 @@
 ## [2026-11-22] ll | "soporte de Windows (windows-support)" → raw/notes/2026-11-22-ll-windows-support.md (7 lessons, 3 articles updated, 1 inventory record)
 
 ## [2026-11-22] ingest-collection | idd via git (manifest-only, windows-support @3d2d8fe): 1 manifest, 22 paths pinned, 0 skipped
+
+## [2026-11-22] compile | soporte-de-windows desde el archivado de windows-support (idd@3d2d8fe)
+
+## [2026-11-22] refresh | arranque-de-sesion, ciclo-de-un-change-y-autopilot y suite-de-aceptacion-y-spec-as-source con el archivado de windows-support (idd@3d2d8fe)

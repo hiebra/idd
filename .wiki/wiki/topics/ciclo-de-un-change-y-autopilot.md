@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md
   - raw/notes/2026-11-22-ll-windows-support.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
@@ -87,7 +88,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - **El servicio carga el plugin una vez por proyecto en el mismo proceso**: lo que se guarde en `globalThis` (generación, PID presentados) tiene que ir por directorio.
 - **Las sesiones que crea un plugin usan el modelo por defecto de la configuración**, no el elegido en la TUI.
 
-- **Ejecutar un CLI de npm desde el plugin**: como `node <bin del paquete>`, nunca por `node_modules/.bin/` (en Windows es un script de shell, y `spawn` no lanza su `.cmd` sin `shell: true`) ni con `process.execPath`, que en OpenCode es su propio binario, compilado con Bun. Así lo hace `openspecCommand()` en `lib/project.mjs` desde `windows-support` ([lecciones de windows-support](../../raw/notes/2026-11-22-ll-windows-support.md), lección 3; las dos causas son conocimiento interno, no comprobado en Windows).
+- **Ejecutar un CLI de npm desde el plugin**: como `node <bin del paquete>`, nunca por `node_modules/.bin/` (en Windows es un script de shell, y `spawn` no lanza su `.cmd` sin `shell: true`) ni con `process.execPath`, que en OpenCode es su propio binario, compilado con Bun. Así lo hace `openspecCommand()` desde `windows-support`: `node` con el `bin.openspec` de `node_modules/@fission-ai/openspec/package.json` y, sin el paquete, el `openspec` del `PATH` (`idd@3d2d8fe:.opencode/plugins/openspec-autopilot/lib/project.mjs`). La spec lo exige aunque `node_modules/.bin/openspec` no sea un ejecutable (`idd@3d2d8fe:openspec/specs/openspec-autopilot/spec.md`, «El plugin ejecuta el CLI de OpenSpec del proyecto en cualquier sistema»), y la suite lo simula con un `.bin/openspec` no ejecutable (`idd@3d2d8fe:acceptance-tests/README.md`). Las dos causas son conocimiento interno, no comprobado en Windows ([lecciones de windows-support](../../raw/notes/2026-11-22-ll-windows-support.md), lección 3). En Windows solo se soporta OpenCode 2 (ver [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](soporte-de-windows.md))).
 
 ## Cómo se verifica
 
@@ -101,6 +102,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## See Also
 
+- [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](soporte-de-windows.md))
 - [[origen-de-openspec-git-discipline|openspec-git-discipline: una regla heredada sin justificación registrada]] ([openspec-git-discipline: una regla heredada sin justificación registrada](../concepts/origen-de-openspec-git-discipline.md))
 - [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](suite-de-aceptacion-y-spec-as-source.md))
 - [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md))
@@ -119,4 +121,5 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `.opencode/plugins/openspec-autopilot/tui.js`, `acceptance-tests/support/agents/opencode-sim.mjs`, `openspec/changes/archive/2026-11-22-fix-tui-subscription-cleanup/design.md` y `tasks.md`.
 - [Collection: ADR-0011 tras la renumeración (idd@002f043)](../../raw/repos/2026-11-22-idd-002f043-adr-0011.md): `adr/0011-opencode-plugins-release-what-they-register.md`.
 - [Lessons Learned: suscripciones de la TUI de OpenCode y su limpieza](../../raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md): lecciones 1, 2 y 4 (las trazas al cerrar con `--standalone`, el contrato de limpieza que corrige la regla de la lección 5, y la prueba en OpenCode real sin tmux).
+- [Collection: archivado de windows-support (idd@3d2d8fe)](../../raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md): `openspec/specs/openspec-autopilot/spec.md`, `.opencode/plugins/openspec-autopilot/lib/project.mjs`, `acceptance-tests/README.md`.
 - [Lessons Learned: soporte de Windows (windows-support)](../../raw/notes/2026-11-22-ll-windows-support.md): lección 3.

@@ -2,6 +2,7 @@
 title: "La suite de aceptación y spec-as-source"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md
   - raw/notes/2026-11-22-ll-windows-support.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
@@ -59,6 +60,9 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - **Regex con grupos opcionales**: cucumber pasa un argumento por cada grupo capturante y decide por la aridad si la función es de callback. Un grupo opcional que no captura descuadra la cuenta y el paso se cuelga hasta el timeout. Solo deben capturar los grupos que la función recibe ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 2).
 - **Duración en la nube**: el entorno firma cada commit, también los de los repos de prueba, y la suite entera tarda 15-20 minutos. Conviene ejecutarla en segundo plano e iterar con `--name` ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 1).
 - **Dependencias para otra plataforma**: un `node_modules` instalado en Linux no sirve en Windows; los paquetes con `os`/`cpu` en el lockfile solo se instalan en su plataforma (en `acceptance-tests/`, `@esbuild/win32-x64` y `@typescript/typescript-win32-x64`). Se preparan en esa plataforma, y lo que falta se deduce de esos campos del lockfile ([lecciones de windows-support](../../raw/notes/2026-11-22-ll-windows-support.md), lección 2).
+- **`pwsh` es requisito de la suite** (desde `windows-support`, ADR-0017): los escenarios de `windows-readiness` ejecutan el diagnóstico con `pwsh -NoProfile -NonInteractive -File … -FactsFile …`, una vez en texto (del que leen el código de salida) y otra con `-Json` (del que leen el informe), y las dos tienen que terminar igual. Sin `pwsh` fallan diciéndolo; no se saltan. En la nube lo instala el script de configuración del entorno `idd` (`idd@3d2d8fe:acceptance-tests/README.md`).
+- **Máquinas Windows simuladas**: `support/windows-readiness.js` parte de los hechos de una máquina con todo lo necesario (OpenCode 2.3.2, Node.js 22.12 con npm, git, Python 3.12, el motor y las dependencias de los lockfiles reales), y cada `But` cambia un hecho. Así se prueba toda la evaluación fuera de Windows; la recogida de hechos solo se puede comprobar a mano en Windows real (`idd@3d2d8fe:acceptance-tests/support/windows-readiness.js`, `idd@3d2d8fe:acceptance-tests/README.md`; ver [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](soporte-de-windows.md))).
+- **Simular Git for Windows**: `step-definitions/line-endings.steps.js` vuelve a extraer la copia del proyecto de su propio repositorio con `core.autocrlf=true` y abre una sesión de OpenCode (`idd@3d2d8fe:acceptance-tests/README.md`).
 - **Ejecutar un subconjunto de escenarios**: con `--name`, que se puede repetir. Pasar un `.feature` como argumento no basta, porque `cucumber.cjs` fija `paths` en el perfil por defecto y se ejecuta la suite completa (lección 6 de la misma nota).
 
 ## Su límite
@@ -69,6 +73,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 
 ## See Also
 
+- [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](soporte-de-windows.md))
 - [[arranque-de-sesion|El arranque de sesión]] ([El arranque de sesión](arranque-de-sesion.md))
 - [[proveedor-falso-para-verificar-contexto|Proveedor falso para verificar el contexto]] ([Proveedor falso para verificar el contexto](../concepts/proveedor-falso-para-verificar-contexto.md))
 - [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md))
@@ -90,4 +95,5 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - [Lessons Learned: manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md): lecciones 1, 2 y 4.
 - [Collection: archivado de replace-gherkin-lint-with-gplint (idd@d355c01)](../../raw/repos/2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md): `acceptance-tests/README.md`, `acceptance-tests/support/spec-lint.js`, `adr/0012-spec-lint-with-gplint.md`, el `design.md` del change archivado.
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `acceptance-tests/README.md`, `acceptance-tests/support/agents/opencode-host.mjs`.
+- [Collection: archivado de windows-support (idd@3d2d8fe)](../../raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md): `acceptance-tests/README.md`, `acceptance-tests/support/windows-readiness.js`, `acceptance-tests/step-definitions/windows-readiness.steps.js`, `acceptance-tests/step-definitions/line-endings.steps.js`.
 - [Lessons Learned: soporte de Windows (windows-support)](../../raw/notes/2026-11-22-ll-windows-support.md): lecciones 2 y 6.
