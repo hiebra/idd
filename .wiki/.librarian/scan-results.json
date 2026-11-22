@@ -1,5 +1,5 @@
 {
- "completed_at": "2026-11-21",
+ "completed_at": "2026-11-22",
  "wiki": ".wiki",
  "passes": [
   "staleness",
@@ -9,11 +9,11 @@
  "articles": [
   {
    "path": "wiki/concepts/hook-context-opencode.md",
-   "staleness": 100,
+   "staleness": 99,
    "quality": 60.0,
    "sources": 2,
    "resolved": 2,
-   "words": 355,
+   "words": 417,
    "headings": 5,
    "depth": 3,
    "source_quality": 3,
@@ -22,11 +22,11 @@
   },
   {
    "path": "wiki/concepts/origen-de-openspec-git-discipline.md",
-   "staleness": 100,
+   "staleness": 99,
    "quality": 65.0,
-   "sources": 5,
-   "resolved": 5,
-   "words": 749,
+   "sources": 7,
+   "resolved": 7,
+   "words": 955,
    "headings": 7,
    "depth": 3,
    "source_quality": 4,
@@ -35,11 +35,11 @@
   },
   {
    "path": "wiki/concepts/proveedor-falso-para-verificar-contexto.md",
-   "staleness": 100,
+   "staleness": 99,
    "quality": 60.0,
    "sources": 2,
    "resolved": 2,
-   "words": 293,
+   "words": 354,
    "headings": 5,
    "depth": 3,
    "source_quality": 3,
@@ -48,11 +48,11 @@
   },
   {
    "path": "wiki/concepts/una-sola-copia-de-las-skills.md",
-   "staleness": 100,
+   "staleness": 99,
    "quality": 60.0,
    "sources": 2,
    "resolved": 2,
-   "words": 374,
+   "words": 447,
    "headings": 5,
    "depth": 3,
    "source_quality": 3,
@@ -62,13 +62,13 @@
   {
    "path": "wiki/topics/arranque-de-sesion.md",
    "staleness": 100,
-   "quality": 60.0,
-   "sources": 3,
-   "resolved": 3,
-   "words": 768,
+   "quality": 65.0,
+   "sources": 4,
+   "resolved": 4,
+   "words": 914,
    "headings": 6,
    "depth": 3,
-   "source_quality": 3,
+   "source_quality": 4,
    "flags": [],
    "missing": []
   },
@@ -76,9 +76,9 @@
    "path": "wiki/topics/carga-en-la-misma-sesion-por-agente.md",
    "staleness": 100,
    "quality": 60.0,
-   "sources": 2,
-   "resolved": 2,
-   "words": 583,
+   "sources": 3,
+   "resolved": 3,
+   "words": 682,
    "headings": 5,
    "depth": 3,
    "source_quality": 3,
@@ -86,15 +86,28 @@
    "missing": []
   },
   {
-   "path": "wiki/topics/flujo-wiki-first.md",
+   "path": "wiki/topics/ciclo-de-un-change-y-autopilot.md",
    "staleness": 100,
-   "quality": 60.0,
+   "quality": 65.0,
    "sources": 3,
    "resolved": 3,
-   "words": 854,
+   "words": 1692,
+   "headings": 8,
+   "depth": 4,
+   "source_quality": 3,
+   "flags": [],
+   "missing": []
+  },
+  {
+   "path": "wiki/topics/flujo-wiki-first.md",
+   "staleness": 99,
+   "quality": 65.0,
+   "sources": 5,
+   "resolved": 5,
+   "words": 1185,
    "headings": 7,
    "depth": 3,
-   "source_quality": 3,
+   "source_quality": 4,
    "flags": [],
    "missing": []
   },
@@ -102,29 +115,14 @@
    "path": "wiki/topics/suite-de-aceptacion-y-spec-as-source.md",
    "staleness": 100,
    "quality": 65.0,
-   "sources": 4,
-   "resolved": 4,
-   "words": 566,
+   "sources": 6,
+   "resolved": 6,
+   "words": 915,
    "headings": 5,
    "depth": 3,
    "source_quality": 4,
    "flags": [],
    "missing": []
   }
- ],
- "summary": {
-  "scanned": 8,
-  "stale": 0,
-  "low_quality": 0,
-  "avg_staleness": 100,
-  "avg_quality": 61.2
- },
- "content_review": {
-  "scope": "claims affected by fix-wiki-flow-operations (idd@b48392d)",
-  "contradicted": [],
-  "obsolete": [],
-  "suggestions": [
-   "wiki/topics/flujo-wiki-first.md: summary and topics/_index.md row do not mention the read/write split or the closing point for lessons (ADR-0009); optional wording update."
-  ]
- }
+ ]
 }

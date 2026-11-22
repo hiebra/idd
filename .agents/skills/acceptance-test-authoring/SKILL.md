@@ -43,7 +43,7 @@ Three files sit at the `references/` root because they are shared by both stacks
 | --- | --- |
 | [EXTRACTION.md](references/EXTRACTION.md) | Normative contract for `spec.md` to `.feature` extraction |
 | [COMPOSITION.md](references/COMPOSITION.md) | Normative contract for which scenarios run |
-| [gherkin-lintrc.json](references/gherkin-lintrc.json) | Shared lint configuration copied to `acceptance-tests/.gherkin-lintrc` |
+| [gplintrc.json](references/gplintrc.json) | Shared lint configuration copied to `acceptance-tests/.gplintrc` |
 
 The Markdown contracts are the definitions; the JavaScript and Python files are bindings. Change the relevant contract first, then both implementations.
 
@@ -85,17 +85,19 @@ The JavaScript binding excludes superseded scenarios through cucumber-js line-ta
 
 ## Linting Specs
 
-Spec linting is shared across stacks: gherkin-lint over the extracted output with the pinned `.gherkin-lintrc`.
+Spec linting is shared across stacks: [gplint](https://github.com/gplint/gplint) over the extracted output with the pinned `.gplintrc`.
 
 - Extract first, then lint; pass `.extracted` as a directory argument.
-- gherkin-lint has no default rules; it requires `.gherkin-lintrc`.
+- gplint enables only the rules listed in `.gplintrc`.
+- Use only the levels `"error"` and `"off"`: on an unknown level (such as the old `"on"`) gplint throws and still exits 0, linting nothing.
+- gplint's rules descend into `Rule:` children, so scenario rules check every scenario of every requirement.
 - Reported line numbers are valid in source `spec.md` files.
 
 Before an `acceptance-tests/` project exists, run the extractor from this skill:
 
 ```sh
 node .agents/skills/acceptance-test-authoring/references/javascript/extract-gherkin.cjs openspec acceptance-tests/.extracted \
-  && npx gherkin-lint --config .agents/skills/acceptance-test-authoring/references/gherkin-lintrc.json acceptance-tests/.extracted
+  && npx gplint@2 --config .agents/skills/acceptance-test-authoring/references/gplintrc.json acceptance-tests/.extracted
 ```
 
 The Python extractor is a drop-in substitute:

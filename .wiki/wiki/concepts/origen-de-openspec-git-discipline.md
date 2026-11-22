@@ -54,7 +54,7 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
   - Los commits y las fusiones los sigue haciendo el usuario.
   - Descarta mantener las puertas heredadas, añadir una skill propia junto a la heredada, retirarla sin sustituto y registrar el change de cada rama en un archivo.
   - Asume el riesgo de que la propuesta ya no se revise ni se fusione por separado, y deja abierta la vuelta de la fusión intermedia.
-- **La copia de la skill está reescrita** con esas puertas, con el mismo nombre y la misma descripción de activación, divergiendo del origen a propósito (`idd@772d0f0:.agents/skills/openspec-git-discipline/SKILL.md`, blob `6cd1ad0`, ya distinto del `835e065` del origen). Las puertas ya no las decide el modelo leyendo git: la skill manda ejecutar `node .agents/openspec/branch-change.mjs check <propose|apply|archive>` y obedecer su salida, y enumera como señales de alarma exigir la propuesta en la rama de origen antes del apply y archivar en una rama permanente. Un comentario al principio avisa de que no se sobrescriba al actualizar desde `intent-driven-template` sin revisarla (ADR-0007). Ver [El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md).
+- **La copia de la skill está reescrita** con esas puertas, con el mismo nombre y la misma descripción de activación, divergiendo del origen a propósito (`idd@772d0f0:.agents/skills/openspec-git-discipline/SKILL.md`, blob `6cd1ad0`, ya distinto del `835e065` del origen). Las puertas ya no las decide el modelo leyendo git: la skill manda ejecutar `node .agents/openspec/branch-change.mjs check <propose|apply|archive>` y obedecer su salida, y enumera como señales de alarma exigir la propuesta en la rama de origen antes del apply y archivar en una rama permanente. Un comentario al principio avisa de que no se sobrescriba al actualizar desde `intent-driven-template` sin revisarla (ADR-0007). Ver [[ciclo-de-un-change-y-autopilot|El ciclo de un change y su automatización en OpenCode]] ([El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md)).
 
 - **ADR-0013 sustituye a ADR-0007** (`idd@5d7f5b0:adr/0013-git-discipline-two-forms-and-ephemeral-commits.md`, en `manage-git-discipline`): la forma de una rama pasa a ser la recomendada, con `--no-ff`, y la forma canónica heredada vuelve a admitirse junto a ella, sin tratarla como una infracción. El motivo registrado es práctico: el agente conocía la canónica y cuestionaba la del proyecto. Sigue sin constar por qué el origen exige sus dos cruces de `main`.
 
@@ -65,8 +65,8 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 
 ## See Also
 
-- [Una sola copia de las skills, vista por cada agente](una-sola-copia-de-las-skills.md)
-- [El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md)
+- [[una-sola-copia-de-las-skills|Una sola copia de las skills, vista por cada agente]] ([Una sola copia de las skills, vista por cada agente](una-sola-copia-de-las-skills.md))
+- [[ciclo-de-un-change-y-autopilot|El ciclo de un change y su automatización en OpenCode]] ([El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md))
 
 ## Sources
 

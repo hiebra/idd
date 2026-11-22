@@ -1,9 +1,21 @@
 node_modules/
 acceptance-tests/.extracted/
 acceptance-tests/reports/
+# Bytecode de Python (por ejemplo, el de py_compile en las skills)
+__pycache__/
 # Motor del wiki instalado por el arranque de sesión (local, nunca versionado)
 .agents/wiki-engine/
 .agents/wiki-engine.*/
 .claude/skills/wiki-manager
 .claude/commands/wiki
 .opencode/skills/wiki-query
+
+# Obsidian: la bóveda es .wiki/ (la raíz de la wiki, como recomienda llm-wiki).
+# Se versiona la configuración que crea el motor del wiki; el estado personal
+# de Obsidian (espacio de trabajo, plugins, caché) y cualquier otra bóveda, no.
+.obsidian/
+!.wiki/.obsidian/
+.wiki/.obsidian/*
+!.wiki/.obsidian/app.json
+!.wiki/.obsidian/appearance.json
+!.wiki/.obsidian/graph.json

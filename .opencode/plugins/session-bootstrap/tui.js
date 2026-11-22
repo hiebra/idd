@@ -1,6 +1,10 @@
 // Parte de TUI del plugin de arranque de sesión para OpenCode 2: muestra como
 // toast los avisos de la parte de servidor (server.js), que llegan por el RPC
 // del plugin. Al cargar recoge los que ya había y después escucha los nuevos.
+// Al descargarse (antes de cada recarga en caliente y al cerrar), se da de baja
+// con la función que devuelve setup (ADR-0011): sin ella, cada carga anterior
+// seguiría mostrando los avisos nuevos y, con --standalone, dejaría una traza
+// ECONNRESET al cerrar.
 //
 // Sin dependencias, como server.js.
 
@@ -48,14 +52,18 @@ export default {
         log("toast:", error);
       }
     };
+    // OpenCode ejecuta lo que devuelve setup antes de cada recarga y al cerrar
+    const subscriptions = new AbortController();
+    const cleanup = () => subscriptions.abort();
     try {
       const client = context.client.rpc(RPC);
       // Primero escuchar y después pedir los pendientes, para no perder ninguno
-      client.events.on("warning", (event) => show(event.data));
+      client.events.on("warning", (event) => show(event.data), { signal: subscriptions.signal });
       const pending = await client.warnings({});
       for (const batch of pending ?? []) show(batch);
     } catch (error) {
       log("rpc:", error);
     }
+    return cleanup;
   },
 };

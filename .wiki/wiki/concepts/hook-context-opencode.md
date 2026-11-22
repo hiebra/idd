@@ -16,7 +16,7 @@ summary: "Contrato del hook context de OpenCode 2.3.2, comprobado capturando los
 
 # El hook context de OpenCode
 
-> Un plugin de OpenCode 2 registra `ctx.session.hook("context", cb)` para cambiar lo que recibe el modelo en cada petición. Lo comprobado se vio en los cuerpos de las peticiones, capturados con un [proveedor falso](proveedor-falso-para-verificar-contexto.md) (OpenCode 2.3.2, 2026-11-21; lección 3 de [la nota de lecciones](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md), tarea 1.2 en `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`).
+> Un plugin de OpenCode 2 registra `ctx.session.hook("context", cb)` para cambiar lo que recibe el modelo en cada petición. Lo comprobado se vio en los cuerpos de las peticiones, capturados con un [[proveedor-falso-para-verificar-contexto|proveedor falso]] ([proveedor falso](proveedor-falso-para-verificar-contexto.md)) (OpenCode 2.3.2, 2026-11-21; lección 3 de [la nota de lecciones](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md), tarea 1.2 en `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`).
 
 ## Contrato
 
@@ -38,10 +38,10 @@ Es una API de plugins de una versión concreta. La suite la simula (`idd@1cf0792
 
 ## See Also
 
-- [Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md)
-- [Proveedor falso para verificar el contexto](proveedor-falso-para-verificar-contexto.md)
-- [El arranque de sesión](../topics/arranque-de-sesion.md)
-- [La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md)
+- [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md))
+- [[proveedor-falso-para-verificar-contexto|Proveedor falso para verificar el contexto]] ([Proveedor falso para verificar el contexto](proveedor-falso-para-verificar-contexto.md))
+- [[arranque-de-sesion|El arranque de sesión]] ([El arranque de sesión](../topics/arranque-de-sesion.md))
+- [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md))
 
 ## Sources
 

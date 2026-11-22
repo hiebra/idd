@@ -13,15 +13,34 @@
 // tasks 1.2 of add-llm-wiki-support). If a context hook throws, OpenCode
 // fails the request: the message does not reach the model.
 //
+// After the message, it can reload the TUI part, emit an event of the
+// plugin's RPC and close the TUI (fix-tui-subscription-cleanup, ADR-0011). As
+// OpenCode 2.3.2, before each reload and at close it runs the cleanup that
+// each part's setup returned, if it returned a function, and events.on(name,
+// handler, { signal }) stops at the signal's abort. Unlike OpenCode, which
+// reloads both parts, only the TUI part is reloaded here: running the server
+// part again starts the bootstrap core again, and what is checked is the
+// TUI's subscription (opencode-sim.mjs reloads both). The emitted event is
+// synthetic: the host sends it, the bootstrap core does not produce it.
+// Closing is a TUI that runs its own server (--standalone): each
+// subscription still alive leaves a trace in the terminal, as OpenCode's
+// client prints its ECONNRESET, and so does whatever the plugin writes to
+// console.error while closing.
+//
 // Usage: node opencode-host.mjs <project dir> <options JSON> <result file>
-// Options: { plugin, shell, frozenEnv, message, frozenMessages }
+// Options: { plugin, shell, frozenEnv, message, frozenMessages, tuiReloads, emit, close }
 //   plugin: the directory name of the plugin under .opencode/plugins/
 //   (default: session-bootstrap);
 //   shell: "ok" | "none" (a server context without `shell`) | "throws" (its
 //   hook() throws); frozenEnv: the command's environment cannot be changed;
 //   message: the user message to send; frozenMessages: the request's
-//   messages cannot be changed, so a hook that edits them throws
-// Result (JSON): { error, setupMs, env, toasts, logs, request }
+//   messages cannot be changed, so a hook that edits them throws;
+//   tuiReloads: how many times to reload the TUI part; emit: { event, data },
+//   an event of the plugin's RPC to emit after the reloads; close: close the
+//   TUI at the end
+// Result (JSON): { error, setupMs, env, toasts, logs, request, terminal, subscriptions }
+//   terminal: the traces left in the terminal at close; subscriptions: the
+//   TUI's subscriptions still alive at the end, { event, load }
 //   request: { delivered, system, messages, error } of the message, where
 //   system and messages are the texts the model receives
 
@@ -33,7 +52,7 @@ const [projectDir, optionsJson, resultFile] = process.argv.slice(2);
 const options = JSON.parse(optionsJson);
 const PLUGIN_DIR = path.join(projectDir, '.opencode', 'plugins', options.plugin ?? 'session-bootstrap');
 
-const result = { error: null, setupMs: null, env: null, toasts: [], logs: [], request: null };
+const result = { error: null, setupMs: null, env: null, toasts: [], logs: [], request: null, terminal: [], subscriptions: [] };
 const done = () => {
   fs.writeFileSync(resultFile, JSON.stringify(result));
   process.exit(0);
@@ -48,7 +67,7 @@ process.on('unhandledRejection', (error) => fail('unhandled rejection', error));
 
 // --- In-memory plugin RPC ------------------------------------------------------
 
-const rpcServers = new Map(); // definition id -> { handlers, listeners }
+const rpcServers = new Map(); // definition id -> { handlers, listeners: Map(name -> [{ fn, load }]) }
 
 function rpcServer(id) {
   if (!rpcServers.has(id)) rpcServers.set(id, { handlers: null, listeners: new Map() });
@@ -74,8 +93,8 @@ function serverRpc() {
         emit: (name, data) =>
           track(
             (async () => {
-              for (const handler of server.listeners.get(name) ?? []) {
-                await handler({ type: `rpc.${definition.id}.${name}`, data });
+              for (const listener of [...(server.listeners.get(name) ?? [])]) {
+                await listener.fn({ type: `rpc.${definition.id}.${name}`, data });
               }
             })()
           ),
@@ -85,14 +104,19 @@ function serverRpc() {
   return rpc;
 }
 
-function clientRpc(definition) {
+const clientRpc = (load) => (definition) => {
   const server = rpcServer(definition.id);
   const client = {
     events: {
-      on(name, handler) {
+      on(name, handler, options) {
+        const signal = options?.signal;
+        if (signal?.aborted) return () => {};
         if (!server.listeners.has(name)) server.listeners.set(name, []);
-        server.listeners.get(name).push(handler);
-        return () => server.listeners.set(name, server.listeners.get(name).filter((h) => h !== handler));
+        const listener = { fn: handler, load };
+        server.listeners.get(name).push(listener);
+        const off = () => server.listeners.set(name, (server.listeners.get(name) ?? []).filter((l) => l !== listener));
+        signal?.addEventListener('abort', off, { once: true });
+        return off;
       },
     },
   };
@@ -103,6 +127,14 @@ function clientRpc(definition) {
     };
   }
   return client;
+};
+
+function subscriptions() {
+  const alive = [];
+  for (const server of rpcServers.values()) {
+    for (const [event, listeners] of server.listeners) for (const listener of listeners) alive.push({ event, load: listener.load });
+  }
+  return alive;
 }
 
 // --- Contexts ------------------------------------------------------------------
@@ -137,11 +169,11 @@ function serverContext() {
   return ctx;
 }
 
-function tuiContext() {
+function tuiContext(load) {
   return {
     options: {},
     location: { directory: projectDir },
-    client: { rpc: clientRpc },
+    client: { rpc: clientRpc(load) },
     ui: {
       toast: {
         show(toast) {
@@ -154,10 +186,10 @@ function tuiContext() {
 
 // A part the plugin directory does not have is skipped, as OpenCode does;
 // the server part is required, since it is what the session needs
-async function loadPart(name, { required }) {
+async function loadPart(name, { required, load = 1 }) {
   const file = path.join(PLUGIN_DIR, `${name}.js`);
   if (!required && !fs.existsSync(file)) return null;
-  const plugin = (await import(pathToFileURL(file).href)).default;
+  const plugin = (await import(`${pathToFileURL(file).href}?load=${load}`)).default;
   if (!plugin || typeof plugin.id !== 'string' || typeof plugin.setup !== 'function') {
     throw new Error(`${file} does not export { id, setup } by default`);
   }
@@ -170,6 +202,22 @@ const log = (message) => result.logs.push(message);
 
 let server;
 let tui;
+// What each part's setup returned to run at reload or close
+const cleanups = { server: null, tui: null };
+const keep = (part, returned) => {
+  cleanups[part] = typeof returned === 'function' ? returned : null;
+};
+// As OpenCode 2.3.2: a failing cleanup is a toast
+async function cleanup(part) {
+  const fn = cleanups[part];
+  cleanups[part] = null;
+  if (!fn) return;
+  try {
+    await fn();
+  } catch (error) {
+    result.toasts.push({ variant: 'error', title: 'Plugin', message: `${part}: cleanup failed: ${error?.message ?? error}` });
+  }
+}
 try {
   server = await loadPart('server', { required: true });
   tui = await loadPart('tui', { required: false });
@@ -179,14 +227,14 @@ try {
 
 try {
   const start = Date.now();
-  await server.setup(serverContext());
+  keep('server', await server.setup(serverContext()));
   result.setupMs = Date.now() - start;
 } catch (error) {
   fail('server setup', error);
 }
 
 try {
-  if (tui) await tui.setup(tuiContext());
+  if (tui) keep('tui', await tui.setup(tuiContext(1)));
 } catch (error) {
   fail('tui setup', error);
 }
@@ -255,5 +303,43 @@ await new Promise((resolve) => setTimeout(resolve, 20));
 // Deliveries to the TUI still in flight
 while (pending.size > 0) await Promise.all([...pending]);
 await new Promise((resolve) => setTimeout(resolve, 50));
+// Hot reloads of the TUI part: the earlier load's cleanup, then a new load
+try {
+  for (let load = 2; tui && load <= 1 + (options.tuiReloads ?? 0); load += 1) {
+    await cleanup('tui');
+    tui = await loadPart('tui', { required: true, load });
+    keep('tui', await tui.setup(tuiContext(load)));
+  }
+} catch (error) {
+  fail('tui reload', error);
+}
+
+if (options.emit) {
+  const id = tui?.id ?? server.id;
+  for (const listener of [...(rpcServer(id).listeners.get(options.emit.event) ?? [])]) {
+    try {
+      await listener.fn({ type: `rpc.${id}.${options.emit.event}`, data: options.emit.data });
+    } catch (error) {
+      fail(`rpc listener ${options.emit.event}`, error);
+    }
+  }
+  await new Promise((resolve) => setTimeout(resolve, 50));
+}
+
+if (options.close) {
+  const original = console.error;
+  console.error = (...args) => result.terminal.push(args.map((a) => (a instanceof Error ? a.stack : String(a))).join(' '));
+  try {
+    await cleanup('tui');
+    await cleanup('server');
+    for (const sub of subscriptions()) {
+      result.terminal.push(`ClientError: Transport: ECONNRESET: The socket connection was closed unexpectedly (rpc event ${sub.event}, TUI load ${sub.load})`);
+    }
+  } finally {
+    console.error = original;
+  }
+}
+
+result.subscriptions = subscriptions();
 log(`shell hooks: ${shellHooks.length}`);
 done();

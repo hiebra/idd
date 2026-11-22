@@ -21,6 +21,11 @@ const OPS = {
     await host.setup();
     return host.state();
   },
+  // The user closes a TUI that runs its own server (--standalone)
+  async close() {
+    await host.close();
+    return host.state();
+  },
   seed: (args) => host.seedSession(args),
   // The user writes a message in a session of the TUI
   async message({ sessionID, text }) {

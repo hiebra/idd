@@ -11,7 +11,7 @@ Copy into `acceptance-tests/` at the repo root. Destination filenames are load-b
 | `javascript/extract-gherkin.cjs` | `extract-gherkin.cjs` | `cucumber.cjs` requires it as `./extract-gherkin.cjs` |
 | `javascript/cucumber.cjs` | `cucumber.cjs` | cucumber-js discovers its configuration by this exact name |
 | `javascript/openspec-effective-paths.cjs` | `openspec-effective-paths.cjs` | required by `cucumber.cjs` under this name |
-| `../gherkin-lintrc.json` | `.gherkin-lintrc` | gherkin-lint auto-discovers this name and has no built-in defaults |
+| `../gplintrc.json` | `.gplintrc` | gplint auto-discovers this name and enables only the rules it lists |
 
 The fourth file is from the shared `references/` root, not this folder.
 
@@ -19,13 +19,13 @@ The fourth file is from the shared `references/` root, not this folder.
 
 `acceptance-tests/` is an independent Node project with its own `package.json`. Its hooks boot the application before the suite and shut it down after, so the suite runs with one command.
 
-devDependencies: `@cucumber/cucumber`, `glob`, `cheerio`, `gherkin-lint`.
+devDependencies: `@cucumber/cucumber`, `glob`, `cheerio`, `gplint`.
 
 ```json
 "scripts": {
   "test": "cucumber-js",
   "test:specs": "cucumber-js -p specs",
-  "lint:specs": "node extract-gherkin.cjs && gherkin-lint .extracted"
+  "lint:specs": "node extract-gherkin.cjs && gplint .extracted"
 }
 ```
 
@@ -57,7 +57,7 @@ npx cucumber-js --dry-run -f message | \
 
 Pass `.extracted` as a directory argument. A quoted `'**'` glob silently matches nothing through the dot-directory. Reported line numbers are valid in source `spec.md`.
 
-Known limitation: gherkin-lint's AST rules do not descend into `Rule:` children, so `no-unnamed-scenarios` misses scenarios nested under a Rule. Line-based rules and feature-level rules work.
+gplint's AST rules descend into `Rule:` children, so the scenario rules (`no-scenario-outlines-without-examples`, `no-examples-in-scenarios`, ...) check every scenario of every requirement.
 
 ## Page Object Model
 

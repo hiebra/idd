@@ -82,9 +82,18 @@ class OpenCodeAgent {
       error: result.error,
       startProblems,
       warnings: result.toasts.flatMap((toast) => String(toast.message).split('\n')),
+      toasts: result.toasts,
+      terminal: result.terminal ?? [],
+      subscriptions: result.subscriptions ?? [],
       log: `host stderr:\n${child.stderr}\nhost logs:\n${result.logs.join('\n')}\ntoasts: ${JSON.stringify(result.toasts)}\nerror: ${result.error}\nrequest: ${JSON.stringify(result.request)}`,
       run(command) {
         return spawnSync('bash', ['-c', command], { cwd: project.dir, env, encoding: 'utf8' });
+      },
+      // Opens the same session again with more host options: reloads of the
+      // TUI part, an event of the plugin's RPC and closing the TUI
+      // (fix-tui-subscription-cleanup)
+      replay(extra) {
+        return self.#open({ machine, project, workDir }, { ...options, ...extra });
       },
       // When the reminder cannot be generated, it is also simulated with a
       // request whose messages cannot be changed, so that the plugin's

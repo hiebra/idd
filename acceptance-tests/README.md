@@ -28,7 +28,7 @@ Pruebas del núcleo del arranque que no están en las specs (conflictos de nombr
 npm run test:core
 ```
 
-Lint del Gherkin de las specs:
+Lint del Gherkin de las specs, con gplint:
 
 ```bash
 npm run lint:specs
@@ -38,7 +38,7 @@ Cada ejecución reconstruye `.extracted/` (los `.feature` extraídos de los `spe
 
 ## Estructura
 
-- `cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gherkin-lintrc` son copias literales de la skill; sus nombres son obligatorios.
+- `cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gplintrc` son copias literales de la skill; sus nombres son obligatorios. `.gplintrc` es la configuración del lint con [gplint](https://github.com/gplint/gplint), y solo usa los niveles `"error"` y `"off"`: con otro nivel, gplint sale con 0 sin revisar nada.
 - `support/` contiene el World y el soporte de los escenarios.
 - `step-definitions/` contiene los pasos, que solo llaman a métodos de intención del World y hacen aserciones.
 
@@ -54,6 +54,7 @@ Los adaptadores están en `support/agents/` y dan a los pasos el mismo resultado
 
 - **Claude Code** (`claude-code.js`): ejecuta `.claude/hooks/session-start.sh` como lo hace Claude Code, con `CLAUDE_PROJECT_DIR` apuntando a la copia y `CLAUDE_ENV_FILE` a un archivo temporal, que se carga antes de cada comando de la sesión. Los avisos mostrados son el `systemMessage` del JSON que el hook imprime por stdout; el stdout tiene que estar vacío o ser un único objeto JSON. "Una versión de Claude Code que no permite ajustar el PATH" es una sesión sin `CLAUDE_ENV_FILE`.
 - **OpenCode 2** (`opencode.js` y `opencode-host.mjs`): un proceso hijo de Node con el entorno de la máquina simulada hace de OpenCode. Carga `server.js` y `tui.js` de `.opencode/plugins/session-bootstrap/` y llama a su `setup` con contextos falsos de servidor y de TUI, unidos por un RPC del plugin en memoria. Un comando de la sesión se ejecuta con el entorno que dejan los hooks `create.before`, y los avisos mostrados son los toasts de la parte de TUI. Además se comprueba que `setup` no espera a la instalación y que ninguna excepción sale del plugin. "Una versión de OpenCode que no permite ajustar el PATH" se simula de tres formas, que tienen que dar los mismos avisos: un contexto de servidor sin `shell`, un `shell.hook()` que lanza una excepción y un entorno del comando que no se puede cambiar.
+- **Recargas y cierre de la TUI en OpenCode** (`fix-tui-subscription-cleanup`): tras el mensaje, el host puede recargar la parte de TUI un número de veces, emitir un evento del RPC del plugin y cerrar la TUI como una que lleva su propio servidor (`--standalone`). Como OpenCode 2.3.2, antes de cada recarga y al cerrar ejecuta la limpieza que devolvió el `setup` de cada parte, y `events.on(nombre, manejador, { signal })` deja de entregar eventos al abortarse el `signal`. Al cerrar, cada suscripción que sigue viva deja una traza `ECONNRESET` en el terminal, como hace el cliente de OpenCode, y también lo que el plugin escriba en `console.error` durante el cierre. A diferencia de OpenCode, solo se recarga la parte de TUI, porque volver a ejecutar la de servidor relanza el núcleo del arranque; y el aviso nuevo es sintético: lo emite el host, no el núcleo.
 
 El contrato de OpenCode que simula el adaptador se comprobó con OpenCode 2.3.2 real (ver las tareas 1.2 y 7.2 del change `add-opencode-parity`). Si cambia la API de plugins de OpenCode, hay que actualizar `opencode-host.mjs`.
 
@@ -100,11 +101,21 @@ El plugin `.opencode/plugins/openspec-autopilot/` se prueba en un OpenCode simul
 - **Ejecución:** `prompt` y `command` arrancan un turno en segundo plano. Antes de cada petición al modelo se ejecutan los hooks `context`, y si uno lanza una excepción la petición falla. Si el modelo llama a una tool, se ejecuta y se le vuelve a preguntar; cuando responde con texto, la sesión queda parada y se ejecutan los hooks `experimental.idle`, salvo tras una interrupción. `time.busy` y `time.idle` dicen si una sesión trabaja, `context({ sessionID })` da los mensajes de cualquier sesión y la compactación ejecuta su hook.
 - **Tools:** solo llegan al modelo las declaradas con `options.codemode === false`.
 - **TUI:** `ui.router.navigate`, `ui.dialog.select` con respuestas guionizadas, toasts y `client.session.update`. Un diálogo puede quedarse abierto hasta que el paso siguiente del escenario lo responda. Sin TUI no se carga `tui.js`, y una TUI que no contesta se simula sin entregarle los eventos.
-- **Recargas:** vuelven a ejecutar `setup`. El servidor solo conserva los hooks, tools y manejadores RPC de la última generación, y los escuchadores de eventos de la TUI anteriores siguen vivos.
+- **Recargas:** vuelven a ejecutar `setup`, de las dos partes. Antes, como OpenCode 2.3.2, se ejecuta la limpieza que devolvió el `setup` anterior de cada parte, si devolvió una función; si falla, sale un toast "cleanup failed". El servidor solo conserva los hooks, tools y manejadores RPC de la última generación. Los escuchadores de eventos de la TUI de cargas anteriores siguen vivos solo si el plugin no los libera: `events.on(nombre, manejador, { signal })` deja de entregar eventos al abortarse el `signal` (ADR-0011).
+- **Cierre de la TUI** con su propio servidor (`--standalone`): ejecuta las limpiezas y cierra el servidor. Cada suscripción que sigue viva deja una traza `ECONNRESET` en el terminal, como hace el cliente de OpenCode, y también lo que el plugin escriba en `console.error` durante el cierre. El estado expone las suscripciones vivas, con la carga de la TUI a la que pertenecen.
 - **Fallos:** se inyectan por operación (por ejemplo, `session.create`).
 
 El modelo es un guion por escenario: reglas por sesión, cada una con una cola de respuestas (texto o una llamada a tool con sus argumentos). Lo que haría un workflow en el proyecto (escribir un artefacto, marcar una task, archivar) lo hace el paso antes de que el modelo llame a `openspec_handoff`. De cada petición se registra lo que recibe el modelo (system, mensajes, skills y tools), y los pasos comprueban sobre eso las instrucciones que inyecta el plugin.
 
-Los casos que no están en las specs están en `core-tests/autopilot-next-step.test.js` (la lógica pura del paso siguiente) y `core-tests/autopilot-plugin.test.js`: recargas sin duplicados, sin TUI, dos sesiones que toman el control a la vez, la tool llamada antes de terminar el paso, el árbol comprobado otra vez en el mensaje siguiente, ninguna excepción hacia OpenCode, esperas con límite y `openspec_session`.
+Los casos que no están en las specs están en `core-tests/autopilot-next-step.test.js` (la lógica pura del paso siguiente) y `core-tests/autopilot-plugin.test.js`: recargas sin duplicados, sin TUI, dos sesiones que toman el control a la vez, la tool llamada antes de terminar el paso, el árbol comprobado otra vez en el mensaje siguiente, ninguna excepción hacia OpenCode, esperas con límite, `openspec_session` y la limpieza que devuelve el `setup` de la parte de TUI, que aborta todas sus suscripciones y no lanza ni cuando falla el RPC.
 
 El banco con OpenCode real con el que se comprobó el contrato está descrito en la lección 9 de esa nota y no forma parte del repositorio. Al subir de versión OpenCode, hay que repetir las pruebas con él y actualizar el simulador si algo cambia (inventario del wiki: `volver-a-comprobar-apis-de-sesion-al-subir-opencode`).
+
+## Escenarios de `spec-lint`
+
+Los escenarios del lint de las specs no ejecutan `npm run lint:specs` tal cual, porque reconstruye `.extracted/`, que es de donde lee cucumber-js la suite en curso. `support/spec-lint.js` ejecuta los mismos dos comandos del script sobre otros directorios: `extract-gherkin.cjs <openspec> <salida>` y el `gplint` de `node_modules` con `-c .gplintrc -f json`, del que lee el código de salida y la línea de cada error.
+
+- **Un defecto en un escenario**: el World escribe en un directorio temporal un `openspec/` con una sola spec, de un requisito cuyo escenario tiene el defecto del ejemplo, y guarda la línea en la que lo escribió. El paso comprueba que hay un error en esa línea y en ninguna otra.
+- **Las specs del proyecto**: extrae el `openspec/` del proyecto, con los deltas de los changes activos, en un directorio temporal. Además de que no haya errores, comprueba que gplint dio un informe, porque sin él no ha revisado nada.
+
+`core-tests/spec-lint-script.test.js` comprueba que `lint:specs` sigue siendo `node extract-gherkin.cjs && gplint .extracted`, que `.gplintrc` solo usa `"error"` y `"off"` y que es igual que la configuración fijada de la skill.

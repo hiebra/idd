@@ -21,7 +21,7 @@ summary: "Para saber exactamente qué recibe el modelo en OpenCode sin claves de
 
 1. Un servidor Node local que guarda el cuerpo de cada `POST /v1/chat/completions` y responde en SSE con un par de `chat.completion.chunk` y `data: [DONE]`.
 2. Un proveedor `@ai-sdk/openai-compatible` con `baseURL: http://127.0.0.1:<puerto>/v1` y una `apiKey` cualquiera, en un `opencode.json` **fuera del repositorio** (el global de la prueba, con `XDG_CONFIG_HOME` aislado).
-3. `opencode run --standalone "<mensaje>"` (con `-c` para seguir la sesión), o la TUI en `tmux` cuando importa que la sesión siga abierta (ver [Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md)).
+3. `opencode run --standalone "<mensaje>"` (con `-c` para seguir la sesión), o la TUI en `tmux` cuando importa que la sesión siga abierta (ver [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md))).
 4. Para probar herramientas, el proveedor puede responder con la llamada que indique el propio mensaje (`@@TOOL <nombre> <json>`), y un plugin sonda puede ejecutar cualquier API del plugin y registrarla ([lección 9](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md)).
 
 ## Qué se ve
@@ -36,9 +36,9 @@ Comprueba qué recibe el modelo, no qué hace con ello. Para eso hace falta un m
 
 ## See Also
 
-- [El hook context de OpenCode](hook-context-opencode.md)
-- [Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md)
-- [La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md)
+- [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](hook-context-opencode.md))
+- [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md))
+- [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md))
 
 ## Sources
 

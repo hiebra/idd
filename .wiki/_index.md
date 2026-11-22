@@ -2,16 +2,16 @@
 
 > Conocimiento de la plantilla intent-driven: decisiones, comprobaciones empíricas y fuentes del propio repositorio
 
-Last updated: 2026-11-21
+Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 13 raw documents
-- Articles: 9 compiled wiki articles
+- Sources: 18 raw documents
+- Articles: 10 compiled wiki articles
 - Inventory records: 3 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
-- Last compiled: 2026-11-21
+- Last compiled: 2026-11-22
 - Last lint: 2026-11-22
 
 ## Quick Navigation
@@ -29,6 +29,8 @@ Last updated: 2026-11-21
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: Fusionado main (add-quote-comment-rule); el ADR de limpieza de los plugins pasa a ADR-0011, con su manifiesto en idd@002f043
 
 - 2026-11-21: Resincronizado con el archivado de add-openspec-autopilot: manifiesto en idd@772d0f0, 1 tema nuevo (el ciclo de un change y el plugin), 3 artículos refrescados y la tarea del inventario cerrada
 

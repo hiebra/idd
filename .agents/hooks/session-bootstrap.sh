@@ -191,9 +191,11 @@ keep_wiki_versioned() {
   fi
 }
 
+# El estado personal de Obsidian (.wiki/.obsidian/) se ignora a propósito
+# en .gitignore, así que no cuenta
 wiki_ignored() {
   git check-ignore -q .wiki 2>/dev/null ||
-    [ -n "$(git ls-files --others --ignored --exclude-standard -- .wiki 2>/dev/null | head -n 1)" ]
+    [ -n "$(git ls-files --others --ignored --exclude-standard -- .wiki ':(exclude).wiki/.obsidian' 2>/dev/null | head -n 1)" ]
 }
 
 # install_project DIR: instala las dependencias del proyecto Node en DIR
