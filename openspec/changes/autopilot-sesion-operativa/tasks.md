@@ -20,10 +20,13 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 2. Núcleo puro del plugin (zona de código), con `core-tests`
 
-- [ ] 2.1 `lib/git.mjs` (D8): estado (`clean`, `staged`, `unstaged`), firma, veredicto (`ok`, `ko` o `continue`) y stage (`add -A` o por rutas). Tests con repositorios reales en `core-tests/autopilot-git.test.js`.
-- [ ] 2.2 `lib/product.mjs` (D7, D11): foto, producto por tipo de paso, cola de revisiones en el orden del schema y rutas de stage por artefacto. Tasks con el id del CLI y la etiqueta de `tasks.md`; `parseTasks` con los mismos ids. Tests en `core-tests/autopilot-product.test.js`.
-- [ ] 2.3 `lib/next-step.mjs` (D9, D10): ok y ko por git, cola, `update` → revisión del plan, esperas de commit (arranque sucio, cambio de zona en auto, tras archive y tras wiki) y verify por veredicto; se retira `needsConfirmation`. Actualizar `core-tests/autopilot-next-step.test.js`.
-- [ ] 2.4 `lib/screen.mjs` (D4, D5): la directiva de cada pantalla (modal, validación o nada) y la discrepancia con `openspec status`. Tests en `core-tests/autopilot-screen.test.js`.
+- [x] 2.1 `lib/git.mjs` (D8): estado (`clean`, `staged`, `unstaged`), firma, veredicto (`ok`, `ko` o `continue`) y stage (`add -A` o por rutas). Tests con repositorios reales en `core-tests/autopilot-git.test.js`.
+  - Resultado: los tests de git, del producto y de la pantalla quedaron juntos en `core-tests/autopilot-product.test.js`. El veredicto se afinó al concretar el stage por producto: ok es HEAD avanzado y nada en el stage, y ko es HEAD igual, nada en el stage y cambios en el árbol (design D8, actualizado).
+- [x] 2.2 `lib/product.mjs` (D7, D11): foto, producto por tipo de paso, cola de revisiones en el orden del schema y rutas de stage por artefacto. Tasks con el id del CLI y la etiqueta de `tasks.md`; `parseTasks` con los mismos ids. Tests en `core-tests/autopilot-product.test.js`.
+- [x] 2.3 `lib/next-step.mjs` (D9, D10): ok y ko por git, cola, `update` → revisión del plan, esperas de commit (arranque sucio, cambio de zona en auto, tras archive y tras wiki) y verify por veredicto; se retira `needsConfirmation`. Actualizar `core-tests/autopilot-next-step.test.js`.
+  - Resultado: la discrepancia con `openspec status` (D5) quedó en `lib/next-step.mjs` (`discrepancy`), junto al paso siguiente.
+- [x] 2.4 `lib/screen.mjs` (D4, D5): la directiva de cada pantalla (modal, validación o nada) y la discrepancia con `openspec status`. Tests en `core-tests/autopilot-screen.test.js`.
+  - Resultado: tests en `core-tests/autopilot-product.test.js`.
 
 ## 3. Ramas (zona de código): `openspec-change-lifecycle`
 

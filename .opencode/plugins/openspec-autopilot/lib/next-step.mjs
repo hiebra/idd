@@ -1,10 +1,12 @@
-// El paso siguiente de un change (design D6 y D11 de add-openspec-autopilot):
-// una función pura, sin OpenCode ni git, que se prueba con node --test.
+// El paso siguiente de un change (design D6 y D11 de add-openspec-autopilot,
+// D9 a D11 de autopilot-sesion-operativa): funciones puras, sin OpenCode ni
+// git, que se prueban con node --test.
 //
-// Pasos ({ kind, id, of }):
+// Pasos ({ kind, id, label, of }):
 //   new                 openspec-new-change
 //   artifact <id>       openspec-continue-change de ese artefacto
-//   task <id>           openspec-apply-change limitado a esa task
+//   task <id>           openspec-apply-change limitado a esa task (id del CLI;
+//                       label, el número de tasks.md)
 //   verify              openspec-verify-change
 //   archive             openspec-archive-change
 //   wiki                la resincronización del wiki de las indicaciones de archivado
@@ -22,12 +24,22 @@ export function zoneOf(step) {
   return step ? ZONE[step.kind] ?? null : null;
 }
 
-// Las tasks de un tasks.md: cada línea "- [ ] <id> ..." o "- [x] <id> ..."
+const LABEL = /^(\d+(?:\.\d+)*)[.:]?(?:\s|$)/;
+
+// Una task de `openspec instructions apply --json`: { id, description, done }
+export function taskFromCli(task) {
+  const label = LABEL.exec(String(task?.description ?? '').trim())?.[1] ?? String(task?.id ?? '');
+  return { id: String(task?.id ?? ''), label, done: Boolean(task?.done) };
+}
+
+// Las tasks de un tasks.md, con los mismos ids que el CLI (por orden) y la
+// etiqueta de cada línea "- [ ] <número> ..."
 export function parseTasks(text) {
   const tasks = [];
   for (const line of String(text ?? '').split(/\r?\n/)) {
-    const m = /^\s*-\s+\[([ xX])\]\s+(\S+)/.exec(line);
-    if (m) tasks.push({ id: m[2].replace(/[.:]$/, ''), done: m[1] !== ' ' });
+    const m = /^\s*-\s+\[([ xX])\]\s+(.*)$/.exec(line);
+    if (!m) continue;
+    tasks.push(taskFromCli({ id: String(tasks.length + 1), description: m[2], done: m[1] !== ' ' }));
   }
   return tasks;
 }
@@ -42,19 +54,19 @@ export function stepFromState(state) {
     return ready ? { kind: 'artifact', id: ready.id } : { kind: 'blocked' };
   }
   const pending = (state.tasks ?? []).find((t) => !t.done);
-  if (pending) return { kind: 'task', id: pending.id };
+  if (pending) return { kind: 'task', id: String(pending.id), label: pending.label ?? String(pending.id) };
   return { kind: 'verify' };
 }
 
-const REVIEWED = new Set(['artifact', 'task', 'verify']);
-
-// next({ mode, finished, result, state }) -> { step, zoneChange }
+// next({ mode, finished, result, state, lastZone }) -> { step, zoneChange }
 //   mode: "normal" | "auto"
 //   finished: el paso terminado ({ kind, id, of }), o null al tomar el control
-//   result: el resultado que dio la tool: "ok" | "no ok" (revisiones),
-//     "clean" | "critical" (verify)
+//   result: "ok" | "ko" (revisiones, por git), "clean" | "critical" (verify)
 //   state: { change, status (openspec status --json), tasks }
 //   lastZone: la zona del último paso que escribió, para el cambio de zona
+//
+// En el modo normal, tras un artefacto, una task, el verify o un update viene
+// una revisión: la abre el servidor con la cola de productos (lib/product.mjs).
 export function next({ mode = 'normal', finished = null, result = null, state = null, lastZone = null }) {
   const step = decide({ mode, finished, result, state });
   const zone = zoneOf(step);
@@ -67,14 +79,12 @@ function decide({ mode, finished, result, state }) {
   const auto = mode === 'auto';
   switch (finished.kind) {
     case 'new':
-      return stepFromState(state);
     case 'artifact':
     case 'task':
-      if (!auto) return { kind: 'review', id: finished.id ?? finished.kind, of: finished.kind };
       return stepFromState(state);
     case 'verify':
-      if (!auto) return { kind: 'review', id: 'verify', of: 'verify' };
-      return result === 'critical' ? { kind: 'review', id: 'verify', of: 'verify' } : { kind: 'archive' };
+      if (!auto || result === 'critical') return { kind: 'review', id: 'verify', of: 'verify' };
+      return { kind: 'archive' };
     case 'review': {
       if (result !== 'ok') return { kind: 'update', id: finished.id, of: finished.of };
       if (finished.of === 'verify') return { kind: 'archive' };
@@ -91,14 +101,33 @@ function decide({ mode, finished, result, state }) {
   }
 }
 
-// Si el paso terminado necesita que el usuario confirme el cierre (design D8)
-export function needsConfirmation({ mode, step, result }) {
-  if (step?.kind === 'review') return true;
-  return mode === 'auto' && step?.kind === 'verify' && result === 'critical';
+// Si el paso siguiente tiene que esperar el commit del usuario (design D9):
+// tras el archive y tras la resincronización del wiki, en los dos modos; en el
+// modo auto, en cada cambio de zona. update-change nunca espera: empieza con
+// el árbol sucio a propósito.
+export function waitsForCommit({ mode, finished, step, zoneChange }) {
+  if (!step || step.kind === 'update' || step.kind === 'review') return false;
+  if (finished?.kind === 'archive' || finished?.kind === 'wiki') return true;
+  return mode === 'auto' && zoneChange;
 }
 
-export function isReviewed(kind) {
-  return REVIEWED.has(kind);
+// Si el paso de una sesión parada no encaja con `openspec status` (design D5):
+// solo se comprueban new, artifact y task, y que el producto del paso ya
+// exista no es una discrepancia. Devuelve null o { expected }.
+export function discrepancy(step, state) {
+  if (!step || !['new', 'artifact', 'task'].includes(step.kind)) return null;
+  const expected = stepFromState(state);
+  if (step.kind === 'new') return state?.change ? null : expected.kind === 'new' ? null : { expected };
+  if (step.kind === 'artifact') {
+    const artifact = (state?.status?.artifacts ?? []).find((a) => a.id === step.id);
+    if (artifact?.status === 'done') return null;
+    if (expected.kind === 'artifact' && expected.id === step.id) return null;
+    return { expected };
+  }
+  const task = (state?.tasks ?? []).find((t) => String(t.id) === String(step.id));
+  if (task?.done) return null;
+  if (expected.kind === 'task' && String(expected.id) === String(step.id)) return null;
+  return { expected };
 }
 
 // Una descripción corta del paso, para títulos, avisos y el índice
@@ -111,7 +140,7 @@ export function describe(step, change) {
     case 'artifact':
       return `artefacto ${step.id}${name}`;
     case 'task':
-      return `task ${step.id}${name}`;
+      return `task ${step.label ?? step.id}${name}`;
     case 'verify':
       return `verify${name}`;
     case 'archive':
@@ -119,7 +148,7 @@ export function describe(step, change) {
     case 'wiki':
       return `resincronización del wiki${name}`;
     case 'review':
-      return `revisión ${of[step.of] ?? ''}${step.of === 'verify' || step.of === 'plan' ? '' : ` ${step.id}`}${name}`.replace(/\s+/g, ' ');
+      return `revisión ${of[step.of] ?? ''}${step.of === 'verify' || step.of === 'plan' ? '' : ` ${step.label ?? step.id}`}${name}`.replace(/\s+/g, ' ');
     case 'update':
       return `update-change${name}`;
     default:
