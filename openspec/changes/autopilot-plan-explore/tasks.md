@@ -83,19 +83,26 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 5. openspec-autopilot: el aviso de lo modificado con el agente plan (zona de código)
 
-- [ ] 5.1 Según D4: guardar `planTurn` con el estado de git al empezar un turno con el agente plan, y borrarlo en un turno con build. Un fallo de git se registra y deja el turno sin `planTurn`. Probarlo en `core-tests/`.
-- [ ] 5.2 "Lo producido en plan detiene la cadena hasta el aviso": definir los pasos y ver que falla, porque hoy la cadena sigue. Implementar D5 en `onIdle`: comparar firmas, la fase `plan-notice` con `planNotice`, la operación `notice` del RPC, que no espera respuesta, y el método `ack({ instance, sessionID })` de la TUI al servidor (`lib/rpc.mjs`; `tui.js`, con el modal de un botón "Entendido" que llama a `ack` al cerrarse, liberado en la limpieza de `setup` según ADR-0011). El servidor acepta el acuse si la sesión sigue en `plan-notice`, sin ninguna petición pendiente en memoria.
-- [ ] 5.3 "Al cerrar el aviso, la cadena sigue": rojo → verde. Al recibir el acuse, volver a `running` y llamar a `finishStep` con el producto recalculado.
-- [ ] 5.4 "Una modificación en plan sin producto también avisa": rojo → verde. Comparar en reposo en todas las fases de la sesión operativa, no solo en las que encadenan.
-- [ ] 5.5 "Sin TUI, el aviso va en la sesión siguiente": rojo → verde. El aviso al principio del mensaje de arranque de la sesión siguiente (`stepPrompt`, `reviewPrompt`) y, sin producto, `planNotice: { next: true }` que `onContext` añade una vez y borra.
-- [ ] 5.6 "Explorar sin modificar nada no avisa": rojo → verde.
-- [ ] 5.7 En `core-tests/autopilot-plugin.test.js`, los casos de D5 que no están en las specs:
+- [x] 5.1 Según D4: guardar `planTurn` con el estado de git al empezar un turno con el agente plan, y borrarlo en un turno con build. Un fallo de git se registra y deja el turno sin `planTurn`. Probarlo en `core-tests/`.
+  - Resultado: `planTurn` se guarda en `turnText` al empezar un turno nuevo con el agente plan, si no hay uno pendiente, y se borra en un turno con build y al quedar en reposo. Lo prueba un test de `core-tests/autopilot-plugin.test.js` que lee la metadata a mitad de un turno en plan. El fallo de git se registra y deja el turno sin `planTurn` (`try`/`catch` alrededor de `gitState`), pero no tiene test: el simulador no puede hacer fallar git.
+- [x] 5.2 "Lo producido en plan detiene la cadena hasta el aviso": definir los pasos y ver que falla, porque hoy la cadena sigue. Implementar D5 en `onIdle`: comparar firmas, la fase `plan-notice` con `planNotice`, la operación `notice` del RPC, que no espera respuesta, y el método `ack({ instance, sessionID })` de la TUI al servidor (`lib/rpc.mjs`; `tui.js`, con el modal de un botón "Entendido" que llama a `ack` al cerrarse, liberado en la limpieza de `setup` según ADR-0011). El servidor acepta el acuse si la sesión sigue en `plan-notice`, sin ninguna petición pendiente en memoria.
+  - Resultado: falló porque la cadena seguía (la revisión se creaba sin modal) y pasa con D5: `changedInPlan` y la fase `plan-notice` en `onIdle`, la operación `notice` (la TUI abre el modal y responde enseguida) y `ack` por la sesión (`releaseNotice`).
+- [x] 5.3 "Al cerrar el aviso, la cadena sigue": rojo → verde. Al recibir el acuse, volver a `running` y llamar a `finishStep` con el producto recalculado.
+  - Resultado: falló sin D5 y pasa.
+- [x] 5.4 "Una modificación en plan sin producto también avisa": rojo → verde. Comparar en reposo en todas las fases de la sesión operativa, no solo en las que encadenan.
+  - Resultado: falló sin D5 (no salía modal) y pasa; la comparación se hace en todas las fases de la sesión operativa.
+- [x] 5.5 "Sin TUI, el aviso va en la sesión siguiente": rojo → verde. El aviso al principio del mensaje de arranque de la sesión siguiente (`stepPrompt`, `reviewPrompt`) y, sin producto, `planNotice: { next: true }` que `onContext` añade una vez y borra.
+  - Resultado: falló sin D5 (la revisión arrancaba sin aviso) y pasa: `noticeAtStart` en la sesión siguiente, que `startStep` pone al principio del mensaje de arranque; sin producto, `planNotice: { next: true }`.
+- [x] 5.6 "Explorar sin modificar nada no avisa": rojo → verde.
+  - Resultado: pasa también sin D5, como se esperaba.
+- [x] 5.7 En `core-tests/autopilot-plugin.test.js`, los casos de D5 que no están en las specs:
   - un aviso pendiente (fase `plan-notice`) se vuelve a pedir cuando se presenta una TUI con otro PID, y no tras una recarga en caliente (el mismo PID) ni en cada `screen`;
   - tras una recarga en caliente con el modal abierto, cerrar ese modal (el de la carga anterior) llega al servidor nuevo como acuse y encadena, una sola vez;
   - un acuse de una sesión que ya no está en `plan-notice` se ignora;
   - en `plan-notice`, un prompt del usuario en la sesión cuenta como acuse y encadena con el aviso en la sesión siguiente;
   - nada lanza hacia OpenCode en ninguno de estos casos;
   - un turno con build no da aviso aunque git cambie.
+  - Resultado: cinco tests en `core-tests/autopilot-plugin.test.js`, además del de la 5.1. Al escribir el del prompt con el aviso pendiente apareció un fallo del simulador de la 2.1: el modal se abre en una promesa separada de la entrega RPC, pero hereda su contexto, y el contador tomaba por esperando al usuario otra llamada pendiente. `settle()` volvía antes de que terminara el turno. Ahora cada entrega guarda su propio estado, y solo cuenta como esperando la entrega que de verdad espera el modal. Suite con los deltas: 215 escenarios, los 215 pasan, sin pasos sin definir. `npm run test:core`: 124 de 125; falla "two sessions taking control at once", una carrera anterior a este change (también falló en la 4.1, antes de tocar `onPrompt`): con dos sesiones que dicen `autopilot` a la vez, si la más antigua escribe su metadata después de que la nueva compruebe, quedan las dos como operativas. Queda fuera de este change.
 
 ## 6. Documentación (zona de código)
 
