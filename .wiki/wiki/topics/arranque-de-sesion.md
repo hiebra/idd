@@ -2,6 +2,10 @@
 title: "El arranque de sesión: núcleo neutral y un adaptador por agente"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-812f22d-autopilot-rama-por-sesion.md
+  - raw/notes/2026-11-22-ll-pruebas-opencode-real-autopilot.md
+  - raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md
+  - raw/notes/2026-11-22-ll-windows-support.md
   - raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
@@ -51,10 +55,11 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - **El CLI del proyecto**: el `openspec` de la versión de `package.json` tiene prioridad sobre uno global. Si el `PATH` no se puede ajustar, se avisa e indica cómo ejecutarlo. "Avisar" es mostrarlo en la interfaz del agente; dejarlo en un log no cuenta.
 - **Las dependencias**: todas, las de la raíz y las de `acceptance-tests/`. Solo se reinstalan si cambian `package.json`, `package-lock.json` o el núcleo, y una instalación vale para los dos agentes.
 - **Los requisitos**: sin npm o con un Node inferior al de `engines.node`, se avisa y no se instala nada. Un fallo de instalación avisa, no bloquea la sesión y se reintenta en la siguiente.
-- **Git listo para el ciclo** (desde `manage-git-discipline`): antes de instalar nada, `prepare_git` completa un clon superficial, en un contenedor efímero trae las referencias de `origin` y guarda la rama de la sesión en `git config idd.sessionBranch`, y pone al día con `update-ref` las ramas permanentes locales atrasadas, salvo la del clon; de una divergida solo avisa. No toca el árbol de trabajo y, fuera de la nube, solo usa la red para completar un clon superficial (`idd@5d7f5b0:.agents/hooks/session-bootstrap.sh`, `idd@5d7f5b0:openspec/specs/session-bootstrap/spec.md`). Saber si la sesión es un contenedor efímero lo dice `branch-change.mjs env`, para que la detección esté en un solo sitio.
+- **Git listo para el ciclo** (desde `manage-git-discipline`): antes de instalar nada, `prepare_git` completa un clon superficial, en un contenedor efímero trae las referencias de `origin` y guarda la rama de la sesión en `git config idd.sessionBranch`, y pone al día con `update-ref` las ramas permanentes locales atrasadas, salvo la del clon; de una divergida solo avisa. No toca el árbol de trabajo y, fuera de la nube, solo usa la red para completar un clon superficial (`idd@5d7f5b0:.agents/hooks/session-bootstrap.sh`, `idd@5d7f5b0:openspec/specs/session-bootstrap/spec.md`). Saber si la sesión es un contenedor efímero lo dice `branch-change.mjs env`, para que la detección esté en un solo sitio. Desde `autopilot-rama-por-sesion` tampoco pone al día ninguna rama sacada en otro worktree del clon: `update-ref` la movería sin su árbol ni su índice, y su directorio vería como cambios en el stage la diferencia con el commit nuevo ([lección 2 de las pruebas en OpenCode real](../../raw/notes/2026-11-22-ll-pruebas-opencode-real-autopilot.md)) (`idd@812f22d:openspec/specs/session-bootstrap/spec.md`, `idd@812f22d:.agents/hooks/session-bootstrap.sh`).
 - **El motor del wiki**: se instala en la versión fijada, se sustituye si hay otra y no se versiona. Un fallo avisa con la instalación manual y se reintenta.
 - **Guía y recordatorio**: los entrega el adaptador del arranque, nunca un archivo de instrucciones que el agente cargue siempre. ADR-0010 extiende esa regla a toda instrucción que la plantilla dé al agente, cada una con su fuente en `.agents/` y su desactivación en local (`idd@16e4617:adr/0010-agent-instructions-through-session-bootstrap.md`); la primera tras el wiki es [[regla-de-comentarios|la regla de comentarios]] ([la regla de comentarios](../concepts/regla-de-comentarios.md)).
 - **En OpenCode, la parte de TUI libera su suscripción a los avisos** al recargarse y al cerrarse: tras una recarga, cada aviso nuevo se muestra una sola vez, y al cerrar con `--standalone` no queda ningún error en el terminal (`idd@99bdccd:openspec/specs/session-bootstrap/spec.md`). Sin esa limpieza, cada carga anterior viva repetía el toast (`idd@99bdccd:.opencode/plugins/session-bootstrap/tui.js`).
+- **Finales de línea LF en cualquier clon** (desde `windows-support`): el repositorio fija LF en todos sus archivos de texto, entre ellos los scripts del arranque y los textos que entrega o procesa, para que un clon con `core.autocrlf=true`, el valor por defecto de Git for Windows, los extraiga con LF; con CRLF, la guía del wiki llegaría con sus identificadores de sección (`idd@3d2d8fe:openspec/specs/session-bootstrap/spec.md`, `idd@3d2d8fe:.gitattributes`). El arranque en Windows aún no existe: lo trae el change `windows-global-distro` (`idd@3d2d8fe:README.md`, «Windows»; ver [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](soporte-de-windows.md))).
 
 ## Consecuencias que recogen los ADRs
 
@@ -62,8 +67,13 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - En OpenCode, el primer comando de la primera sesión espera a la instalación. En OpenCode Desktop y en `opencode run`, sin TUI, los avisos solo quedan en el log (ADR-0002).
 - Para desactivarlo todo en local: `disableAllHooks` en `.claude/settings.local.json`, o `"plugins": ["-session-bootstrap", "-response-comments"]` en la configuración global de OpenCode: desde `update-comment-phrase-and-opencode-marker`, la regla de comentarios tiene su propio plugin, y quitar solo `session-bootstrap` la deja activa (`idd@1657745:adr/0018-opencode-optional-instructions-own-plugin.md`). Solo el wiki: `PROJECT_WIKI=off` (`idd@f2be907:README.md`). Solo la regla de comentarios: `PROJECT_COMMENTS=off` (`idd@16e4617:README.md`).
 
+## Instalación del motor sin red
+
+El núcleo trata `repo` de `.agents/wiki/engine.json` como una URL de git cuando no tiene la forma `owner/name`, así que puede apuntar a un git bundle local con el tag fijado: `git clone --depth 1 --branch <ref>` funciona desde un bundle, sin cambiar el núcleo (comprobado el 2026-11-22; [lecciones de windows-support](../../raw/notes/2026-11-22-ll-windows-support.md), lección 1). El diagnóstico de Windows lo da por presente («OK (vendor)»), y da `FALTA` si el motor no está instalado y `engine.json` apunta a GitHub (`idd@3d2d8fe:openspec/specs/windows-readiness/spec.md`, «Motor del wiki disponible sin red»).
+
 ## See Also
 
+- [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](soporte-de-windows.md))
 - [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](carga-en-la-misma-sesion-por-agente.md))
 - [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md))
 - [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](flujo-wiki-first.md))
@@ -73,6 +83,7 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 
 ## Sources
 
+- [Collection: archivado de autopilot-rama-por-sesion (idd@812f22d)](../../raw/repos/2026-11-22-idd-812f22d-autopilot-rama-por-sesion.md): `openspec/specs/session-bootstrap/spec.md`, `.agents/hooks/session-bootstrap.sh`.
 - [Collection: archivado de update-comment-phrase-and-opencode-marker](../../raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md): `adr/0018-opencode-optional-instructions-own-plugin.md`.
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `adr/0001-session-bootstrap-hook.md`, `adr/0002-agent-neutral-session-bootstrap.md`, `adr/0005-wiki-engine-through-session-bootstrap.md`, `openspec/specs/session-bootstrap/spec.md`, `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/session-start.sh`, `.claude/hooks/user-prompt-submit.sh`, `.opencode/plugins/session-bootstrap/server.js`.
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `.agents/hooks/session-bootstrap.sh`.
@@ -80,3 +91,6 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - [Collection: archivado de add-quote-comment-rule](../../raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md): `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/session-start.sh`, `.claude/hooks/user-prompt-submit.sh`, `.claude/hooks/json.sh`, `adr/0010-agent-instructions-through-session-bootstrap.md`, `README.md`.
 - [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `.agents/hooks/session-bootstrap.sh`, `openspec/specs/session-bootstrap/spec.md`.
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `openspec/specs/session-bootstrap/spec.md`, `.opencode/plugins/session-bootstrap/tui.js`.
+- [Lessons Learned: pruebas de autopilot-rama-por-sesion en OpenCode 2.3.2 real](../../raw/notes/2026-11-22-ll-pruebas-opencode-real-autopilot.md): lección 2.
+- [Collection: archivado de windows-support (idd@3d2d8fe)](../../raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md): `openspec/specs/session-bootstrap/spec.md`, `openspec/specs/windows-readiness/spec.md`, `.gitattributes`, `README.md`.
+- [Lessons Learned: soporte de Windows (windows-support)](../../raw/notes/2026-11-22-ll-windows-support.md): lección 1.

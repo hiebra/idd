@@ -2,13 +2,14 @@
 title: "El hook context de OpenCode"
 category: concept
 sources:
+  - raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md
   - raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md
   - raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md
 created: 2026-11-21
 updated: 2026-11-22
-verified: 2026-11-21
+verified: 2026-11-22
 tags: [opencode, plugins, context, session-bootstrap]
 confidence: high
 volatility: warm
@@ -24,6 +25,7 @@ summary: "Contrato del hook context de OpenCode 2.3.2, comprobado capturando los
 - **[comprobado]** `input.system` (partes `{type: "text", text}`) e `input.messages` se pueden cambiar en el sitio, y el modelo recibe el cambio. Valen los objetos planos: `{role: "user", content: [{type: "text", text}]}`, sin importar `@opencode/ai`.
 - **[comprobado]** Lo añadido no se acumula: con `opencode run -c` en el segundo y el tercer mensaje, cada petición lleva una sola copia.
 - **[comprobado]** Si el callback lanza una excepción sin capturar, `opencode run` termina con 1 y no se hace la petición del agente. Si la captura, la petición sale sin lo añadido y el modelo responde.
+- **[comprobado]** La entrada trae también `agent` (`"build"` o `"plan"`), que cambia con Shift+Tab de un mensaje al siguiente y es el mismo en todas las peticiones de un turno. Cada mensaje guardado de `input.messages` lleva su `id`, que es el `messageID` del hook `prompt` en los del usuario; los resultados de tool no llevan. En plan, OpenCode añade su recordatorio como mensaje `user` (OpenCode 2.3.2, 2026-11-22; `idd@9eae630:openspec/changes/archive/2026-11-22-autopilot-plan-explore/tasks.md`, tasks 1.1 y 1.4).
 - **[comprobado]** La petición del título de la sesión no pasa por este hook.
 - **[lectura de código]** Según los tipos `SessionHooks` de `@opencode/plugin` 2.3.2, la compactación y `generate` tienen sus propios hooks. No se ha comprobado si pasan también por `context`.
 
@@ -45,10 +47,13 @@ Es una API de plugins de una versión concreta. La suite la simula (`idd@1cf0792
 - [[proveedor-falso-para-verificar-contexto|Proveedor falso para verificar el contexto]] ([Proveedor falso para verificar el contexto](proveedor-falso-para-verificar-contexto.md))
 - [[arranque-de-sesion|El arranque de sesión]] ([El arranque de sesión](../topics/arranque-de-sesion.md))
 - [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md))
+- [[ciclo-de-un-change-y-autopilot|El ciclo de un change y su automatización en OpenCode]] ([El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md))
+- [[regla-de-comentarios|La regla de comentarios]] ([La regla de comentarios](regla-de-comentarios.md))
 - [[worktrees-de-opencode|Cómo crea OpenCode 2 los worktrees]] ([Cómo crea OpenCode 2 los worktrees](worktrees-de-opencode.md))
 
 ## Sources
 
+- [Collection: archivado de autopilot-plan-explore (idd@9eae630)](../../raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md): `openspec/changes/archive/2026-11-22-autopilot-plan-explore/tasks.md`.
 - [Collection: archivado de update-comment-phrase-and-opencode-marker](../../raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md): `.opencode/plugins/response-comments/server.js`, `.opencode/plugins/session-bootstrap/server.js`, `adr/0018-opencode-optional-instructions-own-plugin.md`.
 
 - [Lessons Learned](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lección 3.

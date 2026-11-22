@@ -45,6 +45,29 @@ Given('un proyecto con `x-main: [main, develop]` en `openspec\\/config.yaml`', f
   git(project.dir, 'branch', 'develop');
 });
 
+// --- El veto del acceso directo a las ramas permanentes (x-main-protected) -----
+
+Given(/^un proyecto con `x-main-protected: (true|false)`$/, function (value) {
+  this.branches.setProtected(this.lifecycleProject(), value === 'true');
+  this.configKey = 'x-main-protected';
+});
+
+Given('un proyecto sin la clave `x-main-protected`', function () {
+  this.branches.setProtected(this.lifecycleProject(), null);
+});
+
+When('se consulta si el proyecto tiene la excepción a la regla del ciclo', function () {
+  this.branchState = this.branches.branchChange(this.project);
+});
+
+Then('la excepción está disponible', function () {
+  assert.equal(this.branchState.protected, true, describeState(this.branchState));
+});
+
+Then('la excepción no está disponible', function () {
+  assert.equal(this.branchState.protected, false, describeState(this.branchState));
+});
+
 When('se consultan las ramas permanentes del proyecto', function () {
   this.branchState = this.branches.branchChange(this.project);
 });
@@ -86,7 +109,8 @@ Then('la rama temporal es la suya', function () {
 // OpenSpec with and without the key: same exit codes, and nothing about it
 When('se ejecutan `openspec list`, `openspec status`, `openspec instructions` y `openspec validate`', function () {
   const project = this.project;
-  this.branches.branch(project, 'feature/exportar', { from: 'develop' });
+  const key = this.configKey ?? 'x-main';
+  this.branches.branch(project, 'feature/exportar', { from: key === 'x-main' ? 'develop' : 'main' });
   this.branches.addChange(project, 'exportar-datos', { planned: true });
   const commands = [
     ['list', '--json'],
@@ -98,16 +122,16 @@ When('se ejecutan `openspec list`, `openspec status`, `openspec instructions` y 
   this.withKey = run();
   const config = project.path('openspec', 'config.yaml');
   const saved = fs.readFileSync(config, 'utf8');
-  fs.writeFileSync(config, saved.replace(/^x-main:.*\n/m, ''));
+  fs.writeFileSync(config, saved.replace(new RegExp(`^${key}:.*\\n`, 'm'), ''));
   this.withoutKey = run();
   fs.writeFileSync(config, saved);
 });
 
-Then('ninguno falla ni avisa por la clave `x-main`', function () {
+Then(/^ninguno falla ni avisa por la clave `(x-main|x-main-protected)`$/, function (key) {
   this.withKey.forEach((result, i) => {
     const detail = `openspec ${result.args.join(' ')} (exit ${result.exitCode}):\n${result.stdout}\n${result.stderr}`;
-    assert.equal(result.exitCode, this.withoutKey[i].exitCode, `exit code differs with x-main:\n${detail}`);
-    assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, /x-main/, detail);
+    assert.equal(result.exitCode, this.withoutKey[i].exitCode, `exit code differs with ${key}:\n${detail}`);
+    assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, new RegExp(key), detail);
   });
   const [list, status, instructions] = this.withKey;
   for (const result of [list, status, instructions]) {
@@ -187,19 +211,6 @@ Given('la propuesta de `exportar-datos` tiene commit en la rama temporal y no es
   assert.equal(git(project.dir, 'ls-tree', '-d', '--name-only', 'main', 'openspec/changes/exportar-datos').trim(), '');
 });
 
-When('se lanza el apply de `exportar-datos`', function () {
-  this.gate = this.branches.checkGate(this.project, 'apply', 'exportar-datos');
-});
-
-Then('el apply no se detiene porque la propuesta no esté en la rama de origen', function () {
-  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
-  assert.equal(this.gate.exitCode, 0);
-  // The skill the workflows load runs the gate and no longer asks for the origin branch
-  const apply = skillSection(this, 'apply');
-  assert.match(apply, /branch-change\.mjs check apply/);
-  assert.doesNotMatch(readSkill(this), /(merge|merged|fusiona\w*|commit\w*) .*(to|a|en|con) `?main`? before apply|reached `main`|antes del apply.*rama de origen/i);
-});
-
 Given('una rama temporal con el change `exportar-datos` implementado', function () {
   const project = this.lifecycleProject();
   this.branches.branch(project, TEMP_BRANCH);
@@ -252,10 +263,6 @@ Then('el archive se detiene', function () {
   assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
   assert.equal(this.gate.exitCode, 1);
   assert.match(skillSection(this, 'archive'), /(detente|no archives|para)/i);
-});
-
-Then('se indica que el archive se hace en la rama temporal del change', function () {
-  assert.match(this.gate.message, /rama temporal del change/, JSON.stringify(this.gate));
 });
 
 // --- Commits del usuario -----------------------------------------------------------
@@ -399,6 +406,44 @@ When(/^se ejecuta la puerta `check (commit|propose)`$/, function (gate) {
   this.gate = this.branches.checkGate(this.lifecycleProject(), gate, null, { ephemeral: Boolean(this.ephemeral) });
 });
 
+When('se lanza la puerta `check apply` de `exportar-datos`', function () {
+  this.gate = this.branches.checkGate(this.lifecycleProject(), 'apply', 'exportar-datos');
+});
+
+// A gate warns in its own `warning` field, apart from its `message`, and its
+// `message` carries no warning either (before this change, warnings went there)
+Then('la puerta no avisa de nada', function () {
+  assert.equal(this.gate.warning ?? null, null, JSON.stringify(this.gate));
+  assert.doesNotMatch(this.gate.message, /(recomendad|prefiere|pero )/i, JSON.stringify(this.gate));
+});
+
+Then('la puerta no deja seguir e indica que la propuesta llegue antes a la rama de origen', function () {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /propuesta[^.]*llegue antes a la rama de origen/, JSON.stringify(this.gate));
+});
+
+Then('se indica que el change no está en curso en la rama de origen', function () {
+  assert.match(this.gate.message, /no está en curso en la rama (de origen|permanente)/, JSON.stringify(this.gate));
+});
+
+Then('la puerta no deja seguir e indica archivar en la rama de origen tras fusionar la implementación', function () {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /archiv\w* en la rama de origen[^.]*fusionar la implementación/, JSON.stringify(this.gate));
+});
+
+Then('se avisa de que la regla prefiere proponer en la rama de origen', function () {
+  assert.match(this.gate.warning ?? '', /regla prefiere proponer en la rama de origen/, JSON.stringify(this.gate));
+});
+
+Then('la puerta no deja seguir y su mensaje dice cómo dejar un solo change en la rama', function () {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /tiene que quedar uno solo/, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /lleva .* a su propia rama temporal/, JSON.stringify(this.gate));
+});
+
 Then('la puerta deja seguir', function () {
   assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
   assert.equal(this.gate.exitCode, 0, JSON.stringify(this.gate));
@@ -423,15 +468,6 @@ Given('la rama de origen no tiene ningún change en curso', function () {
   const project = this.project;
   const active = git(project.dir, 'ls-tree', '-d', '--name-only', 'main:openspec/changes/').split('\n').filter((d) => d && d !== 'archive');
   assert.deepEqual(active, []);
-});
-
-Then('se avisa de que la forma recomendada es proponer en una rama temporal', function () {
-  assert.match(this.gate.message, /forma recomendada es proponer en una rama temporal/, JSON.stringify(this.gate));
-});
-
-Then('su mensaje dice cómo dejar un solo change en la rama', function () {
-  assert.match(this.gate.message, /tiene que quedar uno solo/, JSON.stringify(this.gate));
-  assert.match(this.gate.message, /lleva .* a su propia rama temporal/, JSON.stringify(this.gate));
 });
 
 Given('una rama de origen con el change en curso `exportar-datos` sin tasks hechas', function () {
@@ -462,12 +498,6 @@ Given('la rama de origen no tiene el change en curso `exportar-datos`', function
 
 When('se lanza la puerta `check archive` de `exportar-datos`', function () {
   this.gate = this.branches.checkGate(this.project, 'archive', 'exportar-datos');
-});
-
-Then('la puerta no deja seguir e indica que faltan tasks por hacer', function () {
-  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
-  assert.equal(this.gate.exitCode, 1);
-  assert.match(this.gate.message, /faltan tasks por hacer/, JSON.stringify(this.gate));
 });
 
 // --- Números de ADR (manage-git-discipline, D6) ---------------------------------
@@ -557,14 +587,42 @@ Then('indica no fusionar, no cambiar de rama y no hacer push a otras ramas', fun
   assertIn(section(this, 'agent-commits'), /No fusiones, no cambies de rama, no crees ramas y no hagas push a otras ramas/, 'the agent commits section');
 });
 
-Then('recomienda la forma de una rama con una fusión con `--no-ff`', function () {
-  const merge = section(this, 'merge');
-  assertIn(merge, /forma recomendada/, 'the merge section');
-  assertIn(merge, /git merge --no-ff/, 'the merge section');
+// --- La regla estándar y su excepción en la skill (git-discipline-standard-with-exception) ---
+
+Then('indica que, con la excepción, la rama llega a la rama de origen en una fusión con `--no-ff`', function () {
+  assertIn(section(this, 'merge'), /[Cc]on la excepción[^\n]*git merge --no-ff/, 'the merge section');
 });
 
-Then('indica que la forma canónica y el squash también se admiten', function () {
-  assertIn(section(this, 'merge'), /forma canónica y el squash también se admiten/, 'the merge section');
+Then('indica que el squash también se admite', function () {
+  assertIn(section(this, 'merge'), /squash también se admite/, 'the merge section');
+});
+
+Then('indica que solo con la excepción el modelo crea o cambia de rama con `branch-change.mjs`', function () {
+  assertIn(section(this, 'core'), /[Ss]olo con la excepción[^\n]*(crea|cambia)[^\n]*branch-change\.mjs/, 'the core section');
+});
+
+Then('indica que sin la excepción solo lo hace si el usuario lo pide', function () {
+  assertIn(section(this, 'core'), /[Ss]in la excepción[^\n]*solo si el usuario lo pide/, 'the core section');
+});
+
+Then('los dos dicen que la regla es archivar en la rama de origen tras fusionar la implementación', function () {
+  for (const [what, text] of Object.entries(this.archiveTexts)) {
+    assertIn(text, /regla[^\n]*archivar en la rama de origen[^\n]*tras fusionar la implementación/, what);
+  }
+});
+
+Then('los dos presentan la forma de una rama como excepción, con su causa y la clave `x-main-protected`', function () {
+  for (const [what, text] of Object.entries(this.archiveTexts)) {
+    assertIn(text, /excepción/, what);
+    assertIn(text, /acceso directo a las ramas permanentes[^\n]*vetado/, what);
+    assertIn(text, /x-main-protected: true/, what);
+  }
+});
+
+Then('ninguno recomienda la excepción sobre la regla', function () {
+  for (const [what, text] of Object.entries(this.archiveTexts)) {
+    assert.doesNotMatch(text, /forma recomendada|conviene casi siempre|recomendad[ao][^\n]*rama temporal/i, what);
+  }
 });
 
 Then('indica que el squash se admite', function () {
@@ -577,21 +635,6 @@ Then('indica que las citas del wiki a commits de la rama se resuelven entonces p
 
 When('se revisa qué dicen sobre dónde se archiva', function () {
   this.archiveTexts = { skill: section(this, 'forms'), config: this.configText };
-});
-
-Then('los dos explican la forma recomendada y la forma canónica, con cuándo conviene cada una', function () {
-  for (const [what, text] of Object.entries(this.archiveTexts)) {
-    assertIn(text, /forma recomendada[^\n]*conviene/, what);
-    assertIn(text, /forma canónica[^\n]*conviene/, what);
-  }
-});
-
-Then('ninguno trata la forma canónica como una infracción', function () {
-  for (const [what, text] of Object.entries(this.archiveTexts)) {
-    assertIn(text, /forma canónica[^\n]*admitida/, what);
-    assert.doesNotMatch(text, /infracci|prohibid|no se admite/i, what);
-  }
-  assert.doesNotMatch(section(this, 'red-flags'), /archivar en una rama permanente/i);
 });
 
 Given('el `openspec\\/config.yaml` del proyecto', function () {
@@ -749,6 +792,28 @@ Then('la instrucción dice que el modelo no haga commits ni pase nada al stage',
   assert.match(this.instruction, /no pases nada al stage/);
 });
 
+// --- Volver a la rama de origen (autopilot-rama-por-sesion, design D7) ---
+
+Given(/^el clon está en una rama temporal `([^`]+)`, (con el árbol limpio|con cambios sin commit)$/, function (branch, tree) {
+  const project = this.lifecycleProject();
+  this.branches.branch(project, branch);
+  if (tree === 'con cambios sin commit') fs.appendFileSync(project.path('README.md'), '\nCambio sin commit.\n');
+});
+
+When('se vuelve a la rama de origen con `branch-change.mjs`', function () {
+  this.result = runBranchChange(this, 'origin');
+});
+
+Then('el clon queda en la rama de origen', function () {
+  assert.equal(this.result.exitCode, 0, JSON.stringify(this.result));
+  assert.equal(this.branches.currentBranch(this.project), 'main');
+});
+
+Then(/^el clon sigue en la rama `([^`]+)`$/, function (branch) {
+  assert.equal(this.result.exitCode, 1, JSON.stringify(this.result));
+  assert.equal(this.branches.currentBranch(this.project), branch);
+});
+
 // --- Las fusiones que pide el usuario (allow-user-requested-merges) ---------------
 
 // The temporary branch of a check merge scenario: one commit of its own, and
@@ -834,6 +899,32 @@ Given(/^el clon está en la rama temporal `([^`]+)`, que contiene `origin\/main`
   temporaryBranchWithRemote(this, name, { containing: true });
 });
 
+// The changes the temporary branch of a check merge scenario carries
+// (name-change-in-merge-title, D7), on top of the branch that already contains
+// origin/main: each one in progress or archived, and with a commit, because the
+// gate does not let merge with a dirty tree
+Given(
+  /^la rama temporal lleva (solo código, sin ningún change|el change (?:en curso|archivado) `[^`]+`|los changes en curso `[^`]+` e `[^`]+`)$/,
+  function (what) {
+    const project = this.project;
+    const names = [...what.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+    const archived = what.includes('archivado');
+    for (const name of names) {
+      this.branches.addChange(project, name, { planned: archived });
+      this.branches.commitAll(project, `propuesta de ${name}`);
+      if (archived) {
+        this.branches.archiveChange(project, name);
+        this.branches.commitAll(project, `archiva ${name}`);
+      }
+    }
+    assert.deepEqual(project.gitStatus(), [], 'the gate needs a clean tree');
+    const state = this.branches.branchChange(project);
+    assert.deepEqual(state.changes.map((c) => c.name), names, describeState(state));
+    assert.ok(state.changes.every((c) => c.state === (archived ? 'archived' : 'active')), describeState(state));
+    assert.ok(this.branches.contains(project, 'HEAD', 'origin/main'), 'the branch still contains origin/main');
+  }
+);
+
 When('se ejecuta la puerta `check merge` hacia la rama temporal', function () {
   this.gate = this.branches.checkGate(this.project, 'merge', this.tempBranch, { ephemeral: Boolean(this.ephemeral) });
 });
@@ -877,6 +968,17 @@ Then('el commit que da esa orden tiene el árbol de la rama temporal y los padre
   assert.equal(this.branches.currentBranch(project), this.tempBranch, 'the clone did not change branch');
 });
 
+// The title of the merge (name-change-in-merge-title, D1, D4): the order is
+// run without its push, so the commit stays as a loose object, and the title
+// is read from the commit it makes, not from the text of the message
+Then(/^el commit de fusión que da su orden se titula `([^`]+)`$/, function (title) {
+  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
+  const commitTree = commandsOf(this.gate.message).find((c) => /^commit=\$\(git commit-tree /.test(c));
+  assert.ok(commitTree, JSON.stringify(this.gate));
+  const commit = shell(this, `${commitTree} && echo "$commit"`);
+  assert.equal(git(this.project.dir, 'log', '-1', '--format=%s', commit).trim(), title, JSON.stringify(this.gate));
+});
+
 Then(/^su mensaje indica abrir un PR de `([^`]+)` contra `([^`]+)` y fusionarlo con un commit de fusión, no con squash$/, function (from, into) {
   assert.ok(this.gate.message.includes(`PR de \`${from}\` contra \`${into}\``), JSON.stringify(this.gate));
   assert.match(this.gate.message, /commit de fusión, no con squash/, JSON.stringify(this.gate));
@@ -887,6 +989,25 @@ Then(/^su mensaje no da ninguna orden de push a `([^`]+)`$/, function (target) {
     assert.doesNotMatch(command, new RegExp(`(refs/heads/|\\s)${target}\\b`), JSON.stringify(this.gate));
   }
   assert.doesNotMatch(this.gate.message, /commit-tree/, JSON.stringify(this.gate));
+});
+
+// The title of the PR (name-change-in-merge-title, D5)
+
+Then(/^su mensaje indica que el PR lleve el título `([^`]+)`, también si ya estaba abierto$/, function (title) {
+  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
+  assert.ok(this.gate.message.includes(`con el título \`${title}\``), JSON.stringify(this.gate));
+  assert.match(this.gate.message, /si el PR ya está abierto, ponle ese título/, JSON.stringify(this.gate));
+});
+
+Then('su mensaje recomienda ese mismo título para el commit de fusión', function () {
+  assert.match(this.gate.message, /recomienda al usuario[^.]*ese mismo título en el commit de fusión/, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /el que propone GitHub nombra la rama de la sesión/, JSON.stringify(this.gate));
+});
+
+// Without a change the gate gives no title: the agent titles the PR, as before
+Then('su mensaje no da ningún título para el PR', function () {
+  assert.doesNotMatch(this.gate.message, /título/, JSON.stringify(this.gate));
+  assert.doesNotMatch(this.gate.message, /Merge \S+ into /, JSON.stringify(this.gate));
 });
 
 // merge-targets (D6)
@@ -968,6 +1089,27 @@ Then('indica que las uniones mecánicas pueden ir agrupadas, pero también entra
 
 Then('indica no hacer el commit de fusión sin el ok del usuario', function () {
   assertIn(section(this, 'merge'), /Sin el ok del usuario no hagas el commit de fusión/, 'the merge section');
+});
+
+// The title of the merge in the skill (name-change-in-merge-title, D6)
+
+Then('indica que el título de la fusión es el que da la puerta `check merge`, que nombra el change de la rama', function () {
+  const merges = section(this, 'merge');
+  assertIn(merges, /El título de la fusión nombra el change/, 'the merge section');
+  assertIn(merges, /Es el que da la puerta, `Merge <change> into <destino>`/, 'the merge section');
+  assertIn(merges, /-m "Merge <change> into <destino>"/, 'the merge section');
+});
+
+Then('indica poner ese título al PR y recomendarlo para su commit de fusión', function () {
+  const merges = section(this, 'merge');
+  assertIn(merges, /Si la rama lleva algún change, ponle al PR el título de la fusión que da la puerta/, 'the merge section');
+  assertIn(merges, /si el PR ya está abierto, cámbiaselo/, 'the merge section');
+  assertIn(merges, /recomienda al usuario ese mismo título en el commit de fusión/, 'the merge section');
+  assertIn(merges, /el que propone GitHub nombra la rama de la sesión/, 'the merge section');
+});
+
+Then('indica que un PR sin change lo titula el agente, como hasta ahora', function () {
+  assertIn(section(this, 'merge'), /Si la rama no lleva ningún change, la puerta no da título: titula tú el PR[^\n]*como hasta ahora/, 'the merge section');
 });
 
 When('se revisa qué dicen sobre lo que sigue al commit del wiki', function () {

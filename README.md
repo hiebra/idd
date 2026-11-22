@@ -16,7 +16,7 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 - **LLM wiki**: una base de conocimiento del proyecto que el agente consulta antes de responder y amplía con lo que descubre, con el motor [nvk/llm-wiki](https://github.com/nvk/llm-wiki) instalado en los dos agentes (ver abajo).
 - **Regla de comentarios**: comentas partes de una respuesta del agente sin que conteste a cada comentario, y luego le pides que los procese todos (`p`) o que reformule la respuesta (`r`) (ver abajo).
 - **Arranque de sesión** que prepara el proyecto en los dos agentes (ver abajo).
-- **El ciclo de un change en una rama y una sola fusión con `--no-ff`** como forma recomendada, con la forma canónica de intent-driven también admitida, igual en los dos agentes, y en OpenCode 2 un plugin que lo automatiza con una sesión por paso (ver abajo).
+- **El ciclo de un change de la skill estándar de intent-driven**, con una única excepción (el change entero en una rama y una sola fusión con `--no-ff`) cuando el acceso directo a las ramas permanentes está vetado, igual en los dos agentes, y en OpenCode 2 un plugin que lo automatiza con una sesión por paso (ver abajo).
 
 ## Requisitos
 
@@ -24,13 +24,14 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 - bash, para el arranque de sesión.
 - git y acceso a GitHub en la primera sesión de cada clon (y al subir la versión del motor del wiki), para descargar el motor.
 - Python 3, para el helper determinista del motor del wiki (`bin/llm-wiki`: lint, checkpoints, archivos…). Los workflows del wiki no lo necesitan.
-- Claude Code, u OpenCode 2 o superior. OpenCode 1 no está soportado: su API de plugins es otra.
+- Claude Code, u OpenCode 2 o superior. OpenCode 1 no está soportado: su API de plugins es otra. En Windows, solo OpenCode 2 o superior (ver [Windows](#windows)).
+- PowerShell 7 (`pwsh`), solo para la suite de aceptación: con él prueba el diagnóstico de Windows.
 
 ## Qué ocurre al abrir una sesión
 
 Cada vez que se abre una sesión de Claude Code o de OpenCode en el proyecto, local o en la nube, el adaptador de ese agente ejecuta el núcleo del arranque de sesión, `.agents/hooks/session-bootstrap.sh`, que no depende de ningún agente:
 
-1. Prepara git: si el clon es superficial, lo completa; en un contenedor efímero (una sesión en la nube), trae las referencias de `origin` con `git fetch`; pone al día cada rama permanente local atrasada respecto a `origin/<rama>`, salvo la rama en la que está el clon, y avisa de las que han divergido; y en un contenedor efímero guarda la rama de la sesión en `git config idd.sessionBranch`. No toca el árbol de trabajo. Fuera de la nube solo usa la red para completar un clon superficial.
+1. Prepara git: si el clon es superficial, lo completa; en un contenedor efímero (una sesión en la nube), trae las referencias de `origin` con `git fetch`; pone al día cada rama permanente local atrasada respecto a `origin/<rama>`, salvo las que están sacadas en algún directorio del clon (el principal o un worktree), y avisa de las que han divergido; y en un contenedor efímero guarda la rama de la sesión en `git config idd.sessionBranch`. No toca el árbol de trabajo. Fuera de la nube solo usa la red para completar un clon superficial.
 1. Instala el motor del wiki en la versión fijada en `.agents/wiki/engine.json`, si falta o hay otra (ver [El wiki del proyecto](#el-wiki-del-proyecto)). No depende de Node.js.
 2. Si `.wiki/` está ignorado por git, quita del `.gitignore` la línea `.wiki` o `.wiki/` y avisa.
 3. Si no hay npm, o la versión de Node.js es inferior a `engines.node`, avisa y no instala dependencias.
@@ -118,7 +119,7 @@ La siguiente sesión crea los symlinks.
 Cambia `ref` en `.agents/wiki/engine.json`; desde la siguiente sesión, los dos agentes usan la nueva versión. Antes del commit, revisa en la nueva versión del motor:
 
 - que siguen existiendo las rutas que se enlazan: `claude-plugin/skills/wiki-manager`, `claude-plugin/commands/`, `claude-plugin/bin/llm-wiki` y `plugins/llm-wiki-opencode/skills/wiki-query`. Si cambian, hay que cambiar el núcleo (`ENGINE_LINKS`), la suite (`acceptance-tests/support/engine.js`) y el design del change que las fijó;
-- que las operaciones que citan la guía, el recordatorio y las indicaciones de archivado (`/wiki:ll`, `/wiki:ingest`, `/wiki:ingest-collection --manifest-only`, `/wiki:refresh`, `/wiki:compile`, `/wiki:librarian scan`, `/wiki:lint`) siguen existiendo con esas opciones;
+- que las operaciones que citan la guía, el recordatorio y las indicaciones de archivado (`/wiki:ll`, `/wiki:ingest`, `/wiki:ingest-collection --manifest-only`, `/wiki:refresh`, `/wiki:compile`, `/wiki:inventory list`, `/wiki:inventory update`, `/wiki:lint`) siguen existiendo con esas opciones;
 - su licencia y su changelog.
 
 Después, pasa la suite de aceptación.
@@ -155,20 +156,27 @@ Con `PROJECT_COMMENTS=off`, el agente no recibe ni la regla ni el recordatorio. 
 
 ## El ciclo de un change
 
-Hay dos formas del ciclo, y las dos se admiten ([ADR-0016](adr/0016-agent-merges-on-user-request.md), que sustituye a ADR-0015, y este a ADR-0007 junto con [ADR-0013](adr/0013-model-creates-change-branches-plugin-stages.md)):
+La regla del ciclo es la de la skill estándar de intent-driven, y el proyecto solo le añade una excepción, con su causa ([ADR-0020](adr/0020-git-discipline-standard-rule-with-protected-main-exception.md), que sustituye a ADR-0015 y ADR-0013, y a ADR-0016 en las formas del ciclo; las fusiones siguen [ADR-0016](adr/0016-agent-merges-on-user-request.md)):
 
-- **La forma recomendada:** el change se hace entero en **una rama temporal** (propuesta, implementación, archive y resincronización del wiki), se archiva en ella y llega a la rama de origen en **una sola fusión con `--no-ff`**. Con `git log --first-parent`, cada change es una entrada cuyo diff junta el plan, el código, el archive y el wiki, y la rama permanente no recibe commits directos.
-- **La forma canónica de intent-driven:** la propuesta se fusiona con la rama de origen antes del apply, y el change se archiva en la rama de origen después de fusionar la implementación, con todas sus tasks hechas. Conviene para revisar el plan aparte o reservar pronto los números de ADR, a cambio de tres fusiones.
+- **La regla:** la propuesta se fusiona con la rama de origen antes del apply; el apply se hace en la rama de origen, en una rama o en un worktree; y el change se archiva en la rama de origen después de fusionar la implementación. Nada de esto se detiene ni lleva avisos.
+- **La excepción, cuando el acceso directo a las ramas permanentes está vetado:** como la regla exige archivar en la rama de origen, el change se hace entero en **una rama temporal** (propuesta, implementación, archive y resincronización del wiki), se archiva en ella y llega a la rama de origen en **una sola fusión con `--no-ff`**, con un solo change por rama. Solo vale si se declara en `openspec/config.yaml`:
+
+  ```yaml
+  x-main-protected: true
+  ```
+
+  Esta plantilla la declara, porque su propio repositorio tiene ese veto. Un proyecto creado desde ella cuyas ramas permanentes no lo tengan debe quitar esa línea. El autopilot de OpenCode lleva el change entero en una rama temporal, así que solo completa el ciclo con la excepción.
 
 El squash también se admite: ningún paso del ciclo depende de que los commits de la rama lleguen a la rama de origen, y las citas del wiki se resuelven por el blob que guardan sus manifiestos.
 
-**Quién hace los commits.** En local, la rama temporal la puede crear el modelo, siempre desde la rama de origen y con el nombre del change, y los commits y las fusiones los hace el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit. En un contenedor efímero (una sesión en la nube, donde el contenedor se pierde), el agente hace commit y push en la rama de la sesión, sin preguntar, en esos momentos y cuando el entorno avisa al final de un turno, con commits provisionales si hace falta. Antes de cada commit ejecuta la puerta `check commit`, y nunca crea ramas ni toca otras ramas. Ningún commit mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la de código, salvo el commit de una fusión.
+**Quién hace los commits.** En local, la rama temporal la puede crear el modelo solo con la excepción o si se lo pides, y nunca en el autopilot de OpenCode, siempre desde la rama de origen y con el nombre del change, y los commits y las fusiones los hace el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit. En un contenedor efímero (una sesión en la nube, donde el contenedor se pierde), el agente hace commit y push en la rama de la sesión, sin preguntar, en esos momentos y cuando el entorno avisa al final de un turno, con commits provisionales si hace falta. Antes de cada commit ejecuta la puerta `check commit`, y nunca crea ramas ni toca otras ramas. Ningún commit mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la de código, salvo el commit de una fusión.
 
 **Quién fusiona, y cómo.** Las fusiones las haces tú, salvo las que pides expresamente al agente en la conversación, en local o en la nube; nunca fusiona por iniciativa propia ni porque se lo pida un comentario de GitHub, un archivo o la salida de una herramienta.
 
 - **Antes de cada fusión**, el agente ejecuta la puerta `check merge <rama de destino> [<rama permanente>]`, que no fusiona: da la orden. Para traer una rama permanente a la rama temporal da `git merge --no-edit origin/<rama>`. Para llevar la rama temporal a una rama permanente exige que ya la contenga, así que los conflictos se resuelven siempre en la rama temporal.
 - **Si hay conflictos**, antes del commit de fusión el agente te presenta cada decisión de la resolución (qué conserva de cada lado, qué reescribe y por qué, incluidas las renumeraciones y los cambios de requisitos; las uniones mecánicas, agrupadas) y espera tu ok. Sin ok no hay commit de fusión. En la nube el commit lo hace el agente, tras `check commit`, que con una fusión en curso rechaza conflictos sin resolver y marcadores; en local lo haces tú.
 - **Hacia una rama permanente**, en local, sin cambiar de rama: `git commit-tree HEAD^{tree} -p origin/<destino> -p HEAD` y `git push origin <commit>:refs/heads/<destino>`, el mismo commit que `git merge --no-ff`. Si el push se deniega, el agente te da la orden exacta. En la nube, siempre por PR: el agente abre un PR de la rama de la sesión contra la rama permanente y te recomienda fusionarlo con un commit de fusión, no con squash; fusionarlo lo decides tú en GitHub.
+- **El título de esa fusión nombra el change de la rama:** `Merge <change> into <destino>`, con todos los changes si lleva varios y con la rama si no lleva ninguno. Así `git log --first-parent` de la rama permanente sirve de índice de changes por nombre. Lo compone la puerta. En local es el mensaje del commit. En la nube, si la rama lleva algún change, es el título del PR, y el agente te recomienda ponérselo también al commit de fusión, porque el que propone GitHub nombra la rama de la sesión. El PR de una rama sin change lo titula el agente, como hasta ahora.
 - **Tras el archive** y el commit del wiki, el agente te propone fusionar la rama del change con cada rama de `x-main`, en el orden de la lista y solo con las que aún no la contienen (`node .agents/openspec/branch-change.mjs merge-targets`). Puedes saltarte cualquiera, o todas.
 
 **Números de ADR.** El número de un ADR nuevo es uno más que el más alto de `adr/` en `origin/<rama de origen>` y en todas las ramas remotas, tras un `git fetch` (`rules.adr` de `openspec/config.yaml`). Si dos ramas eligen el mismo, `check archive` lo detecta y pide renumerar los de la rama.
@@ -186,20 +194,37 @@ El squash también se admite: ningún paso del ciclo depende de que los commits 
   node .agents/openspec/branch-change.mjs --json
   ```
 
-- **Las puertas** (proponer, apply, archive, commit y fusión) las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit|merge> [<change>|<rama de destino>]`, que admite las dos formas del ciclo, dice cómo seguir cuando no deja y la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es una copia del origen reescrita a propósito: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
-- **Las ramas temporales** las maneja el modelo con el mismo módulo, nunca con git a mano, y nunca con el árbol sucio (en un contenedor efímero, `start` y `switch` no actúan: el agente sigue en la rama de la sesión):
+- **Las puertas** (proponer, apply, archive, commit y fusión) las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit|merge> [<change>|<rama de destino>]`, que sigue la regla sin avisos y deja los pasos de la excepción solo con `x-main-protected: true`, dice cómo seguir cuando no deja y la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es la del origen traducida, con la excepción en una sección propia: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
+- **Las ramas temporales** las maneja el modelo con el mismo módulo, solo con la excepción o si se lo pides, nunca con git a mano, y nunca con el árbol sucio (en un contenedor efímero, `start`, `switch` y `origin` no actúan: el agente sigue en la rama de la sesión; en el autopilot de OpenCode, el modelo no crea ramas ni cambia de rama, [ADR-0022](adr/0022-autopilot-session-owns-its-branch-and-worktrees.md)):
 
   ```bash
   node .agents/openspec/branch-change.mjs list            # las ramas temporales con su change
   node .agents/openspec/branch-change.mjs start <change>  # crea la rama del change desde la rama de origen
   node .agents/openspec/branch-change.mjs switch <rama>   # cambia a una rama temporal
+  node .agents/openspec/branch-change.mjs origin          # vuelve a la rama de origen
   ```
 
 ## Automatizar el ciclo en OpenCode
 
-En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` recorre el change de la rama paso a paso, cada paso en una sesión nueva con el workflow y el agente que tocan, y archiva la anterior ([ADR-0014](adr/0014-autopilot-verifies-product-and-closes-reviews-with-git.md), que sustituye a ADR-0008). Lo que se ha producido y cuándo se cierra una revisión no lo decide el modelo: lo decide el plugin con el CLI de OpenSpec y con git.
+En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` recorre el change de la rama paso a paso, cada paso en una sesión nueva con el workflow y el agente que tocan, y archiva la anterior ([ADR-0022](adr/0022-autopilot-session-owns-its-branch-and-worktrees.md), que sustituye a ADR-0014). Lo que se ha producido y cuándo se cierra una revisión no lo decide el modelo: lo decide el plugin con el CLI de OpenSpec y con git.
 
-- **La sesión operativa.** En cada rama hay una sola sesión viva en autopilot. Al abrir OpenCode en la TUI sin ella, el plugin la crea y la arranca solo: con el paso que diga `openspec status` si la rama tiene change, o con `openspec-new-change` si no lo tiene (también en una rama permanente: el modelo te pide la descripción y crea la rama del change). Cualquier otra ventana (la pantalla de inicio, `/new`, otra sesión, o cualquiera de ellas al volver al terminal) muestra un modal de un botón que lleva a la sesión operativa. Con HEAD separado no hace nada; con varios changes en la rama, avisa y tampoco.
+- **La sesión operativa.** En cada rama temporal hay una sola sesión viva en autopilot. Al abrir OpenCode en la TUI sin ella, el plugin la crea y la arranca solo: con el paso que diga `openspec status` si la rama tiene change, o con `openspec-new-change` si no lo tiene. En una rama permanente no arranca ni orquesta nada: sus sesiones son libres y puede haber varias, por ejemplo para preguntar algo en `main`. Con HEAD separado no hace nada; con varios changes en la rama, avisa y tampoco.
+- **Cada sesión tiene su rama.** Es la que tenía HEAD en su directorio al crearla, y el plugin la guarda en su metadata. Si el modelo hace un checkout dentro de la sesión (por ejemplo, para un merge asistido en `main`), la sesión pasa a ser de esa rama, y si era la operativa deja de serlo, sin archivarse; cuando el directorio vuelve a la rama, otra sesión operativa retoma el paso donde se quedó. En los pasos del autopilot el modelo no crea ramas ni cambia de rama: la de un change nuevo la dan el worktree o tú.
+- **Pasar a una sesión es pasar a su rama.** Si la sesión es de otro worktree (u otro repositorio), la TUI salta a él y el plugin solo te dice en qué rama y en qué directorio estás. Si es del mismo directorio y de otra rama, el plugin hace el checkout de su rama (con `branch-change.mjs`, que solo cambia a una rama temporal o a la rama de origen) y te avisa. Con cambios sin commit, o con otra sesión de ese directorio trabajando, no lo hace: vuelve a la ventana anterior (o a la pantalla de inicio) y te dice por qué; con cambios sin commit, haz el commit o usa un worktree.
+- **`/new` en una rama temporal que ya tiene sesión operativa** abre un modal. «Crear un worktree nuevo» abre el diálogo de nombre de worktree de OpenCode, en el que escribes el nombre o lo generas con `tab`; con el árbol limpio, «Cambiar a la rama de origen» deja el directorio en ella (la sesión operativa del change sigue siéndolo). Si lo cierras sin elegir, vuelves a la sesión de la que venías. En OpenCode 2.3.2, `/new` desde una sesión de un worktree abre la pantalla de inicio del directorio principal del clon, así que el modal depende de la rama de ese directorio.
+- **Los worktrees de OpenCode nacen en una rama.** El plugin registra su propia estrategia de worktree, que usan «Manage workspaces» de la TUI, el modal de `/new`, el botón de la web y el modelo. La rama se llama como el worktree, se haya escrito el nombre o lo haya generado OpenCode:
+  - si la rama existe, el worktree se abre en ella; si ya está sacada en otro directorio, no se crea y se dice en cuál;
+  - si no existe, se crea desde la rama de origen del remoto, tras un `git fetch`, sin seguirla (`--no-track`) y con su push hacia `origin/<rama>`: el primer `git push` sin argumentos la publica, sin cambiar la configuración de tu clon. Si el `fetch` falla, no se crea, y se dice por qué;
+  - se ignora la referencia de partida que manda la web, y al quitar el worktree la rama se conserva;
+  - con cambios sin commit, el worktree no se quita: OpenCode muestra «Failed to delete worktree» con el motivo. Haz antes el commit, o quítalo con `git worktree remove --force <directorio>`. La TUI de OpenCode 2.3.2 no ofrece forzarlo desde un plugin.
+
+  Al entrar en un worktree nuevo, el plugin arranca en él la sesión operativa de su rama, con `openspec-new-change`. Desde la pantalla de inicio (y desde el modal de `/new`), OpenCode no crea el worktree al confirmar el nombre, sino con tu primer mensaje, en una sesión propia; ese mensaje llega a la sesión operativa como descripción del change, que no te vuelve a preguntar qué quieres construir. Cada worktree instala sus dependencias; para compartirlas con el clon, añade a tu `opencode.json`:
+
+  ```json
+  {
+    "worktree": { "symlinkDirectories": ["node_modules", "acceptance-tests/node_modules"] }
+  }
+  ```
 - **El producto de cada paso.** Al empezar un paso, el plugin guarda qué artefactos están hechos y qué tasks marcadas. Cuando la sesión queda en reposo, compara: lo que ha cambiado es el producto. Sin producto no pasa nada (la tool `openspec_handoff` lo dice). Con producto, el plugin lo pasa al stage de git y sigue, aunque el modelo no haya llamado a la tool o haya hecho más de lo que tocaba.
 - **La revisión, en el modo normal.** Tras cada artefacto, cada task, el verify y cada `openspec-update-change` se abre una sesión de revisión, una por producto, en la que el modelo te guía sin tocar archivos. La revisión la cierras tú con git, y se cierra cuando envías tu siguiente mensaje:
   - **haz el commit** de lo que hay en el stage: revisión satisfactoria, y se sigue con el paso siguiente;
@@ -207,24 +232,27 @@ En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` recorre e
   - mientras quede algo en el stage sin commit, la revisión sigue y tus mensajes llegan al modelo.
 
   La revisión del verify empieza con el árbol limpio: para darla por buena sin cambiar nada, haz un commit vacío (`git commit --allow-empty -m "verify revisado"`).
+- **El agente plan (Shift+Tab).** Todas las sesiones del autopilot nacen con el agente build, también las de revisión. En la sesión operativa, pasar a plan es explorar ([ADR-0019](adr/0019-autopilot-plan-agent-explores-and-warns.md)): la primera petición en plan recibe el flujo de `openspec-explore` sobre el paso o la revisión en curso, las siguientes en plan solo un recordatorio, y al volver a build el modelo recibe el recordatorio del paso que había antes. Nada de eso queda en el historial de la sesión.
+- **Lo que se modifica en plan, avisado.** Si al terminar un turno en plan ha cambiado algo en git (HEAD, el stage o el árbol), normalmente porque se lo has pedido al modelo (en OpenCode 2.3.2, el agente plan no puede escribir en el proyecto con `write`, pero sí con la tool `shell`), el plugin te avisa con un modal de un botón: son cambios que deberían haberse hecho en build. Si el turno ha dejado producto, la sesión siguiente no se crea hasta que cierras el modal. Si cierras la TUI con el aviso pendiente, vuelve a salir la próxima vez que la abras; escribir en la sesión también cuenta como haberlo visto.
 - **Los commits.** Ningún modelo te pide commits. Además de las revisiones, el plugin espera tu commit tras el archive y tras la resincronización del wiki, que van en commits separados.
-- **Al volver a la sesión operativa** (al entrar o al recuperar el foco), el plugin la comprueba. Si HEAD cambió de rama, sigue las reglas de la rama actual. Si su change ya no está en la rama, la archiva y empieza uno nuevo. Si esperaba tu commit y ya está hecho, arranca el paso. Si su paso no encaja con `openspec status`, te lo explica en un modal y no lo arregla.
+- **Al volver a la sesión operativa** (al entrar o al recuperar el foco), si no está trabajando y su directorio está en su rama, el plugin la comprueba. Si su change ya no está en la rama, la archiva y empieza uno nuevo. Si esperaba tu commit y ya está hecho, arranca el paso. Si su paso no encaja con `openspec status`, te lo explica en un modal y no lo arregla.
 - Las lecciones candidatas de cada sesión quedan en su metadata, nunca en el repositorio, y llegan a la resincronización del wiki tras el archive, que solo registra las que confirmes.
 - El estado (qué sesión es la operativa y qué paso hizo cada una) vive solo en la metadata de las sesiones de OpenCode.
 
 ### Con la UI web, OpenCode Desktop y `opencode run`
 
-La lógica vive en la parte de servidor del plugin y funciona con cualquier cliente: el producto, el stage, el cierre de las revisiones por git, el encadenado de sesiones y la validación. La interfaz (el modal, el foco, navegar a una sesión y archivarla) solo existe en la TUI, porque OpenCode 2.3.2 no ejecuta en la UI web (`opencode pair`, `opencode serve`) la interfaz de los plugins de un proyecto, y OpenCode Desktop solo con una API experimental que el plugin no usa. Sin TUI:
+La lógica vive en la parte de servidor del plugin y funciona con cualquier cliente: el producto, el stage, el cierre de las revisiones por git, el encadenado de sesiones, la validación y la estrategia de worktree. La interfaz (los modales, el foco, el checkout al pasar de sesión, navegar a una sesión y archivarla) solo existe en la TUI, porque OpenCode 2.3.2 no ejecuta en la UI web (`opencode pair`, `opencode serve`) la interfaz de los plugins de un proyecto, y OpenCode Desktop solo con una API experimental que el plugin no usa. Sin TUI:
 
-- en una sesión que no es la operativa, el modelo sabe que ahí no se opera y te dice cuál es la operativa;
+- en una sesión que no es la operativa de una rama temporal, el modelo sabe que ahí no se opera, te dice cuál es la operativa y te ofrece crear un worktree nuevo;
+- el worktree lo creas con el botón de la web o pidiéndoselo al modelo, que usa la tool `openspec_worktree`: crea el worktree con las reglas de arriba y, en él, una sesión que pasa a ser la operativa de su rama y arranca `openspec-new-change` sola. Como el plugin no puede llevar la web a otra sesión, el modelo te da su enlace si el plugin conoce la dirección del servidor, o su título y su id. OpenCode no le da esa dirección; dásela con la opción `serverUrl` del plugin en tu configuración global (por ejemplo, `{ "package": "/ruta/a/tu/clon/.opencode/plugins/openspec-autopilot", "options": { "serverUrl": "http://localhost:4096" } }`);
 - la sesión del paso siguiente se crea y se pone a trabajar, pero tienes que abrirla tú desde la lista; su título dice el paso;
 - las sesiones terminadas no se archivan: quedan marcadas y se archivan la próxima vez que abras la TUI;
 - el autopilot no arranca solo: escribe `autopilot` como primer mensaje de una sesión nueva en una rama sin sesión operativa;
-- los avisos solo quedan en el log de OpenCode.
+- los avisos solo quedan en el log de OpenCode, salvo el de lo modificado en plan: la cadena no espera, y el aviso va al principio del mensaje con el que arranca la sesión siguiente (o, si no hubo producto, el modelo te lo dice en su respuesta siguiente).
 
 `opencode run "…"` en una rama temporal no arranca nada por accidente; con `opencode run autopilot` sí.
 
-En Claude Code no hay plugin: los mismos workflows se lanzan a mano (`/openspec-new-change`, `/openspec-continue-change`, `/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`), con el mismo ciclo y el mismo resultado versionado ([ADR-0006](adr/0006-agent-asymmetry-policy.md)). Ahí los workflows sí te piden el commit.
+En Claude Code no hay plugin: los mismos workflows se lanzan a mano (`/openspec-new-change`, `/openspec-continue-change`, `/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`), con el mismo ciclo y el mismo resultado versionado ([ADR-0025](adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md), que sustituye a ADR-0006). Ahí los workflows sí te piden el commit.
 
 ### Modo auto
 
@@ -237,6 +265,8 @@ El modo auto quita las sesiones de revisión: el producto de cada paso pasa al s
 ```
 
 OpenCode recarga el plugin al cambiar la opción, y el modo nuevo vale desde el paso siguiente.
+
+**El modo también decide cuántas tasks hace el apply por sesión** ([ADR-0025](adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md)). En el modo normal, `openspec/config.yaml` lleva en `operations.apply.guidance` cuatro indicaciones: el apply hace una sola task por sesión, sin delegarla en un subagente, y al terminarla se para. Así lo hace también un apply que lances a mano, en OpenCode o en Claude Code. En el modo auto, esas indicaciones no están. Al cargarse, el plugin ajusta el archivo al modo: añade el bloque si falta o lo quita si sobra, sin tocar nada más. El proyecto lo versiona como lo deja el modo normal, que es el modo por defecto. Así, al activar el modo auto verás `openspec/config.yaml` modificado: haz su commit aparte o descarta el cambio. Mientras siga sin commit, el autopilot espera con el árbol sucio. Claude Code lee el archivo tal como lo dejó la última carga del plugin.
 
 ### Desactivar el plugin en local
 
@@ -256,7 +286,7 @@ Así no se carga la parte de servidor, que es la que orquesta; la de TUI se sigu
 cd acceptance-tests && npm test
 ```
 
-El informe HTML queda en `acceptance-tests/reports/cucumber-report.html`. Los escenarios del arranque de sesión ejecutan `npm install` reales, así que necesitan acceso al registro de npm y tardan más de un minuto. Más detalles en [`acceptance-tests/README.md`](acceptance-tests/README.md).
+El informe HTML queda en `acceptance-tests/reports/cucumber-report.html`. Los escenarios del arranque de sesión ejecutan `npm install` reales, así que necesitan acceso al registro de npm y tardan más de un minuto. Los del diagnóstico de Windows necesitan `pwsh` (PowerShell 7) en la máquina que ejecuta la suite; sin él fallan diciéndolo. Más detalles en [`acceptance-tests/README.md`](acceptance-tests/README.md).
 
 ## Desactivar el arranque en local
 
@@ -282,9 +312,37 @@ En OpenCode, quita el plugin en tu configuración global, `~/.config/opencode/op
 
 Así no se carga la parte de servidor del plugin, que es la que instala y ajusta el `PATH`. La parte de TUI se sigue cargando, pero sin servidor no muestra nada.
 
+## Windows
+
+En Windows solo se soporta OpenCode 2 o superior; Claude Code en Windows no está soportado ([ADR-0017](adr/0017-windows-support-opencode-lf-diagnostic.md)). El arranque de sesión en Windows llega con el change `windows-global-distro`. Hasta entonces, instala las dependencias a mano (ver [Instalación manual](#instalación-manual)).
+
+### Qué le falta a la máquina
+
+El diagnóstico `scripts/windows/Test-OfflineInstall.ps1` dice qué le falta a una máquina Windows para el proyecto, también sin internet: Node.js con npm, git, Python 3, los finales de línea del clon, el motor del wiki, las dependencias npm de la raíz y de `acceptance-tests/` para la plataforma de la máquina, y OpenCode 2. No instala nada, no cambia ningún archivo y no usa la red. Funciona con Windows PowerShell 5.1, el que trae Windows 11, y con PowerShell 7:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\windows\Test-OfflineInstall.ps1
+```
+
+Para cada componente da su estado (`OK`, `OK (vendor)`, `AVISO` o `FALTA`) y, para lo que falta, qué incorporar al repositorio (bajo `vendor\windows\`), la alternativa de instalarlo globalmente, si existe, y cómo conseguirlo en una máquina con internet. Con `-Json` da el mismo informe como JSON. Termina con 1 si falta algo y con 0 si no.
+
+Un `node_modules` instalado en Linux no sirve en Windows: algunos paquetes traen un binario por plataforma (por ejemplo, `@esbuild/win32-x64`), y el diagnóstico los nombra.
+
+### Finales de línea
+
+`.gitattributes` fija LF en todos los archivos de texto, aunque Git for Windows extraiga con `core.autocrlf=true`. Un clon de Windows anterior a `.gitattributes` puede tener archivos con CRLF; el diagnóstico los detecta. Para volver a extraerlos con LF, con el árbol limpio:
+
+```bash
+git rm -r --cached -q .
+```
+
+```bash
+git reset --hard
+```
+
 ## Instalación manual
 
-Donde el arranque de sesión no se ejecuta (por ejemplo, en Windows sin bash, o con OpenCode 1), instala las dependencias de la raíz y de la suite, y usa el CLI del proyecto con npx:
+Donde el arranque de sesión no se ejecuta (por ejemplo, en Windows, o con OpenCode 1), instala las dependencias de la raíz y de la suite, y usa el CLI del proyecto con npx:
 
 ```bash
 npm install

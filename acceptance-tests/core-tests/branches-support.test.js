@@ -32,6 +32,22 @@ function project(t) {
 
 const isAncestor = (p, a, b) => spawnSync('git', ['merge-base', '--is-ancestor', a, b], { cwd: p.dir }).status === 0;
 
+test('x-main-protected set to true or false, or removed, without touching x-main', (t) => {
+  const p = project(t);
+  fs.mkdirSync(p.path('openspec'), { recursive: true });
+  fs.writeFileSync(p.path('openspec', 'config.yaml'), 'schema: intent-driven\nx-main: [main]\n');
+  const read = () => fs.readFileSync(p.path('openspec', 'config.yaml'), 'utf8');
+  branches.setProtected(p, true);
+  assert.match(read(), /^x-main-protected: true$/m);
+  branches.setProtected(p, false);
+  assert.match(read(), /^x-main-protected: false$/m);
+  assert.doesNotMatch(read(), /x-main-protected: true/);
+  branches.setProtected(p, null);
+  assert.doesNotMatch(read(), /x-main-protected/);
+  assert.match(read(), /^x-main: \[main\]$/m);
+  assert.equal(git(p.dir, 'status', '--porcelain').trim(), '');
+});
+
 test('a bare remote with push and fetch', (t) => {
   const p = project(t);
   branches.addRemote(p);

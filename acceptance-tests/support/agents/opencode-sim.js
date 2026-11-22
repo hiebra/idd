@@ -15,8 +15,10 @@ const ENTRY = path.join(__dirname, 'opencode-sim-process.mjs');
 const OPENSPEC_BIN = path.join(REPO_ROOT, 'node_modules', '.bin');
 
 class OpenCodeSim {
-  constructor({ projectDir, workDir, plugin = 'openspec-autopilot', tui = true, tuiSilent = false, rpcLate = false, alreadyOpen = false, pluginOptions = {}, failures = {}, env = process.env }) {
-    this.config = { projectDir, plugin, tui, tuiSilent, rpcLate, alreadyOpen, pluginOptions, failures, dbFile: path.join(workDir, `opencode-sessions-${Date.now()}.json`) };
+  constructor({ projectDir, workDir, plugin = 'openspec-autopilot', tui = true, tuiSilent = false, rpcLate = false, alreadyOpen = false, pluginOptions = {}, failures = {}, workspacesMountMs = undefined, env = process.env }) {
+    // Worktrees go outside the clone, as under OpenCode's data directory
+    const worktreesDir = path.join(workDir, 'worktrees');
+    this.config = { projectDir, plugin, tui, tuiSilent, rpcLate, alreadyOpen, pluginOptions, failures, worktreesDir, ...(workspacesMountMs !== undefined ? { workspacesMountMs } : {}), dbFile: path.join(workDir, `opencode-sessions-${Date.now()}.json`) };
     this.env = { ...env, PATH: `${OPENSPEC_BIN}${path.delimiter}${env.PATH ?? ''}`, OPENSPEC_TELEMETRY: '0' };
     this.child = null;
     this.seq = 0;

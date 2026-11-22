@@ -1,7 +1,11 @@
 // Los textos del plugin (design D6, D8, D9, D10 y D13 de
-// autopilot-sesion-operativa): la instrucción con la que arranca cada paso,
-// el recordatorio de cada petición, el aviso de las sesiones ajenas y el
-// workflow y el agente de cada paso. Ningún texto pide commits: el plugin
+// autopilot-sesion-operativa; D1 y D3 de autopilot-plan-explore; D1 y D2 de
+// guiar-revision-con-tests): la instrucción con la que arranca cada paso, el
+// recordatorio de cada petición, lo que se inyecta al cambiar entre build y
+// plan, el aviso de lo modificado con plan, el aviso de las sesiones ajenas,
+// la verificación guiada con los tests de aceptación y la depuración en la
+// revisión de una task y del verify, y el workflow y el agente de cada paso
+// (siempre build). Ningún texto pide commits: el plugin
 // pasa el producto al stage y el usuario hace el commit (ADR-0013).
 
 import { describe } from './next-step.mjs';
@@ -10,6 +14,7 @@ export const HANDOFF_TOOL = 'openspec_handoff';
 export const SESSION_TOOL = 'openspec_session';
 export const MARK = '[openspec-autopilot]';
 export const START_WORD = 'autopilot';
+export const WORKTREE_TOOL = 'openspec_worktree';
 
 // Workflow (skill) y agente de cada paso
 export const WORKFLOW = {
@@ -20,7 +25,7 @@ export const WORKFLOW = {
   archive: { skill: 'openspec-archive-change', agent: 'build' },
   wiki: { skill: null, agent: 'build' },
   update: { skill: 'openspec-update-change', agent: 'build' },
-  review: { skill: null, agent: 'plan' },
+  review: { skill: null, agent: 'build' },
 };
 
 // El comando con el que el usuario retoma un paso a mano (tras compactar)
@@ -50,7 +55,7 @@ export function stepPrompt({ step, change, description = '', conclusions = '', i
       return (
         `${header}\n\nUsa la skill \`openspec-new-change\` para crear el change de esta rama. ` +
         (description ? `Descripción del usuario:\n\n${description}\n\n` : 'Pregunta al usuario qué quiere construir o arreglar, y espera su respuesta. ') +
-        'Si la rama es permanente o ya tiene otro change, no crees la rama con git: ejecuta `node .agents/openspec/branch-change.mjs start <nombre-del-change>`, que la crea desde la rama de origen y cambia a ella (y `node .agents/openspec/branch-change.mjs list` para ver las ramas temporales con su change). ' +
+        'La rama del change es la de esta sesión, que ya es una rama temporal: no crees ramas ni cambies de rama. ' +
         `Crea solo el change, sin artefactos. ${CLOSE('el change exista en `openspec/changes/`')}`
       );
     case 'artifact':
@@ -91,6 +96,14 @@ export function stepPrompt({ step, change, description = '', conclusions = '', i
 const WHAT = (step) =>
   ({ artifact: `el artefacto \`${step.id}\``, task: `la task ${step.label ?? step.id}`, verify: 'el informe del verify', plan: 'los cambios en el plan' })[step.of] ?? step.id;
 
+// La verificación guiada de lo que es código: una task o el verify (design D1 y
+// D2 de guiar-revision-con-tests). El plugin no ejecuta nada: lo hace el
+// modelo, y la depuración, el usuario.
+const ACCEPTANCE = (step, change) =>
+  `Guía la verificación con los escenarios de aceptación del change: en las specs de \`openspec/changes/${change}/specs/\`, ${step.of === 'verify' ? 'toma todos los del change' : `localiza los que cubren ${WHAT(step)}`}, recórrelos con el usuario como guion de lo que hay que comprobar y ejecútalos con el runner de aceptación del proyecto (el que documente su suite)${step.of === 'verify' ? '' : ', solo esos'}; explica qué pasa y qué falla. ` +
+  'Haz que las ejecuciones no dejen en el árbol de trabajo archivos que git no ignore, porque la revisión la cierra git. ' +
+  'Si lo revisado incluye código fuente que se puede ejecutar, ofrece al usuario ejecutarlo en modo depuración: dale la orden exacta para lanzarlo con el depurador del stack del proyecto (por ejemplo, el escenario de aceptación que lo ejercita, bajo `node --inspect-brk` en JavaScript o `python -m debugpy --wait-for-client` en Python) y dónde le conviene poner los puntos de ruptura. Esa orden la ejecuta el usuario en su terminal, no tú: se queda esperando al depurador.';
+
 export function reviewPrompt({ step, change, review = null }) {
   const errors = review?.errors?.length ? `\n\n\`openspec validate\` da estos errores en el change; señálalos en la revisión:\n\n${review.errors.map((e) => `- ${e}`).join('\n')}` : '';
   const verify = step.of === 'verify' && review?.report ? `\n\nInforme del verify:\n\n${review.report}` : '';
@@ -99,8 +112,8 @@ export function reviewPrompt({ step, change, review = null }) {
       ? 'Para darla por buena, el usuario hace un commit (vacío si no hay nada que cambiar: `git commit --allow-empty`); para rechazarla, deja cambios fuera del stage con sus conclusiones.'
       : 'Lo que hay que revisar está en el stage de git (`git diff --cached`). Para darla por buena, el usuario hace el commit; para rechazarla, lo saca del stage (`git restore --staged .`) y escribe sus conclusiones.';
   return (
-    `${MARK} Esta sesión es la revisión humana de ${WHAT(step)} de \`${change}\`. No modifiques ningún archivo, no hagas commits y no pidas commits.${errors}${verify}\n\n` +
-    `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas. ${staged} ` +
+    `${MARK} Esta sesión es la revisión humana ${`de ${WHAT(step)}`.replace(/^de el /, 'del ')} de \`${change}\`. No modifiques ningún archivo, no hagas commits y no pidas commits.${errors}${verify}\n\n` +
+    `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas.${step.of === 'task' || step.of === 'verify' ? ` ${ACCEPTANCE(step, change)}` : ''} ${staged} ` +
     `La revisión la cierra git cuando el usuario envía su siguiente mensaje, no tú. Si das tus conclusiones, pásalas con \`${HANDOFF_TOOL}\` en \`conclusions\`. ${LESSONS}`
   );
 }
@@ -114,11 +127,49 @@ export function reminderPrompt({ step, change, phase }) {
   return `${MARK} Recordatorio: esta sesión hace solo el paso «${describe(step, change)}». No empieces el paso siguiente. ${GIT} Al terminar, llama a \`${HANDOFF_TOOL}\`.`;
 }
 
-// Lo que recibe el modelo en una sesión que no es la operativa (design D13)
+// Lo que recibe el modelo al cambiar de agente en la sesión operativa (design
+// D3 de autopilot-plan-explore, ADR-0019). Ninguno queda en el historial: los
+// inyecta el hook context en cada petición del turno.
+
+const WHERE = (step, change) => (step?.kind === 'review' ? `la ${describe(step, change)}` : `el paso «${describe(step, change)}»`);
+
+// Al pasar de build a plan: el flujo completo de exploración
+export function explorePrompt({ step, change }) {
+  return (
+    `${MARK} El usuario ha pasado al agente plan para explorar ${WHERE(step, change)}. ` +
+    'Usa la skill `openspec-explore`: sé su compañero de pensamiento, investiga, compara alternativas y aclara dudas sobre el change y este paso, sin implementar nada y sin escribir artefactos ni código. ' +
+    `No llames a \`${HANDOFF_TOOL}\`: explorar no cierra el paso. ` +
+    'Si el usuario te pide expresamente modificar archivos, recuérdale que eso es del agente build (Shift+Tab) y que, si lo haces aquí, el plugin le avisará antes de seguir con el ciclo.'
+  );
+}
+
+// Las peticiones siguientes con el agente plan
+export function exploreReminderPrompt({ step, change }) {
+  return `${MARK} Recordatorio: estás explorando ${WHERE(step, change)} con el agente plan y la skill \`openspec-explore\`. No implementes ni modifiques archivos.`;
+}
+
+// Al volver de plan a build: solo el recordatorio de lo que había antes
+export function returnPrompt({ step, change, phase }) {
+  const reminder = reminderPrompt({ step, change, phase }).replace(`${MARK} `, '').replace(/^Recordatorio: /, '');
+  return `${MARK} Vuelves de explorar con el agente plan; sigue con lo que había antes. ${reminder.charAt(0).toUpperCase()}${reminder.slice(1)}`;
+}
+
+// El aviso de lo modificado con el agente plan (design D5), sin prefijo: lo
+// que llega al modelo ya lleva la marca, y el modal antepone el nombre del plugin
+export function planNoticeText() {
+  return (
+    'Con el agente plan se han hecho modificaciones en el repositorio que, por el enfoque del workflow y la naturaleza del agente plan, deberían haberse reservado al agente build. ' +
+    'Normalmente es porque se le ha pedido expresamente. Revisa los cambios (`git status`) antes de seguir.'
+  );
+}
+
+// Lo que recibe el modelo en una sesión que no es la operativa (design D13 de
+// autopilot-sesion-operativa, D6 de autopilot-rama-por-sesion)
 export function foreignPrompt({ change, title, sessionID }) {
   return (
     `${MARK} Esta sesión no es la sesión operativa. Mientras se edita ${change ? `el change \`${change}\`` : 'un change nuevo'} en modo autopilot, solo se opera con su sesión operativa «${title}» (${sessionID}). ` +
-    'No cambies archivos ni hagas nada del change aquí: di al usuario que vaya a esa sesión.'
+    'No cambies archivos ni hagas nada del change aquí: di al usuario que vaya a esa sesión. ' +
+    `Para trabajar en otro change a la vez, ofrécele crear un worktree nuevo: si lo pide, llama a la tool \`${WORKTREE_TOOL}\` con el nombre que dé (será también el de la rama), y dale lo que te devuelva para abrir la sesión operativa del worktree.`
   );
 }
 

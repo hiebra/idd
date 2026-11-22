@@ -2,6 +2,8 @@
 
 const assert = require('node:assert/strict');
 const { Given, When, Then } = require('@cucumber/cucumber');
+const fs = require('node:fs');
+const path = require('node:path');
 const { git } = require('../support/engine');
 
 // Messages the opened session showed the user, as one text
@@ -259,6 +261,36 @@ Then(/^`main` no cambia( y se avisa de que ha divergido)?$/, function (diverged)
 
 Then('el árbol de trabajo no cambia', function () {
   assert.deepEqual(this.project.gitStatus(), this.gitBefore.status);
+});
+
+// A branch checked out in another directory of the clone (autopilot-rama-por-sesion, design D11)
+Given('el directorio principal del clon en la rama permanente `main`', function () {
+  const project = this.ensureProject();
+  this.branches.addRemote(project);
+  rememberGit(this);
+});
+
+Given(/^un worktree del clon en la rama temporal `([^`]+)`$/, function (name) {
+  const dir = fs.mkdtempSync(path.join(this.workDir, 'worktree-'));
+  fs.rmSync(dir, { recursive: true });
+  git(this.project.dir, 'worktree', 'add', '-q', '-b', name, dir, 'main');
+  this.worktreeDir = dir;
+  rememberGit(this);
+});
+
+When('se abre una sesión en el worktree', function () {
+  const main = this.project;
+  this.project = Object.create(main, { dir: { value: this.worktreeDir } });
+  try {
+    this.openSession();
+  } finally {
+    this.project = main;
+  }
+});
+
+Then('el árbol de trabajo y el índice del directorio principal no cambian', function () {
+  assert.deepEqual(this.project.gitStatus(), this.gitBefore.status, this.session.log);
+  assert.deepEqual(git(this.project.dir, 'diff', '--cached', '--name-status').trim(), '', this.session.log);
 });
 
 Then(/^la rama de la sesión guardada es `([^`]+)`$/, function (name) {

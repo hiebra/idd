@@ -284,7 +284,7 @@ Examples:
 ```
 
 ### Requirement: Clon completo y ramas permanentes al día al abrir sesión
-Al abrir una sesión, el arranque DEBE completar el clon si es superficial. También DEBE poner al día cada rama permanente local que esté atrasada respecto a `origin/<rama>` y la contenga. No DEBE tocar la rama en la que está el clon, ni una rama permanente local que haya divergido de la remota; de esta última DEBE avisar. Si no puede completar el clon o poner al día una rama, DEBE avisar, y la sesión DEBE arrancar igualmente.
+Al abrir una sesión, el arranque DEBE completar el clon si es superficial. También DEBE poner al día cada rama permanente local que esté atrasada respecto a `origin/<rama>` y la contenga. No DEBE tocar ninguna rama sacada en un directorio del clon (el principal o un worktree), ni una rama permanente local que haya divergido de la remota; de esta última DEBE avisar. Si no puede completar el clon o poner al día una rama, DEBE avisar, y la sesión DEBE arrancar igualmente.
 
 #### Scenario: Un clon superficial queda completo
 
@@ -317,6 +317,17 @@ And `main` está atrasada respecto a `origin/main`
 When se abre una sesión en el proyecto
 Then `main` no cambia
 And el árbol de trabajo no cambia
+```
+
+#### Scenario: Una rama sacada en otro directorio del clon no se toca
+
+```gherkin
+Given el directorio principal del clon en la rama permanente `main`
+And `main` está atrasada respecto a `origin/main`
+And un worktree del clon en la rama temporal `exportar-datos`
+When se abre una sesión en el worktree
+Then `main` no cambia
+And el árbol de trabajo y el índice del directorio principal no cambian
 ```
 
 #### Scenario: Sin acceso al remoto, la sesión arranca
@@ -365,4 +376,16 @@ Then el aviso se muestra una sola vez en la TUI
 Given una sesión de OpenCode abierta en la TUI con su propio servidor, en el proyecto
 When el usuario cierra la TUI
 Then el terminal no muestra ningún error del arranque de sesión
+```
+
+### Requirement: Finales de línea del repositorio en cualquier clon
+El repositorio DEBE fijar finales de línea LF en todos sus archivos de texto, entre ellos los scripts del arranque de sesión y los textos que el arranque entrega o procesa (la guía y el recordatorio del wiki, la regla de comentarios y su recordatorio), para que un clon con `core.autocrlf=true`, el valor por defecto de Git for Windows, los extraiga con LF.
+
+#### Scenario: Clon con conversión de finales de línea
+
+```gherkin
+Given un clon del proyecto extraído con `core.autocrlf=true`
+When se abre una sesión de OpenCode en el proyecto
+Then los scripts del arranque de sesión del clon tienen finales de línea LF
+And la guía del wiki se entrega sin los identificadores de sección
 ```

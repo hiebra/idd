@@ -8,6 +8,23 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-main-avanza-durante-la-suite.md](2026-11-22-ll-main-avanza-durante-la-suite.md) | 1 lección: main avanza mientras corre la suite de una fusión; git fetch otra vez antes del commit de fusión y tras el push | lessons-learned, git, merge | 2026-11-22 |
+| [2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md](2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md) | 2 lecciones de la fusión de main con autopilot-rama-por-sesion: el cierre común de un conflicto y el entorno del contenedor en el plugin | lessons-learned, git, merge | 2026-11-22 |
+| [2026-11-22-ll-pruebas-opencode-real-autopilot.md](2026-11-22-ll-pruebas-opencode-real-autopilot.md) | 7 lecciones de las pruebas de autopilot-rama-por-sesion en OpenCode 2.3.2 real: `@opencode/cli`, update-ref con worktrees, ctx.location.project, remove y forceRequired de una estrategia, keymap.dispatch y el worktree del primer mensaje, simulador primero y el banco | lessons-learned, opencode, worktrees, git, testing | 2026-11-22 |
+| [2026-11-22-ll-archive-autopilot-rama-por-sesion.md](2026-11-22-ll-archive-autopilot-rama-por-sesion.md) | 2 lecciones del archive de autopilot-rama-por-sesion: el aviso del cargador tras sincronizar un REMOVED y el sync por bloques | lessons-learned, openspec, archive | 2026-11-22 |
+| [2026-11-22-ll-autopilot-rama-por-sesion.md](2026-11-22-ll-autopilot-rama-por-sesion.md) | 2 lecciones de autopilot-rama-por-sesion: la `/` en las expresiones de Cucumber y `git switch` desde origin/ sin remoto configurado | lessons-learned, cucumber, git | 2026-11-22 |
+| [2026-11-22-ll-fusion-supuestos-invalidados.md](2026-11-22-ll-fusion-supuestos-invalidados.md) | 1 lección: al fusionar main, lo que llega sin conflicto puede apoyarse en lo que el change cambió (las revisiones con plan) | lessons-learned, git, merge, openspec-autopilot, llm-wiki | 2026-11-22 |
+| [2026-11-22-ll-archivado-autopilot-plan-explore.md](2026-11-22-ll-archivado-autopilot-plan-explore.md) | 4 lecciones del archivado de autopilot-plan-explore: la task del archive, el banco con OpenCode real (ESC [ Z y opencode serve propio), las referencias del motor y las búsquedas sin los informes generados | lessons-learned, openspec, archive, opencode, testing, llm-wiki | 2026-11-22 |
+| [2026-11-22-ll-cucumber-rerun.md](2026-11-22-ll-cucumber-rerun.md) | 1 lección: --format rerun lista los fallos, pero @rerun.txt se suma a las rutas del perfil y no acota; se repiten con --name | lessons-learned, acceptance-tests, cucumber-js | 2026-11-22 |
+| [2026-11-22-ll-apply-guidance-timeout.md](2026-11-22-ll-apply-guidance-timeout.md) | 1 lección: un temporizador con unref() no mantiene vivo node --test, y un test cancelado no cuenta como fail | lessons-learned, core-tests, node-test, openspec-autopilot | 2026-11-22 |
+| [2026-11-22-ll-reorder-wiki-resync.md](2026-11-22-ll-reorder-wiki-resync.md) | 1 lección de reorder-wiki-resync: en la nube, windows-readiness falla por falta de pwsh y el modo automático deniega descargarlo | lessons-learned, acceptance-tests, windows-readiness, cloud-session | 2026-11-22 |
+| [2026-11-22-ll-lint-fix-y-librarian-1-0-0.md](2026-11-22-ll-lint-fix-y-librarian-1-0-0.md) | 2 lecciones del motor 1.0.0: lint --fix aparca la fuente sin artículo y pasa; librarian scan solo puntúa antigüedad y forma | lessons-learned, llm-wiki, lint, librarian | 2026-11-22 |
+| [2026-11-22-ll-guiar-revision-con-tests.md](2026-11-22-ll-guiar-revision-con-tests.md) | 2 lecciones de guiar-revision-con-tests: el agente plan ejecuta la shell sin pedir permiso y las pruebas del autopilot valen solo en su sesión operativa | lessons-learned, opencode, openspec-autopilot | 2026-11-22 |
+| [2026-11-22-ll-fusion-wiki-contadores.md](2026-11-22-ll-fusion-wiki-contadores.md) | 1 lección: al resolver una fusión en el wiki, los contadores se cuentan de nuevo sobre el disco; el lint no los comprueba | lessons-learned, wiki, git, merge | 2026-11-22 |
+| [2026-11-22-ll-check-commit-arbol-entero.md](2026-11-22-ll-check-commit-arbol-entero.md) | 1 lección: check commit juzga todos los cambios pendientes del árbol, no el stage; se aparta una zona con git stash | lessons-learned, openspec, git, check-commit | 2026-11-22 |
+| [2026-11-22-ll-archive-windows-support.md](2026-11-22-ll-archive-windows-support.md) | 3 lecciones del archivado de windows-support: enlaces relativos al archivar, lint:specs solo en acceptance-tests/ y un commit de .wiki/ por paso en la nube | lessons-learned, openspec, archive, spec-lint, git | 2026-11-22 |
+| [2026-11-22-ll-windows-support.md](2026-11-22-ll-windows-support.md) | 7 lecciones de windows-support: motor desde un git bundle, node_modules por plataforma, el CLI desde un plugin de OpenCode en Windows, --renormalize, BOM duplicado, --name en cucumber y cd en segundo plano | lessons-learned, windows, opencode, npm, git, powershell | 2026-11-22 |
+| [2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md](2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md) | 1 lección: al resolver una fusión en el wiki, buscar lecciones equivalentes en el lado que llega y citar las dos notas en una sola viñeta | lessons-learned, wiki, git, merge | 2026-11-22 |
 | [2026-11-22-ll-changes-concurrentes-antes-de-proponer.md](2026-11-22-ll-changes-concurrentes-antes-de-proponer.md) | 1 lección de checkout-al-cambiar-de-sesion: mirar los changes y ADRs de las ramas remotas sin fusionar antes de proponer | lessons-learned, openspec, git, adr | 2026-11-22 |
 | [2026-11-22-ll-allow-user-requested-merges-2.md](2026-11-22-ll-allow-user-requested-merges-2.md) | 2 correcciones de allow-user-requested-merges: la suite tardó 6-7 minutos y la prueba intermitente falla también en la pasada de core | lessons-learned, acceptance-tests, node-test | 2026-11-22 |
 | [2026-11-22-ll-allow-user-requested-merges.md](2026-11-22-ll-allow-user-requested-merges.md) | 3 lecciones de allow-user-requested-merges: la copia del proyecto sale del disco, las rutas de cucumber-js se suman a las del perfil y una prueba de core intermitente | lessons-learned, acceptance-tests, cucumber, node-test | 2026-11-22 |
@@ -15,6 +32,9 @@ Last updated: 2026-11-22
 | [2026-11-22-ll-update-comment-phrase-and-opencode-marker.md](2026-11-22-ll-update-comment-phrase-and-opencode-marker.md) | Lecciones de update-comment-phrase-and-opencode-marker: cita de la web de OpenCode, validate --strict y una prueba intermitente | lessons-learned, opencode, response-comments, openspec, acceptance-tests | 2026-11-22 |
 | [2026-11-22-ll-update-comment-closing-and-quotes.md](2026-11-22-ll-update-comment-closing-and-quotes.md) | 3 lecciones de update-comment-closing-and-quotes: citas de la app de Claude, H1 en delta specs y escenarios renombrados | lessons-learned, claude-code, response-comments, openspec | 2026-11-22 |
 | [2026-11-22-ll-fusion-no-ff-y-trazabilidad.md](2026-11-22-ll-fusion-no-ff-y-trazabilidad.md) | 3 lecciones: la regla de una zona no afecta a la fusión, --no-ff mantiene en main los commits citados y el título de la fusión debe nombrar el change | lessons-learned, git, no-ff, trazabilidad | 2026-11-22 |
+| [2026-11-22-ll-git-discipline-standard-with-exception.md](2026-11-22-ll-git-discipline-standard-with-exception.md) | 5 lecciones de git-discipline-standard-with-exception: validate y los escenarios de un MODIFIED, check commit y los archivos sin seguimiento, archive --yes y las tasks, una puerta que bloquea su propio change y cucumber-js con --name | lessons-learned, openspec, git, cucumber | 2026-11-22 |
+| [2026-11-22-ll-conflictos-entre-deltas-concurrentes.md](2026-11-22-ll-conflictos-entre-deltas-concurrentes.md) | 3 lecciones: el archive aborta con deltas que ya no casan, dos MODIFIED con los mismos escenarios se sobrescriben en silencio en la misma rama (en ramas separadas, conflicto de git) y los ADR en la rama de origen reservan su número | lessons-learned, openspec, archive, delta-specs | 2026-11-22 |
+| [2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md](2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md) | Opinión del usuario: la spec en la rama de origen no choca salvo por los ADR, el apply va en rama si hay concurrencia, y la plantilla mantiene las dos formas porque sus proyectos pueden tener varias ramas permanentes | openspec-git-discipline, opinion-del-usuario | 2026-11-22 |
 | [2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md](2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md) | 2 lecciones: la guidance de archivado no salta la pregunta del sync y cuándo archivar sin sincronizar | lessons-learned, openspec, archive | 2026-11-22 |
 | [2026-11-22-ll-modo-auto-instalar-opencode.md](2026-11-22-ll-modo-auto-instalar-opencode.md) | 1 lección: el modo auto de Claude Code en la nube bloqueó instalar @opencode/cli para el banco; reglas allow sin comprobar | lessons-learned, opencode, claude-code, auto-mode | 2026-11-22 |
 | [2026-11-22-ll-manage-git-discipline.md](2026-11-22-ll-manage-git-discipline.md) | 4 lecciones de manage-git-discipline: firma de commits en la nube, grupos opcionales de cucumber, worktree para probar el módulo y variables del contenedor efímero | lessons-learned, acceptance-tests, cucumber, git | 2026-11-22 |
@@ -30,6 +50,18 @@ Last updated: 2026-11-22
 ## Categories
 
 ## Recent Changes
+
+- 2026-11-22: Lección sobre main que avanza durante la suite de una fusión
+- 2026-11-22: Lecciones de la fusión de main con autopilot-rama-por-sesion
+- 2026-11-22: Lecciones de autopilot-rama-por-sesion
+
+- 2026-11-22: Lección sobre los supuestos que invalida un change al fusionar main
+- 2026-11-22: Lecciones del archivado de autopilot-plan-explore
+- 2026-11-22: Lección sobre los contadores del wiki en una fusión
+- 2026-11-22: Lección de check commit
+- 2026-11-22: Lecciones del archivado de windows-support
+- 2026-11-22: Lecciones de windows-support
+- 2026-11-22: Lecciones sobre conflictos entre deltas concurrentes y opinión del usuario sobre la spec en la rama de origen
 
 - 2026-11-22: Correcciones de las lecciones de allow-user-requested-merges
 
