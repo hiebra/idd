@@ -79,3 +79,9 @@
 ## [2026-11-22] librarian | scanned 10 articles, 0 stale, 0 low-quality, 1 suggestion (carga-en-la-misma-sesion-por-agente could link ADR-0010 and regla-de-comentarios)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | 3 lecciones de add-quote-comment-rule confirmadas por el usuario (raw/notes/2026-11-22-ll-add-quote-comment-rule.md)
+
+## [2026-11-22] compile | lecciones de add-quote-comment-rule en regla-de-comentarios, suite-de-aceptacion-y-spec-as-source y ciclo-de-un-change-y-autopilot
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed

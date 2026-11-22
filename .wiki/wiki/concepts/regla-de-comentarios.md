@@ -3,8 +3,9 @@ title: "La regla de comentarios"
 category: concept
 sources:
   - raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md
+  - raw/notes/2026-11-22-ll-add-quote-comment-rule.md
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 verified: 2026-11-21
 tags: [response-comments, session-bootstrap, claude-code, opencode, adr]
 confidence: high
@@ -39,6 +40,7 @@ summary: "Cómo comenta el usuario partes de una respuesta del agente sin que co
 ## Límites
 
 - **La suite comprueba lo que el agente recibe, no que el modelo cumpla la regla** (design, Non-Goals). En el cierre del change se ejecutaron los hooks reales de Claude Code, pero no se comprobó en una sesión nueva que el modelo conteste con la frase fija (`idd@16e4617:openspec/changes/archive/2026-11-21-add-quote-comment-rule/tasks.md`, 6.3).
+- **`json_field` y `\uXXXX`**: el `printf` de bash solo convierte un `\uXXXX` fuera de ASCII con una locale UTF-8, así que la conversión fuerza `LC_ALL=C.UTF-8`; en bash 3.2 (macOS), que no entiende `\u`, queda un espacio. Para decidir si un mensaje activa la regla basta, porque solo importan la comilla simple inicial y las palabras de cierre (`idd@16e4617:.claude/hooks/json.sh`; [lecciones de add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md), lección 1).
 - **Falsos positivos**: un mensaje como "ya lo veo" recibe el recordatorio; la regla deja al modelo decidir si aplica.
 
 ## See Also
@@ -51,3 +53,4 @@ summary: "Cómo comenta el usuario partes de una respuesta del agente sin que co
 ## Sources
 
 - [Collection: archivado de add-quote-comment-rule](../../raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md): `openspec/specs/response-comments/spec.md`, `.agents/comments/rule.md`, `.agents/comments/reminder.md`, `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/json.sh`, `adr/0010-agent-instructions-through-session-bootstrap.md`, `README.md`, y `proposal.md`, `design.md` y `tasks.md` del change archivado.
+- [Lessons Learned: add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md): lección 1.
