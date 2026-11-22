@@ -36,5 +36,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que la secci
 
 ## 6. Cierre
 
-- [ ] 6.1 Ejecutar la suite completa (`npm test`, `npm run test:core` y `npm run lint:specs` en `acceptance-tests/`): todos los escenarios en verde, sin pasos pendientes ni sin definir, y con el informe HTML generado.
-- [ ] 6.2 Ejecutar `openspec validate apply-one-task-per-session-in-normal-mode --type change --strict`.
+- [x] 6.1 Ejecutar la suite completa (`npm test`, `npm run test:core` y `npm run lint:specs` en `acceptance-tests/`): todos los escenarios en verde, sin pasos pendientes ni sin definir, y con el informe HTML generado.
+  - Resultado (2026-11-22): 236 escenarios y 1253 pasos en verde (los 9 de este change incluidos), sin pasos pendientes ni sin definir, e informe HTML en `acceptance-tests/reports/cucumber-report.html`; `npm run test:core`, 177 en verde; `npm run lint:specs`, sin errores. En dos de las siete ejecuciones de la suite fallaron dos escenarios del autopilot, distintos cada vez y en verde por separado; el test de núcleo «two sessions taking control at once» también falla a veces en `main` (una de tres en un worktree de `origin/main`), así que son carreras de tiempos que ya existían.
+- [x] 6.2 Ejecutar `openspec validate apply-one-task-per-session-in-normal-mode --type change --strict`.
+  - Resultado: ningún `[ERROR]`. Quedan 8 avisos de los tipos que ya da `openspec validate --specs --strict`: requisitos con «DEBE» en lugar de SHALL/MUST, escenarios en bloques `gherkin` sin WHEN/GIVEN ni THEN y un requisito de más de 500 caracteres. Con `--strict`, el comando sale con 1 por esos avisos, como en los changes anteriores.
