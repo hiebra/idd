@@ -1010,6 +1010,112 @@ Then('la sesión de la task 1 espera a que el usuario haga el commit', function 
   assert.deepEqual(next.messages, []);
 });
 
+// --- El agente plan explora en la sesión operativa (autopilot-plan-explore) ---------------
+
+// What the plugin injected into the last request of the session the scenario looks at
+function lastInjected(world) {
+  const id = world.opened ?? world.owner;
+  const last = ap.requestsOf(world, id).at(-1);
+  assert.ok(last, `no request in ${id}:\n${detail(world)}`);
+  return last.messages.filter((m) => m.role === 'user' && m.text.includes(ap.MARK)).map((m) => m.text);
+}
+const EXPLORE_FULL = /compañero de pensamiento/;
+const STEP_REMINDER = /Recordatorio: esta sesión (hace solo el paso|es la revisión)/;
+
+async function toAgent(world, agent, text) {
+  await world.opencodeCall('switchAgent', { sessionID: world.owner, agent });
+  await say(world, world.owner, text);
+}
+
+Given('una sesión operativa de `exportar-datos` que hace el artefacto `design`, con el agente build', async function () {
+  await ap.prepareChange(this, { artifacts: ['proposal', 'specs'] });
+  await startMode(this, 'normal');
+  await seedOperational(this, { kind: 'artifact', id: 'design' });
+  await say(this, this.owner, 'Empieza.');
+});
+
+Given('una sesión operativa de `exportar-datos` que hace la revisión de la task {int}, con el agente build', async function (task) {
+  assert.equal(task, 3);
+  await reachReview(this, 'la task 3');
+});
+
+When('el usuario cambia la sesión al agente plan y escribe un mensaje', async function () {
+  await toAgent(this, 'plan', '¿Qué alternativas hay?');
+});
+
+When('el usuario cambia otra vez la sesión al agente plan y escribe un mensaje', async function () {
+  await toAgent(this, 'plan', '¿Y si lo hacemos de otra forma?');
+});
+
+When('el usuario cambia la sesión al agente build y escribe un mensaje', async function () {
+  await toAgent(this, 'build', 'Sigue con el paso.');
+});
+
+Given('el usuario ya ha escrito un mensaje en ella con el agente plan', async function () {
+  await toAgent(this, 'plan', 'Pensemos antes de seguir.');
+});
+
+Given('el usuario ha pasado por el agente plan y ha vuelto a build', async function () {
+  await toAgent(this, 'plan', 'Pensemos antes de seguir.');
+  await toAgent(this, 'build', 'Sigue.');
+});
+
+When('el usuario escribe otro mensaje con el agente plan', async function () {
+  await say(this, this.owner, '¿Y los formatos de fecha?');
+});
+
+When('el usuario escribe con el agente plan en una sesión que no es la operativa', async function () {
+  const { sessionID } = await this.opencodeCall('openHome', { text: '¿Qué opciones hay?', agent: 'plan' });
+  this.opened = sessionID;
+});
+
+Then('la petición al modelo incluye la instrucción de seguir `openspec-explore` sobre el artefacto `design`', function () {
+  const texts = lastInjected(this);
+  assert.ok(texts.some((t) => t.includes('`openspec-explore`') && EXPLORE_FULL.test(t) && t.includes('artefacto design de exportar-datos')), JSON.stringify(texts));
+});
+
+Then('la petición al modelo incluye la instrucción de seguir `openspec-explore` sobre la revisión de la task {int}', function (task) {
+  const texts = lastInjected(this);
+  assert.ok(texts.some((t) => t.includes('`openspec-explore`') && EXPLORE_FULL.test(t) && t.includes(`revisión de la task ${task} de exportar-datos`)), JSON.stringify(texts));
+});
+
+Then('la petición al modelo incluye la instrucción completa de `openspec-explore`', function () {
+  const texts = lastInjected(this);
+  assert.ok(texts.some((t) => t.includes('`openspec-explore`') && EXPLORE_FULL.test(t)), JSON.stringify(texts));
+});
+
+Then('la petición al modelo incluye el recordatorio de la exploración', function () {
+  const texts = lastInjected(this);
+  assert.ok(texts.some((t) => /Recordatorio: estás explorando/.test(t) && t.includes('artefacto design')), JSON.stringify(texts));
+});
+
+Then('la petición al modelo incluye el recordatorio del paso del artefacto `design`, que dice que se vuelve de explorar', function () {
+  const texts = lastInjected(this);
+  assert.ok(texts.some((t) => /Vuelves de explorar/.test(t) && t.includes('artefacto design de exportar-datos')), JSON.stringify(texts));
+});
+
+Then('la petición no incluye el recordatorio del paso', function () {
+  const texts = lastInjected(this);
+  assert.ok(!texts.some((t) => STEP_REMINDER.test(t)), JSON.stringify(texts));
+});
+
+Then('la petición no incluye la instrucción completa de `openspec-explore`', function () {
+  const texts = lastInjected(this);
+  assert.ok(!texts.some((t) => EXPLORE_FULL.test(t)), JSON.stringify(texts));
+});
+
+Then('la petición no incluye ninguna instrucción de `openspec-explore`', function () {
+  const texts = lastInjected(this);
+  assert.ok(!texts.some((t) => t.includes('openspec-explore')), JSON.stringify(texts));
+});
+
+Then('el plugin no añade ningún mensaje a la sesión', function () {
+  // What the plugin injects stays out of the history: every stored message is the user's
+  const stored = ap.session(this, this.owner).messages.filter((m) => m.type === 'user');
+  assert.ok(stored.length > 0);
+  for (const m of stored) assert.ok(!m.text.includes(ap.MARK), JSON.stringify(stored));
+});
+
 // --- Compactación y fallos ---------------------------------------------------------------------
 
 Given('una sesión dueña que aplica la task 3 de `exportar-datos`', async function () {

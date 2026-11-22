@@ -29,7 +29,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { RPC, TIMEOUT_MS } from './lib/rpc.mjs';
 import { describe, discrepancy, next, stepFromState, waitsForCommit, zoneOf } from './lib/next-step.mjs';
-import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, closedPrompt, foreignPrompt, reminderPrompt, resumeCommand, stepPrompt } from './lib/prompts.mjs';
+import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, closedPrompt, explorePrompt, exploreReminderPrompt, foreignPrompt, reminderPrompt, resumeCommand, returnPrompt, stepPrompt } from './lib/prompts.mjs';
+import { agentTurn, transition, turnKey } from './lib/agent-turn.mjs';
 import { allSessions, branchSessions, changeSessions, isArchived, isWorking, meta, nextSeq, owners, winner, writeMeta } from './lib/state.mjs';
 import { branchChange, changeState, validateErrors } from './lib/project.mjs';
 import { gitState, stage, treeClean, verdict } from './lib/git.mjs';
@@ -549,12 +550,26 @@ async function start(ctx) {
 
   // --- Cada mensaje que entra en una sesión (hook prompt) ---
 
+  // La clave del turno (D2 de autopilot-plan-explore): el último messageID que
+  // entra en la sesión operativa, también el del mensaje con el que el plugin
+  // arranca un paso, guardado antes de decidir nada más
+  const rememberTurn = async (session, messageID) => {
+    if (typeof messageID !== 'string' || messageID === '') return;
+    if (isArchived(session) || meta(session)?.role !== 'owner') return;
+    try {
+      await writeMeta(api, session.id, { turnMessage: messageID });
+    } catch (error) {
+      log('turnMessage:', error?.message ?? error);
+    }
+  };
+
   const onPrompt = guard('prompt', async (input) => {
     const sessionID = input?.sessionID;
     const text = String(input?.prompt?.text ?? '');
-    if (!sessionID || text.startsWith(MARK)) return;
+    if (!sessionID) return;
     const session = await api.get({ sessionID });
-    if (isArchived(session)) return;
+    await rememberTurn(session, input?.messageID);
+    if (text.startsWith(MARK) || isArchived(session)) return;
     const m = meta(session);
     if (m?.role === 'owner') {
       if (m.phase === 'review') return reviewPrompted(session, m, input);
@@ -587,7 +602,7 @@ async function start(ctx) {
     const state = bc.kind === 'active' ? await changeState(directory, bc.change) : null;
     const step = bc.kind === 'active' ? stepFromState(state) : { kind: 'new' };
     if (step.kind === 'blocked') return;
-    const nm = { worktree: directory, branch: bc.branch, change: bc.change ?? null, role: 'owner', step, seq: nextSeq(sessions), phase: 'starting', zone: null };
+    const nm = { worktree: directory, branch: bc.branch, change: bc.change ?? null, role: 'owner', step, seq: nextSeq(sessions), phase: 'starting', zone: null, ...(typeof input?.messageID === 'string' ? { turnMessage: input.messageID } : {}) };
     await writeMeta(api, sessionID, nm);
     // Escribir y comprobar: si otra sesión ha tomado el control a la vez, gana la más antigua
     const { op: first } = await opOf(bc);
@@ -623,13 +638,37 @@ async function start(ctx) {
     messages.splice(at, 0, { role: 'user', content: [{ type: 'text', text }] });
   };
 
+  // Lo que se inyecta en la sesión operativa según el agente del turno (D2 y
+  // D3 de autopilot-plan-explore): se decide una vez por turno, se guarda en
+  // `agentTurn` y se repite en todas sus peticiones
+  const TURN_TEXT = {
+    step: reminderPrompt,
+    explore: explorePrompt,
+    'explore-reminder': exploreReminderPrompt,
+    return: returnPrompt,
+  };
+  const turnText = async (input, m) => {
+    const key = turnKey(input.messages, { turnMessage: m.turnMessage, previous: m.agentTurn?.key });
+    const { state, fresh } = agentTurn(m.agentTurn, { key, agent: input.agent });
+    if (fresh) {
+      try {
+        await writeMeta(api, input.sessionID, { agentTurn: state });
+      } catch (error) {
+        log('agentTurn:', error?.message ?? error);
+      }
+    }
+    // Sin clave (una sesión de antes de este change), se decide sin guardar, como si el turno anterior fuera build
+    const kind = state?.kind ?? transition(undefined, input.agent);
+    return TURN_TEXT[kind]({ step: m.step, change: m.change, phase: m.phase });
+  };
+
   const onContext = guard('context', async (input) => {
     const sessionID = input.sessionID;
     const session = await api.get({ sessionID });
     if (isArchived(session)) return;
     const m = meta(session);
     if (m?.role === 'owner') {
-      if (m.step) inject(input, reminderPrompt({ step: m.step, change: m.change, phase: m.phase }));
+      if (m.step) inject(input, await turnText(input, m));
       return;
     }
     const bc = await branchChange(directory);

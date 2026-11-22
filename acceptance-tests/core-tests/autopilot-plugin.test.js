@@ -371,3 +371,63 @@ test("the user's description in the new step reaches the next steps", async (t) 
   assert.deepEqual(ap.metaOf(next).step, { kind: 'artifact', id: 'proposal' }, ap.describeSessions(w));
   assert.match(ap.instructionOf(w, next.id), /exportar los datos a CSV con una cabecera/);
 });
+
+// autopilot-plan-explore (D2): what the plugin injects with the plan agent
+const injectedIn = (request) => request.messages.filter((m) => m.role === 'user' && m.text.includes('[openspec-autopilot]')).map((m) => m.text);
+
+test('in a plan turn with several tools, every request carries the full exploration, also after the plan reminder', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  await w.opencodeCall('message', { sessionID: owner, text: 'Empieza.' });
+  await w.opencodeCall('switchAgent', { sessionID: owner, agent: 'plan' });
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ tool: { name: 'read', input: {} } }, { tool: { name: 'grep', input: {} } }, { text: 'Hay dos opciones.' }] }] });
+  await w.opencodeCall('message', { sessionID: owner, text: '¿Qué opciones hay?' });
+  const plan = ap.requestsOf(w, owner).filter((r) => r.agent === 'plan');
+  assert.equal(plan.length, 3, ap.describeSessions(w));
+  for (const request of plan) {
+    const texts = injectedIn(request);
+    assert.equal(texts.length, 1, JSON.stringify(texts));
+    assert.match(texts[0], /`openspec-explore`/);
+    assert.match(texts[0], /compañero de pensamiento/);
+  }
+  // The next message in plan only gets the reminder
+  await w.opencodeCall('message', { sessionID: owner, text: '¿Y la segunda?' });
+  assert.match(injectedIn(ap.requestsOf(w, owner).at(-1))[0], /Recordatorio: estás explorando/);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('a message sent mid-turn after a Tab to plan gets the exploration from the first request that carries it', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  // A build turn whose tool takes a while; the user switches to plan and writes meanwhile
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ tool: { name: 'read', input: {} }, delayMs: 400 }, { text: 'Visto.' }, { text: 'Opciones.' }] }] });
+  await w.opencodeCall('messageAsync', { sessionID: owner, text: 'Empieza.' });
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  await w.opencodeCall('switchAgent', { sessionID: owner, agent: 'plan' });
+  await w.opencodeCall('message', { sessionID: owner, text: '¿Qué opciones hay?' });
+  const requests = ap.requestsOf(w, owner);
+  const last = requests.at(-1);
+  assert.equal(last.agent, 'plan', ap.describeSessions(w));
+  assert.ok(last.messages.some((m) => m.text === '¿Qué opciones hay?'));
+  assert.match(injectedIn(last)[0], /compañero de pensamiento/);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+test('a failure writing the turn does not block the request nor throw', async (t) => {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode();
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  await w.opencodeCall('switchAgent', { sessionID: owner, agent: 'plan' });
+  await w.opencodeCall('fail', { failures: { 'session.update': 20 } });
+  await w.opencodeCall('message', { sessionID: owner, text: '¿Qué opciones hay?' });
+  const last = ap.requestsOf(w, owner).at(-1);
+  assert.equal(last.failed, null);
+  // Without the key written, the turn is decided as if the previous one were build
+  assert.match(injectedIn(last)[0], /`openspec-explore`/);
+  assert.deepEqual(w.opencode.crashes, []);
+});
