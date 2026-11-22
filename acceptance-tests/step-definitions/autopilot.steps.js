@@ -900,7 +900,8 @@ Then('el árbol de trabajo no tiene cambios nuevos', function () {
 
 const LESSONS = ['Lección candidata uno.', 'Lección candidata dos.', 'Lección candidata tres.'];
 
-Given('un change `exportar-datos` cuyas sesiones dejaron tres lecciones candidatas', async function () {
+Given('un change `exportar-datos` de un proyecto con el wiki habilitado, cuyas sesiones dejaron tres lecciones candidatas', async function () {
+  this.ensureProject().setWiki(true);
   await ap.prepareChange(this, { tasks: [{ id: '1', done: true }] });
   await startMode(this, 'normal');
   await ap.seed(this, { title: 'design', step: { kind: 'artifact', id: 'design' }, archived: true, meta: { role: 'free', phase: 'done', seq: 1, lessons: [LESSONS[0]] } });
@@ -925,6 +926,47 @@ Then('la sesión recibe las tres lecciones candidatas', function () {
 Then('el wiki solo registra las que el usuario confirma', function () {
   assert.match(this.wikiText, /registra solo las que confirme/);
   assert.match(this.wikiText, /indicaciones de archivado/);
+});
+
+// --- El paso del wiki según el ajuste del proyecto (design D5 de add-project-wiki-toggle) ---
+
+Given(/^una rama temporal con el change `exportar-datos` en un proyecto con el wiki (habilitado|deshabilitado)$/, async function (state) {
+  this.ensureProject().setWiki(state === 'habilitado');
+  await ap.prepareChange(this, { tasks: [{ id: '1', done: true }] });
+  await startMode(this, 'normal');
+});
+
+// The archive is written; the session hands off once the user has committed it
+Given('la sesión operativa ha terminado el archive de `exportar-datos`', async function () {
+  await seedOperational(this, { kind: 'archive' }, { seq: 3 });
+  this.branches.archiveChange(this.project, ap.CHANGE);
+});
+
+When('el usuario hace el commit del archive', async function () {
+  this.branches.commitAll(this.project, 'archive');
+  await script(this, this.owner, [{ tool: { name: HANDOFF, input: {} } }, { text: 'Archivado.' }]);
+  await say(this, this.owner, 'Ya está.');
+});
+
+Then('no se crea ninguna sesión para resincronizar el wiki', function () {
+  const wiki = ap.sessions(this).filter((s) => ap.metaOf(s)?.step?.kind === 'wiki');
+  assert.deepEqual(wiki.map((s) => s.id), [], detail(this));
+});
+
+Then('se avisa de que el ciclo de `exportar-datos` ha terminado y de que queda fusionar la rama', function () {
+  assert.match(ap.toasts(this), /el ciclo de exportar-datos ha terminado[^\n]*fusionar la rama/, detail(this));
+});
+
+Then('el aviso no menciona el commit del wiki', function () {
+  const end = ap.toasts(this).split('\n').filter((t) => /ha terminado/.test(t));
+  assert.ok(end.length > 0, detail(this));
+  for (const toast of end) assert.doesNotMatch(toast, /wiki/i);
+});
+
+Then('se crea una sesión nueva con el control para resincronizar el wiki', function () {
+  const wiki = newOwnerAfter(this, this.owner);
+  assert.equal(ap.metaOf(wiki).step.kind, 'wiki', detail(this));
+  assert.match(ap.instructionOf(this, wiki.id), /resincronizar el wiki/);
 });
 
 // --- Árbol limpio ----------------------------------------------------------------------------

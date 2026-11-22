@@ -115,7 +115,23 @@ function schemaSkillProblems(projectDir) {
 }
 
 // The Claude Code commands of the project, as { name, file }
+// OpenCode 2.3.2 loads project commands from .opencode/command/ and
+// .opencode/commands/ (task 1.3 of add-project-wiki-toggle), as /<file>
+function discoverOpenCodeCommands(projectDir) {
+  const commands = [];
+  for (const dir of ['command', 'commands']) {
+    const root = path.join(projectDir, '.opencode', dir);
+    if (!fs.existsSync(root)) continue;
+    for (const entry of fs.readdirSync(root).sort()) {
+      const file = path.join(root, entry);
+      if (entry.endsWith('.md') && fs.statSync(file).isFile()) commands.push({ name: `/${entry.slice(0, -3)}`, file });
+    }
+  }
+  return commands;
+}
+
 function discoverCommands(agent, projectDir) {
+  if (agent === 'OpenCode') return discoverOpenCodeCommands(projectDir);
   if (agent !== 'Claude Code') return [];
   const root = path.join(projectDir, '.claude', 'commands');
   if (!fs.existsSync(root)) return [];
