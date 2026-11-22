@@ -63,5 +63,7 @@ Trasladada a `windows-global-distro` (design D1), por decisión del usuario: se 
 
 ## 7. Cierre
 
-- [ ] 7.1 Ejecutar la suite completa con el delta del change, `npm run test:core` y `npm run lint:specs`: todo pasa, cero pasos pendientes o sin definir, informe HTML generado. Anotar aquí el resultado.
-- [ ] 7.2 `openspec validate windows-support --type change --strict` sin errores.
+- [x] 7.1 Ejecutar la suite completa con el delta del change, `npm run test:core` y `npm run lint:specs`: todo pasa, cero pasos pendientes o sin definir, informe HTML generado. Anotar aquí el resultado.
+  - Resultado: suite completa con el delta del change, 220 escenarios y 1156 pasos, todos pasan, sin pasos pendientes ni sin definir, con el informe en `reports/cucumber-report.html`. `lint:specs`, sin errores (11 `spec.md`). `test:core`, 111 pruebas: pasan todas salvo, a veces, «two sessions taking control at once: the oldest wins and the other is left free» (`core-tests/autopilot-plugin.test.js`), que es intermitente desde antes de este change. Ejecutada sola 8 veces, falla 1 con el `lib/project.mjs` de este change y 1 con el de `ec60c4d`, anterior al change. No se corrige aquí: queda fuera de alcance.
+- [x] 7.2 `openspec validate windows-support --type change --strict` sin errores.
+  - Resultado: sin errores. Quedan los avisos de siempre de las specs en español: SHALL o MUST, y escenarios sin WHEN o THEN, porque el Gherkin va en bloques.
