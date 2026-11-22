@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-update-comment-closing-and-quotes.md](2026-11-22-ll-update-comment-closing-and-quotes.md) | 3 lecciones de update-comment-closing-and-quotes: citas de la app de Claude, H1 en delta specs y escenarios renombrados | lessons-learned, claude-code, response-comments, openspec | 2026-11-22 |
 | [2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md](2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md) | 2 lecciones: la guidance de archivado no salta la pregunta del sync y cuándo archivar sin sincronizar | lessons-learned, openspec, archive | 2026-11-22 |
 | [2026-11-22-ll-modo-auto-instalar-opencode.md](2026-11-22-ll-modo-auto-instalar-opencode.md) | 1 lección: el modo auto de Claude Code en la nube bloqueó instalar @opencode/cli para el banco; reglas allow sin comprobar | lessons-learned, opencode, claude-code, auto-mode | 2026-11-22 |
 | [2026-11-22-ll-manage-git-discipline.md](2026-11-22-ll-manage-git-discipline.md) | 4 lecciones de manage-git-discipline: firma de commits en la nube, grupos opcionales de cucumber, worktree para probar el módulo y variables del contenedor efímero | lessons-learned, acceptance-tests, cucumber, git | 2026-11-22 |

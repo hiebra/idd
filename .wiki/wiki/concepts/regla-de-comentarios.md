@@ -5,6 +5,7 @@ sources:
   - raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md
   - raw/notes/2026-11-22-ll-add-quote-comment-rule.md
   - raw/repos/2026-11-22-idd-c4d6b27-update-comment-closing-and-quotes.md
+  - raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md
 created: 2026-11-21
 updated: 2026-11-22
 verified: 2026-11-22
@@ -29,7 +30,7 @@ summary: "Cómo comenta el usuario partes de una respuesta del agente sin que co
 
 ### Cómo llega una cita de la app de Claude
 
-Comprobado en el transcript de una sesión de Claude Code en la nube: al citar un fragmento con la app de Claude, el `prompt` llega como `<!-- attach -->\n> fragmento citado\n\ntexto del usuario`. Por eso `activates_comments` quita, una y otra vez, los espacios y los comentarios HTML iniciales antes de buscar la marca (`idd@c4d6b27:.agents/hooks/session-bootstrap.sh`; design D1 de `update-comment-closing-and-quotes`).
+Comprobado en el transcript de una sesión de Claude Code en la nube: al citar un fragmento con la app de Claude, el `prompt` llega como `<!-- attach -->\n> fragmento citado\n\ntexto del usuario`. Por eso `activates_comments` quita, una y otra vez, los espacios y los comentarios HTML iniciales antes de buscar la marca (`idd@c4d6b27:.agents/hooks/session-bootstrap.sh`; design D1 de `update-comment-closing-and-quotes`; [lecciones de update-comment-closing-and-quotes](../../raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md), lección 1).
 
 ### Historia
 
@@ -64,4 +65,5 @@ La primera versión (`idd@16e4617`) solo reconocía `'…'` y cerraba con "ya" y
 
 - [Collection: archivado de add-quote-comment-rule](../../raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md): `openspec/specs/response-comments/spec.md`, `.agents/comments/rule.md`, `.agents/comments/reminder.md`, `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/json.sh`, `adr/0010-agent-instructions-through-session-bootstrap.md`, `README.md`, y `proposal.md`, `design.md` y `tasks.md` del change archivado.
 - [Collection: archivado de update-comment-closing-and-quotes](../../raw/repos/2026-11-22-idd-c4d6b27-update-comment-closing-and-quotes.md): `openspec/specs/response-comments/spec.md`, `.agents/comments/rule.md`, `.agents/hooks/session-bootstrap.sh`, y `proposal.md` y `design.md` del change archivado.
+- [Lessons Learned: update-comment-closing-and-quotes](../../raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md): lección 1.
 - [Lessons Learned: add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md): lección 1.
