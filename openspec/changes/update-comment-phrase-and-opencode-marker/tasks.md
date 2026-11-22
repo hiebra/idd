@@ -8,8 +8,8 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 2. Suite: varios plugins en el OpenCode simulado (D5)
 
-- [ ] 2.1 `opencode-host.mjs`: cargar `options.plugins` en orden, con `options.plugin` como lista de uno; ejecutar los hooks `context` de todos sobre la misma petición, y la limpieza de cada uno
-- [ ] 2.2 `opencode.js`: abrir la sesión con los plugins de sesión del proyecto que existan (`session-bootstrap` y `response-comments`) → suite en verde → commit
+- [x] 2.1 `opencode-host.mjs`: cargar `options.plugins` en orden, con `options.plugin` como lista de uno; ejecutar los hooks `context` de todos sobre la misma petición, y la limpieza de cada uno
+- [x] 2.2 `opencode.js`: abrir la sesión con los plugins de sesión del proyecto que existan (`session-bootstrap` y `response-comments`) → suite en verde → commit
 
 ## 3. Plugin `response-comments` (D2, D3, D4)
 
