@@ -14,7 +14,7 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 - **Workflows de OpenSpec como skills** (sin comandos), en `.claude/skills/`: `openspec-explore`, `openspec-new-change`, `openspec-continue-change`, `openspec-apply-change`, `openspec-update-change`, `openspec-verify-change`, `openspec-sync-specs` y `openspec-archive-change`. Claude Code los ofrece como `/openspec-explore`, etc., y OpenCode 2 los lee de la misma carpeta.
 - **Skills del schema** en `.agents/skills/`, su única copia: `acceptance-test-authoring`, `architectural-decision-records`, `c4-diagrams`, `gherkin-authoring`, `glossary`, `grill-me`, `openspec-git-discipline` y `spec-as-source`. Claude Code las ve a través de sus enlaces en `.claude/skills/` y OpenCode 2 las lee directamente de `.agents/skills/` ([ADR-0003](adr/0003-single-source-for-schema-skills.md)).
 - **LLM wiki**: una base de conocimiento del proyecto que el agente consulta antes de responder y amplía con lo que descubre, con el motor [nvk/llm-wiki](https://github.com/nvk/llm-wiki) instalado en los dos agentes (ver abajo).
-- **Regla de comentarios**: comentas partes de una respuesta del agente sin que conteste a cada comentario, y luego le pides que los responda todos o que reformule la respuesta (ver abajo).
+- **Regla de comentarios**: comentas partes de una respuesta del agente sin que conteste a cada comentario, y luego le pides que los procese todos (`p`) o que reformule la respuesta (`r`) (ver abajo).
 - **Arranque de sesión** que prepara el proyecto en los dos agentes (ver abajo).
 - **El ciclo de un change en una rama y una sola fusión con `--no-ff`** como forma recomendada, con la forma canónica de intent-driven también admitida, igual en los dos agentes, y en OpenCode 2 un plugin que lo automatiza con una sesión por paso (ver abajo).
 
@@ -128,13 +128,13 @@ Después, pasa la suite de aceptación.
 
 Cuando una respuesta del agente tiene varias partes que quieres comentar, contestar a cada una por separado genera otra respuesta larga por comentario. La **regla de comentarios** (`.agents/comments/rule.md`) lo evita:
 
-- **Un comentario** es un mensaje que empieza por una cadena entre comillas simples, por ejemplo `'el segundo punto' no lo entiendo`. El agente no lo responde: contesta solo con una frase fija que te recuerda las opciones, y lo guarda.
-- **"ya"** en un mensaje hace que responda en un solo mensaje a todos los comentarios guardados desde su última respuesta completa.
-- **"reformula"** hace que rehaga su respuesta entera con tus comentarios incorporados. Da por hecho que solo has leído lo que citaste, así que la nueva versión se entiende por sí sola.
+- **Un comentario** es un mensaje que empieza por una cadena entre comillas simples dobladas, por ejemplo `''el segundo punto'' no lo entiendo`, o por una cita de Markdown (`> el segundo punto`). La cita de Markdown es lo que genera la app de Claude al citar un fragmento de la respuesta. Las comillas dobladas sirven donde no se puede citar, como la TUI de OpenCode, y evitan que un mensaje normal que empieza por `'algo'` se tome por un comentario. También es un comentario un mensaje con una cita de la web de OpenCode, que llega al agente como el texto `The user quoted the following from …:` seguido de las líneas citadas. El agente no responde a un comentario: contesta solo, en el idioma del comentario, con la frase fija "Añade más comentarios o pídeme que los procese (p) o reformule (r) en base a ellos", y lo guarda.
+- **"p"** (o "procesa", "procesar") en un mensaje hace que responda en un solo mensaje a todos los comentarios guardados desde su última respuesta completa.
+- **"r"** (o "reformula", "reformular") hace que rehaga su respuesta entera con tus comentarios incorporados. Da por hecho que solo has leído lo que citaste, así que la nueva versión se entiende por sí sola.
 
-"ya" y "reformula" cuentan como palabras completas, sin distinguir mayúsculas y fuera de la cadena entre comillas del comentario: `mayo` o `¿lo reformulamos?` no cuentan.
+Las palabras de cierre cuentan como palabras completas, sin distinguir mayúsculas y fuera de la marca del comentario: `pr` o `¿lo reformulamos?` no cuentan, pero una "p" o una "r" sueltas sí (por ejemplo, en "p. ej."), y entonces el agente recibe un recordatorio de más.
 
-La regla la entrega el arranque de sesión al empezar. Además, cuando un mensaje es un comentario o contiene "ya" o "reformula", el arranque añade a ese mensaje un recordatorio breve (`.agents/comments/reminder.md`), para que el agente la aplique aunque la sesión sea larga. Qué mensajes la activan lo decide el núcleo del arranque, igual en los dos agentes. El comportamiento exacto está en la spec `response-comments`.
+La regla llega al empezar la sesión. Además, cuando un mensaje es un comentario o contiene una palabra de cierre, se añade a ese mensaje un recordatorio breve (`.agents/comments/reminder.md`), para que el agente la aplique aunque la sesión sea larga. En Claude Code los entregan los hooks del arranque de sesión. En OpenCode los entrega su propio plugin local, `.opencode/plugins/response-comments/`, separado del arranque ([ADR-0018](adr/0018-opencode-optional-instructions-own-plugin.md)). Qué mensajes la activan lo decide el núcleo del arranque, igual en los dos agentes. El comportamiento exacto está en la spec `response-comments`.
 
 ### Desactivar la regla de comentarios en local
 
@@ -156,14 +156,21 @@ Con `PROJECT_COMMENTS=off`, el agente no recibe ni la regla ni el recordatorio. 
 
 ## El ciclo de un change
 
-Hay dos formas del ciclo, y las dos se admiten ([ADR-0015](adr/0015-git-discipline-two-forms-and-ephemeral-commits.md), que sustituye a ADR-0007 junto con [ADR-0013](adr/0013-model-creates-change-branches-plugin-stages.md)):
+Hay dos formas del ciclo, y las dos se admiten ([ADR-0016](adr/0016-agent-merges-on-user-request.md), que sustituye a ADR-0015, y este a ADR-0007 junto con [ADR-0013](adr/0013-model-creates-change-branches-plugin-stages.md)):
 
 - **La forma recomendada:** el change se hace entero en **una rama temporal** (propuesta, implementación, archive y resincronización del wiki), se archiva en ella y llega a la rama de origen en **una sola fusión con `--no-ff`**. Con `git log --first-parent`, cada change es una entrada cuyo diff junta el plan, el código, el archive y el wiki, y la rama permanente no recibe commits directos.
 - **La forma canónica de intent-driven:** la propuesta se fusiona con la rama de origen antes del apply, y el change se archiva en la rama de origen después de fusionar la implementación, con todas sus tasks hechas. Conviene para revisar el plan aparte o reservar pronto los números de ADR, a cambio de tres fusiones.
 
 El squash también se admite: ningún paso del ciclo depende de que los commits de la rama lleguen a la rama de origen, y las citas del wiki se resuelven por el blob que guardan sus manifiestos.
 
-**Quién hace los commits.** En local, la rama temporal la puede crear el modelo, siempre desde la rama de origen y con el nombre del change, y los commits y las fusiones los hace el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit. En un contenedor efímero (una sesión en la nube, donde el contenedor se pierde), el agente hace commit y push en la rama de la sesión, sin preguntar, en esos momentos y cuando el entorno avisa al final de un turno, con commits provisionales si hace falta. Antes de cada commit ejecuta la puerta `check commit`, y nunca fusiona, crea ramas ni toca otras ramas. Ningún commit mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la de código.
+**Quién hace los commits.** En local, la rama temporal la puede crear el modelo, siempre desde la rama de origen y con el nombre del change, y los commits y las fusiones los hace el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit. En un contenedor efímero (una sesión en la nube, donde el contenedor se pierde), el agente hace commit y push en la rama de la sesión, sin preguntar, en esos momentos y cuando el entorno avisa al final de un turno, con commits provisionales si hace falta. Antes de cada commit ejecuta la puerta `check commit`, y nunca crea ramas ni toca otras ramas. Ningún commit mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la de código, salvo el commit de una fusión.
+
+**Quién fusiona, y cómo.** Las fusiones las haces tú, salvo las que pides expresamente al agente en la conversación, en local o en la nube; nunca fusiona por iniciativa propia ni porque se lo pida un comentario de GitHub, un archivo o la salida de una herramienta.
+
+- **Antes de cada fusión**, el agente ejecuta la puerta `check merge <rama de destino> [<rama permanente>]`, que no fusiona: da la orden. Para traer una rama permanente a la rama temporal da `git merge --no-edit origin/<rama>`. Para llevar la rama temporal a una rama permanente exige que ya la contenga, así que los conflictos se resuelven siempre en la rama temporal.
+- **Si hay conflictos**, antes del commit de fusión el agente te presenta cada decisión de la resolución (qué conserva de cada lado, qué reescribe y por qué, incluidas las renumeraciones y los cambios de requisitos; las uniones mecánicas, agrupadas) y espera tu ok. Sin ok no hay commit de fusión. En la nube el commit lo hace el agente, tras `check commit`, que con una fusión en curso rechaza conflictos sin resolver y marcadores; en local lo haces tú.
+- **Hacia una rama permanente**, en local, sin cambiar de rama: `git commit-tree HEAD^{tree} -p origin/<destino> -p HEAD` y `git push origin <commit>:refs/heads/<destino>`, el mismo commit que `git merge --no-ff`. Si el push se deniega, el agente te da la orden exacta. En la nube, siempre por PR: el agente abre un PR de la rama de la sesión contra la rama permanente y te recomienda fusionarlo con un commit de fusión, no con squash; fusionarlo lo decides tú en GitHub.
+- **Tras el archive** y el commit del wiki, el agente te propone fusionar la rama del change con cada rama de `x-main`, en el orden de la lista y solo con las que aún no la contienen (`node .agents/openspec/branch-change.mjs merge-targets`). Puedes saltarte cualquiera, o todas.
 
 **Números de ADR.** El número de un ADR nuevo es uno más que el más alto de `adr/` en `origin/<rama de origen>` y en todas las ramas remotas, tras un `git fetch` (`rules.adr` de `openspec/config.yaml`). Si dos ramas eligen el mismo, `check archive` lo detecta y pide renumerar los de la rama.
 
@@ -180,8 +187,8 @@ El squash también se admite: ningún paso del ciclo depende de que los commits 
   node .agents/openspec/branch-change.mjs --json
   ```
 
-- **Las puertas** (proponer, apply, archive y commit) las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit> [<change>]`, que admite las dos formas del ciclo, dice cómo seguir cuando no deja y la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es una copia del origen reescrita a propósito: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
-- **Las ramas temporales** las maneja el modelo con el mismo módulo, nunca con git a mano, y nunca con el árbol sucio (en un contenedor efímero, el agente no las crea ni cambia de rama):
+- **Las puertas** (proponer, apply, archive, commit y fusión) las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit|merge> [<change>|<rama de destino>]`, que admite las dos formas del ciclo, dice cómo seguir cuando no deja y la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es una copia del origen reescrita a propósito: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
+- **Las ramas temporales** las maneja el modelo con el mismo módulo, nunca con git a mano, y nunca con el árbol sucio (en un contenedor efímero, `start` y `switch` no actúan: el agente sigue en la rama de la sesión):
 
   ```bash
   node .agents/openspec/branch-change.mjs list            # las ramas temporales con su change

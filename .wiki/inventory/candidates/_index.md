@@ -9,6 +9,8 @@ Last updated: 2026-11-22
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
 | [corregir-prueba-intermitente-dos-sesiones-autopilot.md](corregir-prueba-intermitente-dos-sesiones-autopilot.md) | task · active · p3 — la prueba «two sessions taking control at once» falla a veces, también sin windows-support | openspec-autopilot, task | 2026-11-22 |
+| [nombrar-el-change-en-el-titulo-de-la-fusion.md](nombrar-el-change-en-el-titulo-de-la-fusion.md) | task · active · p3 — que la skill recomiende nombrar el change en el título de la fusión | git, task | 2026-11-22 |
+| [declarar-skip-specs-al-proponer-un-change-sin-specs.md](declarar-skip-specs-al-proponer-un-change-sin-specs.md) | question · active · p3 — ¿pedir skip_specs: true al proponer un change sin cambios de comportamiento? | openspec, question | 2026-11-22 |
 | [compilar-lecciones-de-add-openspec-autopilot-al-archivarlo.md](compilar-lecciones-de-add-openspec-autopilot-al-archivarlo.md) | task · archived · p2 — compiladas las lecciones de las pruebas al archivar add-openspec-autopilot; cerrada | opencode, task | 2026-11-22 |
 | [volver-a-comprobar-apis-de-sesion-al-subir-opencode.md](volver-a-comprobar-apis-de-sesion-al-subir-opencode.md) | watch · active · p2 — archivado, codemode y limpieza de los plugins (setup y signal) | opencode, watch | 2026-11-21 |
 | [volver-a-comprobar-hook-context-al-subir-opencode.md](volver-a-comprobar-hook-context-al-subir-opencode.md) | watch · active · p2 — volver a comprobar las APIs de plugin de OpenCode al subir de versión | opencode, watch | 2026-11-21 |
@@ -18,6 +20,8 @@ Last updated: 2026-11-22
 ## Recent Changes
 
 - 2026-11-22: Tarea de corregir la prueba intermitente del autopilot
+- 2026-11-22: Tarea de nombrar el change en el título de la fusión
+- 2026-11-22: Tema abierto sobre skip_specs al proponer
 
 - 2026-11-22: Cerrada la tarea de compilar las lecciones de add-openspec-autopilot
 

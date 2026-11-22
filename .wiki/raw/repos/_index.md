@@ -9,6 +9,9 @@ Last updated: 2026-11-22
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
 | [2026-11-22-idd-3d2d8fe-windows-support.md](2026-11-22-idd-3d2d8fe-windows-support.md) | Manifiesto de lo que tocó windows-support en el commit del archivado (idd@3d2d8fe) | collection, collection-manifest, git | 2026-11-22 |
+| [2026-11-22-idd-cac0041-allow-user-requested-merges.md](2026-11-22-idd-cac0041-allow-user-requested-merges.md) | Manifiesto de lo que tocó allow-user-requested-merges en el commit del archivado (idd@cac0041) | collection, collection-manifest, git | 2026-11-22 |
+| [2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md](2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md) | Manifiesto de lo que tocó update-comment-phrase-and-opencode-marker en el commit del archivado (idd@1657745) | collection, collection-manifest, git | 2026-11-22 |
+| [2026-11-22-idd-c4d6b27-update-comment-closing-and-quotes.md](2026-11-22-idd-c4d6b27-update-comment-closing-and-quotes.md) | Manifiesto de lo que tocó update-comment-closing-and-quotes en el commit del archivado (idd@c4d6b27) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-5d7f5b0-manage-git-discipline.md](2026-11-22-idd-5d7f5b0-manage-git-discipline.md) | Manifiesto de lo que tocó manage-git-discipline en el commit del archivado (idd@5d7f5b0) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md](2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md) | Manifiesto de lo que tocó autopilot-sesion-operativa en el commit del archivado (idd@6d6e79c) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md](2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md) | Manifiesto de lo que tocó replace-gherkin-lint-with-gplint en el commit del archivado (idd@d355c01) | collection, collection-manifest, git | 2026-11-22 |
@@ -31,6 +34,7 @@ Last updated: 2026-11-22
 - 2026-11-22: Manifiesto del archivado de windows-support (idd@3d2d8fe)
 - 2026-11-22: Manifiesto del archivado de manage-git-discipline (idd@5d7f5b0)
 - 2026-11-22: Manifiesto del archivado de replace-gherkin-lint-with-gplint (idd@d355c01)
+- 2026-11-22: Manifiesto del archivado de allow-user-requested-merges (idd@cac0041)
 
 - 2026-11-22: Manifiesto del archivado de fix-tui-subscription-cleanup (idd@99bdccd)
 
