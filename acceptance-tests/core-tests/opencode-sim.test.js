@@ -11,7 +11,11 @@
 // - with the plan agent, each request carries OpenCode's own reminder as a
 //   user message: before the user's message in the first request of the
 //   turn, and at the end, after the tool's result, in the next ones (task 1.1
-//   of autopilot-plan-explore, checked with OpenCode 2.3.2).
+//   of autopilot-plan-explore, checked with OpenCode 2.3.2);
+// - the `prompt` hook comes once per message, with delivery "steer" and the
+//   messageID that the stored message carries as `id` in the `context`
+//   input; a message sent while the turn goes on enters the same loop, after
+//   the tool's result, with a single idle at the end (task 1.4).
 //
 // Run with: npm run test:core
 
@@ -46,7 +50,13 @@ export default {
     // What each request to the model carries, in order
     await ctx.session.hook('context', async (input) => {
       const text = (m) => (m.content ?? []).map((p) => p.text ?? (p.type === 'tool-call' ? '[call]' : p.type === 'tool-result' ? '[result]' : '')).join('');
-      console.error('probe context ' + JSON.stringify({ agent: input.agent, messages: input.messages.map((m) => m.role + ':' + text(m)) }));
+      console.error('probe context ' + JSON.stringify({ agent: input.agent, messages: input.messages.map((m) => m.role + ':' + text(m)), ids: input.messages.map((m) => m.id ?? null) }));
+    });
+    await ctx.session.hook('prompt', async (input) => {
+      console.error('probe prompt ' + JSON.stringify({ messageID: input.messageID, delivery: input.delivery, text: input.prompt.text }));
+    });
+    await ctx.session.hook('experimental.idle', async (input) => {
+      console.error('probe idle ' + input.sessionID);
     });
   },
 };
@@ -122,4 +132,45 @@ test('with the plan agent, each request carries the plan reminder as a user mess
   const last = contexts(built.state).at(-1);
   assert.equal(last.agent, 'build');
   assert.deepEqual(last.messages, ['user:Sigue.']);
+});
+
+const prompts = (state) => state.logs.filter((l) => l.startsWith('probe prompt ')).map((l) => JSON.parse(l.slice('probe prompt '.length)));
+const idles = (state) => state.logs.filter((l) => l.startsWith('probe idle '));
+
+test('the prompt hook comes once per message, and its messageID is the id of the stored message', async (t) => {
+  const sim = probeSim(t);
+  await sim.start();
+  await sim.call('script', { rules: [{ responses: [{ tool: { name: 'read', input: {} } }, { text: 'Hecho.' }] }] });
+  const { sessionID, state } = await sim.call('open', { text: 'Hola', agent: 'plan' });
+  const [p] = prompts(state);
+  assert.equal(prompts(state).length, 1);
+  assert.equal(p.delivery, 'steer');
+  assert.match(p.messageID, /^msg_/);
+  const [first, second] = contexts(state);
+  // The plan reminder has no id in the first request, and its own one after the tool
+  assert.deepEqual(first.ids, [null, p.messageID], JSON.stringify(first));
+  assert.equal(second.ids[0], p.messageID);
+  assert.ok(second.ids[1], 'the assistant message has an id');
+  assert.equal(second.ids[2], null, 'a tool result has no id');
+  assert.ok(second.ids[3] && second.ids[3] !== p.messageID, JSON.stringify(second));
+  // Another message: another messageID
+  const next = await sim.call('message', { sessionID, text: 'Otra' });
+  assert.notEqual(prompts(next).at(-1).messageID, p.messageID);
+});
+
+test('a message sent while the turn goes on enters the same loop, after the tool, with a single idle', async (t) => {
+  const sim = probeSim(t);
+  await sim.start();
+  // The model takes a while with its tool, so the user writes meanwhile
+  await sim.call('script', { rules: [{ responses: [{ tool: { name: 'read', input: {} }, delayMs: 400 }, { text: 'Visto.' }] }] });
+  const sessionID = await sim.call('openAsync', { text: 'Mira el README', agent: 'build' });
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const state = await sim.call('message', { sessionID, text: 'Y el CHANGELOG' });
+  assert.deepEqual(prompts(state).map((p) => p.text), ['Mira el README', 'Y el CHANGELOG']);
+  const all = contexts(state);
+  assert.equal(all.length, 2, JSON.stringify(all));
+  assert.deepEqual(all[1].messages, ['user:Mira el README', 'assistant:[call]', 'tool:[result]', 'user:Y el CHANGELOG']);
+  assert.equal(all[1].ids[3], prompts(state)[1].messageID);
+  assert.equal(idles(state).length, 1, JSON.stringify(state.logs));
+  assert.deepEqual(state.crashes, []);
 });
