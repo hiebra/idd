@@ -4,6 +4,7 @@ category: concept
 sources:
   - raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md
   - raw/repos/2026-11-21-idd-1cf0792.md
+  - raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md
 created: 2026-11-21
 updated: 2026-11-21
 verified: 2026-11-21
@@ -27,7 +28,7 @@ summary: "Contrato del hook context de OpenCode 2.3.2, comprobado capturando los
 
 ## Cómo lo usa la plantilla
 
-El plugin `session-bootstrap` (`idd@1cf0792:.opencode/plugins/session-bootstrap/server.js`) añade la guía del wiki a `system` e inserta el recordatorio como mensaje `user` justo antes del último mensaje del usuario. **[lectura de código]** El modo Plan de OpenCode hace lo mismo, según su código en el binario de `@opencode/cli` 2.3.2. Todo el callback va en `try/catch`.
+El plugin `session-bootstrap` (`idd@1cf0792:.opencode/plugins/session-bootstrap/server.js`) añade la guía del wiki a `system` e inserta el recordatorio como mensaje `user` justo antes del último mensaje del usuario. **[lectura de código]** El modo Plan de OpenCode hace lo mismo, según su código en el binario de `@opencode/cli` 2.3.2. Todo el callback va en `try/catch`. Desde `add-quote-comment-rule` añade también la regla de comentarios a `system` y, si el último mensaje del usuario la activa, su recordatorio junto al del wiki. Como el hook se ejecuta en cada petición al modelo, también en las que siguen a una herramienta dentro del mismo turno, solo pregunta al núcleo cuando cambia el texto de ese mensaje, y guarda la respuesta (`idd@16e4617:.opencode/plugins/session-bootstrap/server.js`, `lastUserText`).
 
 **[heredado]** El design del change descartó el hook `prompt`, que cambiaría el texto guardado del mensaje, e `instructions.entry.put`, una API experimental marcada para retirarse (`idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/design.md`, D3).
 
@@ -46,3 +47,4 @@ Es una API de plugins de una versión concreta. La suite la simula (`idd@1cf0792
 
 - [Lessons Learned](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lección 3.
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `server.js`, `opencode-host.mjs`, y `tasks.md` y `design.md` del change archivado.
+- [Collection: archivado de add-quote-comment-rule](../../raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md): `server.js`.

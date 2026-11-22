@@ -69,3 +69,13 @@
 ## [2026-11-21] librarian | scanned 9 articles, 0 stale, 0 low-quality, 1 suggestion (hook-context-opencode cites opencode-host.mjs at idd@1cf0792; generalized in idd@772d0f0, claim still holds)
 
 ## [2026-11-21] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed (the uncited lessons note is now compiled)
+
+## [2026-11-21] ingest-collection | idd via git (manifest-only, idd@16e4617, archivado de add-quote-comment-rule): 21 new, 0 skipped, 21 total candidates
+
+## [2026-11-21] refresh | arranque-de-sesion y hook-context-opencode con idd@16e4617 (modos comments-*, entrega combinada en Claude Code, recordatorio por último mensaje en OpenCode, ADR-0010)
+
+## [2026-11-21] compile | concepts/regla-de-comentarios desde el manifiesto idd@16e4617
+
+## [2026-11-22] librarian | scanned 10 articles, 0 stale, 0 low-quality, 1 suggestion (carga-en-la-misma-sesion-por-agente could link ADR-0010 and regla-de-comentarios)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
