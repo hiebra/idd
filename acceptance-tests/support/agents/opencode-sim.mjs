@@ -52,6 +52,9 @@
 //   waiting, as OpenCode's emit does not wait for the TUI; the scenario sees
 //   the dialog open in `dialogs` and closes it with `answers`. Model rules
 //   match the session's agent (`match.agent`), switched with `switchAgent`.
+//   With the plan agent, each request carries OpenCode's reminder as a user
+//   message (`<system-reminder>`): before the user's message in the first
+//   request of a turn, at the end after a tool's result in the next ones.
 //
 // The model is a script per scenario: rules matched against the session,
 // each with a queue of responses ({ text }, { tool: { name, input } }).
@@ -63,6 +66,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const BASE_SYSTEM = 'You are OpenCode (simulated system prompt).';
+const PLAN_REMINDER = '<system-reminder>\nYou are in Plan mode (simulated): you must not make any edits; only read, search and plan.\n</system-reminder>';
 const BUILTIN_TOOLS = ['edit', 'glob', 'grep', 'question', 'read', 'shell', 'skill', 'subagent', 'write'];
 
 let clock = 0;
@@ -516,6 +520,14 @@ export class Host {
           }
         }
       }
+    }
+    // As OpenCode 2.3.2 with the plan agent (task 1.1 of autopilot-plan-explore):
+    // its reminder goes before the user's message in the first request of the
+    // turn, and at the end, after the tool's result, in the next ones
+    if (session.agent === 'plan') {
+      const reminder = { role: 'user', content: [{ type: 'text', text: PLAN_REMINDER }] };
+      if (messages.at(-1)?.role === 'user') messages.splice(messages.length - 1, 0, reminder);
+      else messages.push(reminder);
     }
     return {
       sessionID: session.id,

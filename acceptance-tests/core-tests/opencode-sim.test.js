@@ -7,7 +7,11 @@
 // - an RPC event whose TUI listener waits on a modal does not keep the host
 //   busy: in OpenCode the server's emit does not wait for the TUI, so the
 //   scenario can see the modal open and close it later, and the TUI's answer
-//   still reaches the server (autopilot-plan-explore, design D5 and D6).
+//   still reaches the server (autopilot-plan-explore, design D5 and D6);
+// - with the plan agent, each request carries OpenCode's own reminder as a
+//   user message: before the user's message in the first request of the
+//   turn, and at the end, after the tool's result, in the next ones (task 1.1
+//   of autopilot-plan-explore, checked with OpenCode 2.3.2).
 //
 // Run with: npm run test:core
 
@@ -38,6 +42,11 @@ export default {
         console.error('probe reply ' + input.value);
         return { ok: true };
       },
+    });
+    // What each request to the model carries, in order
+    await ctx.session.hook('context', async (input) => {
+      const text = (m) => (m.content ?? []).map((p) => p.text ?? (p.type === 'tool-call' ? '[call]' : p.type === 'tool-result' ? '[result]' : '')).join('');
+      console.error('probe context ' + JSON.stringify({ agent: input.agent, messages: input.messages.map((m) => m.role + ':' + text(m)) }));
     });
   },
 };
@@ -90,4 +99,27 @@ test('an RPC event waiting on a modal does not keep the simulated OpenCode busy'
   assert.equal(closed.dialogs.at(-1).open, false);
   assert.ok(closed.logs.includes('probe reply ok'), JSON.stringify(closed.logs));
   assert.deepEqual(closed.crashes, []);
+});
+
+const contexts = (state) => state.logs.filter((l) => l.startsWith('probe context ')).map((l) => JSON.parse(l.slice('probe context '.length)));
+
+test('with the plan agent, each request carries the plan reminder as a user message, where OpenCode puts it', async (t) => {
+  const sim = probeSim(t);
+  await sim.start();
+  await sim.call('script', { rules: [{ match: { agent: 'plan' }, responses: [{ tool: { name: 'read', input: {} } }, { text: 'Hecho.' }] }] });
+  const { state } = await sim.call('open', { text: '¿Qué queda?', agent: 'plan' });
+  const [first, second] = contexts(state);
+  assert.equal(first.agent, 'plan');
+  assert.equal(first.messages.length, 2, JSON.stringify(first));
+  assert.match(first.messages[0], /^user:<system-reminder>[\s\S]*Plan mode/);
+  assert.equal(first.messages[1], 'user:¿Qué queda?');
+  // After the tool, the reminder goes at the end
+  assert.deepEqual(second.messages.slice(0, 3), ['user:¿Qué queda?', 'assistant:[call]', 'tool:[result]'], JSON.stringify(second));
+  assert.match(second.messages[3], /^user:<system-reminder>[\s\S]*Plan mode/);
+  assert.equal(second.messages.length, 4);
+  // With build, no reminder
+  const built = await sim.call('open', { text: 'Sigue.', agent: 'build' });
+  const last = contexts(built.state).at(-1);
+  assert.equal(last.agent, 'build');
+  assert.deepEqual(last.messages, ['user:Sigue.']);
 });
