@@ -28,7 +28,7 @@ Pruebas del núcleo del arranque que no están en las specs (conflictos de nombr
 npm run test:core
 ```
 
-Lint del Gherkin de las specs:
+Lint del Gherkin de las specs, con gplint:
 
 ```bash
 npm run lint:specs
@@ -38,7 +38,7 @@ Cada ejecución reconstruye `.extracted/` (los `.feature` extraídos de los `spe
 
 ## Estructura
 
-- `cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gherkin-lintrc` son copias literales de la skill; sus nombres son obligatorios.
+- `cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gplintrc` son copias literales de la skill; sus nombres son obligatorios. `.gplintrc` es la configuración del lint con [gplint](https://github.com/gplint/gplint), y solo usa los niveles `"error"` y `"off"`: con otro nivel, gplint sale con 0 sin revisar nada.
 - `support/` contiene el World y el soporte de los escenarios.
 - `step-definitions/` contiene los pasos, que solo llaman a métodos de intención del World y hacen aserciones.
 
@@ -110,3 +110,12 @@ El modelo es un guion por escenario: reglas por sesión, cada una con una cola d
 Los casos que no están en las specs están en `core-tests/autopilot-next-step.test.js` (la lógica pura del paso siguiente) y `core-tests/autopilot-plugin.test.js`: recargas sin duplicados, sin TUI, dos sesiones que toman el control a la vez, la tool llamada antes de terminar el paso, el árbol comprobado otra vez en el mensaje siguiente, ninguna excepción hacia OpenCode, esperas con límite, `openspec_session` y la limpieza que devuelve el `setup` de la parte de TUI, que aborta todas sus suscripciones y no lanza ni cuando falla el RPC.
 
 El banco con OpenCode real con el que se comprobó el contrato está descrito en la lección 9 de esa nota y no forma parte del repositorio. Al subir de versión OpenCode, hay que repetir las pruebas con él y actualizar el simulador si algo cambia (inventario del wiki: `volver-a-comprobar-apis-de-sesion-al-subir-opencode`).
+
+## Escenarios de `spec-lint`
+
+Los escenarios del lint de las specs no ejecutan `npm run lint:specs` tal cual, porque reconstruye `.extracted/`, que es de donde lee cucumber-js la suite en curso. `support/spec-lint.js` ejecuta los mismos dos comandos del script sobre otros directorios: `extract-gherkin.cjs <openspec> <salida>` y el `gplint` de `node_modules` con `-c .gplintrc -f json`, del que lee el código de salida y la línea de cada error.
+
+- **Un defecto en un escenario**: el World escribe en un directorio temporal un `openspec/` con una sola spec, de un requisito cuyo escenario tiene el defecto del ejemplo, y guarda la línea en la que lo escribió. El paso comprueba que hay un error en esa línea y en ninguna otra.
+- **Las specs del proyecto**: extrae el `openspec/` del proyecto, con los deltas de los changes activos, en un directorio temporal. Además de que no haya errores, comprueba que gplint dio un informe, porque sin él no ha revisado nada.
+
+`core-tests/spec-lint-script.test.js` comprueba que `lint:specs` sigue siendo `node extract-gherkin.cjs && gplint .extracted`, que `.gplintrc` solo usa `"error"` y `"off"` y que es igual que la configuración fijada de la skill.

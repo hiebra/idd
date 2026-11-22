@@ -99,3 +99,17 @@
 ## [2026-11-22] ingest-collection | idd via git (manifest-only, 002f043, ADR-0011 tras la renumeración): 2 new, 0 skipped, 2 total candidates
 
 ## [2026-11-22] refresh | ciclo-de-un-change-y-autopilot, carga-en-la-misma-sesion-por-agente e inventario volver-a-comprobar-apis-de-sesion-al-subir-opencode: el ADR de limpieza de los plugins se cita como ADR-0011 en idd@002f043 (ADR-0010 es el de add-quote-comment-rule)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, d355c01, replace-gherkin-lint-with-gplint): 21 new, 0 skipped, 21 total candidates
+
+## [2026-11-22] refresh | suite-de-aceptacion-y-spec-as-source checked against raw/repos/2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md: 1 updated (.gplintrc and the spec lint with gplint), 0 flagged, 0 retracted; no other article cites gherkin-lint
+
+## [2026-11-22] librarian | scanned the articles and inventory for replace-gherkin-lint-with-gplint: 0 stale, 0 contradicted, 0 suggestions (only suite-de-aceptacion-y-spec-as-source named the lint config, refreshed)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest | gplint 2.6.2 (https://github.com/gplint/gplint; README, CLI y CHANGELOG del paquete npm) → raw/articles/2026-11-22-gplint.md
+
+## [2026-11-22] ll | "el lint de las specs con gplint (replace-gherkin-lint-with-gplint)" → raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md (6 lessons, 2 articles updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
