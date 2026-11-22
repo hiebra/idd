@@ -22,7 +22,7 @@ Cada proyecto creado desde la plantilla lleva su propia copia del schema `intent
   - exportar `CLAUDE_PLUGIN_ROOT` con la ruta del motor;
   - entregar la guía, el recordatorio y la regla de comentarios.
 - **El arranque global solo actúa en proyectos intent-driven**, los que declaran `schema: intent-driven` en `openspec/config.yaml`. En cualquier otro proyecto no hace nada.
-- **Variante adelgazada de la plantilla** para quien usa la instalación global. Prescinde de:
+- **Variante adelgazada de la plantilla** para quien usa la instalación global. Es otro artefacto de la misma release, generado desde este repositorio: un zip con la plantilla ya adelgazada, de la misma versión que el `.bat`. No es otro repositorio ni una rama. Prescinde de:
   - `openspec/schemas/` y `.agents/skills/`;
   - `.agents/openspec/` y `.agents/hooks/`;
   - el motor del wiki, `.agents/wiki/` y los plugins de `.opencode/`;
@@ -41,7 +41,7 @@ Cada proyecto creado desde la plantilla lleva su propia copia del schema `intent
 ### New Capabilities
 
 - `windows-global-install`: el instalador de la release para Windows. Comprende las ubicaciones `<data>` y `<config>`, con XDG o sin XDG, qué instala en cada una, la detección de la versión instalada y la actualización, y que una ejecución con la misma versión no cambia nada.
-- `slim-template`: la variante adelgazada de la plantilla. Comprende qué contiene y qué no, y que un proyecto creado desde ella funciona con la instalación global sin copias locales del schema, las skills, los plugins ni el motor.
+- `slim-template`: la variante adelgazada de la plantilla, generada desde este repositorio como artefacto de cada release. Comprende qué contiene y qué no, que se genera a partir de la plantilla completa de la misma versión, y que un proyecto creado desde ella funciona con la instalación global sin copias locales del schema, las skills, los plugins ni el motor.
 
 ### Modified Capabilities
 
@@ -54,7 +54,7 @@ Cada proyecto creado desde la plantilla lleva su propia copia del schema `intent
 ## Impact
 
 - **Código nuevo:**
-  - el `.bat` y el script que monta el zip de la release;
+  - el `.bat`, el script que monta el zip de lo que instala y el que genera el zip de la variante adelgazada;
   - el workflow o el procedimiento de release que publica los dos con su tag.
 - **Código modificado:**
   - `.agents/hooks/session-bootstrap.sh`, que se sustituye por un núcleo en Node;
