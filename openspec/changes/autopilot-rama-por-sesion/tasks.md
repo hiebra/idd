@@ -4,7 +4,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 1. Simulador (zona de código)
 
-- [ ] 1.1 En `acceptance-tests/support/agents/opencode-sim.mjs`, según D9:
+- [x] 1.1 En `acceptance-tests/support/agents/opencode-sim.mjs`, según D9:
   - varios directorios (el principal y worktrees) con una instancia de la parte de servidor del plugin por directorio, cargada al entrar la TUI en él;
   - `context.location` de la TUI que cambia al saltar a una sesión de otro directorio, y rutas `home` con `location`;
   - `ctx.worktree.transform` con `add` de una estrategia, y `worktree.create` y `remove` que la usan, como la TUI, la web y el modelo;
@@ -13,8 +13,9 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
   - respuestas del modelo que hacen checkout dentro de una sesión.
 
   Los escenarios y `core-tests` que no cambian de comportamiento siguen en verde.
-- [ ] 1.2 En `acceptance-tests/support/autopilot.js` y `support/branches.js`: preparar worktrees, ramas sacadas en otro directorio, el remoto y su rama de origen; leer la rama de cada directorio, los avisos y las opciones del modal.
-- [ ] 1.3 Ejecutar la suite con los deltas del change. Los escenarios nuevos salen con pasos sin definir, y los de los requisitos modificados que cambian de comportamiento fallan; el resto pasa. Anotar aquí el recuento.
+- [x] 1.2 En `acceptance-tests/support/autopilot.js` y `support/branches.js`: preparar worktrees, ramas sacadas en otro directorio, el remoto y su rama de origen; leer la rama de cada directorio, los avisos y las opciones del modal.
+- [x] 1.3 Ejecutar la suite con los deltas del change. Los escenarios nuevos salen con pasos sin definir, y los de los requisitos modificados que cambian de comportamiento fallan; el resto pasa. Anotar aquí el recuento.
+  - Recuento: 221 escenarios, 194 pasan, 25 con pasos sin definir y 2 fallan («El plugin no actúa» en la rama de origen y «En la rama de origen no se arranca nada»: el plugin todavía crea la sesión operativa en la rama permanente).
 
 ## 2. Núcleo puro (zona de código), con `core-tests`
 

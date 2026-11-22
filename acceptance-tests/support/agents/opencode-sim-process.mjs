@@ -42,9 +42,10 @@ const OPS = {
     await host.settle();
     return host.state();
   },
-  // The user opens a new session in the TUI: it exists from its first message
-  async open({ text, agent = 'build' }) {
-    const id = host.seedSession({ title: text.slice(0, 40), agent });
+  // The user opens a new session in the TUI (or another client): it exists
+  // from its first message, in the TUI's directory unless another is given
+  async open({ text, agent = 'build', directory = null }) {
+    const id = host.seedSession({ title: text.slice(0, 40), agent, directory: directory ?? host.tuiLocation() });
     const session = host.session(id);
     delete session.time.idle;
     host.startTurn(id, { text });
@@ -75,8 +76,8 @@ const OPS = {
     host.startTurn(sessionID, { text });
     return true;
   },
-  openAsync({ text, agent = 'build' }) {
-    const id = host.seedSession({ title: text.slice(0, 40), agent });
+  openAsync({ text, agent = 'build', directory = null }) {
+    const id = host.seedSession({ title: text.slice(0, 40), agent, directory: directory ?? host.tuiLocation() });
     delete host.session(id).time.idle;
     host.startTurn(id, { text });
     return id;
@@ -91,9 +92,37 @@ const OPS = {
     return host.state();
   },
   // The TUI's screen: what the user sees changes, and the TUI notices it in its next poll
-  async home() {
-    host.setRoute({ type: 'home' });
+  async home({ directory = null } = {}) {
+    host.setRoute({ type: 'home', ...(directory ? { location: { directory } } : {}) });
     return waitScreen();
+  },
+  // Worktrees: the user confirms «Name worktree» (a name, or generated with tab)
+  async nameWorktree({ name = null }) {
+    const directory = await host.nameWorktree({ name });
+    await waitScreen();
+    return { directory, state: host.state() };
+  },
+  // worktree.create from a client (the web's button: { name, branch }) or the TUI
+  async createWorktree({ name = null, branch = undefined, via = 'web' }) {
+    let directory = null;
+    let error = null;
+    try {
+      ({ directory } = await host.createWorktree({ name, branch, via }));
+    } catch (e) {
+      error = String(e?.message ?? e);
+    }
+    await host.settle();
+    return { directory, error, state: host.state() };
+  },
+  async removeWorktree({ directory, force = false }) {
+    let error = null;
+    try {
+      await host.removeWorktree({ directory, force });
+    } catch (e) {
+      error = { message: String(e?.message ?? e), forceRequired: Boolean(e?.forceRequired) };
+    }
+    await host.settle();
+    return { error, state: host.state() };
   },
   async goto({ sessionID }) {
     host.setRoute({ type: 'session', sessionID });
@@ -109,7 +138,7 @@ const OPS = {
   },
   // The user writes the first message in the home screen: the session exists from it
   async openHome({ text, agent = 'build' }) {
-    const id = host.seedSession({ title: text.slice(0, 40), agent });
+    const id = host.seedSession({ title: text.slice(0, 40), agent, directory: host.tuiLocation() });
     delete host.session(id).time.idle;
     host.startTurn(id, { text });
     host.setRoute({ type: 'session', sessionID: id });
