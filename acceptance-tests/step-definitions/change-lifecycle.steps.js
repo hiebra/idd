@@ -282,3 +282,59 @@ Then('se pide al usuario que haga el commit', function () {
   for (const moment of [/artefacto/, /task/, /archive/, /wiki/]) assert.match(commits, moment);
   assert.match(commits, /pide al usuario (que haga )?el commit/i);
 });
+
+// --- La referencia de origen (manage-git-discipline, D1, D2) ------------------------
+
+Given('una rama de origen remota con el change archivado `importar-datos`', function () {
+  const project = this.lifecycleProject();
+  this.branches.remoteCommit(project, {
+    'openspec/changes/archive/2026-11-21-importar-datos/proposal.md': '## Why\n\nPrueba de importar-datos.\n',
+  }, { message: 'archiva importar-datos' });
+});
+
+Given('la rama de origen local está atrasada y no tiene ese change', function () {
+  const project = this.project;
+  assert.notEqual(this.branches.revParse(project, 'refs/heads/main'), this.branches.revParse(project, 'refs/remotes/origin/main'));
+  assert.equal(git(project.dir, 'ls-tree', '-d', '--name-only', 'main', 'openspec/changes/archive/2026-11-21-importar-datos').trim(), '');
+});
+
+Given('una rama temporal que sale de la rama de origen remota', function () {
+  this.branches.branch(this.project, TEMP_BRANCH, { from: 'origin/main' });
+});
+
+Given('la rama de origen local y la remota han divergido', function () {
+  const project = this.lifecycleProject();
+  this.branches.remoteCommit(project, { 'remoto.txt': 'remoto\n' }, { message: 'commit solo en el remoto' });
+  fs.writeFileSync(project.path('local.txt'), 'local\n');
+  this.branches.commitAll(project, 'commit solo en la rama local');
+});
+
+Given('una rama temporal que sale de la rama de origen local', function () {
+  this.branches.branch(this.project, TEMP_BRANCH, { from: 'main' });
+});
+
+Then('el merge-base se calcula contra la rama de origen local', function () {
+  assert.equal(this.branchState.originRef, 'refs/heads/main', describeState(this.branchState));
+});
+
+Then('se avisa de que la rama de origen local y la remota han divergido', function () {
+  assert.match(this.branchState.warnings.join('\n'), /divergido/, describeState(this.branchState));
+});
+
+Given('una rama temporal con el change archivado `exportar-datos`', function () {
+  const project = this.lifecycleProject();
+  this.branches.branch(project, TEMP_BRANCH);
+  this.branches.addChange(project, 'exportar-datos', { planned: true, tasks: [{ id: '1.1', done: true }] });
+  this.branches.commitAll(project, 'exportar-datos');
+  this.branches.archiveChange(project, 'exportar-datos');
+  this.branches.commitAll(project, 'archiva exportar-datos');
+});
+
+Given('la rama temporal se ha fusionado con squash con la rama de origen', function () {
+  this.branches.squashMerge(this.project, TEMP_BRANCH, 'main');
+});
+
+Given('en la rama temporal se crea después el change `importar-datos`', function () {
+  assert.equal(this.branches.currentBranch(this.project), TEMP_BRANCH);
+  this.branches.addChange(this.project, 'importar-datos');
+});

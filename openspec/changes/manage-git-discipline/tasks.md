@@ -16,10 +16,10 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
 ## 2. La referencia de origen y los changes de la rama (D1, D2): rojo → implementar → verde → commit
 
-- [ ] 2.1 `openspec-change-lifecycle: La rama de origen local está atrasada respecto a la remota`: pasos `una rama de origen remota con el change archivado …`, `la rama de origen local está atrasada y no tiene ese change` y `una rama temporal que sale de la rama de origen remota`. Rojo con el `branch-change.mjs` actual. Implementar D1 (`originRef`, `merge-base --is-ancestor`) → verde → commit
-- [ ] 2.2 `La rama de origen local y la remota han divergido`: pasos `la rama de origen local y la remota han divergido`, `una rama temporal que sale de la rama de origen local`, `el merge-base se calcula contra la rama de origen local` (por `originRef`) y `se avisa de que la rama de origen local y la remota han divergido` (por `warnings`) → commit
-- [ ] 2.3 `Tras un squash, el change fusionado no cuenta en la rama temporal`: pasos `una rama temporal con el change archivado …`, `la rama temporal se ha fusionado con squash con la rama de origen` y `en la rama temporal se crea después el change …`. Rojo: «varios changes». Implementar D2 (comparar el árbol del directorio en `originRef` y en `HEAD`, sin cambios pendientes) → verde → commit
-- [ ] 2.4 Comprobar que los escenarios vigentes de `openspec-change-lifecycle` y del autopilot siguen en verde con D1 y D2, y que la forma del resultado de `branchChange` solo gana `originRef`
+- [x] 2.1 `openspec-change-lifecycle: La rama de origen local está atrasada respecto a la remota`: pasos `una rama de origen remota con el change archivado …`, `la rama de origen local está atrasada y no tiene ese change` y `una rama temporal que sale de la rama de origen remota`. Rojo con el `branch-change.mjs` actual. Implementar D1 (`originRef`, `merge-base --is-ancestor`) → verde → commit
+- [x] 2.2 `La rama de origen local y la remota han divergido`: pasos `la rama de origen local y la remota han divergido`, `una rama temporal que sale de la rama de origen local`, `el merge-base se calcula contra la rama de origen local` (por `originRef`) y `se avisa de que la rama de origen local y la remota han divergido` (por `warnings`) → commit
+- [x] 2.3 `Tras un squash, el change fusionado no cuenta en la rama temporal`: pasos `una rama temporal con el change archivado …`, `la rama temporal se ha fusionado con squash con la rama de origen` y `en la rama temporal se crea después el change …`. Rojo: «varios changes». Implementar D2 (comparar el árbol del directorio en `originRef` y en `HEAD`, sin cambios pendientes) → verde → commit
+- [x] 2.4 Comprobar que los escenarios vigentes de `openspec-change-lifecycle` y del autopilot siguen en verde con D1 y D2, y que la forma del resultado de `branchChange` solo gana `originRef`
 
 ## 3. Las puertas (D3, D4, D6): rojo → implementar → verde → commit
 

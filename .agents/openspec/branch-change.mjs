@@ -110,39 +110,68 @@ export function changesOf(paths) {
   return [...found.values()].sort((a, b) => a.name.localeCompare(b.name) || a.state.localeCompare(b.state));
 }
 
+// La referencia de origen (design D1 de manage-git-discipline): la más
+// avanzada de refs/heads/<origen> y refs/remotes/origin/<origen>; si han
+// divergido, la local, con un aviso. Devuelve { ref, warning }.
+export function originRefOf(dir, origin) {
+  const local = `refs/heads/${origin}`;
+  const remote = `refs/remotes/origin/${origin}`;
+  const has = (ref) => git(dir, 'rev-parse', '--verify', '-q', ref).ok;
+  const [hasLocal, hasRemote] = [has(local), has(remote)];
+  if (!hasLocal && !hasRemote) return { ref: null, warning: null };
+  if (!hasRemote) return { ref: local, warning: null };
+  if (!hasLocal) return { ref: remote, warning: null };
+  const ancestor = (a, b) => git(dir, 'merge-base', '--is-ancestor', a, b).ok;
+  if (ancestor(remote, local)) return { ref: local, warning: null };
+  if (ancestor(local, remote)) return { ref: remote, warning: null };
+  return {
+    ref: local,
+    warning: `la rama de origen local '${origin}' y 'origin/${origin}' han divergido; el merge-base se calcula contra la local`,
+  };
+}
+
+// Un change cuyo directorio está igual en la rama de origen y en HEAD, sin
+// cambios sin commit, ya llegó a la rama de origen (design D2): por ejemplo,
+// tras un squash
+function alreadyInOrigin(dir, originRef, change) {
+  const there = git(dir, 'rev-parse', '-q', '--verify', `${originRef}:${change.dir}`);
+  const here = git(dir, 'rev-parse', '-q', '--verify', `HEAD:${change.dir}`);
+  if (!there.ok || !here.ok || there.out !== here.out) return false;
+  return git(dir, 'status', '--porcelain', '--untracked-files=all', '--', change.dir).out === '';
+}
+
 export function branchChange(dir = process.cwd()) {
   const { permanent, warning } = readPermanent(dir);
   const origin = permanent.at(-1);
   const warnings = warning ? [warning] : [];
-  const base = { branch: null, origin, permanent, changes: [], change: null, warnings };
+  const base = { branch: null, origin, originRef: null, permanent, changes: [], change: null, warnings };
 
   const head = git(dir, 'symbolic-ref', '--short', '-q', 'HEAD');
   if (!head.ok || !head.out) return { ...base, kind: 'permanent' };
   const branch = head.out;
   if (permanent.includes(branch)) return { ...base, branch, kind: 'permanent' };
 
-  const ref = [`refs/heads/${origin}`, `refs/remotes/origin/${origin}`].find(
-    (candidate) => git(dir, 'rev-parse', '--verify', '-q', candidate).ok
-  );
+  const { ref, warning: divergence } = originRefOf(dir, origin);
   if (!ref) {
     return { ...base, branch, kind: 'unknown', warnings: [...warnings, `no se encuentra la rama de origen '${origin}' (ni local ni en origin)`] };
   }
+  if (divergence) warnings.push(divergence);
   const mergeBase = git(dir, 'merge-base', 'HEAD', ref);
   if (!mergeBase.ok) {
-    return { ...base, branch, kind: 'unknown', warnings: [...warnings, `la rama '${branch}' no tiene merge-base con '${origin}'`] };
+    return { ...base, branch, originRef: ref, kind: 'unknown', warnings: [...warnings, `la rama '${branch}' no tiene merge-base con '${origin}'`] };
   }
   const diff = git(dir, 'diff', '--name-only', mergeBase.out, '--', CHANGES);
   const untracked = git(dir, 'ls-files', '--others', '--exclude-standard', '--', CHANGES);
   const paths = [...diff.out.split('\n'), ...untracked.out.split('\n')]
     .filter(Boolean)
     .filter((file) => fs.existsSync(path.join(dir, file)));
-  const changes = changesOf(paths);
+  const changes = changesOf(paths).filter((c) => !alreadyInOrigin(dir, ref, c));
   const names = new Set(changes.map((c) => c.name));
   let kind = 'none';
   if (names.size > 1) kind = 'several';
   else if (names.size === 1) kind = changes.some((c) => c.state === 'active') ? 'active' : 'archived';
   const change = names.size === 1 ? changes[0].name : null;
-  return { ...base, branch, kind, changes, change };
+  return { ...base, branch, originRef: ref, kind, changes, change };
 }
 
 // Las puertas del ciclo (design D2): propose, apply y archive
