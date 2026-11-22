@@ -44,7 +44,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
 ## 5. La clave en este repositorio y cierre
 
-- [ ] 5.1 Preguntar al usuario si este repositorio declara `x-main-protected: true`, teniendo en cuenta que los proyectos creados desde la plantilla heredan su `openspec/config.yaml` (pregunta abierta 1 del design). Sin la clave, este change no se podrá archivar en la rama de la sesión. Aplicar su respuesta en `openspec/config.yaml` (zona de specs) → commit
+- [x] 5.1 Preguntar al usuario si este repositorio declara `x-main-protected: true`, teniendo en cuenta que los proyectos creados desde la plantilla heredan su `openspec/config.yaml` (pregunta abierta 1 del design). Sin la clave, este change no se podrá archivar en la rama de la sesión. Aplicar su respuesta en `openspec/config.yaml` (zona de specs) → commit
 - [ ] 5.2 Ejecutar la suite efectiva entera (`npm test` en `acceptance-tests/`): todos los escenarios de este change y de las specs vigentes pasan, sin pasos pendientes ni sin definir de este change, y se genera el informe HTML. Ejecutar también `npm run test:core` y `npm run lint:specs`
 - [ ] 5.3 Comprobar en esta sesión, con el `branch-change.mjs` real, la tabla de D2 en la rama de la sesión con veto y sin veto, usando un worktree o una copia para no tocar la configuración del clon
 - [ ] 5.4 Ejecutar `openspec validate git-discipline-standard-with-exception --type change --strict` antes del archive. Como en los changes anteriores, el criterio es la validación sin `--strict`; en modo estricto solo deben quedar los avisos de idioma (SHALL/MUST), de formato (Gherkin en bloques de código) y de longitud de los requisitos

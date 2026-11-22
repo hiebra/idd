@@ -1,6 +1,11 @@
 schema: intent-driven
 stack: javascript
 
+# El acceso directo a las ramas permanentes está vetado: activa la única excepción
+# a la regla estándar del ciclo, el change entero en una rama temporal (ADR-0020).
+# Un proyecto creado desde la plantilla sin ese veto debe quitar esta línea.
+x-main-protected: true
+
 # Project context (optional)
 # Add only constraints that should guide OpenSpec artifacts and workflows.
 # Include constraints an agent cannot infer by reading the code.
