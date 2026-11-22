@@ -87,10 +87,10 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
   - ingerir una URL, lecciones en dry-run y el lint con `wiki-manager`;
   - el archive de un change de prueba con el autopilot, con el wiki encendido (paso `wiki` y espera de su commit) y apagado (fin del ciclo).
 - [x] 10.3 En Claude Code real, `/toggle-wiki` en los dos sentidos y la ingesta inicial con confirmación, y qué queda disponible en la misma sesión
-- [ ] 10.4 Apuntar como lecciones candidatas lo comprobado en 1.2 a 1.5 y en 10.1 a 10.3, y proponer registrarlas en el wiki del proyecto (`/wiki:ll --dry-run --local`) cuando el wiki esté encendido. Si algo no se pudo probar, decirlo con el motivo y no archivar el change sin la decisión del usuario
+- [x] 10.4 Apuntar como lecciones candidatas lo comprobado en 1.2 a 1.5 y en 10.1 a 10.3, y proponer registrarlas en el wiki del proyecto (`/wiki:ll --dry-run --local`) cuando el wiki esté encendido. Si algo no se pudo probar, decirlo con el motivo y no archivar el change sin la decisión del usuario
 
 ## 11. Cierre
 
-- [ ] 11.1 Ejecutar la suite efectiva entera (`npm test` en `acceptance-tests/`): todos los escenarios de este change y de las specs vigentes pasan, sin pasos pendientes ni sin definir de este change, y se genera el informe HTML. Ejecutar también `npm run test:core` y `npm run lint:specs`
+- [x] 11.1 Ejecutar la suite efectiva entera (`npm test` en `acceptance-tests/`): todos los escenarios de este change y de las specs vigentes pasan, sin pasos pendientes ni sin definir de este change, y se genera el informe HTML. Ejecutar también `npm run test:core` y `npm run lint:specs`
 - [ ] 11.2 Ejecutar `openspec validate add-project-wiki-toggle --type change --strict` y revisar que solo quedan los avisos conocidos (SHALL/MUST y WHEN/GIVEN en castellano)
-- [ ] 11.3 Recordar al usuario, antes del archive, que con el wiki apagado este change no resincronizará el wiki (D10). Si quiere que quede registrado, que lo encienda antes con `/toggle-wiki`
+- [x] 11.3 Recordar al usuario, antes del archive, que con el wiki apagado este change no resincronizará el wiki (D10). Si quiere que quede registrado, que lo encienda antes con `/toggle-wiki`
