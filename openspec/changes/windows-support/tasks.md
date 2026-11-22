@@ -27,17 +27,28 @@ Las tasks 2.2 a 2.7 de la primera versión (symlinks nativos, rutas en el format
 
 ## 4. Diagnóstico (zona de código): por escenario, rojo → implementar → verde → commit
 
-- [ ] 4.1 Reestructurar `scripts/windows/Test-OfflineInstall.ps1` según D4: `Get-ReadinessFacts` (recogida), `Get-ReadinessReport` (evaluación, sin tocar la máquina) y `-FactsFile <json>` para evaluar unos hechos dados. Quitar las comprobaciones que dependían del núcleo bash: Git Bash y sus utilidades, `MSYS`, qué bash va primero en el `PATH`, los symlinks, el Modo de desarrollador y el nombre `python3`. Comprobar a mano con `pwsh` que el script se carga y que, con unos hechos de ejemplo, da un informe.
-- [ ] 4.2 Soporte en `acceptance-tests/support/` para «una máquina Windows …»: hechos de una máquina con todo lo necesario, que cada `But` modifica, un proyecto temporal con sus lockfiles, y la ejecución del script con `pwsh -NoProfile -File … -FactsFile …` (y `-Json` cuando el paso lo pide), leyendo el código de salida y el informe. Si no hay `pwsh`, el paso falla con un mensaje que lo dice.
-- [ ] 4.3 "Máquina con todo lo necesario", "No falta nada" y "Falta algo".
-- [ ] 4.4 "Falta Node.js", "Node.js de una versión inferior a la requerida" y "Lo que está en el vendor del repositorio cuenta como presente".
-- [ ] 4.5 "Dependencias instaladas en otro sistema operativo" (con el `acceptance-tests/package-lock.json` del proyecto: `@esbuild/win32-x64` sí, `@esbuild/linux-x64` no).
-- [ ] 4.6 "Dependencias solo en la caché global sin modo offline".
-- [ ] 4.7 "Motor sin instalar que solo está en GitHub" y "Motor sin instalar con una fuente local" (un bundle real con el tag fijado).
-- [ ] 4.8 "Solo el alias de la Microsoft Store".
-- [ ] 4.9 "Clon extraído con CRLF antes de fijar los finales de línea" (añade a los hechos los archivos de texto versionados del clon con CRLF).
-- [ ] 4.10 "Solo Claude Code" y "OpenCode 1".
-- [ ] 4.11 "Informe en JSON".
+- [x] 4.1 Reestructurar `scripts/windows/Test-OfflineInstall.ps1` según D4: `Get-ReadinessFacts` (recogida), `Get-ReadinessReport` (evaluación, sin tocar la máquina) y `-FactsFile <json>` para evaluar unos hechos dados. Quitar las comprobaciones que dependían del núcleo bash: Git Bash y sus utilidades, `MSYS`, qué bash va primero en el `PATH`, los symlinks, el Modo de desarrollador y el nombre `python3`. Comprobar a mano con `pwsh` que el script se carga y que, con unos hechos de ejemplo, da un informe.
+  - Resultado: el script tiene `Get-ReadinessFacts` (recoge, sin decidir), `Get-ReadinessReport` (evalúa: filtros de plataforma, versiones, estados y textos) y `-FactsFile`. Los hechos recogidos pasan por JSON antes de evaluarse, para que la evaluación vea siempre la misma forma que con `-FactsFile`. Cada componente tiene un `Id` estable (`node`, `npm`, `npx`, `git`, `python`, `line-endings`, `wiki-engine`, `npm-root`, `npm-acceptance-tests`, `agent`). El parser de PowerShell no da errores, y recogiendo los hechos de la máquina de la suite (Linux, `pwsh` 7.4.6) da un informe y no cambia el árbol. Lección: al reescribir el archivo se duplicó el BOM UTF-8, y PowerShell dejó de reconocer el bloque de ayuda; hay que escribirlo con un solo BOM.
+- [x] 4.2 Soporte en `acceptance-tests/support/` para «una máquina Windows …»: hechos de una máquina con todo lo necesario, que cada `But` modifica, un proyecto temporal con sus lockfiles, y la ejecución del script con `pwsh -NoProfile -File … -FactsFile …` (y `-Json` cuando el paso lo pide), leyendo el código de salida y el informe. Si no hay `pwsh`, el paso falla con un mensaje que lo dice.
+  - Resultado: `support/windows-readiness.js` construye los hechos de una máquina con todo lo necesario, con los lockfiles reales del proyecto, y ejecuta el script con `pwsh -NoProfile -NonInteractive -File … -FactsFile …`. Sin `pwsh`, el paso falla diciendo que hace falta. Los pasos están en `step-definitions/windows-readiness.steps.js`. «Se ejecuta el diagnóstico» lo ejecuta dos veces, en texto y en JSON, y comprueba que terminan igual. «El árbol no ha cambiado» lo ejecuta además recogiendo los hechos de la máquina de la suite.
+- [x] 4.3 "Máquina con todo lo necesario", "No falta nada" y "Falta algo".
+  - Resultado: con el script anterior, que no tiene `-FactsFile`, todos los escenarios de `windows-readiness` fallan en «se ejecuta el diagnóstico» (comprobado con «Falta Node.js»). Por eso el rojo es el mismo para toda la sección, y no uno por escenario. Con el script de 4.1, los tres pasan.
+- [x] 4.4 "Falta Node.js", "Node.js de una versión inferior a la requerida" y "Lo que está en el vendor del repositorio cuenta como presente".
+  - Resultado: pasan los tres, con el rojo de 4.3.
+- [x] 4.5 "Dependencias instaladas en otro sistema operativo" (con el `acceptance-tests/package-lock.json` del proyecto: `@esbuild/win32-x64` sí, `@esbuild/linux-x64` no).
+  - Resultado: pasa. Con el `acceptance-tests/package-lock.json` real, faltan los dos paquetes que solo se instalan en `win32-x64`, `@esbuild/win32-x64@0.28.2` y `@typescript/typescript-win32-x64@7.0.2`. `@esbuild/linux-x64` no se nombra, porque no se instala en `win32`.
+- [x] 4.6 "Dependencias solo en la caché global sin modo offline".
+  - Resultado: pasa (AVISO, y la alternativa global es `npm config set offline true`).
+- [x] 4.7 "Motor sin instalar que solo está en GitHub" y "Motor sin instalar con una fuente local" (un bundle real con el tag fijado).
+  - Resultado: pasan los dos. La recogida de la fuente local (`git ls-remote` sobre el bundle) no la cubre la suite: se comprueba en Windows real (sección 6, trasladada).
+- [x] 4.8 "Solo el alias de la Microsoft Store".
+  - Resultado: pasa.
+- [x] 4.9 "Clon extraído con CRLF antes de fijar los finales de línea" (añade a los hechos los archivos de texto versionados del clon con CRLF).
+  - Resultado: pasa. La recogida usa `git ls-files --eol` y toma las líneas con `w/crlf`.
+- [x] 4.10 "Solo Claude Code" y "OpenCode 1".
+  - Resultado: pasan los dos.
+- [x] 4.11 "Informe en JSON".
+  - Resultado: pasa. Suite completa tras la sección 4: 220 escenarios y 1156 pasos, todos pasan.
 
 ## 5. Documentación (zona de código)
 

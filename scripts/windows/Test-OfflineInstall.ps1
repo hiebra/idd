@@ -1,22 +1,27 @@
 ﻿<#
 .SYNOPSIS
-  Diagnostica qué le falta a esta máquina Windows 11 para una instalación
-  completa del proyecto sin acceso a internet.
+  Diagnostica qué le falta a esta máquina Windows 11 para que el proyecto
+  funcione en ella, también sin acceso a internet.
 
 .DESCRIPTION
-  Comprueba cada binario y cada dato que el proyecto necesita (el arranque de
-  sesión, el motor del wiki, las dependencias npm de la raíz y de
-  acceptance-tests/ y el agente) y, para lo que no está, dice:
+  Comprueba cada binario, dato y ajuste que necesita el proyecto (Node.js y
+  npm, git, Python 3, los finales de línea del clon, el motor del wiki, las
+  dependencias npm de la raíz y de acceptance-tests/ y el agente, OpenCode 2)
+  y, para lo que falta, dice:
 
-    - Repo:   qué habría que incorporar al repositorio (bajo vendor\windows\,
-              por defecto) para que funcione sin internet.
-    - Global: la alternativa de instalarlo globalmente en la máquina, si existe.
+    - Repo:    qué habría que incorporar al repositorio (bajo vendor\windows\,
+               por defecto) para no depender de la máquina.
+    - Global:  la alternativa de instalarlo globalmente en la máquina, si existe.
     - Obtener: cómo conseguirlo en una máquina CON internet.
 
-  No instala ni cambia nada, y no usa la red.
+  No instala ni cambia nada, y no usa la red. Lo que esté en el directorio de
+  vendor cuenta como presente ("OK (vendor)").
 
-  Lo que ya esté en el directorio de vendor cuenta como presente ("OK (vendor)"),
-  así que el script sirve también para comprobar un vendor ya montado.
+  Tiene dos partes (design D4 de windows-support): Get-ReadinessFacts recoge
+  los hechos de la máquina, sin decidir nada, y Get-ReadinessReport los
+  convierte en el informe, sin tocar la máquina. Con -FactsFile se evalúan
+  unos hechos dados, sin recogerlos: así prueba la suite de aceptación la
+  evaluación fuera de Windows.
 
 .PARAMETER ProjectDir
   Raíz del proyecto. Por defecto, dos niveles por encima de este script.
@@ -26,7 +31,11 @@
   Por defecto, <ProjectDir>\vendor\windows.
 
 .PARAMETER Json
-  Devuelve el resultado como JSON en vez de como informe de texto.
+  Devuelve el informe como JSON en vez de como texto.
+
+.PARAMETER FactsFile
+  Un JSON con los hechos de una máquina, en el formato de Get-ReadinessFacts.
+  Se evalúan en lugar de recoger los de esta máquina.
 
 .EXAMPLE
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\windows\Test-OfflineInstall.ps1
@@ -42,88 +51,31 @@
 param(
   [string]$ProjectDir,
   [string]$VendorDir,
-  [switch]$Json
+  [switch]$Json,
+  [string]$FactsFile
 )
 
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-# --- Parámetros por defecto -------------------------------------------------
+# --- Utilidades comunes ------------------------------------------------------
 
-if (-not $ProjectDir) { $ProjectDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path }
-$ProjectDir = (Resolve-Path $ProjectDir).Path
-if (-not $VendorDir) { $VendorDir = Join-Path $ProjectDir 'vendor\windows' }
-$VendorRel = $VendorDir
-if ($VendorDir.StartsWith($ProjectDir, [StringComparison]::OrdinalIgnoreCase)) {
-  $VendorRel = $VendorDir.Substring($ProjectDir.Length).TrimStart('\', '/')
-}
-
-# Arquitectura con los nombres de Node (os/cpu de package-lock.json)
-$NodeOs = 'win32'
-switch ($env:PROCESSOR_ARCHITECTURE) {
-  'ARM64' { $NodeCpu = 'arm64' }
-  'x86'   { $NodeCpu = 'ia32' }
-  default { $NodeCpu = 'x64' }
-}
-
-$Results = New-Object System.Collections.Generic.List[object]
-
-function Add-Result {
-  param(
-    [string]$Componente,
-    [ValidateSet('binario', 'datos', 'configuración')][string]$Tipo,
-    [ValidateSet('OK', 'OK (vendor)', 'AVISO', 'FALTA')][string]$Estado,
-    [string]$Detalle,
-    [string]$Repo = '',
-    [string]$Global = '',
-    [string]$Obtener = ''
-  )
-  $Results.Add([pscustomobject][ordered]@{
-      Componente = $Componente
-      Tipo       = $Tipo
-      Estado     = $Estado
-      Detalle    = $Detalle
-      Repo       = $Repo
-      Global     = $Global
-      Obtener    = $Obtener
-    })
-}
-
-# --- Utilidades -------------------------------------------------------------
-
-# Ejecuta un programa y devuelve su salida (stdout+stderr) recortada, o $null si falla
-function Invoke-Quiet {
-  param([string]$Exe, [string[]]$Arguments)
-  # En Windows PowerShell 5.1, con Stop, cualquier línea en stderr sería un error
-  $ErrorActionPreference = 'Continue'
-  try {
-    $out = & $Exe @Arguments 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) { return $null }
-    return $out.Trim()
-  } catch { return $null }
-}
-
-# Todas las rutas del PATH para un nombre, sin los alias de la Microsoft Store
-function Find-Exe {
-  param([string[]]$Names)
-  $found = @()
-  foreach ($n in $Names) {
-    foreach ($c in @(Get-Command $n -CommandType Application -All -ErrorAction SilentlyContinue)) {
-      $found += $c.Source
-    }
+# Una propiedad de un objeto (PSCustomObject o hashtable), o $null si no la tiene
+function P {
+  param($Object, [string]$Name)
+  if ($null -eq $Object) { return $null }
+  if ($Object -is [System.Collections.IDictionary]) {
+    if ($Object.Contains($Name)) { return $Object[$Name] }
+    return $null
   }
-  return @($found | Select-Object -Unique)
-}
-
-function Test-StoreStub {
-  param([string]$Path)
-  if ($Path -notmatch '\\WindowsApps\\') { return $false }
-  try { return ((Get-Item $Path -Force).Length -eq 0) } catch { return $true }
+  $prop = $Object.PSObject.Properties[$Name]
+  if ($prop) { return $prop.Value }
+  return $null
 }
 
 function Get-Version {
   param([string]$Text)
-  if ($Text -match '(\d+)\.(\d+)(?:\.(\d+))?') {
+  if ($Text -and $Text -match '(\d+)\.(\d+)(?:\.(\d+))?') {
     $patch = 0; if ($Matches[3]) { $patch = [int]$Matches[3] }
     return New-Object Version -ArgumentList @([int]$Matches[1], [int]$Matches[2], $patch)
   }
@@ -138,29 +90,223 @@ function Read-Json {
   return $raw | ConvertFrom-Json
 }
 
-function Get-Prop {
-  param($Object, [string]$Name)
-  if ($null -eq $Object) { return $null }
-  $p = $Object.PSObject.Properties[$Name]
-  if ($p) { return $p.Value }
-  return $null
+# =============================================================================
+# Recogida de hechos: lee la máquina y el proyecto, sin decidir nada
+# =============================================================================
+
+# Ejecuta un programa y devuelve su salida (stdout+stderr) recortada, o $null si falla
+function Invoke-Quiet {
+  param([string]$Exe, [string[]]$Arguments)
+  # En Windows PowerShell 5.1, con Stop, cualquier línea en stderr sería un error
+  $ErrorActionPreference = 'Continue'
+  try {
+    $out = & $Exe @Arguments 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) { return $null }
+    return $out.Trim()
+  } catch { return $null }
+}
+
+# Todas las rutas del PATH para unos nombres
+function Find-Exe {
+  param([string[]]$Names)
+  $found = @()
+  foreach ($n in $Names) {
+    foreach ($c in @(Get-Command $n -CommandType Application -All -ErrorAction SilentlyContinue)) {
+      $found += $c.Source
+    }
+  }
+  return @($found | Select-Object -Unique)
+}
+
+# Los alias de ejecución de la Microsoft Store son archivos vacíos en WindowsApps
+function Test-StoreStub {
+  param([string]$Path)
+  if ($Path -notmatch '\\WindowsApps\\') { return $false }
+  try { return ((Get-Item $Path -Force).Length -eq 0) } catch { return $true }
 }
 
 # integrity de npm (sha512-<base64>) -> ruta en content-v2 de un cacache
 function Get-CacachePath {
   param([string]$CacheRoot, [string]$Integrity)
-  if ($Integrity -notmatch '^(sha\d+)-(.+)$') { return $null }
+  if (-not $CacheRoot -or $Integrity -notmatch '^(sha\d+)-(.+)$') { return $null }
   $algo = $Matches[1]
   try { $bytes = [Convert]::FromBase64String(($Matches[2] -split '\s')[0]) } catch { return $null }
   $hex = -join ($bytes | ForEach-Object { $_.ToString('x2') })
   return Join-Path $CacheRoot ("_cacache\content-v2\{0}\{1}\{2}\{3}" -f $algo, $hex.Substring(0, 2), $hex.Substring(2, 2), $hex.Substring(4))
 }
 
+function Get-NpmPackagesFacts {
+  param([string]$Dir, [string]$VendorCache, [string]$GlobalCache)
+  $lockPath = Join-Path $Dir 'package-lock.json'
+  if (-not (Test-Path $lockPath)) { return $null }
+  $lock = Read-Json $lockPath
+  $packages = @()
+  foreach ($prop in (P $lock 'packages').PSObject.Properties) {
+    $key = $prop.Name; $p = $prop.Value
+    if ($key -notlike 'node_modules/*' -and $key -notlike '*/node_modules/*') { continue }
+    if ((P $p 'link') -or (P $p 'inBundle')) { continue }
+    $version = P $p 'version'
+    $installed = $false
+    $pj = Join-Path $Dir ($key.Replace('/', '\') + '\package.json')
+    if (Test-Path $pj) {
+      try { $installed = ((P (Read-Json $pj) 'version') -eq $version) } catch { }
+    }
+    $integrity = P $p 'integrity'
+    $vp = $null; $gp = $null
+    if ($integrity) { $vp = Get-CacachePath $VendorCache $integrity; $gp = Get-CacachePath $GlobalCache $integrity }
+    $packages += [ordered]@{
+      name          = $key.Substring($key.LastIndexOf('node_modules/') + 13)
+      version       = $version
+      os            = @(P $p 'os')
+      cpu           = @(P $p 'cpu')
+      installed     = $installed
+      inVendorCache = [bool]($vp -and (Test-Path $vp))
+      inGlobalCache = [bool]($gp -and (Test-Path $gp))
+    }
+  }
+  return $packages
+}
+
+function Get-ReadinessFacts {
+  param([string]$ProjectDir, [string]$VendorDir, [string]$VendorRel)
+  $vendorNode = Join-Path $VendorDir 'node'
+  $vendorGit = Join-Path $VendorDir 'git'
+  $vendorPython = Join-Path $VendorDir 'python'
+  $vendorCache = Join-Path $VendorDir 'npm-cache'
+
+  $cpu = 'x64'
+  switch ($env:PROCESSOR_ARCHITECTURE) { 'ARM64' { $cpu = 'arm64' } 'x86' { $cpu = 'ia32' } }
+
+  # Node.js: el del vendor primero, después los del PATH
+  $required = P (P (Read-Json (Join-Path $ProjectDir 'package.json')) 'engines') 'node'
+  $nodes = @()
+  $vendorExe = Join-Path $vendorNode 'node.exe'
+  if (Test-Path $vendorExe) { $nodes += [ordered]@{ path = $vendorExe; source = 'vendor'; version = (Invoke-Quiet $vendorExe @('--version')) } }
+  foreach ($p in Find-Exe 'node') { $nodes += [ordered]@{ path = $p; source = 'PATH'; version = (Invoke-Quiet $p @('--version')) } }
+
+  # npm y npx: junto al primer Node.js o en el PATH
+  $tool = {
+    param($name)
+    foreach ($n in $nodes) {
+      $c = Join-Path (Split-Path $n.path) "$name.cmd"
+      if (Test-Path $c) { return $c }
+    }
+    $f = @(Find-Exe $name)
+    if ($f.Count -gt 0) { return $f[0] }
+    return $null
+  }
+  $npmPath = & $tool 'npm'
+  $npxPath = & $tool 'npx'
+  $globalCache = $null; $offline = $null
+  if ($npmPath) {
+    $globalCache = Invoke-Quiet $npmPath @('config', 'get', 'cache')
+    $offline = Invoke-Quiet $npmPath @('config', 'get', 'offline')
+  }
+  if (-not $globalCache -and $env:LOCALAPPDATA) { $globalCache = Join-Path $env:LOCALAPPDATA 'npm-cache' }
+
+  # git: el del vendor primero
+  $git = [ordered]@{ path = $null; source = $null; version = $null }
+  $gits = @()
+  foreach ($rel in @('cmd\git.exe', 'bin\git.exe', 'mingw64\bin\git.exe')) {
+    $p = Join-Path $vendorGit $rel
+    if (Test-Path $p) { $gits += , @($p, 'vendor'); break }
+  }
+  foreach ($p in Find-Exe 'git') { $gits += , @($p, 'PATH') }
+  foreach ($c in $gits) {
+    $out = Invoke-Quiet $c[0] @('--version')
+    if ($out -match 'git version') { $git = [ordered]@{ path = $c[0]; source = $c[1]; version = $out }; break }
+  }
+
+  # Python 3, con los alias de la Microsoft Store marcados
+  $pythons = @()
+  foreach ($n in @('python3.exe', 'python.exe')) {
+    $p = Join-Path $vendorPython $n
+    if (Test-Path $p) { $pythons += [ordered]@{ path = $p; source = 'vendor'; version = (Invoke-Quiet $p @('--version')); storeAlias = $false } }
+  }
+  foreach ($p in Find-Exe @('python3', 'python', 'py')) {
+    if (Test-StoreStub $p) { $pythons += [ordered]@{ path = $p; source = 'PATH'; version = $null; storeAlias = $true }; continue }
+    $a = @('--version'); if ((Split-Path $p -Leaf) -eq 'py.exe') { $a = @('-3', '--version') }
+    $pythons += [ordered]@{ path = $p; source = 'PATH'; version = (Invoke-Quiet $p $a); storeAlias = $false }
+  }
+
+  # Archivos de texto versionados extraídos con CRLF
+  $lineEndings = [ordered]@{ checked = $false; crlf = @() }
+  if ($git.path) {
+    $eol = Invoke-Quiet $git.path @('-C', $ProjectDir, 'ls-files', '--eol')
+    if ($null -ne $eol) {
+      $crlf = @()
+      foreach ($line in ($eol -split "`r?`n")) {
+        if ($line -match '\bw/crlf\b' -and $line -match '\t(.+)$') { $crlf += $Matches[1] }
+      }
+      $lineEndings = [ordered]@{ checked = $true; crlf = $crlf }
+    }
+  }
+
+  # Motor del wiki
+  $engine = [ordered]@{ configured = $false }
+  $engineJson = Join-Path $ProjectDir '.agents\wiki\engine.json'
+  if (Test-Path $engineJson) {
+    $eng = Read-Json $engineJson
+    $repo = P $eng 'repo'; $ref = P $eng 'ref'
+    $stamp = Join-Path $ProjectDir '.agents\wiki-engine\.wiki-engine-ref'
+    $installedRef = $null; if (Test-Path $stamp) { $installedRef = ([IO.File]::ReadAllText($stamp)).Trim() }
+    $local = -not ($repo -match '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') -and -not ($repo -match '^(https?|ssh|git)://|^git@')
+    $localHasRef = $false
+    if ($local -and $git.path) { $localHasRef = [bool](Invoke-Quiet $git.path @('-C', $ProjectDir, 'ls-remote', $repo, $ref)) }
+    $engine = [ordered]@{ configured = $true; repo = $repo; ref = $ref; installedRef = $installedRef; local = $local; localHasRef = $localHasRef }
+  }
+
+  # Dependencias npm de la raíz y de acceptance-tests/
+  $npmProjects = @()
+  foreach ($proj in @(@('raíz', '.'), @('acceptance-tests', 'acceptance-tests'))) {
+    $dir = $ProjectDir; if ($proj[1] -ne '.') { $dir = Join-Path $ProjectDir $proj[1] }
+    $packages = Get-NpmPackagesFacts $dir $vendorCache $globalCache
+    if ($null -ne $packages) { $npmProjects += [ordered]@{ label = $proj[0]; rel = $proj[1]; packages = @($packages) } }
+  }
+
+  # Agentes
+  $agents = [ordered]@{ opencode = @(); claude = @() }
+  $opencodes = @()
+  $vendorOc = Join-Path $VendorDir 'opencode\opencode.exe'
+  if (Test-Path $vendorOc) { $opencodes += $vendorOc }
+  $opencodes += Find-Exe 'opencode'
+  foreach ($p in $opencodes) { $agents.opencode += [ordered]@{ path = $p; version = (Invoke-Quiet $p @('--version')) } }
+  foreach ($p in Find-Exe 'claude') { $agents.claude += [ordered]@{ path = $p; version = (Invoke-Quiet $p @('--version')) } }
+
+  return [ordered]@{
+    version     = 1
+    platform    = [ordered]@{ os = 'win32'; cpu = $cpu }
+    vendorRel   = $VendorRel
+    node        = [ordered]@{ required = $required; candidates = $nodes }
+    npm         = [ordered]@{ path = $npmPath; offline = $offline; globalCache = $globalCache }
+    npx         = [ordered]@{ path = $npxPath }
+    git         = $git
+    python      = [ordered]@{ candidates = $pythons }
+    lineEndings = $lineEndings
+    engine      = $engine
+    npmProjects = $npmProjects
+    agents      = $agents
+  }
+}
+
+# =============================================================================
+# Evaluación: convierte los hechos en el informe, sin tocar la máquina
+# =============================================================================
+
+function New-Result {
+  param([string]$Id, [string]$Componente, [string]$Tipo, [string]$Estado, [string]$Detalle,
+    [string]$Repo = '', [string]$Global = '', [string]$Obtener = '')
+  return [pscustomobject][ordered]@{
+    Id = $Id; Componente = $Componente; Tipo = $Tipo; Estado = $Estado; Detalle = $Detalle
+    Repo = $Repo; Global = $Global; Obtener = $Obtener
+  }
+}
+
 # El paquete del lockfile se instala en esta plataforma (campos os/cpu)
 function Test-Platform {
   param($Values, [string]$Current)
-  if ($null -eq $Values) { return $true }
-  $list = @($Values)
+  $list = @($Values | Where-Object { $_ })
+  if ($list.Count -eq 0) { return $true }
   $neg = @($list | Where-Object { $_ -like '!*' })
   $pos = @($list | Where-Object { $_ -notlike '!*' })
   if ($neg -contains "!$Current") { return $false }
@@ -168,328 +314,214 @@ function Test-Platform {
   return $true
 }
 
-$VendorNode   = Join-Path $VendorDir 'node'
-$VendorGit    = Join-Path $VendorDir 'git'
-$VendorPython = Join-Path $VendorDir 'python'
-$VendorCache  = Join-Path $VendorDir 'npm-cache'
+function Get-ReadinessReport {
+  param($Facts)
+  $results = New-Object System.Collections.Generic.List[object]
+  $os = P (P $Facts 'platform') 'os'; $cpu = P (P $Facts 'platform') 'cpu'
+  $v = P $Facts 'vendorRel'
+  $noGlobal = 'No hay alternativa global.'
 
-# --- 1. Node.js y npm ---------------------------------------------------------
-
-$NodeExe = $null; $NpmCmd = $null; $NodeSource = $null
-$pkg = Read-Json (Join-Path $ProjectDir 'package.json')
-$engines = Get-Prop $pkg 'engines'
-$nodeRange = Get-Prop $engines 'node'
-$nodeMin = $null
-if ($nodeRange -match '>=\s*v?(\d+(?:\.\d+){0,2})') { $nodeMin = Get-Version $Matches[1] }
-if (-not $nodeMin) { $nodeMin = New-Object Version 22, 12, 0 }
-
-$candidates = @()
-if (Test-Path (Join-Path $VendorNode 'node.exe')) { $candidates += , @((Join-Path $VendorNode 'node.exe'), 'vendor') }
-foreach ($p in Find-Exe 'node') { $candidates += , @($p, 'PATH') }
-$nodeIssues = @()
-foreach ($c in $candidates) {
-  $v = Get-Version (Invoke-Quiet $c[0] @('--version'))
-  if ($v -and $v -ge $nodeMin) { $NodeExe = $c[0]; $NodeSource = $c[1]; $NodeVersion = $v; break }
-  if ($v) { $nodeIssues += "$($c[0]) es $v" }
-}
-$nodeRepo = "Node.js portable (zip) descomprimido en $VendorRel\node\ (node.exe, npm.cmd, npx.cmd, node_modules\npm). El arranque y los hooks deben poner ese directorio por delante en el PATH."
-$nodeGlobal = "Instalador MSI de Node.js $nodeMin o superior (LTS 22.x o 24.x) para $NodeCpu, que añade node y npm al PATH del sistema. Sin internet: copia el .msi y ejecuta 'msiexec /i node-v22.x.y-$NodeCpu.msi'."
-$nodeGet = "https://nodejs.org/dist/latest-v22.x/ -> node-v22.x.y-win-$NodeCpu.zip (repo) o node-v22.x.y-$NodeCpu.msi (global). Con winget: 'winget download OpenJS.NodeJS.LTS'."
-if ($NodeExe) {
-  $estado = 'OK'; if ($NodeSource -eq 'vendor') { $estado = 'OK (vendor)' }
-  Add-Result 'Node.js' 'binario' $estado "node $NodeVersion en $NodeExe (requiere $nodeRange)"
-  $nodeDir = Split-Path $NodeExe
-  foreach ($n in @('npm.cmd', 'npx.cmd')) {
-    $c = Join-Path $nodeDir $n
-    if (-not (Test-Path $c)) { $f = @(Find-Exe $n.Replace('.cmd', '')); if ($f.Count -gt 0) { $c = $f[0] } else { $c = $null } }
-    if ($n -eq 'npm.cmd') { $NpmCmd = $c }
-    if ($c) { Add-Result $n.Replace('.cmd', '') 'binario' $estado "$c" }
-    else { Add-Result $n.Replace('.cmd', '') 'binario' 'FALTA' "No se encuentra $n junto a node.exe ni en el PATH" $nodeRepo $nodeGlobal $nodeGet }
+  # --- Node.js, npm y npx ---
+  $node = P $Facts 'node'
+  $required = P $node 'required'
+  $min = $null
+  if ($required -match '>=\s*v?(\d+(?:\.\d+){0,2})') { $min = Get-Version $Matches[1] }
+  if (-not $min) { $min = New-Object Version -ArgumentList @(22, 12, 0) }
+  $nodeRepo = "Node.js portable (zip) descomprimido en $v\node\ (node.exe, npm.cmd, npx.cmd, node_modules\npm), por delante en el PATH de la sesión."
+  $nodeGlobal = "Instalador MSI de Node.js $min o superior (LTS 22.x o 24.x) para $cpu, que añade node y npm al PATH. Sin internet: copia el .msi y ejecuta 'msiexec /i node-v22.x.y-$cpu.msi'."
+  $nodeGet = "https://nodejs.org/dist/latest-v22.x/ -> node-v22.x.y-win-$cpu.zip (repo) o node-v22.x.y-$cpu.msi (global). Con winget: 'winget download OpenJS.NodeJS.LTS'."
+  $good = $null; $found = @()
+  foreach ($c in @(P $node 'candidates')) {
+    if ($null -eq $c) { continue }
+    $ver = Get-Version (P $c 'version')
+    if ($ver -and $ver -ge $min) { $good = $c; $goodVer = $ver; break }
+    if ($ver) { $found += "$(P $c 'path') es $ver" }
   }
-} else {
-  $det = "No hay Node.js $nodeRange (requisito de package.json)"
-  if ($nodeIssues) { $det += ". Encontrado: " + ($nodeIssues -join '; ') }
-  Add-Result 'Node.js + npm' 'binario' 'FALTA' $det $nodeRepo $nodeGlobal $nodeGet
-}
-
-# --- 2. Git, bash y las utilidades de coreutils ------------------------------
-
-$GitExe = $null; $GitRoot = $null; $GitSource = $null
-$gitCandidates = @()
-foreach ($rel in @('cmd\git.exe', 'bin\git.exe', 'mingw64\bin\git.exe')) {
-  $p = Join-Path $VendorGit $rel
-  if (Test-Path $p) { $gitCandidates += , @($p, 'vendor'); break }
-}
-foreach ($p in Find-Exe 'git') { $gitCandidates += , @($p, 'PATH') }
-foreach ($c in $gitCandidates) {
-  $out = Invoke-Quiet $c[0] @('--version')
-  if ($out -match 'git version') { $GitExe = $c[0]; $GitSource = $c[1]; $GitVersion = $out; break }
-}
-if ($GitExe) {
-  $d = Split-Path $GitExe
-  if ((Split-Path $d -Leaf) -eq 'bin' -and (Split-Path (Split-Path $d) -Leaf) -eq 'mingw64') { $GitRoot = Split-Path (Split-Path $d) }
-  else { $GitRoot = Split-Path $d }
-}
-$gitRepo = "PortableGit (Git for Windows portable) descomprimido en $VendorRel\git\: aporta git.exe (cmd\), bash.exe (bin\) y las utilidades de usr\bin\."
-$gitGlobal = "Instalador de Git for Windows (Git-2.x-64-bit.exe), que es además el bash que Claude Code usa en Windows. Sin internet: copia el instalador; admite instalación desatendida con '/VERYSILENT /NORESTART'."
-$gitGet = "https://github.com/git-for-windows/git/releases/latest -> PortableGit-2.x-64-bit.7z.exe (repo) o Git-2.x-64-bit.exe (global). Con winget: 'winget download Git.Git'."
-if ($GitExe) {
-  $estado = 'OK'; if ($GitSource -eq 'vendor') { $estado = 'OK (vendor)' }
-  Add-Result 'git' 'binario' $estado "$GitVersion en $GitExe"
-} else {
-  Add-Result 'git' 'binario' 'FALTA' 'No hay git: lo necesitan el arranque de sesión, el motor del wiki, las puertas del ciclo (branch-change.mjs) y la suite de aceptación' $gitRepo $gitGlobal $gitGet
-}
-
-# bash de Git for Windows (el arranque de sesión y los hooks son scripts bash)
-$GitBash = $null
-if ($GitRoot) {
-  foreach ($rel in @('bin\bash.exe', 'usr\bin\bash.exe')) {
-    $p = Join-Path $GitRoot $rel
-    if (Test-Path $p) { $GitBash = $p; break }
-  }
-}
-if ($env:CLAUDE_CODE_GIT_BASH_PATH -and (Test-Path $env:CLAUDE_CODE_GIT_BASH_PATH)) { $GitBash = $env:CLAUDE_CODE_GIT_BASH_PATH }
-if ($GitBash) {
-  Add-Result 'bash (Git Bash)' 'binario' 'OK' "$GitBash"
-} else {
-  Add-Result 'bash (Git Bash)' 'binario' 'FALTA' 'No hay bash de Git for Windows: el arranque (.agents\hooks\session-bootstrap.sh) y los hooks de Claude Code son scripts bash' $gitRepo $gitGlobal $gitGet
-}
-
-# El primer "bash" del PATH es el que lanza el plugin de OpenCode (spawn("bash"))
-$pathBash = @(Find-Exe 'bash')
-if ($pathBash.Count -gt 0 -and $pathBash[0] -match '\\(System32|WindowsApps)\\') {
-  Add-Result 'bash en el PATH' 'configuración' 'AVISO' "El primer bash del PATH es $($pathBash[0]) (WSL), no Git Bash: el plugin de OpenCode ejecutaría el arranque en WSL" `
-    "Que los adaptadores llamen a la ruta del bash de $VendorRel\git\bin\bash.exe en vez de a 'bash'." `
-    "Poner '<Git>\bin' por delante de C:\Windows\System32 en el PATH del usuario, o desinstalar WSL si no se usa."
-} elseif ($pathBash.Count -eq 0 -and $GitBash) {
-  Add-Result 'bash en el PATH' 'configuración' 'AVISO' "bash no está en el PATH: Claude Code lo encuentra junto a git, pero el plugin de OpenCode (spawn(""bash"")) no" `
-    "Que el adaptador de OpenCode use la ruta de $VendorRel\git\bin\bash.exe." `
-    "Añadir '$(Split-Path $GitBash)' al PATH del usuario."
-} elseif ($pathBash.Count -gt 0) {
-  Add-Result 'bash en el PATH' 'configuración' 'OK' "$($pathBash[0])"
-}
-
-# Utilidades que usan el arranque y la suite (acceptance-tests\support\machine.js)
-$tools = 'cat', 'dirname', 'grep', 'head', 'ln', 'mkdir', 'mktemp', 'mv', 'readlink', 'rm', 'sed', 'sha256sum', 'sort', 'tail', 'timeout', 'wc'
-if ($GitRoot) {
-  $usrBin = Join-Path $GitRoot 'usr\bin'
-  $missing = @($tools | Where-Object { -not (Test-Path (Join-Path $usrBin "$_.exe")) })
-  if ($missing.Count -eq 0) { Add-Result 'coreutils de Git Bash' 'binario' 'OK' "$usrBin ($($tools.Count) utilidades)" }
-  else { Add-Result 'coreutils de Git Bash' 'binario' 'FALTA' ("Faltan en ${usrBin}: " + ($missing -join ', ')) $gitRepo $gitGlobal $gitGet }
-}
-
-# ln -s en Git Bash copia en vez de enlazar si MSYS no pide symlinks nativos
-$msys = [Environment]::GetEnvironmentVariable('MSYS')
-if ($msys -match 'winsymlinks:native') {
-  Add-Result 'MSYS=winsymlinks' 'configuración' 'OK' "MSYS=$msys"
-} else {
-  Add-Result 'MSYS=winsymlinks' 'configuración' 'AVISO' "MSYS no incluye winsymlinks:nativestrict: 'ln -s' en Git Bash crea copias, y el arranque no reconocerá después los enlaces del motor del wiki" `
-    "Que el arranque exporte MSYS=winsymlinks:nativestrict antes de enlazar el motor." `
-    "Variable de entorno de usuario: [Environment]::SetEnvironmentVariable('MSYS','winsymlinks:nativestrict','User')"
-}
-
-# --- 3. Symlinks del repositorio --------------------------------------------
-
-$devMode = $false
-try {
-  $v = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' -Name AllowDevelopmentWithoutDevLicense -ErrorAction Stop
-  $devMode = ($v.AllowDevelopmentWithoutDevLicense -eq 1)
-} catch { }
-$canLink = $false
-$probe = Join-Path ([IO.Path]::GetTempPath()) ("idd-link-" + [guid]::NewGuid().ToString('N'))
-try {
-  New-Item -ItemType Directory -Path "$probe\t" | Out-Null
-  # mklink (y no New-Item, que en Windows PowerShell 5.1 exige administrador
-  # aunque esté el Modo de desarrollador) crea el enlace como lo haría git
-  $null = cmd /c mklink /D "$probe\l" "$probe\t" 2>&1
-  $canLink = ($LASTEXITCODE -eq 0)
-} catch { } finally {
-  # Primero el enlace, con rmdir, para no recorrerlo al borrar
-  if (Test-Path "$probe\l") { $null = cmd /c rmdir "$probe\l" 2>&1 }
-  Remove-Item $probe -Recurse -Force -ErrorAction SilentlyContinue
-}
-$linkGlobal = "Activar el Modo de desarrollador (Configuración > Sistema > Para programadores), que permite crear symlinks sin ser administrador, y 'git config --global core.symlinks true'."
-if ($canLink) { Add-Result 'Crear symlinks' 'configuración' 'OK' "Se pueden crear symlinks (Modo de desarrollador: $devMode)" }
-else {
-  Add-Result 'Crear symlinks' 'configuración' 'FALTA' "Este usuario no puede crear symlinks: el arranque no podrá exponer el motor del wiki a los agentes" `
-    "No hay alternativa en el repo: los enlaces .claude\skills\* y los del motor son symlinks por diseño (ADR-0003, ADR-0005)." $linkGlobal
-}
-
-$symlinkCfg = $null
-if ($GitExe) { $symlinkCfg = Invoke-Quiet $GitExe @('-C', $ProjectDir, 'config', '--get', 'core.symlinks') }
-$sample = Join-Path $ProjectDir '.claude\skills\grill-me'
-$isLink = $false
-if (Test-Path $sample) {
-  $it = Get-Item $sample -Force
-  $isLink = [bool]($it.Attributes -band [IO.FileAttributes]::ReparsePoint)
-}
-if ($isLink) { Add-Result 'Symlinks del clon' 'configuración' 'OK' ".claude\skills\* son symlinks (core.symlinks=$symlinkCfg)" }
-else {
-  Add-Result 'Symlinks del clon' 'configuración' 'FALTA' ".claude\skills\grill-me no es un symlink (core.symlinks=$symlinkCfg): git lo ha escrito como un archivo de texto y Claude Code no verá las skills del schema" `
-    "Nada que incorporar: hay que volver a extraer el clon con symlinks." `
-    ("$linkGlobal Después: 'git -C ""$ProjectDir"" config core.symlinks true' y 'git -C ""$ProjectDir"" checkout -- .claude .opencode'.")
-}
-
-# --- 4. Python 3 (helper del motor del wiki, bin/llm-wiki) -------------------
-
-$pyRepo = "Python embeddable (zip) descomprimido en $VendorRel\python\, con una copia de python.exe llamada python3.exe (el helper bin/llm-wiki usa '#!/usr/bin/env python3')."
-$pyGlobal = "Instalador de python.org 3.12 o superior para $NodeCpu ('/quiet InstallAllUsers=1 PrependPath=1'). No crea python3.exe: hace falta un alias python3 en Git Bash o una copia de python.exe como python3.exe."
-$pyGet = "https://www.python.org/downloads/windows/ -> python-3.12.x-embed-amd64.zip (repo) o python-3.12.x-amd64.exe (global). Con winget: 'winget download Python.Python.3.12'."
-$pyFound = $null; $py3Found = $null
-$pyCands = @()
-foreach ($n in @('python3.exe', 'python.exe')) { $p = Join-Path $VendorPython $n; if (Test-Path $p) { $pyCands += , @($p, 'vendor') } }
-foreach ($p in Find-Exe @('python3', 'python', 'py')) { if (-not (Test-StoreStub $p)) { $pyCands += , @($p, 'PATH') } }
-foreach ($c in $pyCands) {
-  $args_ = @('--version'); if ((Split-Path $c[0] -Leaf) -eq 'py.exe') { $args_ = @('-3', '--version') }
-  $out = Invoke-Quiet $c[0] $args_
-  $v = Get-Version $out
-  if ($v -and $v.Major -eq 3 -and $v.Minor -ge 8) {
-    if (-not $pyFound) { $pyFound = $c; $pyVersion = $v }
-    if ((Split-Path $c[0] -Leaf) -eq 'python3.exe') { $py3Found = $c; break }
-  }
-}
-if ($pyFound) {
-  $estado = 'OK'; if ($pyFound[1] -eq 'vendor') { $estado = 'OK (vendor)' }
-  Add-Result 'Python 3' 'binario' $estado "Python $pyVersion en $($pyFound[0])"
-  if (-not $py3Found) {
-    Add-Result 'python3 (nombre)' 'configuración' 'AVISO' "No hay ningún python3.exe real (solo python/py o el alias de la Store): '#!/usr/bin/env python3' de bin/llm-wiki fallará en Git Bash" `
-      "Incluir python3.exe (copia de python.exe) en $VendorRel\python\." `
-      "Copiar python.exe como python3.exe en su carpeta, o desactivar el alias de la Store (Configuración > Aplicaciones > Alias de ejecución de aplicaciones) y crear el alias en ~/.bashrc."
-  }
-} else {
-  Add-Result 'Python 3' 'binario' 'FALTA' 'No hay Python 3.8+ (el alias de la Microsoft Store no cuenta): lo necesita el helper determinista del motor del wiki (lint, checkpoints...). Los workflows del wiki funcionan sin él.' $pyRepo $pyGlobal $pyGet
-}
-
-# --- 5. Motor del wiki (nvk/llm-wiki) ---------------------------------------
-
-$engineJson = Join-Path $ProjectDir '.agents\wiki\engine.json'
-if (Test-Path $engineJson) {
-  $eng = Read-Json $engineJson
-  $repo = Get-Prop $eng 'repo'; $ref = Get-Prop $eng 'ref'
-  $want = "$ref $repo"
-  $stamp = Join-Path $ProjectDir '.agents\wiki-engine\.wiki-engine-ref'
-  $have = $null; if (Test-Path $stamp) { $have = ([IO.File]::ReadAllText($stamp)).Trim() }
-  $bundleName = "llm-wiki-$ref.bundle"
-  $bundle = Join-Path $VendorDir $bundleName
-  $isLocal = -not ($repo -match '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') -and -not ($repo -match '^(https?|ssh|git)://|^git@')
-  $engRepo = "Un git bundle con el tag $ref en $VendorRel\$bundleName, y en .agents\wiki\engine.json ""repo"": ""$($VendorRel.Replace('\','/'))/$bundleName"" (el arranque admite cualquier URL de git, y 'git clone --branch $ref' funciona con un bundle)."
-  $engGlobal = "Un clon compartido en la máquina (p. ej. C:\offline\llm-wiki.git, 'git clone --mirror') y, en engine.json, ""repo"": ""C:/offline/llm-wiki.git"". O instalarlo a mano en .agents\wiki-engine\ con el comando que da el arranque."
-  $engGet = "git clone --mirror https://github.com/$repo.git llm-wiki.git; git -C llm-wiki.git bundle create ..\$bundleName $ref"
-  if ($have -eq $want) {
-    Add-Result "Motor del wiki ($repo $ref)" 'datos' 'OK' "Instalado en .agents\wiki-engine\"
-  } elseif (Test-Path $bundle) {
-    $st = 'OK (vendor)'; $det = "$bundle existe"
-    if (-not $isLocal) { $st = 'AVISO'; $det += ", pero engine.json aún apunta a '$repo' (GitHub): sin internet el arranque no lo usará" }
-    Add-Result "Motor del wiki ($repo $ref)" 'datos' $st $det $engRepo $engGlobal $engGet
-  } elseif ($isLocal -and $GitExe -and (Invoke-Quiet $GitExe @('-C', $ProjectDir, 'ls-remote', $repo, $ref))) {
-    Add-Result "Motor del wiki ($ref)" 'datos' 'OK' "engine.json apunta a una fuente local accesible: $repo"
+  if ($good) {
+    $st = 'OK'; if ((P $good 'source') -eq 'vendor') { $st = 'OK (vendor)' }
+    $results.Add((New-Result 'node' 'Node.js' 'binario' $st "node $goodVer en $(P $good 'path') (requiere $required)"))
   } else {
-    $det = "No está instalado (sello: '$have', se espera '$want') y engine.json apunta a '$repo', que sin internet no se puede clonar"
-    Add-Result "Motor del wiki ($repo $ref)" 'datos' 'FALTA' $det $engRepo $engGlobal $engGet
+    $det = "No hay Node.js $required (requisito de package.json)"
+    if ($found.Count -gt 0) { $det += '. Encontrado: ' + ($found -join '; ') }
+    $results.Add((New-Result 'node' 'Node.js' 'binario' 'FALTA' $det $nodeRepo $nodeGlobal $nodeGet))
   }
-} else {
-  Add-Result 'Motor del wiki' 'datos' 'OK' 'No hay .agents\wiki\engine.json: el proyecto no usa el motor'
-}
+  foreach ($t in @('npm', 'npx')) {
+    $path = P (P $Facts $t) 'path'
+    if ($path) { $results.Add((New-Result $t $t 'binario' 'OK' $path)) }
+    else { $results.Add((New-Result $t $t 'binario' 'FALTA' "No hay $t junto a Node.js ni en el PATH" $nodeRepo $nodeGlobal $nodeGet)) }
+  }
 
-# --- 6. Dependencias npm (raíz y acceptance-tests) ---------------------------
+  # --- git ---
+  $git = P $Facts 'git'
+  $gitRepo = "PortableGit (Git for Windows portable) descomprimido en $v\git\ (cmd\git.exe)."
+  $gitGlobal = "Instalador de Git for Windows (Git-2.x-64-bit.exe). Sin internet: copia el instalador; admite instalación desatendida con '/VERYSILENT /NORESTART'."
+  $gitGet = "https://github.com/git-for-windows/git/releases/latest -> PortableGit-2.x-64-bit.7z.exe (repo) o Git-2.x-64-bit.exe (global). Con winget: 'winget download Git.Git'."
+  if (P $git 'path') {
+    $st = 'OK'; if ((P $git 'source') -eq 'vendor') { $st = 'OK (vendor)' }
+    $results.Add((New-Result 'git' 'git' 'binario' $st "$(P $git 'version') en $(P $git 'path')"))
+  } else {
+    $results.Add((New-Result 'git' 'git' 'binario' 'FALTA' 'No hay git: lo necesitan el arranque de sesión, el motor del wiki y las puertas del ciclo (branch-change.mjs)' $gitRepo $gitGlobal $gitGet))
+  }
 
-$globalCache = $null
-if ($NpmCmd) { $globalCache = Invoke-Quiet $NpmCmd @('config', 'get', 'cache') }
-if (-not $globalCache) { $globalCache = Join-Path $env:LOCALAPPDATA 'npm-cache' }
-$npmOffline = $null
-if ($NpmCmd) { $npmOffline = Invoke-Quiet $NpmCmd @('config', 'get', 'offline') }
+  # --- Python 3 ---
+  $pyRepo = "Python embeddable (zip) descomprimido en $v\python\."
+  $pyGlobal = "Instalador de python.org 3.12 o superior para $cpu ('/quiet InstallAllUsers=1 PrependPath=1')."
+  $pyGet = "https://www.python.org/downloads/windows/ -> python-3.12.x-embed-amd64.zip (repo) o python-3.12.x-amd64.exe (global). Con winget: 'winget download Python.Python.3.12'."
+  $py = $null; $stores = @()
+  foreach ($c in @(P (P $Facts 'python') 'candidates')) {
+    if ($null -eq $c) { continue }
+    if (P $c 'storeAlias') { $stores += (P $c 'path'); continue }
+    $ver = Get-Version (P $c 'version')
+    if ($ver -and $ver.Major -eq 3 -and $ver.Minor -ge 8) { $py = $c; $pyVer = $ver; break }
+  }
+  if ($py) {
+    $st = 'OK'; if ((P $py 'source') -eq 'vendor') { $st = 'OK (vendor)' }
+    $results.Add((New-Result 'python' 'Python 3' 'binario' $st "Python $pyVer en $(P $py 'path')"))
+  } else {
+    $det = 'No hay Python 3.8+: lo necesita el helper determinista del motor del wiki (lint, checkpoints...). Los workflows del wiki funcionan sin él.'
+    if ($stores.Count -gt 0) { $det += ' El alias de la Microsoft Store no es un intérprete: ' + ($stores -join ', ') + '.' }
+    $results.Add((New-Result 'python' 'Python 3' 'binario' 'FALTA' $det $pyRepo $pyGlobal $pyGet))
+  }
 
-function Test-NpmProject {
-  param([string]$Dir, [string]$Label)
-  $lockPath = Join-Path $Dir 'package-lock.json'
-  if (-not (Test-Path $lockPath)) { return }
-  $lock = Read-Json $lockPath
-  $total = 0; $installed = 0; $inVendor = 0; $inGlobal = 0
-  $absent = @(); $platformPkgs = @()
-  foreach ($prop in $lock.packages.PSObject.Properties) {
-    $key = $prop.Name; $p = $prop.Value
-    if ($key -notlike 'node_modules/*' -and $key -notlike '*/node_modules/*') { continue }
-    if ((Get-Prop $p 'link') -or (Get-Prop $p 'inBundle')) { continue }
-    if (-not (Test-Platform (Get-Prop $p 'os') $NodeOs)) { continue }
-    if (-not (Test-Platform (Get-Prop $p 'cpu') $NodeCpu)) { continue }
-    $total++
-    $ver = Get-Prop $p 'version'
-    $name = $key.Substring($key.LastIndexOf('node_modules/') + 13)
-    if ((Get-Prop $p 'os') -or (Get-Prop $p 'cpu')) { $platformPkgs += "$name@$ver" }
-    $pj = Join-Path $Dir ($key.Replace('/', '\') + '\package.json')
-    if (Test-Path $pj) {
-      try { if ((Read-Json $pj).version -eq $ver) { $installed++; continue } } catch { }
+  # --- Finales de línea del clon ---
+  $le = P $Facts 'lineEndings'
+  $reextract = "Con el árbol limpio, en la raíz del clon: 'git rm -r --cached -q .' y después 'git reset --hard'. .gitattributes ya fija LF."
+  if (-not (P $le 'checked')) {
+    $results.Add((New-Result 'line-endings' 'Finales de línea del clon' 'configuración' 'AVISO' 'No se han podido comprobar (hace falta git)' '' $noGlobal ''))
+  } else {
+    $crlf = @(P $le 'crlf' | Where-Object { $_ })
+    if ($crlf.Count -eq 0) { $results.Add((New-Result 'line-endings' 'Finales de línea del clon' 'configuración' 'OK' 'Todos los archivos de texto versionados tienen LF')) }
+    else {
+      $show = ($crlf | Select-Object -First 5) -join ', '
+      if ($crlf.Count -gt 5) { $show += ", ... (+$($crlf.Count - 5))" }
+      $results.Add((New-Result 'line-endings' 'Finales de línea del clon' 'configuración' 'FALTA' "$($crlf.Count) archivos de texto versionados con CRLF: $show. Volver a extraerlos con LF: $reextract" `
+            "Nada que incorporar: hay que volver a extraer el clon. $reextract" "$noGlobal $reextract" ''))
     }
-    $integ = Get-Prop $p 'integrity'
-    $vp = $null; $gp = $null
-    if ($integ) { $vp = Get-CacachePath $VendorCache $integ; $gp = Get-CacachePath $globalCache $integ }
-    if ($vp -and (Test-Path $vp)) { $inVendor++; continue }
-    if ($gp -and (Test-Path $gp)) { $inGlobal++; continue }
-    $absent += "$name@$ver"
   }
-  $rel = $Dir.Substring($ProjectDir.Length).TrimStart('\'); if (-not $rel) { $rel = '.' }
-  $plat = ''; if ($platformPkgs) { $plat = " Con binario propio de $NodeOs-${NodeCpu}: " + ($platformPkgs -join ', ') + '.' }
-  $offNote = ''
-  if ($inGlobal -gt 0 -and $npmOffline -ne 'true') { $offNote = " La caché global los tiene, pero npm no está en modo offline (npm config get offline = $npmOffline): 'npm install' del arranque intentará la red." }
-  $repoTxt = "Una caché de npm ($VendorRel\npm-cache\_cacache) con los $total paquetes de $rel\package-lock.json para $NodeOs-$NodeCpu, y que el arranque instale con 'npm install --offline --cache <ruta absoluta de $VendorRel\npm-cache>'. Alternativa: versionar $rel\node_modules\ instalado en Windows (no sirve el de Linux).$plat"
-  $globalTxt = "Llenar la caché global de npm ($globalCache) con esos paquetes y fijar 'npm config set offline true' (o prefer-offline) a nivel de usuario: el 'npm install' del arranque los toma de ahí sin cambiar el repo."
-  if ($Label -eq 'raíz') { $globalTxt += " Para el CLI: 'npm install -g --offline @fission-ai/openspec@1.17.0' con la caché llena (el arranque seguirá queriendo node_modules\ local)." }
-  $getTxt = "En una máquina Windows $NodeCpu con internet: copiar $rel\package.json y package-lock.json a una carpeta vacía y ejecutar 'npm ci --cache <carpeta>\npm-cache --no-audit --no-fund' (en Windows, para que baje los binarios win32), y copiar <carpeta>\npm-cache."
-  $detail = "$total paquetes para ${NodeOs}-${NodeCpu}: $installed instalados en $rel\node_modules, $inVendor en la caché del vendor, $inGlobal en la caché global."
-  if ($absent.Count -eq 0) {
-    $estado = 'OK'
-    if ($installed -lt $total -and $inVendor -gt 0) { $estado = 'OK (vendor)' }
-    if ($installed -lt $total -and $inGlobal -gt 0 -and $npmOffline -ne 'true') { $estado = 'AVISO' }
-    Add-Result "Dependencias npm ($Label)" 'datos' $estado ($detail + $offNote) $repoTxt $globalTxt $getTxt
+
+  # --- Motor del wiki ---
+  $eng = P $Facts 'engine'
+  if (-not (P $eng 'configured')) {
+    $results.Add((New-Result 'wiki-engine' 'Motor del wiki' 'datos' 'OK' 'No hay .agents\wiki\engine.json: el proyecto no usa el motor'))
   } else {
-    $show = ($absent | Select-Object -First 8) -join ', '
-    if ($absent.Count -gt 8) { $show += ", ... (+$($absent.Count - 8))" }
-    Add-Result "Dependencias npm ($Label)" 'datos' 'FALTA' "$detail Faltan $($absent.Count): $show" $repoTxt $globalTxt $getTxt
+    $repo = P $eng 'repo'; $ref = P $eng 'ref'
+    $want = "$ref $repo"
+    $bundle = "llm-wiki-$ref.bundle"
+    $name = "Motor del wiki ($ref)"
+    $engRepo = "Un git bundle con el tag $ref en $v\$bundle, y en .agents\wiki\engine.json ""repo"": ""$($v.Replace('\','/'))/$bundle"" (el arranque admite cualquier URL de git, y 'git clone --branch $ref' funciona con un bundle)."
+    $engGlobal = "Un clon compartido en la máquina (p. ej. C:\offline\llm-wiki.git, 'git clone --mirror') y, en engine.json, ""repo"": ""C:/offline/llm-wiki.git""."
+    $engGet = "git clone --mirror https://github.com/nvk/llm-wiki.git llm-wiki.git; git -C llm-wiki.git bundle create ..\$bundle $ref"
+    if ((P $eng 'installedRef') -eq $want) {
+      $results.Add((New-Result 'wiki-engine' $name 'datos' 'OK' 'Instalado en .agents\wiki-engine\'))
+    } elseif ((P $eng 'local') -and (P $eng 'localHasRef')) {
+      $results.Add((New-Result 'wiki-engine' $name 'datos' 'OK (vendor)' "engine.json apunta a una fuente de git local con $ref ($repo)"))
+    } elseif (P $eng 'local') {
+      $results.Add((New-Result 'wiki-engine' $name 'datos' 'FALTA' "No está instalado y la fuente local de engine.json ($repo) no tiene $ref" $engRepo $engGlobal $engGet))
+    } else {
+      $results.Add((New-Result 'wiki-engine' $name 'datos' 'FALTA' "No está instalado (se espera '$want') y engine.json apunta a '$repo', que sin internet no se puede clonar" $engRepo $engGlobal $engGet))
+    }
   }
+
+  # --- Dependencias npm ---
+  $offline = P (P $Facts 'npm') 'offline'
+  $globalCache = P (P $Facts 'npm') 'globalCache'
+  foreach ($proj in @(P $Facts 'npmProjects')) {
+    if ($null -eq $proj) { continue }
+    $label = P $proj 'label'; $rel = P $proj 'rel'
+    $id = 'npm-root'; if ($label -ne 'raíz') { $id = "npm-$label" }
+    $total = 0; $installed = 0; $inVendor = 0; $inGlobal = 0; $absent = @(); $plat = @()
+    foreach ($p in @(P $proj 'packages')) {
+      if ($null -eq $p) { continue }
+      if (-not (Test-Platform (P $p 'os') $os) -or -not (Test-Platform (P $p 'cpu') $cpu)) { continue }
+      $total++
+      $nv = "$(P $p 'name')@$(P $p 'version')"
+      if (@(P $p 'os' | Where-Object { $_ }).Count -gt 0 -or @(P $p 'cpu' | Where-Object { $_ }).Count -gt 0) { $plat += $nv }
+      if (P $p 'installed') { $installed++ }
+      elseif (P $p 'inVendorCache') { $inVendor++ }
+      elseif (P $p 'inGlobalCache') { $inGlobal++ }
+      else { $absent += $nv }
+    }
+    $platTxt = ''; if ($plat.Count -gt 0) { $platTxt = " Con binario propio de ${os}-${cpu}: " + ($plat -join ', ') + '.' }
+    $repoTxt = "Una caché de npm ($v\npm-cache\_cacache) con los $total paquetes de $rel\package-lock.json para ${os}-${cpu}, e instalar con 'npm install --offline --cache <ruta absoluta de $v\npm-cache>'. O versionar $rel\node_modules\ instalado en Windows (no sirve el de Linux).$platTxt"
+    $globalTxt = "Llenar la caché global de npm ($globalCache) con esos paquetes y configurar npm para trabajar sin red ('npm config set offline true'): el 'npm install' del arranque los toma de ahí sin cambiar el repo."
+    $getTxt = "En una máquina Windows $cpu con internet: copiar $rel\package.json y package-lock.json a una carpeta vacía, ejecutar 'npm ci --cache <carpeta>\npm-cache --no-audit --no-fund' (en Windows, para que baje los binarios de win32) y copiar <carpeta>\npm-cache."
+    $detail = "$total paquetes para ${os}-${cpu}: $installed instalados en $rel\node_modules, $inVendor en la caché del vendor, $inGlobal en la caché global."
+    $name = "Dependencias npm ($label)"
+    if ($absent.Count -gt 0) {
+      $show = ($absent | Select-Object -First 8) -join ', '
+      if ($absent.Count -gt 8) { $show += ", ... (+$($absent.Count - 8))" }
+      $results.Add((New-Result $id $name 'datos' 'FALTA' "$detail Faltan $($absent.Count): $show" $repoTxt $globalTxt $getTxt))
+    } elseif ($inGlobal -gt 0 -and $offline -ne 'true') {
+      $results.Add((New-Result $id $name 'datos' 'AVISO' "$detail Los que no están instalados solo están en la caché global, y npm no está configurado para trabajar sin red (offline = $offline): el arranque intentaría usar la red." $repoTxt $globalTxt $getTxt))
+    } elseif ($inVendor -gt 0) {
+      $results.Add((New-Result $id $name 'datos' 'OK (vendor)' $detail))
+    } else {
+      $results.Add((New-Result $id $name 'datos' 'OK' $detail))
+    }
+  }
+
+  # --- Agente: solo OpenCode 2 en Windows ---
+  $agents = P $Facts 'agents'
+  $oc = $null; $others = @()
+  foreach ($a in @(P $agents 'opencode')) {
+    if ($null -eq $a) { continue }
+    $ver = Get-Version (P $a 'version')
+    if ($ver -and $ver.Major -ge 2) { $oc = $a; $ocVer = $ver; break }
+    $others += "OpenCode $(P $a 'version') ($(P $a 'path')): el proyecto solo admite OpenCode 2 o superior"
+  }
+  foreach ($a in @(P $agents 'claude')) {
+    if ($null -eq $a) { continue }
+    $others += "Claude Code $(P $a 'version') ($(P $a 'path')): no se soporta en Windows"
+  }
+  $note = 'En Windows solo se soporta OpenCode 2 o superior. Necesita llegar al proveedor del modelo; sin internet, solo con un modelo local (p. ej. un servidor compatible con OpenAI en la LAN).'
+  if ($oc) { $results.Add((New-Result 'agent' 'Agente' 'binario' 'OK' "OpenCode $ocVer ($(P $oc 'path')). $note")) }
+  else {
+    $det = $note
+    if ($others.Count -gt 0) { $det += ' Encontrado: ' + ($others -join '; ') + '.' }
+    $results.Add((New-Result 'agent' 'Agente' 'binario' 'FALTA' $det "opencode.exe (binario único, versión 2.x) en $v\opencode\." `
+          'Copiar opencode.exe (versión 2.x) a una carpeta del PATH.' "https://github.com/sst/opencode/releases -> opencode-windows-$cpu.zip"))
+  }
+
+  return $results
 }
 
-Test-NpmProject $ProjectDir 'raíz'
-$at = Join-Path $ProjectDir 'acceptance-tests'
-if (Test-Path (Join-Path $at 'package.json')) { Test-NpmProject $at 'acceptance-tests' }
+# =============================================================================
+# Programa
+# =============================================================================
 
-# --- 7. Agente (Claude Code u OpenCode 2) ------------------------------------
+if ($MyInvocation.InvocationName -eq '.') { return }
 
-$claude = @(Find-Exe 'claude'); $opencode = @(Find-Exe 'opencode')
-$vendorOc = Join-Path $VendorDir 'opencode\opencode.exe'
-if (Test-Path $vendorOc) { $opencode = @($vendorOc) + $opencode }
-$agents = @()
-if ($claude.Count -gt 0) { $v = Invoke-Quiet $claude[0] @('--version'); $agents += "Claude Code $v ($($claude[0]))" }
-if ($opencode.Count -gt 0) {
-  $v = Invoke-Quiet $opencode[0] @('--version'); $agents += "OpenCode $v ($($opencode[0]))"
-  $ov = Get-Version $v
-  if ($ov -and $ov.Major -lt 2) { Add-Result 'OpenCode' 'binario' 'AVISO' "OpenCode ${v}: el proyecto solo admite OpenCode 2 o superior" }
-}
-$agNote = 'Ojo: cualquiera de los dos necesita llegar al proveedor del modelo; sin internet solo es viable OpenCode con un modelo local (p. ej. un servidor compatible con OpenAI en la LAN).'
-if ($agents) { Add-Result 'Agente' 'binario' 'OK' (($agents -join '; ') + '. ' + $agNote) }
-else {
-  Add-Result 'Agente' 'binario' 'FALTA' "No hay ni Claude Code ni OpenCode en el PATH. $agNote" `
-    "opencode.exe (binario único, versión 2.x) en $VendorRel\opencode\." `
-    "Claude Code: instalador nativo o 'npm install -g @anthropic-ai/claude-code' con la caché llena. OpenCode: copiar opencode.exe a una carpeta del PATH." `
-    "Claude Code: https://claude.com/claude-code. OpenCode: https://github.com/sst/opencode/releases (opencode-windows-$NodeCpu.zip)."
+if (-not $ProjectDir) { $ProjectDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path }
+$ProjectDir = (Resolve-Path $ProjectDir).Path
+if (-not $VendorDir) { $VendorDir = Join-Path $ProjectDir 'vendor\windows' }
+$VendorRel = $VendorDir
+if ($VendorDir.StartsWith($ProjectDir, [StringComparison]::OrdinalIgnoreCase)) {
+  $VendorRel = $VendorDir.Substring($ProjectDir.Length).TrimStart('\', '/')
 }
 
-# --- Informe ----------------------------------------------------------------
-
+if ($FactsFile) {
+  $facts = [IO.File]::ReadAllText((Resolve-Path $FactsFile).Path) | ConvertFrom-Json
+} else {
+  # Los hechos pasan por JSON, para que la evaluación vea siempre la misma forma que con -FactsFile
+  $facts = (Get-ReadinessFacts $ProjectDir $VendorDir $VendorRel | ConvertTo-Json -Depth 8) | ConvertFrom-Json
+}
+$Results = Get-ReadinessReport $facts
 $missing = @($Results | Where-Object { $_.Estado -eq 'FALTA' })
+
 if ($Json) {
-  [pscustomobject]@{
+  [pscustomobject][ordered]@{
     proyecto   = $ProjectDir
     vendor     = $VendorDir
-    plataforma = "$NodeOs-$NodeCpu"
-    resultados = $Results
+    plataforma = "$(P (P $facts 'platform') 'os')-$(P (P $facts 'platform') 'cpu')"
+    resultados = @($Results)
   } | ConvertTo-Json -Depth 4
 } else {
   Write-Host ''
-  Write-Host "Instalación offline en Windows: $ProjectDir ($NodeOs-$NodeCpu)" -ForegroundColor Cyan
+  Write-Host "Diagnóstico de Windows: $ProjectDir ($(P (P $facts 'platform') 'os')-$(P (P $facts 'platform') 'cpu'))" -ForegroundColor Cyan
   Write-Host "Vendor del repo: $VendorDir"
   Write-Host ''
   $Results | Format-Table Estado, Tipo, Componente, Detalle -AutoSize -Wrap | Out-String -Width 220 | Write-Host
-  $todo = @($Results | Where-Object { $_.Estado -in 'FALTA', 'AVISO' })
+  $todo = @($Results | Where-Object { $_.Estado -eq 'FALTA' -or $_.Estado -eq 'AVISO' })
   if ($todo.Count -gt 0) {
     Write-Host 'Qué hacer con lo que falta o tiene avisos' -ForegroundColor Cyan
     foreach ($r in $todo) {
@@ -497,13 +529,13 @@ if ($Json) {
       Write-Host ''
       Write-Host "[$($r.Estado)] $($r.Componente) ($($r.Tipo))" -ForegroundColor $color
       Write-Host "  Detalle : $($r.Detalle)"
-      if ($r.Repo)    { Write-Host "  Repo    : $($r.Repo)" }
-      if ($r.Global)  { Write-Host "  Global  : $($r.Global)" } elseif ($r.Estado -eq 'FALTA') { Write-Host '  Global  : no hay alternativa global' }
+      if ($r.Repo) { Write-Host "  Repo    : $($r.Repo)" }
+      if ($r.Global) { Write-Host "  Global  : $($r.Global)" } else { Write-Host '  Global  : no hay alternativa global' }
       if ($r.Obtener) { Write-Host "  Obtener : $($r.Obtener)" }
     }
     Write-Host ''
   }
-  if ($missing.Count -eq 0) { Write-Host 'No falta nada para una instalación completa sin internet.' -ForegroundColor Green }
+  if ($missing.Count -eq 0) { Write-Host 'No falta nada.' -ForegroundColor Green }
   else { Write-Host "Faltan $($missing.Count) componentes." -ForegroundColor Red }
 }
 
