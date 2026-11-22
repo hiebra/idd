@@ -14,5 +14,5 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 3. Documentación y cierre
 
-- [ ] 3.1 README: actualizar la regla de comentarios (citas, frase, `p`/`r`) → commit
+- [x] 3.1 README: actualizar la regla de comentarios (citas, frase, `p`/`r`) → commit
 - [ ] 3.2 Ejecutar la suite entera (`npm test`), `npm run test:core` y `npm run lint:specs`
