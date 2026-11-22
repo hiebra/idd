@@ -66,12 +66,14 @@ export default {
     const unavailable = (error) => /rpc\.unavailable|RPC is unavailable/i.test(`${error?.type ?? ""} ${error?.message ?? ""}`);
     try {
       const client = context.client.rpc(RPC);
+      // Sin sesión abierta, una llamada sin ubicación no llega a la parte de servidor del proyecto
+      const at = context.location?.directory ? { location: { directory: context.location.directory } } : undefined;
       // Primero escuchar y después pedir los pendientes, para no perder ninguno
       client.events.on("warning", (event) => show(event.data), { signal: subscriptions.signal });
       const fetchPending = async (attempt = 0) => {
         if (subscriptions.signal.aborted) return;
         try {
-          const pending = await client.warnings({});
+          const pending = await client.warnings({}, at);
           for (const batch of pending ?? []) show(batch);
         } catch (error) {
           if (unavailable(error) && attempt < RETRY_MS.length) {

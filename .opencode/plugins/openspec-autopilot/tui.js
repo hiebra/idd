@@ -3,9 +3,11 @@
 // lógica vive en server.js, que la TUI consulta por el RPC del plugin.
 //
 // - Se presenta con hello({ instance, pid }): el PID dice al servidor si es un
-//   arranque (otro proceso) o una recarga en caliente (el mismo). Si el
-//   servidor todavía no ha registrado su RPC (rpc.unavailable), lo reintenta
-//   sin escribir nada; el servidor la vuelve a pedir con hello-request.
+//   arranque (otro proceso) o una recarga en caliente (el mismo). Cada
+//   llamada lleva la ubicación del proyecto: sin ella, en la pantalla de
+//   inicio no llega a la parte de servidor (rpc.unavailable). Si aun así el
+//   servidor todavía no ha registrado su RPC, lo reintenta sin escribir nada;
+//   el servidor la vuelve a pedir con hello-request.
 // - Cada 300 ms consulta la pantalla (ui.router.current(), que no tiene
 //   evento) y, al cambiar o al recuperar el foco del terminal
 //   (renderer "focus"), pregunta al servidor qué hacer (screen).
@@ -51,6 +53,9 @@ export default {
 
     try {
       const client = context.client.rpc(RPC);
+      // Sin sesión abierta (la pantalla de inicio), una llamada sin ubicación
+      // no llega a la parte de servidor del proyecto: rpc.unavailable (D14)
+      const at = context.location?.directory ? { location: { directory: context.location.directory } } : undefined;
       let presented = false;
       let lastKey = null;
       let modalOpen = false;
@@ -110,7 +115,7 @@ export default {
         if (reason === 'focus') shownKey = null;
         let d;
         try {
-          d = await client.screen({ instance, route, reason });
+          d = await client.screen({ instance, route, reason }, at);
         } catch (error) {
           if (!rpcUnavailable(error)) log('screen:', error);
           return;
@@ -142,7 +147,7 @@ export default {
       const hello = async (attempt = 0) => {
         if (signal.aborted) return;
         try {
-          await client.hello({ instance, pid: process.pid, client: 'tui' });
+          await client.hello({ instance, pid: process.pid, client: 'tui' }, at);
           presented = true;
         } catch (error) {
           if (rpcUnavailable(error) && attempt < HELLO_RETRY_MS.length) {
@@ -170,7 +175,7 @@ export default {
           log(`${request.op}:`, e);
         }
         try {
-          await client.reply({ id: request.id, instance, value, error });
+          await client.reply({ id: request.id, instance, value, error }, at);
         } catch (e) {
           log('reply:', e);
         }
