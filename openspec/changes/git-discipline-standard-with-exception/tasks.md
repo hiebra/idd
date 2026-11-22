@@ -30,7 +30,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
 ## 4. La skill, las indicaciones de archivado y la documentación (D3, D4): rojo → implementar → verde → commit
 
-- [ ] 4.1 Reescribir `.agents/skills/openspec-git-discipline/SKILL.md` según D3:
+- [x] 4.1 Reescribir `.agents/skills/openspec-git-discipline/SKILL.md` según D3:
   - la estándar del origen (blob `835e065`) traducida, con su estructura: regla central, puertas, comprobaciones obligatorias y señales de alarma;
   - las comprobaciones hechas con `branch-change.mjs check`;
   - la excepción en una sección propia, con su causa y la clave;
@@ -38,9 +38,9 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
   - los identificadores `lifecycle:<id>`.
 
   Escenarios `La skill recomienda la fusión con --no-ff en la excepción` (pasos `indica que, con la excepción, la rama llega a la rama de origen en una fusión con \`--no-ff\`` e `indica que el squash también se admite`) y `Sin la excepción, la skill no deja al modelo crear ramas por su cuenta` (pasos `indica que solo con la excepción el modelo crea o cambia de rama con \`branch-change.mjs\`` e `indica que sin la excepción solo lo hace si el usuario lo pide`). Rojo antes de reescribirla → verde → commit
-- [ ] 4.2 `La forma de una rama se presenta como excepción justificada`: pasos `los dos dicen que la regla es archivar en la rama de origen tras fusionar la implementación`, `los dos presentan la forma de una rama como excepción, con su causa y la clave \`x-main-protected\`` y `ninguno recomienda la excepción sobre la regla`. Reescribir el primer punto de las indicaciones de archivado de `openspec/config.yaml` (zona de specs, commit aparte) → verde → commit
-- [ ] 4.3 Revisar los pasos vigentes que leen la skill o `config.yaml` y fijaban la redacción de ADR-0015 («forma recomendada», «forma canónica»). Ajustarlos a la spec, sin debilitarla, y quitar las definiciones de pasos que solo usaban los requisitos eliminados → verde la suite de `openspec-change-lifecycle` → commit
-- [ ] 4.4 README: el ciclo como la regla estándar con su excepción, la clave `x-main-protected`, que el autopilot necesita la excepción, y ADR-0020 en lugar de ADR-0015 y ADR-0013 donde describa el ciclo → commit
+- [x] 4.2 `La forma de una rama se presenta como excepción justificada`: pasos `los dos dicen que la regla es archivar en la rama de origen tras fusionar la implementación`, `los dos presentan la forma de una rama como excepción, con su causa y la clave \`x-main-protected\`` y `ninguno recomienda la excepción sobre la regla`. Reescribir el primer punto de las indicaciones de archivado de `openspec/config.yaml` (zona de specs, commit aparte) → verde → commit
+- [x] 4.3 Revisar los pasos vigentes que leen la skill o `config.yaml` y fijaban la redacción de ADR-0015 («forma recomendada», «forma canónica»). Ajustarlos a la spec, sin debilitarla, y quitar las definiciones de pasos que solo usaban los requisitos eliminados → verde la suite de `openspec-change-lifecycle` → commit
+- [x] 4.4 README: el ciclo como la regla estándar con su excepción, la clave `x-main-protected`, que el autopilot necesita la excepción, y ADR-0020 en lugar de ADR-0015 y ADR-0013 donde describa el ciclo → commit
 
 ## 5. La clave en este repositorio y cierre
 
