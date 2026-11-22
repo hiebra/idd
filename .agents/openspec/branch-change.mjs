@@ -355,13 +355,13 @@ export function check(dir, gate, name, { env = process.env } = {}) {
     if (!state.branch) return deny(`El clon está en un HEAD separado: ${newBranch}.`);
     const where = `la rama permanente '${state.branch}'`;
     if (gate === 'propose') {
-      return allow(`Se puede proponer en ${where} (forma canónica), pero la forma recomendada es proponer en una rama temporal: ${newBranch}.`);
+      return allow(`Se puede proponer en ${where}.`);
     }
     if (!activeHere(dir, name)) {
       if (gate === 'archive') {
         return deny(`'${name}' no está en curso en ${where}: el archive se hace donde está en curso, en la rama de origen después de fusionar la implementación${state.protected ? ', o en su rama temporal (excepción: x-main-protected)' : ''}.`);
       }
-      return deny(`'${name}' no está en curso en ${where}: el apply se hace en la rama temporal del change; cambia a ella, o ${newBranch} si su propuesta ya está en '${state.origin}'.`);
+      return deny(`'${name}' no está en curso en ${where}: aplícalo donde esté en curso, con su propuesta ya en la rama de origen${state.protected ? ', o en su rama temporal (excepción: x-main-protected)' : ''}.`);
     }
     if (gate === 'apply') {
       return allow(`Se puede aplicar '${name}' en ${where}.`);
@@ -371,6 +371,14 @@ export function check(dir, gate, name, { env = process.env } = {}) {
     return allow(`Se puede archivar '${name}' en ${where}.`);
   }
 
+  // Proponer en una rama temporal sin la excepción: la regla lo permite, con el
+  // aviso de la skill estándar ("Prefer main; if not, warn and ask")
+  if (gate === 'propose' && !state.protected) {
+    return allow(
+      `Se puede proponer en la rama temporal '${state.branch}'.`,
+      `La regla prefiere proponer en la rama de origen '${state.origin}': pregunta al usuario si sigue aquí a propósito. La propuesta tendrá que llegar a '${state.origin}' antes del apply.`
+    );
+  }
   if (state.kind === 'unknown') {
     return deny(`No se puede leer el change de la rama: ${state.warnings.at(-1)}. Trae la rama de origen ('git fetch origin ${state.origin}') y vuelve a ejecutar la puerta.`);
   }

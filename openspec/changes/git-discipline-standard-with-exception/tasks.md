@@ -19,13 +19,13 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 - [x] 3.3 `La regla estándar del ciclo`, archive: el Scenario Outline `El archive en la rama de origen, con tasks hechas o sin hacer` y `El archive no se hace en una rama permanente sin el change en curso`, con el paso `se indica que el change no está en curso en la rama de origen`. Rojo: la puerta rechaza las tasks sin hacer. Quitar la comprobación de tasks y reescribir el mensaje del change que no está en curso → verde → commit
 - [x] 3.4 `La excepción: el change entero en una rama temporal`, archive: el Scenario Outline `El archive en la rama temporal`, con el paso `la puerta no deja seguir e indica archivar en la rama de origen tras fusionar la implementación`, y `Con la excepción, el archive y el wiki van en la rama temporal`. Rojo: sin la clave, la puerta deja seguir. Implementar el archive de la tabla de D2 → verde → commit
 - [x] 3.5 `Números de ADR sin choques entre ramas`: comprobar que el Scenario Outline `El archive comprueba los números de los ADRs nuevos`, ya con `x-main-protected: true`, sigue en verde, y que la comprobación de ADRs también se hace en el archive en la rama de origen → commit si hay cambios
-- [ ] 3.6 `Las puertas admiten la regla sin avisos y la excepción solo con su causa`. Pasos:
+- [x] 3.6 `Las puertas admiten la regla sin avisos y la excepción solo con su causa`. Pasos:
   - `Proponer en la rama de origen, sin avisos`, con `la puerta no avisa de nada`;
   - el Scenario Outline `Proponer en una rama temporal`, con `se avisa de que la regla prefiere proponer en la rama de origen`;
   - el Scenario Outline `Una rama temporal con varios changes`, con `la puerta no deja seguir y su mensaje dice cómo dejar un solo change en la rama`.
 
   Rojo. Implementar `check propose` de la tabla de D2 y que, sin veto, el estado `several` no impida el propose ni el apply → verde → commit
-- [ ] 3.7 Comprobar que los escenarios vigentes del autopilot siguen en verde. Donde den por hecha la forma de una rama, declarar `x-main-protected: true` en su `Given`, sin debilitarlos (D5) → commit
+- [x] 3.7 Comprobar que los escenarios vigentes del autopilot siguen en verde. Donde den por hecha la forma de una rama, declarar `x-main-protected: true` en su `Given`, sin debilitarlos (D5) → commit
 - [ ] 3.8 Documentar en la cabecera de `branch-change.mjs` la clave `x-main-protected`, la tabla de las puertas y el campo `protected` → commit
 
 ## 4. La skill, las indicaciones de archivado y la documentación (D3, D4): rojo → implementar → verde → commit

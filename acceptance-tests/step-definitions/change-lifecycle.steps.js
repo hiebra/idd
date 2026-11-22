@@ -450,6 +450,17 @@ Then('la puerta no deja seguir e indica archivar en la rama de origen tras fusio
   assert.match(this.gate.message, /archiv\w* en la rama de origen[^.]*fusionar la implementación/, JSON.stringify(this.gate));
 });
 
+Then('se avisa de que la regla prefiere proponer en la rama de origen', function () {
+  assert.match(this.gate.warning ?? '', /regla prefiere proponer en la rama de origen/, JSON.stringify(this.gate));
+});
+
+Then('la puerta no deja seguir y su mensaje dice cómo dejar un solo change en la rama', function () {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /tiene que quedar uno solo/, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /lleva .* a su propia rama temporal/, JSON.stringify(this.gate));
+});
+
 Then('la puerta deja seguir', function () {
   assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
   assert.equal(this.gate.exitCode, 0, JSON.stringify(this.gate));
