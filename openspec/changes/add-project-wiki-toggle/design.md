@@ -125,6 +125,17 @@ Consecuencia para este mismo change: si al archivarlo el wiki está apagado, sus
 
 Alternativa descartada: mantenerlo encendido aquí y que la release del `.bat`, o la creación de un proyecto, lo deje en `false`. Obliga a un paso más, y la plantilla de este repositorio no sería la misma que se distribuye.
 
+### D11. `openspec/config.yaml` es neutro para las zonas de `spec-as-source`
+
+`/toggle-wiki` cambia `.agents/wiki/engine.json`, de la zona de código, y `openspec/config.yaml`, que hoy es de la zona de specs. `check commit` rechazaría ese commit. `zoneOf` en `branch-change.mjs` pasa a tratar `openspec/config.yaml` como neutro, igual que los `tasks.md`. Las skills `spec-as-source` y `openspec-git-discipline` lo dicen igual.
+
+La regla de las zonas existe para que una spec y el código que la cumple no entren juntos. `config.yaml` no es una spec: es la configuración de OpenSpec.
+
+Alternativas descartadas:
+
+- **Dos commits, uno por zona.** Encender o apagar el wiki dejaría de ser un único commit, y entre los dos el proyecto quedaría a medias.
+- **Una excepción en `check commit` solo para el commit de `/toggle-wiki`.** Mete en la puerta una regla a medida de un comando.
+
 ## Risks / Trade-offs
 
 - [El modo auto bloquea `npm install @opencode/cli` en la nube, como ya pasó] → La tarea del banco empieza pidiendo al usuario que apruebe la instalación, o añadiendo antes reglas `allow` estrechas para ese paquete. Si no se consigue, las pruebas con OpenCode real se hacen fuera de la nube y el change no se archiva sin ellas.

@@ -97,3 +97,25 @@ When se lee la instrucción del paso
 Then la instrucción no pide al usuario ningún commit
 And la instrucción dice que el modelo no haga commits ni pase nada al stage
 ```
+
+### Requirement: Commits provisionales de una sola zona
+En una rama temporal DEBEN admitirse commits provisionales, que guardan trabajo a medias sin esperar a un momento de commit del ciclo. Ningún commit, provisional o no, DEBE mezclar la zona de specs (`openspec/`, salvo los `tasks.md` y `openspec/config.yaml`) con la zona de código (todo lo demás). Los `tasks.md` y `openspec/config.yaml` son neutros: pueden ir en un commit de cualquiera de las dos zonas. `openspec/config.yaml` es neutro porque es la configuración de OpenSpec, no una spec, y `/toggle-wiki` lo cambia junto con archivos de la zona de código.
+
+#### Scenario Outline: La puerta check commit comprueba las zonas
+
+```gherkin
+Given un contenedor efímero con `claude/exportar` guardada como rama de la sesión
+And el clon está en la rama temporal `claude/exportar`
+And hay cambios pendientes en <rutas>
+When se ejecuta la puerta `check commit`
+Then la puerta <resultado>
+
+Examples:
+  | rutas                                                            | resultado      |
+  | `openspec/changes/exportar-datos/design.md`                      | deja seguir    |
+  | `src/exportar.js`                                                | deja seguir    |
+  | `src/exportar.js` y `openspec/changes/exportar-datos/tasks.md`   | deja seguir    |
+  | `src/exportar.js` y `openspec/changes/exportar-datos/design.md`  | no deja seguir |
+  | `.agents/wiki/engine.json` y `openspec/config.yaml`              | deja seguir    |
+  | `openspec/config.yaml` y `openspec/changes/exportar-datos/design.md` | deja seguir |
+```

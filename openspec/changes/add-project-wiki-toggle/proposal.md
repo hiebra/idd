@@ -34,6 +34,7 @@ Fuera de alcance: el `.bat` y la variante adelgazada en sí, que son del change 
 - Núcleo del arranque (`.agents/hooks/session-bootstrap.sh`) y adaptadores de los dos agentes: leer `enabled` en vez de `PROJECT_WIKI`, y un modo nuevo para `/toggle-wiki`.
 - `.agents/wiki/engine.json` (campo `enabled`), `openspec/config.yaml` (los pasos del wiki entre marcas, quitados por defecto) y un comando nuevo en `.claude/commands/` y en OpenCode, propio del proyecto, no del motor.
 - Plugin `openspec-autopilot` (`lib/next-step.mjs`, `lib/prompts.mjs`) y skill `openspec-git-discipline` (en `.agents/skills/` y su copia en `.claude/skills/`).
+- `openspec/config.yaml` pasa a ser neutro para las zonas de `spec-as-source`, como los `tasks.md`, para que el cambio de `/toggle-wiki` quepa en un solo commit: `zoneOf` en `.agents/openspec/branch-change.mjs` y las skills `spec-as-source` y `openspec-git-discipline`.
 - Suite de aceptación: los escenarios de "el usuario desactiva el wiki" pasan a ser "el proyecto tiene el wiki deshabilitado" y "lo habilita"; `support/machine.js` deja de usar `PROJECT_WIKI`.
 - README: las secciones del wiki y de cómo desactivarlo.
 - ADRs: ADR-0005 decidió el apagado en local con `PROJECT_WIKI=off`, y ADR-0004 da por hecho que el wiki viene encendido; un ADR nuevo los sustituye en esa parte.
