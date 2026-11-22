@@ -15,7 +15,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 ## 2. Zonas: `openspec/config.yaml` neutro (D11)
 
 - [x] 2.1 `openspec-change-lifecycle: La puerta check commit comprueba las zonas`, filas nuevas de `engine.json` con `config.yaml` y de `config.yaml` con un `design.md`. Rojo con el `zoneOf` actual; tratar `openspec/config.yaml` como neutro en `.agents/openspec/branch-change.mjs` → verde → commit
-- [ ] 2.2 Decir lo mismo en las skills `spec-as-source` y `openspec-git-discipline` (en `.agents/skills/`; la copia de `.claude/skills/` es un symlink), con el comentario de copia reescrita a propósito en `spec-as-source`, que viene del origen → commit
+- [x] 2.2 Decir lo mismo en las skills `spec-as-source` y `openspec-git-discipline` (en `.agents/skills/`; la copia de `.claude/skills/` es un symlink), con el comentario de copia reescrita a propósito en `spec-as-source`, que viene del origen → commit
 
 ## 3. Núcleo: el ajuste y el modo `wiki` (D1, D2, D3, D5, D6, D8)
 

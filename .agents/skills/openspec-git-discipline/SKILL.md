@@ -75,7 +75,7 @@ Los momentos de commit del ciclo son:
 - tras el archive, en un commit aparte;
 - tras la resincronización del wiki, en un commit aparte y posterior al del archive.
 
-Un commit, provisional o no, no mezcla la zona de specs (`openspec/`, salvo los `tasks.md`) con la zona de código (todo lo demás). Las fusiones las hace siempre el usuario.
+Un commit, provisional o no, no mezcla la zona de specs (`openspec/`, salvo los `tasks.md` y `openspec/config.yaml`) con la zona de código (todo lo demás). Los `tasks.md` y `openspec/config.yaml` son neutros: pueden ir en un commit de cualquiera de las dos zonas. Las fusiones las hace siempre el usuario.
 
 **Fuera de un contenedor efímero**, nunca hagas commits ni fusiones: los hace siempre el usuario. Las únicas operaciones de ramas que haces son las de `branch-change.mjs` (`start` y `switch`).
 

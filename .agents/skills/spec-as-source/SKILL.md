@@ -5,6 +5,8 @@ description: Use when a user or project explicitly adopts OpenSpec spec-as-sourc
 
 # Spec As Source
 
+<!-- Copia del origen (intent-driven-dev/intent-driven-template) reescrita a propósito en las reglas de zona: aquí `openspec/config.yaml` es neutro, como los `tasks.md` (ADR-0021, D11 de add-project-wiki-toggle). No la sobrescribas al actualizar desde el origen sin revisarlo. -->
+
 ## Overview
 
 Use OpenSpec `spec.md` files as the executable source of truth. When this skill is active, fenced-Gherkin authoring, acceptance-first task ordering, spec-first implementation, and BDD zone isolation are one workflow.
@@ -31,13 +33,13 @@ Once active, the BDD zone rules below are mandatory. Do not activate or disable 
 ## BDD Zone Rules
 
 1. Code is written only for an active change under `openspec/changes/` whose scenarios describe the behavior.
-2. A unit of work edits either the specs zone (`openspec/`) or the code zone (everything else), never both while changes are uncommitted.
+2. A unit of work edits either the specs zone (`openspec/`, except the neutral files of rule 5) or the code zone (everything else), never both while changes are uncommitted.
 3. Before crossing zones, finish and commit or stash the current zone.
 4. Never commit `openspec/` files and code-zone files together.
-5. Any file named `tasks.md` is exempt and may be edited from either zone.
+5. Any file named `tasks.md`, and `openspec/config.yaml`, are neutral: they may be edited and committed from either zone. `openspec/config.yaml` is OpenSpec configuration, not a spec.
 6. Never revert or discard user-owned changes without explicit permission.
 
-Use `git status --porcelain` before editing. Non-`tasks.md` paths under `openspec/` select the specs zone; other changed paths select the code zone.
+Use `git status --porcelain` before editing. Paths under `openspec/` other than `tasks.md` files and `openspec/config.yaml` select the specs zone; other changed paths select the code zone.
 
 ## Workflow
 
