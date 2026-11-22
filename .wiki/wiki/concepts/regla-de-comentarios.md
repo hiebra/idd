@@ -60,7 +60,7 @@ La primera versión (`idd@16e4617`) solo reconocía `'…'` y cerraba con "ya" y
 
 ## ADR-0018: un plugin propio en OpenCode
 
-`idd@1657745:adr/0018-opencode-optional-instructions-own-plugin.md` matiza ADR-0010 sin sustituirlo: en OpenCode, una instrucción opcional puede tener su propio plugin como adaptador, que solo pide sus textos al núcleo y los añade con el hook `context`; la fuente, la activación y la desactivación siguen en el núcleo. `session-bootstrap` solo entrega lo que forma parte del arranque (la guía y el recordatorio del wiki). El plugin no comparte código con otros: copia la llamada al núcleo y `lastUserText`. En Claude Code no cambia nada, así que no es una asimetría de ADR-0006.
+`idd@1657745:adr/0018-opencode-optional-instructions-own-plugin.md` matiza ADR-0010 sin sustituirlo: en OpenCode, una instrucción opcional puede tener su propio plugin como adaptador, que solo pide sus textos al núcleo y los añade con el hook `context`; la fuente, la activación y la desactivación siguen en el núcleo. `session-bootstrap` solo entrega lo que forma parte del arranque (la guía y el recordatorio del wiki). El plugin no comparte código con otros: copia la llamada al núcleo y `lastUserText`. En Claude Code no cambia nada, así que no es una asimetría de ADR-0006 (hoy ADR-0025).
 
 ## Límites
 
