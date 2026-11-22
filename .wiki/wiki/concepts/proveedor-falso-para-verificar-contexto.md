@@ -4,8 +4,9 @@ category: concept
 sources:
   - raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md
   - raw/repos/2026-11-21-idd-1cf0792.md
+  - raw/notes/2026-11-22-ll-modo-auto-instalar-opencode.md
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 verified: 2026-11-21
 tags: [opencode, testing, providers, verification]
 confidence: high
@@ -23,6 +24,7 @@ summary: "Para saber exactamente qué recibe el modelo en OpenCode sin claves de
 2. Un proveedor `@ai-sdk/openai-compatible` con `baseURL: http://127.0.0.1:<puerto>/v1` y una `apiKey` cualquiera, en un `opencode.json` **fuera del repositorio** (el global de la prueba, con `XDG_CONFIG_HOME` aislado).
 3. `opencode run --standalone "<mensaje>"` (con `-c` para seguir la sesión), o la TUI en `tmux` cuando importa que la sesión siga abierta (ver [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md))).
 4. Para probar herramientas, el proveedor puede responder con la llamada que indique el propio mensaje (`@@TOOL <nombre> <json>`), y un plugin sonda puede ejecutar cualquier API del plugin y registrarla ([lección 9](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md)).
+- En una sesión de Claude Code en la nube, el modo auto puede bloquear la instalación de `@opencode/cli` del paso 1 del banco. Hay que aprobarla a mano o permitirla antes con reglas `allow` estrechas, sin comprobar que basten ([lección del 2026-11-22](../../raw/notes/2026-11-22-ll-modo-auto-instalar-opencode.md)).
 
 ## Qué se ve
 
@@ -44,3 +46,4 @@ Comprueba qué recibe el modelo, no qué hace con ello. Para eso hace falta un m
 
 - [Lessons Learned](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lección 4.
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `tasks.md` del change archivado.
+- [Lessons Learned](../../raw/notes/2026-11-22-ll-modo-auto-instalar-opencode.md): el modo auto y la instalación de OpenCode.
