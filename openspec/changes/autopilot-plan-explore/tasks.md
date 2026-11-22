@@ -115,7 +115,8 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 7. Cierre
 
-- [ ] 7.1 Ejecutar la suite completa con los deltas del change, `npm run lint:specs` y `npm run test:core`: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado.
+- [x] 7.1 Ejecutar la suite completa con los deltas del change, `npm run lint:specs` y `npm run test:core`: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado.
+  - Resultado: `npm run lint:specs` sin errores; `npm run test:core`: 125 de 125 en esta ejecución (la carrera de "two sessions taking control at once", anotada en la 5.7, no salió); `npm test`: 215 escenarios y 1129 pasos, todos pasan, sin pendientes ni sin definir, con el informe en `acceptance-tests/reports/cucumber-report.html`.
 - [ ] 7.2 Probar con OpenCode 2.3.2 real, fuera del repositorio, con el banco de las tasks 1.1 a 1.4 (proveedor falso, TUI `--standalone` en un pseudoterminal de Python; si hay que montarlo de nuevo, la lección 9 de `.wiki/raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md` y lo anotado en la sección 1), en una copia de esta rama con una rama temporal y un change con la proposal y las specs. Con el proveedor falso se ven los cuerpos de las peticiones. Comprobar, con su criterio:
   1. **Las sesiones nacen en build**: la del artefacto y la de su revisión (modo normal) llevan `agent: "build"` en la primera petición.
   2. **Tab a plan**: en la sesión operativa del artefacto `design`, Tab a plan y un mensaje. La primera petición lleva un mensaje `user` del plugin que empieza por `[openspec-autopilot] El usuario ha pasado al agente plan` y nombra `openspec-explore`, y no lleva el recordatorio del paso. Si el turno usa una tool, la petición siguiente lleva la misma instrucción completa, aunque el recordatorio de plan de OpenCode quede al final.
@@ -128,6 +129,8 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
   9. **El Tab a mitad de turno** (la Open Question del design): con el turno en build en curso (el proveedor falso tarda), Tab a plan y un mensaje. Anotar qué agente lleva la petición que incluye ese mensaje y qué inyecta el plugin en ella. Si lleva `build`, el design ya lo recoge como riesgo y no hay que cambiar nada; anotarlo igualmente.
 
   Anotar aquí el resultado de cada punto. Si alguno no se cumple, anotar qué se ve en su lugar y no marcar la task.
-- [ ] 7.3 Ejecutar `openspec validate autopilot-plan-explore --type change --strict`: ningún error. Los avisos que queden son los mismos tipos que ya da `openspec validate --specs --strict`.
-- [ ] 7.4 Commit de la zona de código pendiente, sin archivos de `openspec/`.
+- [x] 7.3 Ejecutar `openspec validate autopilot-plan-explore --type change --strict`: ningún error. Los avisos que queden son los mismos tipos que ya da `openspec validate --specs --strict`.
+  - Resultado: ningún error. Los avisos son de los tres tipos que ya da `openspec validate --specs --strict`: requisitos de más de 500 caracteres, "DEBE" en lugar de SHALL/MUST y pasos en bloques `gherkin`.
+- [x] 7.4 Commit de la zona de código pendiente, sin archivos de `openspec/`.
+  - Resultado: no queda nada de la zona de código sin commit; el último commit de código es `11355c8`.
 - [ ] 7.5 Archivar `autopilot-plan-explore` en su rama, en un commit propio sin archivos de la zona de código, y resincronizar el wiki en un commit aparte. Proponer al usuario actualizar `ciclo-de-un-change-y-autopilot.md` (las revisiones en build, la exploración en plan y el aviso), añadir al registro de vigilancia `volver-a-comprobar-apis-de-sesion-al-subir-opencode` las comprobaciones de 1.1 a 1.3, y las lecciones candidatas de la sesión.
