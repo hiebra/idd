@@ -150,3 +150,9 @@
 ## [2026-11-22] ll | "autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md (2 lessons, 1 articles updated)
 
 ## [2026-11-22] ll | "pruebas de autopilot-rama-por-sesion en OpenCode 2.3.2 real" → raw/notes/2026-11-22-ll-pruebas-opencode-real-autopilot.md (7 lessons, 3 articles updated, 1 inventory record updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, autopilot-rama-por-sesion @812f22d): 1 new, 0 skipped, 38 total candidates
+
+## [2026-11-22] refresh | archivado de autopilot-rama-por-sesion (idd@812f22d): 3 artículos actualizados (ciclo-de-un-change-y-autopilot, arranque-de-sesion, suite-de-aceptacion-y-spec-as-source)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
