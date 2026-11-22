@@ -182,3 +182,7 @@
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed; contadores de fuentes corregidos a mano (35)
+
+## [2026-11-22] ll | "allow-user-requested-merges (fusiones con main)" → raw/notes/2026-11-22-ll-allow-user-requested-merges-2.md (2 lessons, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
