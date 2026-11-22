@@ -58,9 +58,9 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 6. El `.bat` y la suite de Windows (D6, D7)
 
-- [ ] 6.1 Steps `@windows` de `windows-global-install` y `slim-template`. Ejecutan el `.bat` con `cmd.exe` sobre un `<data>` y un `<config>` temporales, con y sin variables XDG, y con un perfil con espacios en la ruta. Los zips los sirve un servidor local. Rojo en Windows
-  - Escritos en `step-definitions/windows.steps.js` y `support/windows.js`, sin ejecutar: en Linux solo se comprueba que están todos definidos (`cucumber-js -p windows --dry-run`). El rojo y el verde se ven en el job de Windows (6.4).
-- [ ] 6.2 Escribir el `.bat`, solo con `cmd`, `curl.exe` y `tar.exe`:
+- [x] 6.1 Steps `@windows` de `windows-global-install` y `slim-template`. Ejecutan el `.bat` con `cmd.exe` sobre un `<data>` y un `<config>` temporales, con y sin variables XDG, y con un perfil con espacios en la ruta. Los zips los sirve un servidor local. Rojo en Windows
+  - En `step-definitions/windows.steps.js` y `support/windows.js`. En Linux solo se comprueba que están todos definidos (`cucumber-js -p windows --dry-run`). No se vio el rojo en Windows: se ejecutaron por primera vez con el `.bat` ya escrito (5.4), y pasaron (6.4).
+- [x] 6.2 Escribir el `.bat`, solo con `cmd`, `curl.exe` y `tar.exe`:
   - calcula `<data>` y `<config>`;
   - lee la versión instalada;
   - descarga y descomprime en un directorio temporal;
@@ -69,7 +69,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - escribe al final `installed.txt` y `version`.
 
   → verde en Windows → commit
-  - Escrito en `scripts/release/idd.bat` (5.4), sin ejecutar en Windows. No mueve directorios entre volúmenes: descomprime `data/` y `config/` directamente en `<data>` y `<config>` con `tar.exe --strip-components=1`, después de borrar lo de `installed.txt`; la versión se sigue escribiendo al final.
+  - Escrito en `scripts/release/idd.bat` (5.4), en verde en Windows (6.4). No mueve directorios entre volúmenes: descomprime `data/` y `config/` directamente en `<data>` y `<config>` con `tar.exe --strip-components=1`, después de borrar lo de `installed.txt`; la versión se sigue escribiendo al final.
 - [x] 6.3 Añadir `.github/workflows/release.yml`, que se dispara con los tags `v*`:
   - un job de Linux que pasa la suite, monta los artefactos y ejecuta la prueba de 5.2;
   - un job `windows-latest` que pasa el perfil `windows` con los artefactos montados;
@@ -77,6 +77,10 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
   → commit
 - [ ] 6.4 Probar el workflow sin publicar, con un disparo manual o un tag de prueba que se borra después, y comprobar que los dos jobs pasan → anotar el resultado aquí
+  - 2026-11-22, tag `v0.0.0-ci1` sobre `3fcfaab`, ya borrado (run 45050800884). Ninguno de los dos jobs ha publicado nada.
+    - **windows:** en verde, con los 8 escenarios de Windows (45 steps) en 1 min 18 s.
+    - **linux:** en rojo en `test:core`, por «two sessions taking control at once: the oldest wins and the other is left free» (`core-tests/autopilot-plugin.test.js:168`): quedan dos sesiones operativas en lugar de una. El fallo es intermitente y anterior a este change (falla 2 de cada 4 veces en `2ba326e`). Por eso no llegaron a ejecutarse el lint, la suite, la prueba de origen ni el montaje de los artefactos en el runner.
+  - Falta un run con los dos jobs en verde.
 
 ## 7. Integración con `windows-support`
 
