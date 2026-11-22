@@ -92,5 +92,6 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 ## 11. Cierre
 
 - [x] 11.1 Ejecutar la suite efectiva entera (`npm test` en `acceptance-tests/`): todos los escenarios de este change y de las specs vigentes pasan, sin pasos pendientes ni sin definir de este change, y se genera el informe HTML. Ejecutar también `npm run test:core` y `npm run lint:specs`
-- [ ] 11.2 Ejecutar `openspec validate add-project-wiki-toggle --type change --strict` y revisar que solo quedan los avisos conocidos (SHALL/MUST y WHEN/GIVEN en castellano)
+- [x] 11.2 Ejecutar `openspec validate add-project-wiki-toggle --type change --strict` y revisar que solo quedan los avisos conocidos (SHALL/MUST y WHEN/GIVEN en castellano)
+  - Resultado: además de los avisos conocidos, quedan dos de requisito de más de 500 caracteres ("Wiki deshabilitado por defecto…" y "Habilitar y deshabilitar el wiki con /toggle-wiki"), que el usuario acepta como conocidos
 - [x] 11.3 Recordar al usuario, antes del archive, que con el wiki apagado este change no resincronizará el wiki (D10). Si quiere que quede registrado, que lo encienda antes con `/toggle-wiki`
