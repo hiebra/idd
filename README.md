@@ -24,7 +24,8 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 - bash, para el arranque de sesión.
 - git y acceso a GitHub en la primera sesión de cada clon (y al subir la versión del motor del wiki), para descargar el motor.
 - Python 3, para el helper determinista del motor del wiki (`bin/llm-wiki`: lint, checkpoints, archivos…). Los workflows del wiki no lo necesitan.
-- Claude Code, u OpenCode 2 o superior. OpenCode 1 no está soportado: su API de plugins es otra.
+- Claude Code, u OpenCode 2 o superior. OpenCode 1 no está soportado: su API de plugins es otra. En Windows, solo OpenCode 2 o superior (ver [Windows](#windows)).
+- PowerShell 7 (`pwsh`), solo para la suite de aceptación: con él prueba el diagnóstico de Windows.
 
 ## Qué ocurre al abrir una sesión
 
@@ -249,7 +250,7 @@ Así no se carga la parte de servidor, que es la que orquesta; la de TUI se sigu
 cd acceptance-tests && npm test
 ```
 
-El informe HTML queda en `acceptance-tests/reports/cucumber-report.html`. Los escenarios del arranque de sesión ejecutan `npm install` reales, así que necesitan acceso al registro de npm y tardan más de un minuto. Más detalles en [`acceptance-tests/README.md`](acceptance-tests/README.md).
+El informe HTML queda en `acceptance-tests/reports/cucumber-report.html`. Los escenarios del arranque de sesión ejecutan `npm install` reales, así que necesitan acceso al registro de npm y tardan más de un minuto. Los del diagnóstico de Windows necesitan `pwsh` (PowerShell 7) en la máquina que ejecuta la suite; sin él fallan diciéndolo. Más detalles en [`acceptance-tests/README.md`](acceptance-tests/README.md).
 
 ## Desactivar el arranque en local
 
@@ -275,9 +276,37 @@ En OpenCode, quita el plugin en tu configuración global, `~/.config/opencode/op
 
 Así no se carga la parte de servidor del plugin, que es la que instala y ajusta el `PATH`. La parte de TUI se sigue cargando, pero sin servidor no muestra nada.
 
+## Windows
+
+En Windows solo se soporta OpenCode 2 o superior; Claude Code en Windows no está soportado ([ADR-0017](adr/0017-windows-support-opencode-lf-diagnostic.md)). El arranque de sesión en Windows llega con el change `windows-global-distro`. Hasta entonces, instala las dependencias a mano (ver [Instalación manual](#instalación-manual)).
+
+### Qué le falta a la máquina
+
+El diagnóstico `scripts/windows/Test-OfflineInstall.ps1` dice qué le falta a una máquina Windows para el proyecto, también sin internet: Node.js con npm, git, Python 3, los finales de línea del clon, el motor del wiki, las dependencias npm de la raíz y de `acceptance-tests/` para la plataforma de la máquina, y OpenCode 2. No instala nada, no cambia ningún archivo y no usa la red. Funciona con Windows PowerShell 5.1, el que trae Windows 11, y con PowerShell 7:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\windows\Test-OfflineInstall.ps1
+```
+
+Para cada componente da su estado (`OK`, `OK (vendor)`, `AVISO` o `FALTA`) y, para lo que falta, qué incorporar al repositorio (bajo `vendor\windows\`), la alternativa de instalarlo globalmente, si existe, y cómo conseguirlo en una máquina con internet. Con `-Json` da el mismo informe como JSON. Termina con 1 si falta algo y con 0 si no.
+
+Un `node_modules` instalado en Linux no sirve en Windows: algunos paquetes traen un binario por plataforma (por ejemplo, `@esbuild/win32-x64`), y el diagnóstico los nombra.
+
+### Finales de línea
+
+`.gitattributes` fija LF en todos los archivos de texto, aunque Git for Windows extraiga con `core.autocrlf=true`. Un clon de Windows anterior a `.gitattributes` puede tener archivos con CRLF; el diagnóstico los detecta. Para volver a extraerlos con LF, con el árbol limpio:
+
+```bash
+git rm -r --cached -q .
+```
+
+```bash
+git reset --hard
+```
+
 ## Instalación manual
 
-Donde el arranque de sesión no se ejecuta (por ejemplo, en Windows sin bash, o con OpenCode 1), instala las dependencias de la raíz y de la suite, y usa el CLI del proyecto con npx:
+Donde el arranque de sesión no se ejecuta (por ejemplo, en Windows, o con OpenCode 1), instala las dependencias de la raíz y de la suite, y usa el CLI del proyecto con npx:
 
 ```bash
 npm install

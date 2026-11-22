@@ -52,8 +52,10 @@ Las tasks 2.2 a 2.7 de la primera versión (symlinks nativos, rutas en el format
 
 ## 5. Documentación (zona de código)
 
-- [ ] 5.1 `README.md`: una sección «Windows» que dice que solo se soporta OpenCode 2, que el arranque en Windows llega con `windows-global-distro`, cómo ejecutar el diagnóstico y cómo volver a extraer con LF un clon existente (design, Migration Plan).
-- [ ] 5.2 `acceptance-tests/README.md`: `pwsh` entre los requisitos, y secciones de los escenarios de `windows-readiness` (D4), del de finales de línea en `session-bootstrap` (D2) y del CLI en `openspec-autopilot` (D3).
+- [x] 5.1 `README.md`: una sección «Windows» que dice que solo se soporta OpenCode 2, que el arranque en Windows llega con `windows-global-distro`, cómo ejecutar el diagnóstico y cómo volver a extraer con LF un clon existente (design, Migration Plan).
+  - Resultado: sección «Windows» (soporte solo de OpenCode 2, el diagnóstico y los finales de línea, con los comandos para volver a extraer con LF), y `pwsh` en los requisitos y en «Ejecutar la suite». «Instalación manual» no se sustituye, como decía esta task: mientras no llegue el arranque de `windows-global-distro`, es como se instala en Windows, y la sección «Windows» remite a ella.
+- [x] 5.2 `acceptance-tests/README.md`: `pwsh` entre los requisitos, y secciones de los escenarios de `windows-readiness` (D4), del de finales de línea en `session-bootstrap` (D2) y del CLI en `openspec-autopilot` (D3).
+  - Resultado: `pwsh` en «Ejecutar», y secciones «Escenarios de `windows-readiness`» y «Escenarios de Windows en `session-bootstrap` y `openspec-autopilot`».
 
 ## 6. Verificación en Windows 11 real
 
