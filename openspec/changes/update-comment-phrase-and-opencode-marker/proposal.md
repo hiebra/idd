@@ -3,7 +3,8 @@
 La regla de comentarios (`response-comments`) tiene tres pegas en el uso diario:
 
 - **La frase fija es larga.** "Puedes seguir añadiendo comentarios, pedirme que los procese (p) o que reformule (r) el mensaje en base a ellos" se lee tras cada comentario. Se puede decir lo mismo en menos palabras.
-- **La marca de comentario `'así'` choca con mensajes normales.** Un mensaje que empieza por una cadena entre comillas simples, como `'foo' no aparece en el log`, se toma por un comentario. Doblar las comillas (`''así''`) es tan rápido de teclear y casi nunca aparece en un mensaje normal.
+- **La marca de comentario `'así'` puede activarse por error.** Donde no hay mecanismo de cita, como la TUI de OpenCode, la marca entre comillas es la forma de comentar. Pero un mensaje normal puede empezar por una cadena entre comillas simples, como `'foo' no aparece en el log`, y se tomaría por un comentario. Es muy poco probable que un mensaje normal empiece por una cadena entre comillas simples dobladas (`''así''`), y se teclea igual de rápido.
+- **La cita se mantiene donde la hay**: la app de Claude y la web de OpenCode permiten citar un fragmento, y la cita de Markdown (`>`) sigue siendo una marca de comentario en los dos agentes.
 - **En OpenCode, la regla va metida en el plugin del arranque de sesión** (`session-bootstrap`). Ese plugin es el adaptador del núcleo, y tiene que funcionar siempre (ADR-0002). La regla de comentarios es una ayuda opcional. Si va en su propio plugin, se puede quitar, cambiar o fallar sin tocar el arranque, como pasa con `openspec-autopilot` (ADR-0008).
 
 ## What Changes
@@ -24,8 +25,7 @@ Fuera de alcance: qué se hace al procesar o al reformular, las palabras de cier
 - `response-comments`: los cambios son tres:
   - la marca de comentario entre comillas es una cadena entre comillas simples dobladas (`''así''`) en lugar de entre comillas simples;
   - la frase fija es otra;
-  - en OpenCode, la regla y su recordatorio llegan por un plugin propio, no por el adaptador del arranque de sesión.
-- `session-bootstrap`: el plugin del arranque en OpenCode deja de entregar la regla de comentarios. Solo cambia si su spec la nombra; si no, no hay delta.
+  - en OpenCode, la regla y su recordatorio llegan por un plugin propio, no por el adaptador del arranque de sesión. Que el arranque deje de entregarla se especifica aquí: la spec `session-bootstrap` no nombra la regla de comentarios, así que no tiene delta.
 
 ## Impact
 
