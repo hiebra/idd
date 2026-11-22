@@ -115,7 +115,10 @@ link_engine() {
       warn "ya existe '$link' y no es del motor del wiki; no se sustituye, así que el agente no verá esa parte del motor"
       continue
     fi
-    mkdir -p "$(dirname "$link")" && ln -s "$target" "$link" ||
+    # En Git Bash, ln -s copia salvo que se pidan symlinks nativos; con
+    # nativestrict falla en vez de copiar (design D3 de windows-support).
+    # Fuera de MSYS, la variable no tiene efecto
+    mkdir -p "$(dirname "$link")" && MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict" ln -s "$target" "$link" ||
       warn "no se ha podido crear '$link', que expone el motor del wiki al agente"
   done
 }
