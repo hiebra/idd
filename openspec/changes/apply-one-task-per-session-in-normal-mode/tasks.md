@@ -4,7 +4,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que la secci
 
 ## 1. Núcleo puro (zona de código), con `core-tests`
 
-- [ ] 1.1 `lib/apply-guidance.mjs` (D1, D2, D3): el bloque canónico de las cuatro indicaciones y `adjust(text, mode) -> { text, changed }`, con estos casos:
+- [x] 1.1 `lib/apply-guidance.mjs` (D1, D2, D3): el bloque canónico de las cuatro indicaciones y `adjust(text, mode) -> { text, changed }`, con estos casos:
   - añadir al final de `operations.apply.guidance`, creando `guidance`, `apply` u `operations` si faltan;
   - quitar el bloque y podar las claves vacías;
   - no cambiar nada si el archivo ya está como pide el modo;
