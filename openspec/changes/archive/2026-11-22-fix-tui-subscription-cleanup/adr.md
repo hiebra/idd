@@ -31,4 +31,4 @@ ADR-0001 no está en vigor: lo sustituye ADR-0002.
 
 ## New Durable ADRs Created
 
-- [ADR-0010: Los plugins de OpenCode del proyecto liberan al descargarse lo que registran](../../../adr/0010-opencode-plugins-release-what-they-register.md)
+- [ADR-0011: Los plugins de OpenCode del proyecto liberan al descargarse lo que registran](../../../../adr/0011-opencode-plugins-release-what-they-register.md)
