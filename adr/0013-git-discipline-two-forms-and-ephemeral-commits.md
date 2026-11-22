@@ -1,4 +1,4 @@
-# ADR-0011: Dos formas del ciclo de un change y commits del agente en contenedores efímeros
+# ADR-0013: Dos formas del ciclo de un change y commits del agente en contenedores efímeros
 
 - Status: accepted, supersedes ADR-0007
 - Date: 2026-11-22

@@ -7,7 +7,7 @@ compatibility: Requires git, Node.js and OpenSpec workflow artifacts.
 
 # OpenSpec Git Discipline
 
-<!-- Copia del origen (intent-driven-dev/intent-driven-template) reescrita a propósito con el ciclo de este proyecto: ADR-0011, que sustituye a ADR-0007. No la sobrescribas al actualizar desde el origen sin revisarlo. -->
+<!-- Copia del origen (intent-driven-dev/intent-driven-template) reescrita a propósito con el ciclo de este proyecto: ADR-0013, que sustituye a ADR-0007. No la sobrescribas al actualizar desde el origen sin revisarlo. -->
 
 ## Regla central
 

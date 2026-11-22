@@ -155,7 +155,7 @@ Con `PROJECT_COMMENTS=off`, el agente no recibe ni la regla ni el recordatorio. 
 
 ## El ciclo de un change
 
-Hay dos formas del ciclo, y las dos se admiten ([ADR-0011](adr/0011-git-discipline-two-forms-and-ephemeral-commits.md), que sustituye a ADR-0007):
+Hay dos formas del ciclo, y las dos se admiten ([ADR-0013](adr/0013-git-discipline-two-forms-and-ephemeral-commits.md), que sustituye a ADR-0007):
 
 - **La forma recomendada:** el change se hace entero en **una rama temporal** (propuesta, implementación, archive y resincronización del wiki), se archiva en ella y llega a la rama de origen en **una sola fusión con `--no-ff`**. Con `git log --first-parent`, cada change es una entrada cuyo diff junta el plan, el código, el archive y el wiki, y la rama permanente no recibe commits directos.
 - **La forma canónica de intent-driven:** la propuesta se fusiona con la rama de origen antes del apply, y el change se archiva en la rama de origen después de fusionar la implementación, con todas sus tasks hechas. Conviene para revisar el plan aparte o reservar pronto los números de ADR, a cambio de tres fusiones.
