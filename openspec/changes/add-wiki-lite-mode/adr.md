@@ -5,24 +5,23 @@
 
 ## Review Summary
 
-ADR review completed for this change. Una decisión duradera es nueva: el wiki tiene dos modos y cada usuario elige el suyo en local con `PROJECT_WIKI`. Complementa a ADR-0004 sin sustituirlo, porque «wiki primero» sigue siendo el modo por defecto.
+ADR review completed for this change. Una decisión duradera es nueva: el wiki habilitado tiene dos modos, y los declara el proyecto en `"mode"` de `engine.json`, con `/toggle-wiki lite|full` como forma de cambiarlo. Complementa a ADR-0021 sin sustituirlo, porque «wiki primero» sigue siendo el modo por defecto.
 
-El número es 0026: tras `git fetch`, el más alto de `adr/` en `origin/main`, en las ramas remotas y en esta rama es 0025.
+El número es 0028: tras `git fetch`, el más alto de `adr/` en `origin/main` y en las ramas remotas es 0027 (en `origin/claude/focused-rubin-2q927o`), y en esta rama, 0026 era el borrador anterior de este change, que no había llegado a ninguna otra rama y se ha renumerado.
 
-No requieren ADR, por ser detalles de implementación: la forma de las marcas de bloque (design D2), qué secciones de la guía van en cada bloque (D3) y cómo lo comprueba la suite (D6).
+No requieren ADR, por ser detalles de implementación: la forma de las marcas de bloque (design D2), qué secciones de la guía van en cada bloque (D3), la acción `mode` del núcleo (D5) y cómo lo comprueba la suite (D8).
 
 ## In-Force ADRs Reviewed
 
-- ADR-0004: wiki primero. Lo complementa ADR-0026.
-- ADR-0005: el motor, la guía y el recordatorio llegan por el arranque, con `PROJECT_WIKI=off`. Se mantiene: la misma variable elige el modo.
+- ADR-0021: el ajuste del wiki es del proyecto, versionado en `engine.json`; `/toggle-wiki` es la única forma de cambiarlo; sin preferencia local. Sustituye a ADR-0004, ADR-0005 y ADR-0010. Lo complementa ADR-0028.
 - ADR-0009: consultar y modificar son operaciones distintas. Se mantiene en los dos modos.
-- ADR-0010: toda instrucción llega por el arranque y se desactiva en local. Se mantiene.
 - ADR-0002: núcleo neutral y adaptadores finos. La lógica nueva va en el núcleo y los adaptadores no cambian.
 - ADR-0018: en OpenCode, el wiki sigue en `session-bootstrap`. No cambia.
-- En vigor y sin relación: ADR-0003, ADR-0011, ADR-0012, ADR-0014, ADR-0016, ADR-0017, ADR-0020 y ADR-0025.
-- ADR-0021 a ADR-0024 solo existen en otras ramas remotas: se han mirado para numerar y no acotan este change.
-- Sustituidos, solo como contexto: ADR-0001, ADR-0006, ADR-0007, ADR-0008, ADR-0013 y ADR-0015.
+- ADR-0020: ciclo del change y fusión con la rama de origen. Sin relación con el contenido, solo con cómo se fusiona este change.
+- En vigor y sin relación: ADR-0003, ADR-0011, ADR-0012, ADR-0017, ADR-0019, ADR-0022 y ADR-0025.
+- ADR-0023, ADR-0024 y ADR-0027 solo existen en otras ramas remotas: se han mirado para numerar y no acotan este change.
+- Sustituidos, solo como contexto: ADR-0001, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0010, ADR-0013, ADR-0014, ADR-0015 y ADR-0016.
 
 ## New Durable ADRs Created
 
-- [ADR-0026](../../../adr/0026-wiki-modes-chosen-by-the-user.md): el wiki tiene dos modos, y cada usuario elige el suyo en local.
+- [ADR-0028](../../../adr/0028-wiki-modes-declared-by-the-project.md): el wiki habilitado tiene dos modos, y los declara el proyecto.
