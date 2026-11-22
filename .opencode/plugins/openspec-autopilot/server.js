@@ -129,11 +129,15 @@ function clientBridge(ctx, gen, registry, directory, onFirst) {
 // --- El plugin --------------------------------------------------------------------
 
 async function start(ctx) {
-  const registry = (globalThis[REGISTRY] ??= { gen: 0, pids: {} });
-  registry.pids ??= {};
-  const gen = ++registry.gen;
-  const alive = () => registry.gen === gen;
+  // Un mismo proceso (el servicio de OpenCode) carga el plugin una vez por
+  // proyecto: la generación, que descarta las cargas anteriores tras una
+  // recarga en caliente, y los PID ya presentados van por directorio
   const directory = ctx.location.directory;
+  const registry = (globalThis[REGISTRY] ??= { gens: {}, pids: {} });
+  registry.gens ??= {};
+  registry.pids ??= {};
+  const gen = (registry.gens[directory] = (registry.gens[directory] ?? 0) + 1);
+  const alive = () => registry.gens[directory] === gen;
   const mode = ctx.options?.auto === true ? 'auto' : 'normal';
   const api = ctx.session;
   const chaining = new Set();

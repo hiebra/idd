@@ -326,3 +326,35 @@ test('auto mode: the verify without a verdict does not chain to the archive', as
   assert.deepEqual(ap.metaOf(ap.onlyOwner(w)).step, { kind: 'archive' });
   assert.equal(w.opencode.dialogs.length, 0);
 });
+
+test('one process with two projects: loading the second does not retire the first', async () => {
+  const server = (await import(`${pathToFileURL(path.join(REPO_ROOT, '.opencode', 'plugins', 'openspec-autopilot', 'server.js')).href}?two-projects`)).default;
+  const owner = { id: 'ses_a', title: 'Operativa', time: { created: 1 }, metadata: { openspec: { v: 1, role: 'owner', step: { kind: 'artifact', id: 'design' }, change: 'x', phase: 'running' } } };
+  const context = (directory) => {
+    const hooks = {};
+    return {
+      hooks,
+      ctx: {
+        location: { directory },
+        options: {},
+        rpc: { register: async () => ({ events: { emit: async () => {} } }) },
+        tool: { transform: () => {} },
+        session: { hook: async (name, fn) => (hooks[name] = fn), get: async () => owner },
+      },
+    };
+  };
+  const a = context('/proyecto/a');
+  const b = context('/proyecto/b');
+  await server.setup(a.ctx);
+  await server.setup(b.ctx);
+  const input = { sessionID: 'ses_a', messages: [{ role: 'user', content: [{ type: 'text', text: 'hola' }] }] };
+  await a.hooks.context(input);
+  assert.equal(input.messages.length, 2, 'the first project still answers its hooks');
+  assert.match(input.messages[0].content[0].text, /Recordatorio/);
+  // A reload of the same project does retire its previous load
+  const a2 = context('/proyecto/a');
+  await server.setup(a2.ctx);
+  const again = { sessionID: 'ses_a', messages: [{ role: 'user', content: [{ type: 'text', text: 'hola' }] }] };
+  await a.hooks.context(again);
+  assert.equal(again.messages.length, 1);
+});

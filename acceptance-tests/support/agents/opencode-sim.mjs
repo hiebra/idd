@@ -74,7 +74,7 @@ export class Host {
     // before, so loading the plugin is like a hot reload and not a start
     // (the registry the plugin keeps in globalThis, design D3 of
     // autopilot-sesion-operativa)
-    if (alreadyOpen) globalThis[Symbol.for('openspec-autopilot.registry')] = { gen: 0, pids: { [projectDir]: [String(process.pid)] } };
+    if (alreadyOpen) globalThis[Symbol.for('openspec-autopilot.registry')] = { gens: {}, pids: { [projectDir]: [String(process.pid)] } };
     this.rpcLate = rpcLate;
     this.route = { type: 'home' };
     this.focusListeners = { focus: new Set(), blur: new Set() };
