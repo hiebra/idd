@@ -5,7 +5,7 @@ El ciclo de una rama y una sola fusión (ADR-0007) pasa a ser la forma recomenda
 ## MODIFIED Requirements
 
 ### Requirement: El change de una rama temporal se lee de git
-El change de una rama temporal DEBE ser el que aparece en `openspec/changes/` entre el merge-base de la rama con la rama de origen y el árbol de trabajo, contando los cambios sin commit. Un change está en curso si su directorio es `openspec/changes/<nombre>/`, y archivado si es `openspec/changes/archive/<fecha>-<nombre>/`. Ese estado NO DEBE guardarse en ningún otro sitio del repositorio ni depender del nombre de la rama. Si existen la rama de origen local y `origin/<rama de origen>`, el merge-base DEBE calcularse contra la más avanzada de las dos, cuando una contiene a la otra; si han divergido, contra la local, con un aviso.
+El change de una rama temporal DEBE ser el que aparece en `openspec/changes/` entre el merge-base de la rama con la rama de origen y el árbol de trabajo, contando los cambios sin commit. Un change está en curso si su directorio es `openspec/changes/<nombre>/`, y archivado si es `openspec/changes/archive/<fecha>-<nombre>/`. Ese estado NO DEBE guardarse en ningún otro sitio del repositorio ni depender del nombre de la rama. Si existen la rama de origen local y `origin/<rama de origen>`, el merge-base DEBE calcularse contra la más avanzada de las dos, cuando una contiene a la otra; si han divergido, contra la local, con un aviso. Un change cuyo directorio, en curso o archivado, ya está en la rama de origen con el mismo contenido que en el árbol de trabajo NO DEBE contar como change de la rama temporal, aunque los commits de la rama no hayan llegado a la de origen, como pasa tras un squash.
 
 #### Scenario Outline: Estado de la rama según lo que ha cambiado en openspec/changes/
 
@@ -41,6 +41,16 @@ And la rama de origen local está atrasada y no tiene ese change
 And una rama temporal que sale de la rama de origen remota
 When se consulta el change de la rama temporal
 Then la rama está sin change
+```
+
+#### Scenario: Tras un squash, el change fusionado no cuenta en la rama temporal
+
+```gherkin
+Given una rama temporal con el change archivado `exportar-datos`
+And la rama temporal se ha fusionado con squash con la rama de origen
+And en la rama temporal se crea después el change `importar-datos`
+When se consulta el change de la rama temporal
+Then la rama está con el change en curso `importar-datos`
 ```
 
 #### Scenario: La rama de origen local y la remota han divergido
@@ -264,4 +274,26 @@ Given la skill de disciplina de git y el `openspec/config.yaml` del proyecto
 When se revisa qué dicen sobre dónde se archiva
 Then los dos explican la forma recomendada y la forma canónica, con cuándo conviene cada una
 And ninguno trata la forma canónica como una infracción
+```
+
+### Requirement: Las puertas admiten las dos formas del ciclo
+Ninguna puerta de `branch-change.mjs` DEBE impedir un paso de la forma recomendada ni de la forma canónica. `check propose` DEBE dejar proponer en la rama de origen, avisando de que la forma recomendada es proponer en una rama temporal. Cuando una puerta no deja seguir, su mensaje DEBE decir cómo seguir.
+
+#### Scenario: Proponer en la rama de origen
+
+```gherkin
+Given el clon está en la rama de origen
+And la rama de origen no tiene ningún change en curso
+When se ejecuta la puerta `check propose`
+Then la puerta deja seguir
+And se avisa de que la forma recomendada es proponer en una rama temporal
+```
+
+#### Scenario: El mensaje de una puerta que no deja seguir dice cómo seguir
+
+```gherkin
+Given una rama temporal con los changes en curso `exportar-datos` e `importar-datos`
+When se ejecuta la puerta `check propose`
+Then la puerta no deja seguir
+And su mensaje dice cómo dejar un solo change en la rama
 ```
