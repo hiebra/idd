@@ -57,7 +57,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 - [x] 6.3 `llm-wiki: Habilitar el wiki` y `Deshabilitar el wiki`: pasos `el usuario ejecuta \`/toggle-wiki\` en <agente>` (el modelo con guion de la suite sigue los pasos del comando y ejecuta el modo `wiki`), `el wiki del proyecto queda habilitado|deshabilitado`, `las indicaciones de archivado de OpenSpec incluyen la resincronización del wiki`, `el resto de \`openspec/config.yaml\` no ha cambiado`, `\`.wiki/\` se conserva sin cambios`, `los cambios quedan en el stage de git, sin commit` y `se informa de que el wiki queda …`
 - [x] 6.4 `llm-wiki: La sesión siguiente a habilitar el wiki`: paso `un clon del proyecto en el que se acaba de habilitar el wiki con \`/toggle-wiki\``
 - [x] 6.5 `llm-wiki: El usuario confirma la ingesta inicial` y `El usuario no confirma la ingesta inicial`: pasos `el usuario ejecuta \`/toggle-wiki\``, `confirma|no confirma la ingesta inicial que se le propone`, `\`.wiki/\` tiene como fuentes los productos del proyecto, fijados al commit actual`, `las fuentes no incluyen lo generado ni la copia del motor`, `el wiki del proyecto sigue deshabilitado`, `no existe \`.wiki/\`` y `ningún archivo del proyecto ha cambiado`. La ingesta la hace el modelo con guion a partir de la lista de `wiki status`; la prueba del comportamiento con el motor real va en la sección 10
-- [ ] 6.6 `llm-wiki: La plantilla trae el wiki deshabilitado`: pasos `la plantilla del proyecto`, `se comprueba el ajuste del wiki del proyecto` y `el wiki está deshabilitado`. Rojo hasta la tarea 9.1
+- [x] 6.6 `llm-wiki: La plantilla trae el wiki deshabilitado`: pasos `la plantilla del proyecto`, `se comprueba el ajuste del wiki del proyecto` y `el wiki está deshabilitado`. Rojo hasta la tarea 9.1
 
 ## 7. Autopilot (D5): rojo → implementar → verde → commit
 
@@ -72,7 +72,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 9. Estado de este repositorio (D2, D10)
 
-- [ ] 9.1 Poner `"enabled": false` en `.agents/wiki/engine.json` → verde 6.6 → commit
+- [x] 9.1 Poner `"enabled": false` en `.agents/wiki/engine.json` → verde 6.6 → commit
 - [x] 9.2 En `openspec/config.yaml`, quitar los pasos de resincronización y reescribir la primera entrada de `operations.archive.guidance` sin mencionar el wiki. Comprobar con `wiki on` y `wiki off` que el bloque se inserta y se quita sin tocar lo demás → commit
 
 ## 10. Pruebas con OpenCode real y con Claude Code real (D9)

@@ -1,4 +1,5 @@
 {
+  "enabled": false,
   "repo": "nvk/llm-wiki",
   "ref": "v1.0.0"
 }
