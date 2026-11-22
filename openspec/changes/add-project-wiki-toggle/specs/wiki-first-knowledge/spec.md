@@ -46,7 +46,7 @@ Examples:
 ```
 
 ### Requirement: Resincronizar el wiki al archivar un change
-Con el wiki del proyecto habilitado, las indicaciones de archivado de OpenSpec del proyecto DEBEN incluir la resincronización del wiki del proyecto con lo que tocó el change, mediante las operaciones del motor, escribiendo solo lo que confirme el usuario, dejando el wiki sin errores de lint y en un commit posterior al del archivado. Con el wiki deshabilitado, NO DEBEN mencionar el wiki.
+Con el wiki del proyecto habilitado, las indicaciones de archivado de OpenSpec del proyecto DEBEN incluir la resincronización del wiki del proyecto con lo que tocó el change, mediante las operaciones del motor. Tras fijar las fuentes, DEBEN evaluar sin escribir lo que cambia en el wiki (los artículos cuyas fuentes cambiaron, las lecciones aprendidas y los registros del inventario), presentarlo al usuario y escribir solo lo que confirme, compilando después de registrar las lecciones. DEBEN dejar el wiki sin errores de lint y hacer su commit después del commit del archivado. NO DEBEN incluir la revisión con el librarian, que no revisa el contenido de los artículos. Con el wiki deshabilitado, NO DEBEN mencionar el wiki.
 
 #### Scenario: Las indicaciones de archivado incluyen la resincronización del wiki
 
@@ -55,14 +55,15 @@ Given un proyecto con el wiki habilitado
 And un change del proyecto listo para archivar
 When se consultan las indicaciones de archivado de OpenSpec para ese change
 Then incluyen resincronizar el wiki del proyecto con estos pasos, en este orden:
-  | paso                                                                                 |
-  | fijar como fuentes, en el commit del archivado, el código, specs y ADRs que tocó     |
-  | refrescar los artículos cuyas fuentes cambiaron y compilar las fuentes nuevas        |
-  | revisar con el librarian, sin modificar, lo que quedó obsoleto o contradicho         |
-  | extraer las lecciones aprendidas sin escribir                                        |
-  | presentarlo al usuario y escribir solo lo que confirme                               |
-  | pasar el lint del wiki hasta dejarlo sin errores                                     |
-  | hacer el commit del wiki después del commit del archivado                            |
+  | paso                                                                                          |
+  | fijar como fuentes, en el commit del archivado, el código, specs y ADRs que tocó              |
+  | refrescar sin escribir los artículos que citan lo que tocó el change                          |
+  | extraer las lecciones aprendidas sin escribir                                                 |
+  | revisar sin escribir los registros del inventario que el change completa o deja obsoletos     |
+  | presentarlo al usuario y escribir solo lo que confirme: refresco, lecciones, compile, inventario |
+  | pasar el lint del wiki hasta dejarlo sin errores                                              |
+  | hacer el commit del wiki después del commit del archivado                                     |
+And no incluyen la revisión con el librarian
 ```
 
 #### Scenario: Sin resincronización con el wiki deshabilitado

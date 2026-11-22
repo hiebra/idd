@@ -2,31 +2,44 @@
 
 ## MODIFIED Requirements
 
-### Requirement: Un change, una rama y una sola fusión
-La forma recomendada del ciclo es hacer todo el change (propuesta, implementación, archive y, con el wiki del proyecto habilitado, resincronización del wiki) en una sola rama temporal, archivar en ella y llevarla a la rama de origen en una única fusión con `--no-ff`. La skill de disciplina de git DEBE recomendarla, y el ciclo DEBE poder hacerse entero así. Los workflows de OpenSpec NO DEBEN exigir que la propuesta haya llegado a la rama de origen antes del apply. DEBE admitirse además la forma canónica de intent-driven: fusionar la propuesta con la rama de origen antes del apply, y archivar en la rama de origen después de fusionar la implementación. Un change en curso en la rama de origen DEBE poder archivarse allí solo si todas sus tasks están hechas.
+### Requirement: La excepción: el change entero en una rama temporal
+Solo con `x-main-protected: true`, DEBE admitirse además hacer todo el change (propuesta, implementación, archive y, con el wiki del proyecto habilitado, resincronización del wiki) en una rama temporal: el apply sin que la propuesta haya llegado a la rama de origen, el archive en la rama temporal y una sola fusión con la rama de origen con `--no-ff`. Con la excepción, cada rama temporal DEBE llevar un solo change.
 
-#### Scenario: El apply empieza con la propuesta solo en la rama temporal
+#### Scenario Outline: El apply con la propuesta solo en la rama temporal
 
 ```gherkin
-Given una rama temporal con el change en curso `exportar-datos`
+Given un proyecto <veto>
+And una rama temporal con el change en curso `exportar-datos`
 And la propuesta de `exportar-datos` tiene commit en la rama temporal y no está en la rama de origen
-When se lanza el apply de `exportar-datos`
-Then el apply no se detiene porque la propuesta no esté en la rama de origen
+When se lanza la puerta `check apply` de `exportar-datos`
+Then la puerta <resultado>
+
+Examples:
+  | veto                             | resultado                                                              |
+  | con `x-main-protected: true`     | deja seguir                                                            |
+  | sin la clave `x-main-protected` | no deja seguir e indica que la propuesta llegue antes a la rama de origen |
 ```
 
-#### Scenario: El apply empieza con la propuesta ya fusionada en la rama de origen
+#### Scenario Outline: El archive en la rama temporal
 
 ```gherkin
-Given una rama de origen con el change en curso `exportar-datos` sin tasks hechas
-And una rama temporal que sale de ella después de ese change
-When se lanza el apply de `exportar-datos` en la rama temporal
-Then el apply no se detiene
+Given un proyecto <veto>
+And una rama temporal con el change `exportar-datos` implementado
+And la implementación no está fusionada con la rama de origen
+When se lanza la puerta `check archive` de `exportar-datos`
+Then la puerta <resultado>
+
+Examples:
+  | veto                             | resultado                                                                     |
+  | con `x-main-protected: true`     | deja seguir                                                                   |
+  | sin la clave `x-main-protected` | no deja seguir e indica archivar en la rama de origen tras fusionar la implementación |
 ```
 
-#### Scenario: El archive se hace en la rama temporal
+#### Scenario: Con la excepción, el archive y el wiki van en la rama temporal
 
 ```gherkin
 Given un proyecto con el wiki habilitado
+And un proyecto con `x-main-protected: true`
 And una rama temporal con el change `exportar-datos` implementado
 And la implementación no está fusionada con la rama de origen
 When se lanza el archive de `exportar-datos` en la rama temporal
@@ -34,41 +47,17 @@ Then el change queda archivado en la rama temporal
 And la resincronización del wiki se hace en la rama temporal, después del commit del archive
 ```
 
-#### Scenario: El archive no se hace en una rama permanente
-
-```gherkin
-Given el clon está en la rama de origen
-And la rama de origen no tiene el change en curso `exportar-datos`
-When se lanza el archive de un change
-Then el archive se detiene
-And se indica que el archive se hace en la rama temporal del change
-```
-
-#### Scenario Outline: El archive en la rama de origen
-
-```gherkin
-Given el clon está en la rama de origen
-And la rama de origen tiene el change en curso `exportar-datos` con <tasks>
-When se lanza la puerta `check archive` de `exportar-datos`
-Then la puerta <resultado>
-
-Examples:
-  | tasks                 | resultado                                          |
-  | todas las tasks hechas | deja seguir                                        |
-  | tasks sin hacer        | no deja seguir e indica que faltan tasks por hacer |
-```
-
-#### Scenario: La skill recomienda la fusión con --no-ff
+#### Scenario: La skill recomienda la fusión con --no-ff en la excepción
 
 ```gherkin
 Given la skill de disciplina de git del proyecto
 When se revisa qué indica sobre la fusión de la rama temporal
-Then recomienda la forma de una rama con una fusión con `--no-ff`
-And indica que la forma canónica y el squash también se admiten
+Then indica que, con la excepción, la rama llega a la rama de origen en una fusión con `--no-ff`
+And indica que el squash también se admite
 ```
 
-### Requirement: Los commits y las fusiones los hace el usuario
-Fuera de un contenedor efímero, ningún workflow de OpenSpec ni ningún componente del proyecto DEBE hacer commits ni fusiones por su cuenta: los hace el usuario. El modelo PUEDE crear la rama temporal del change y cambiar entre ramas temporales, solo con `branch-change.mjs`. El plugin `openspec-autopilot` PUEDE pasar al stage de git el producto de un paso, y en sus sesiones el modelo NO DEBE pedir commits, porque el plugin espera el commit del usuario. Fuera del autopilot, cuando un paso del ciclo necesita un commit, el workflow DEBE pedírselo al usuario. En un contenedor efímero, los commits y el push los hace el agente, según el requisito «En un contenedor efímero, el agente hace commit y push en la rama de la sesión». Las fusiones las hace siempre el usuario. En todos los casos, con el wiki del proyecto habilitado, el commit del wiki DEBE ir aparte y después del commit del archive.
+### Requirement: Los commits los hace el usuario y las fusiones, quien el usuario diga
+Fuera de un contenedor efímero, ningún workflow de OpenSpec ni ningún componente del proyecto DEBE hacer commits por su cuenta: los hace el usuario. Solo con la excepción, el modelo PUEDE crear la rama temporal del change y cambiar entre ramas temporales, y solo con `branch-change.mjs` y fuera de un contenedor efímero; sin ella, NO DEBE crear ni cambiar de rama salvo que el usuario lo pida. El plugin `openspec-autopilot` PUEDE pasar al stage de git el producto de un paso, y en sus sesiones el modelo NO DEBE pedir commits, porque el plugin espera el commit del usuario. Fuera del autopilot, cuando un paso del ciclo necesita un commit, el workflow DEBE pedírselo al usuario. En un contenedor efímero, los commits y el push los hace el agente, según el requisito «En un contenedor efímero, el agente hace commit y push en la rama de la sesión». Las fusiones las hace el usuario, salvo las que el usuario pide expresamente al agente en la conversación, según el requisito «El agente fusiona solo cuando el usuario se lo pide». En todos los casos, con el wiki del proyecto habilitado, el commit del wiki DEBE ir aparte y después del commit del archive.
 
 #### Scenario: Un artefacto terminado queda sin commit
 
@@ -98,8 +87,17 @@ Then la instrucción no pide al usuario ningún commit
 And la instrucción dice que el modelo no haga commits ni pase nada al stage
 ```
 
+#### Scenario: Sin la excepción, la skill no deja al modelo crear ramas por su cuenta
+
+```gherkin
+Given la skill de disciplina de git del proyecto
+When se revisa qué indica sobre crear ramas o cambiar de rama
+Then indica que solo con la excepción el modelo crea o cambia de rama con `branch-change.mjs`
+And indica que sin la excepción solo lo hace si el usuario lo pide
+```
+
 ### Requirement: Commits provisionales de una sola zona
-En una rama temporal DEBEN admitirse commits provisionales, que guardan trabajo a medias sin esperar a un momento de commit del ciclo. Ningún commit, provisional o no, DEBE mezclar la zona de specs (`openspec/`, salvo los `tasks.md` y `openspec/config.yaml`) con la zona de código (todo lo demás). Los `tasks.md` y `openspec/config.yaml` son neutros: pueden ir en un commit de cualquiera de las dos zonas. `openspec/config.yaml` es neutro porque es la configuración de OpenSpec, no una spec, y `/toggle-wiki` lo cambia junto con archivos de la zona de código.
+En una rama temporal DEBEN admitirse commits provisionales, que guardan trabajo a medias sin esperar a un momento de commit del ciclo. Ningún commit, provisional o no, DEBE mezclar la zona de specs (`openspec/`, salvo los `tasks.md` y `openspec/config.yaml`) con la zona de código (todo lo demás), salvo un commit de fusión: los commits que trae ya respetaban las zonas. Los `tasks.md` y `openspec/config.yaml` son neutros: pueden ir en un commit de cualquiera de las dos zonas. `openspec/config.yaml` es neutro porque es la configuración de OpenSpec, no una spec, y `/toggle-wiki` lo cambia junto con archivos de la zona de código.
 
 #### Scenario Outline: La puerta check commit comprueba las zonas
 
@@ -118,4 +116,32 @@ Examples:
   | `src/exportar.js` y `openspec/changes/exportar-datos/design.md`  | no deja seguir |
   | `.agents/wiki/engine.json` y `openspec/config.yaml`              | deja seguir    |
   | `openspec/config.yaml` y `openspec/changes/exportar-datos/design.md` | deja seguir |
+```
+
+### Requirement: Tras el archive se propone la fusión con las ramas de x-main
+Tras el commit del archive y, con el wiki del proyecto habilitado, tras el del wiki, el agente DEBE proponer al usuario fusionar la rama del change con cada rama de `x-main`, en el orden de la lista, y el usuario PUEDE saltarse cualquiera o todas. NO DEBE proponer una rama cuyo `origin/<rama>` ya contiene la rama del change (`git merge-base --is-ancestor`). `node .agents/openspec/branch-change.mjs merge-targets [--json]` DEBE dar esas ramas, en ese orden, y para cada una si la rama del change ya contiene `origin/<rama>` o hay que traerla antes. Cada fusión que acepte el usuario sigue la puerta `check merge`: si hay que traer antes `origin/<rama>`, se trae con el ok de la resolución, y en un contenedor efímero la fusión con la rama permanente se hace por PR. La skill de disciplina de git y las indicaciones de archivado de `openspec/config.yaml` DEBEN indicarlo, también con el wiki deshabilitado: en las indicaciones de archivado, la propuesta de fusión DEBE ser una indicación propia, fuera de los pasos del wiki.
+
+#### Scenario Outline: Las ramas que se proponen tras el archive
+
+```gherkin
+Given un proyecto con `x-main: [main, develop]` en `openspec/config.yaml`
+And una rama temporal con el change archivado `exportar-datos`
+And <fusiones>
+When se consultan las ramas a las que proponer la fusión
+Then <propuesta>
+
+Examples:
+  | fusiones                                              | propuesta                              |
+  | ni `origin/main` ni `origin/develop` contienen la rama | se proponen `main` y `develop`, en ese orden |
+  | `origin/main` ya contiene la rama                      | se propone solo `develop`              |
+  | las dos ya contienen la rama                           | no se propone ninguna                  |
+```
+
+#### Scenario: La propuesta de fusión está en la skill y en las indicaciones de archivado
+
+```gherkin
+Given la skill de disciplina de git y el `openspec/config.yaml` del proyecto
+When se revisa qué dicen sobre lo que sigue al archive
+Then los dos indican proponer la fusión con cada rama de `x-main`, en el orden de la lista, con `merge-targets`
+And los dos indican que en un contenedor efímero la fusión con una rama permanente se hace por PR
 ```

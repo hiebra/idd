@@ -27,8 +27,8 @@ Then se crea una sesión nueva con el control para resincronizar el wiki
 
 ## MODIFIED Requirements
 
-### Requirement: Una sesión por paso
-Cada paso del ciclo DEBE hacerse en una sesión nueva que crea el plugin, con el workflow y el agente que elige el plugin para ese paso, y que nace como sesión operativa. Los pasos son: cada artefacto del plan, cada task, el verify, el archive y, con el wiki del proyecto habilitado, la resincronización del wiki, y en el modo normal también las sesiones de revisión y de `openspec-update-change`. El plugin DEBE arrancar cada paso con un mensaje en la sesión, para que la instrucción del paso siga en su historial, y DEBE recordársela al modelo en cada petición de la sesión operativa. El paso DEBE terminar cuando la sesión queda en reposo con producto evaluable, haya llamado o no a `openspec_handoff`. Al terminar su paso, la sesión DEBE pasar el control a la siguiente y quedar archivada. Las sesiones archivadas DEBEN conservar su metadata, de modo que el change guarde qué sesiones ha tenido, qué paso hizo cada una y, en las de revisión, su resultado y sus conclusiones. Cambiar de agente dentro de la sesión operativa NO DEBE hacer que el plugin inyecte nada nuevo.
+### Requirement: Una sesión por paso, con el agente build
+Cada paso del ciclo DEBE hacerse en una sesión nueva que crea el plugin, con el workflow que elige el plugin para ese paso y con el agente build, y que nace como sesión operativa. Los pasos son: cada artefacto del plan, cada task, el verify, el archive y, con el wiki del proyecto habilitado, la resincronización del wiki, y en el modo normal también las sesiones de revisión y de `openspec-update-change`. El plugin DEBE arrancar cada paso con un mensaje en la sesión, para que la instrucción del paso siga en su historial, y DEBE recordársela al modelo en cada petición de la sesión operativa con el agente build. El paso DEBE terminar cuando la sesión queda en reposo con producto evaluable, haya llamado o no a `openspec_handoff`. Al terminar su paso, la sesión DEBE pasar el control a la siguiente y quedar archivada. Las sesiones archivadas DEBEN conservar su metadata, de modo que el change guarde qué sesiones ha tenido, qué paso hizo cada una y, en las de revisión, su resultado y sus conclusiones. Lo que el plugin inyecta cuando el usuario cambia de agente dentro de la sesión operativa lo fija el requisito "El agente plan explora en la sesión operativa".
 
 #### Scenario: El siguiente paso en una sesión nueva
 
@@ -49,12 +49,18 @@ When el usuario escribe un segundo mensaje en la sesión
 Then la petición al modelo incluye el recordatorio del paso
 ```
 
-#### Scenario: Cambiar de agente no inyecta nada
+#### Scenario Outline: Toda sesión del ciclo nace con el agente build
 
 ```gherkin
-Given una sesión operativa que trabaja con el agente build
-When el usuario cambia esa sesión al agente plan y después de vuelta a build
-Then el plugin no añade ningún mensaje ni instrucción a la sesión
+Given una rama temporal con el change en curso `exportar-datos`, en modo normal
+And la sesión operativa está creando <lo que produce>
+When la sesión termina <lo que produce>
+Then se crea la sesión siguiente con el agente build
+
+Examples:
+  | lo que produce         |
+  | el artefacto `design`  |
+  | la task 3              |
 ```
 
 ### Requirement: Lecciones candidatas, registradas en el archive
@@ -76,4 +82,22 @@ Given un change `exportar-datos` de un proyecto con el wiki habilitado, cuyas se
 When se crea la sesión que resincroniza el wiki tras el archive
 Then la sesión recibe las tres lecciones candidatas
 And el wiki solo registra las que el usuario confirma
+```
+
+### Requirement: Árbol limpio al empezar un paso
+Antes de que el modelo empiece un paso, la sesión operativa DEBE comprobar que el árbol de trabajo está limpio (sin cambios sin commit) cuando la sesión se crea al arrancar o al validar, y en cada cambio de zona. Si no lo está, NO DEBE empezar y DEBE esperar a que el usuario haga el commit. Tras una revisión satisfactoria el árbol ya está limpio, y tras una no satisfactoria `openspec-update-change` DEBE empezar con el árbol sucio a propósito, sin esperar. Las zonas son las de `spec-as-source`: la de specs es `openspec/`, salvo los `tasks.md`, y la de código es todo lo demás. Los cambios de zona del ciclo son tres: del plan a las tasks, de las tasks al archive y, con el wiki del proyecto habilitado, del archive a la resincronización del wiki. Tras la resincronización del wiki, el plugin DEBE esperar también el commit del wiki. Con el wiki deshabilitado, los cambios de zona son dos y no hay commit del wiki.
+
+#### Scenario Outline: Comprobación del árbol al empezar un paso
+
+```gherkin
+Given una rama temporal con el change en curso `exportar-datos`, en modo <modo>
+And el árbol de trabajo tiene cambios sin commit
+When una sesión operativa empieza <paso>
+Then <resultado>
+
+Examples:
+  | modo   | paso                                   | resultado                                       |
+  | auto   | el artefacto `design`, tras `specs`    | empieza                                         |
+  | auto   | la task 1, tras el plan                | no empieza y espera a que el usuario haga el commit |
+  | normal | `openspec-update-change`, tras una revisión no satisfactoria | empieza                   |
 ```
