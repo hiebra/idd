@@ -4,6 +4,8 @@ Suite de aceptación del proyecto, montada según la skill `acceptance-test-auth
 
 ## Ejecutar
 
+Además de Node.js con npm, git y bash, la suite necesita PowerShell 7 (`pwsh`) en el `PATH`: con él ejecuta los escenarios del diagnóstico de Windows (`windows-readiness`). Sin `pwsh`, esos escenarios fallan con un mensaje que lo dice; no se saltan. En la nube, el entorno `idd` lo instala con su script de configuración.
+
 Las dependencias las instala el arranque de sesión de Claude Code u OpenCode. Si no se ha ejecutado, instálalas a mano:
 
 ```bash
@@ -132,3 +134,18 @@ Los escenarios del lint de las specs no ejecutan `npm run lint:specs` tal cual, 
 - **Las specs del proyecto**: extrae el `openspec/` del proyecto, con los deltas de los changes activos, en un directorio temporal. Además de que no haya errores, comprueba que gplint dio un informe, porque sin él no ha revisado nada.
 
 `core-tests/spec-lint-script.test.js` comprueba que `lint:specs` sigue siendo `node extract-gherkin.cjs && gplint .extracted`, que `.gplintrc` solo usa `"error"` y `"off"` y que es igual que la configuración fijada de la skill.
+
+## Escenarios de `windows-readiness`
+
+El diagnóstico `scripts/windows/Test-OfflineInstall.ps1` tiene dos partes (design D4 de `windows-support`): `Get-ReadinessFacts` recoge los hechos de la máquina y `Get-ReadinessReport` los convierte en el informe. Con `-FactsFile` evalúa unos hechos dados, sin recogerlos. La suite prueba así toda la evaluación fuera de Windows:
+
+- **Máquinas Windows simuladas** (`support/windows-readiness.js`). Cada escenario parte de los hechos de una máquina con todo lo necesario: OpenCode 2.3.2, Node.js 22.12 con npm, git, Python 3.12 y, instalados, el motor del wiki en la versión fijada y todas las dependencias npm de los lockfiles reales de la raíz y de `acceptance-tests/`. Cada `But` cambia un hecho, por ejemplo, unas dependencias instaladas en Linux (solo las que se instalan en `linux-x64`) o el alias de Python de la Microsoft Store.
+- **Ejecución.** El paso escribe los hechos en un JSON y ejecuta el script con `pwsh -NoProfile -NonInteractive -File … -FactsFile …`, una vez en texto (de la que lee el código de salida) y otra con `-Json` (de la que lee el informe). Las dos tienen que terminar igual. Cada componente tiene un `Id` estable, que es lo que comprueban los pasos.
+- **Sin efectos.** El diagnóstico se ejecuta sobre un clon pequeño con el `package.json` del proyecto. Para comprobar que no cambia nada, se ejecuta además recogiendo los hechos de la máquina que ejecuta la suite.
+
+La recogida de hechos solo se puede probar en Windows: se comprueba a mano en Windows 11 real, con Windows PowerShell 5.1 y con PowerShell 7 (trasladado al change `windows-global-distro`).
+
+## Escenarios de Windows en `session-bootstrap` y `openspec-autopilot`
+
+- **Finales de línea** (`step-definitions/line-endings.steps.js`): la copia del proyecto se vuelve a extraer de su propio repositorio con `core.autocrlf=true`, como Git for Windows, y se abre una sesión de OpenCode. Los scripts del arranque tienen que tener LF y la guía del wiki tiene que llegar sin sus identificadores de sección.
+- **El CLI de OpenSpec en el autopilot**: el proyecto tiene su propio `node_modules/`, con el paquete real de OpenSpec del repositorio, y un `node_modules/.bin/openspec` que no es ejecutable, como en Windows. La sesión operativa tiene que arrancar con el paso de `openspec status`. `core-tests/autopilot-openspec-cli.test.js` prueba además que sin el paquete se usa el `openspec` del `PATH`.

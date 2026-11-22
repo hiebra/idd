@@ -2,10 +2,11 @@
 title: "Una sola copia de las skills, vista por cada agente"
 category: concept
 sources:
+  - raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-f2be907-readme.md
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 verified: 2026-11-21
 tags: [skills, claude-code, opencode, openspec, adr, spec]
 confidence: high
@@ -37,11 +38,12 @@ summary: "Las skills del schema viven solo en .agents/skills/ y los workflows de
 ## Riesgos que recoge el ADR
 
 - La disponibilidad en OpenCode depende de que siga leyendo `.claude/skills` y `.agents/skills` por compatibilidad, y de su precedencia. Esa precedencia la recogen ADR-0003 y `skills.js` como lectura del código de OpenCode; no se ha comprobado en ejecución con un ID repetido (ver [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md))).
-- Los symlinks no funcionan en entornos sin soporte de symlinks, como Windows sin modo desarrollador (ADR-0003).
+- Los symlinks no funcionan en entornos sin soporte de symlinks, como Windows sin modo desarrollador (ADR-0003). Desde `windows-support`, Windows se soporta con OpenCode 2, y el repositorio versiona symlinks en `.claude/skills/`; ese change no lo resuelve, y su diagnóstico ya no comprueba los symlinks ni el Modo de desarrollador: queda para el núcleo del arranque en Windows de `windows-global-distro` (`idd@3d2d8fe:openspec/changes/archive/2026-11-22-windows-support/design.md`; ver [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](../topics/soporte-de-windows.md))).
 - Para subir de versión OpenSpec se regenera solo `.claude/skills/`, y se revisa su diff (`idd@f2be907:README.md`).
 
 ## See Also
 
+- [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](../topics/soporte-de-windows.md))
 - [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](../topics/carga-en-la-misma-sesion-por-agente.md))
 - [[arranque-de-sesion|El arranque de sesión]] ([El arranque de sesión](../topics/arranque-de-sesion.md))
 - [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](../topics/flujo-wiki-first.md))
@@ -51,3 +53,4 @@ summary: "Las skills del schema viven solo en .agents/skills/ y los workflows de
 
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `adr/0003-single-source-for-schema-skills.md`, `adr/0005-wiki-engine-through-session-bootstrap.md`, `openspec/specs/agent-skills/spec.md`, `acceptance-tests/support/skills.js`.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
+- [Collection: archivado de windows-support (idd@3d2d8fe)](../../raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md): `openspec/changes/archive/2026-11-22-windows-support/design.md`.

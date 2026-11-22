@@ -20,14 +20,28 @@ export async function branchChange(directory) {
   return module.branchChange(directory);
 }
 
-// El CLI de OpenSpec del proyecto, el mismo que el arranque pone en el PATH
-function openspecBin(directory) {
-  const local = path.join(directory, 'node_modules', '.bin', 'openspec');
-  return fs.existsSync(local) ? local : 'openspec';
+// El CLI de OpenSpec del proyecto, el mismo que el arranque pone en el PATH,
+// como { command, prefix }. Se ejecuta su script con `node`, sin pasar por
+// node_modules/.bin/, que en Windows es un script de shell, y sin el
+// openspec.cmd, que Node.js no lanza sin shell (design D6 de
+// windows-support). No es process.execPath: en OpenCode es el binario de
+// OpenCode. Sin el CLI del proyecto, el `openspec` del PATH
+function openspecCommand(directory) {
+  try {
+    const dir = path.join(directory, 'node_modules', '@fission-ai', 'openspec');
+    const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.openspec;
+    const script = bin ? path.join(dir, bin) : null;
+    if (script && fs.existsSync(script)) return { command: 'node', prefix: [script] };
+  } catch {
+    // sin el paquete del proyecto
+  }
+  return { command: 'openspec', prefix: [] };
 }
 
 async function openspecJson(directory, args) {
-  const result = await run(openspecBin(directory), [...args, '--json'], { cwd: directory });
+  const { command, prefix } = openspecCommand(directory);
+  const result = await run(command, [...prefix, ...args, '--json'], { cwd: directory });
   try {
     return JSON.parse(result.stdout);
   } catch {
