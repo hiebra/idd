@@ -102,7 +102,12 @@ Supersede la ruta de ADR-0013.
 
 **`idd-<versión>.bat`**, con la versión y la URL del zip escritas dentro.
 
-**`idd-slim-<versión>.zip`**, con la variante adelgazada: el árbol del tag sin `openspec/schemas/`, `.agents/`, `.opencode/` ni `.claude/`, y sin los changes archivados del propio template.
+**`idd-slim-<versión>.zip`**, con la variante adelgazada: el árbol del tag sin `openspec/schemas/`, `.agents/`, `.opencode/` ni `.claude/`, y sin los changes archivados del propio template. Tampoco lleva lo que describe o prueba la plantilla completa, porque en un proyecto adelgazado no pasaría:
+- las specs de `openspec/specs/`;
+- la suite de `acceptance-tests/`, que se sustituye por una vacía: las copias de la skill `acceptance-test-authoring` (`cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gplintrc`), el `package.json` y el `package-lock.json` de la suite, sin los scripts que dependen de la plantilla;
+- las herramientas de release: `scripts/release/` y `.github/workflows/release.yml`.
+
+Los ADRs sí se heredan, como en la plantilla completa: siguen en vigor para el proyecto mientras ningún ADR posterior los sustituya.
 
 Un workflow de GitHub Actions, que se dispara con cada tag `v*`:
 1. monta los artefactos;

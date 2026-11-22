@@ -17,7 +17,13 @@ And se publica en la release `v1.2.0` junto al `.bat`
 ```
 
 ### Requirement: Solo contiene lo que es de cada proyecto
-La variante adelgazada NO DEBE contener nada de lo que aporta la instalación global ni de Claude Code: ni `openspec/schemas/`, ni `.agents/`, ni `.opencode/`, ni `.claude/`. DEBE contener `openspec/config.yaml` con `schema: intent-driven`, el ajuste del wiki del proyecto, `.wiki/`, `package.json` con el OpenSpec fijado, `adr/`, `openspec/specs/` y la suite de aceptación del proyecto.
+La variante adelgazada NO DEBE contener nada de lo que aporta la instalación global ni de Claude Code: ni `openspec/schemas/`, ni `.agents/`, ni `.opencode/`, ni `.claude/`. Tampoco DEBE heredar las specs de la plantilla ni su suite de aceptación, que describen y prueban la plantilla completa, ni sus herramientas de release. DEBE contener:
+- `openspec/config.yaml` con `schema: intent-driven`;
+- el ajuste del wiki del proyecto y `.wiki/`;
+- `package.json` con el OpenSpec fijado;
+- `adr/`;
+- `openspec/specs/` sin ninguna spec;
+- una suite de aceptación sin escenarios ni steps, lista para las specs del proyecto, que pasa en verde.
 
 #### Scenario: Qué no contiene
 
@@ -25,6 +31,24 @@ La variante adelgazada NO DEBE contener nada de lo que aporta la instalación gl
 Given la variante adelgazada de una release
 When se buscan en ella `openspec/schemas/`, `.agents/`, `.opencode/` y `.claude/`
 Then no está ninguno
+```
+
+#### Scenario: No hereda las specs ni la suite de la plantilla
+
+```gherkin
+Given la variante adelgazada de una release
+When se buscan en ella las specs, los steps y las herramientas de release de la plantilla
+Then no hay ninguna spec en `openspec/specs/`
+And la suite de aceptación no tiene steps ni soporte
+And no tiene el workflow ni los scripts de release de la plantilla
+```
+
+#### Scenario: La suite de un proyecto adelgazado empieza en verde
+
+```gherkin
+Given la variante adelgazada de una release
+When se pasan en ella la suite de aceptación y el lint de las specs
+Then los dos terminan con éxito, sin ningún escenario
 ```
 
 #### Scenario: Qué contiene
