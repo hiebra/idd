@@ -138,6 +138,7 @@ async function start(ctx) {
   const registry = (globalThis[REGISTRY] ??= { gens: {}, pids: {} });
   registry.gens ??= {};
   registry.pids ??= {};
+  registry.claims ??= {};
   const gen = (registry.gens[directory] = (registry.gens[directory] ?? 0) + 1);
   const alive = () => registry.gens[directory] === gen;
   const mode = ctx.options?.auto === true ? 'auto' : 'normal';
@@ -290,7 +291,22 @@ async function start(ctx) {
   };
 
   // La sesión operativa de la rama, creándola si no hay ninguna válida (D3)
-  const ensureOperational = async (bc, { go = false } = {}) => {
+  // Tomar el control de una rama, de uno en uno en este proceso. Escribir y
+  // comprobar no basta entre sesiones del mismo proceso: si la más nueva
+  // comprueba antes de que escriba la más antigua, se ve sola y sigue; después
+  // la más antigua escribe, gana por antigüedad y también sigue, y la rama
+  // queda con dos operativas. En serie, la segunda ve ya escrita a la primera.
+  // La cola vive en el registro de globalThis, para que valga entre recargas
+  const claim = (branch, fn) => {
+    const key = `${directory}\0${branch}`;
+    const run = (registry.claims[key] ?? Promise.resolve()).then(fn, fn);
+    registry.claims[key] = run.catch(() => {});
+    return run;
+  };
+
+  const ensureOperational = (bc, options) => claim(bc?.branch, () => ensureOperationalNow(bc, options));
+
+  const ensureOperationalNow = async (bc, { go = false } = {}) => {
     if (!actionable(bc) || bc.kind === 'archived') return null;
     const { op, invalid, sessions } = await opOf(bc);
     for (const s of invalid) {
@@ -584,6 +600,12 @@ async function start(ctx) {
     if (text.trim().toLowerCase() !== START_WORD) return;
     const bc = await branchChange(directory);
     if (!actionable(bc) || bc.kind === 'archived') return;
+    await claim(bc.branch, () => takeControl(input, sessionID, bc));
+  });
+
+  // La sesión `sessionID` pasa a ser la operativa de la rama si no tiene
+  // ninguna (D13); dentro de claim
+  const takeControl = async (input, sessionID, bc) => {
     const { op, sessions } = await opOf(bc);
     if (op) return;
     const state = bc.kind === 'active' ? await changeState(directory, bc.change) : null;
@@ -609,7 +631,7 @@ async function start(ctx) {
       return;
     }
     input.prompt.text = await startStep(sessionID, nm, { send: false });
-  });
+  };
 
   // --- Recordatorio y aviso en cada petición (hook context, D6, D13) ---
 
