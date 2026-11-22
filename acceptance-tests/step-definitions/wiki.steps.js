@@ -68,8 +68,10 @@ function cloneWithWiki(world, state) {
   return project;
 }
 
+// A project with the wiki enabled has its wiki, versioned with the clone
 Given(new RegExp(`^un (?:clon del )?proyecto con el wiki ${STATE}$`), function (state) {
-  cloneWithWiki(this, state);
+  const project = cloneWithWiki(this, state);
+  if (state === 'habilitado') project.addCommittedWiki();
 });
 
 Given('un clon del proyecto con el wiki deshabilitado y con `.wiki\\/`', function () {
@@ -174,6 +176,147 @@ Then('las indicaciones de archivado de OpenSpec no mencionan el wiki', function 
 
 Then('no mencionan el wiki', function () {
   assertNoWiki(this.archiveGuidance.map(String));
+});
+
+// --- /toggle-wiki (design D4 de add-project-wiki-toggle) ------------------------
+
+const { runToggleWiki, manifests } = require('../support/toggle-wiki');
+const skillsSupport = require('../support/skills');
+const YAML = require('../../node_modules/yaml');
+
+// The files of a directory of the clone and their contents
+function snapshot(dir) {
+  const files = {};
+  const walk = (current) => {
+    if (!fs.existsSync(current)) return;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = require('node:path').join(current, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else files[full.slice(dir.length)] = fs.readFileSync(full, 'utf8');
+    }
+  };
+  walk(dir);
+  return files;
+}
+
+function toggleWiki(world, agent) {
+  const project = world.ensureProject();
+  if (world.session?.agent !== agent) world.openSetupSession(agent);
+  world.beforeToggle = {
+    config: project.readConfig(),
+    wiki: snapshot(project.path('.wiki')),
+    status: project.gitStatus(),
+    head: require('../support/engine').git(project.dir, 'rev-parse', 'HEAD').trim(),
+  };
+  world.toggle = runToggleWiki(project, world.session, agent);
+  return world.toggle;
+}
+
+When(new RegExp(`^el usuario ejecuta \`/toggle-wiki\` en ${AGENT}$`), function (agent) {
+  toggleWiki(this, agent);
+  assert.equal(this.toggle.proposal, null, `the command proposed an initial ingest: ${JSON.stringify(this.toggle.proposal)}`);
+});
+
+When('el usuario ejecuta `\\/toggle-wiki`', function () {
+  toggleWiki(this, 'Claude Code');
+});
+
+When(new RegExp('^(confirma|no confirma) la ingesta inicial que se le propone$'), function (answer) {
+  assert.ok(this.toggle.answer, `the command did not propose an initial ingest: ${JSON.stringify(this.toggle.status)}`);
+  assert.ok(this.toggle.proposal.sources.length > 0, 'the proposal lists no sources');
+  assert.ok(this.toggle.proposal.excluded.length > 0, 'the proposal lists nothing left out');
+  assert.equal(fs.existsSync(this.project.path('.wiki')), false, '.wiki/ exists before the user confirms');
+  this.toggle.answer(answer === 'confirma');
+});
+
+Then(new RegExp(`^el wiki del proyecto (queda|sigue) ${STATE}$`), function (_, state) {
+  assert.equal(this.project.wikiEnabled(), state === 'habilitado', `${JSON.stringify(this.toggle?.runs, null, 2)}`);
+});
+
+Then('las indicaciones de archivado de OpenSpec incluyen la resincronización del wiki', function () {
+  const source = YAML.parse(fs.readFileSync(this.project.path('.agents', 'wiki', 'archive-guidance.yaml'), 'utf8'));
+  const guidance = archiveGuidanceOf(this);
+  for (const entry of source) assert.ok(guidance.includes(entry), `the archive guidance lacks: ${entry}\n${JSON.stringify(guidance, null, 2)}`);
+});
+
+Then('el resto de `openspec\\/config.yaml` no ha cambiado', function () {
+  assert.equal(this.project.configWithoutWikiBlock(), this.project.configWithoutWikiBlock(this.beforeToggle.config));
+});
+
+Then('`.wiki\\/` se conserva sin cambios', function () {
+  assert.ok(Object.keys(this.beforeToggle.wiki).length > 0, 'the clone had no .wiki/ to keep');
+  assert.deepEqual(snapshot(this.project.path('.wiki')), this.beforeToggle.wiki);
+});
+
+Then('los cambios quedan en el stage de git, sin commit', function () {
+  const { git } = require('../support/engine');
+  assert.equal(git(this.project.dir, 'rev-parse', 'HEAD').trim(), this.beforeToggle.head, 'the command made a commit');
+  const staged = this.project.stagedFiles();
+  for (const file of ['.agents/wiki/engine.json', 'openspec/config.yaml']) assert.ok(staged.includes(file), `${file} is not staged: ${staged}`);
+  assert.equal(git(this.project.dir, 'diff', '--name-only', '--', '.agents/wiki/engine.json', 'openspec/config.yaml').trim(), '', 'changes left unstaged');
+});
+
+Then('se informa de que el wiki queda habilitado y de qué vale desde la sesión siguiente', function () {
+  assert.match(this.toggle.report, /queda habilitado/);
+  assert.match(this.toggle.report, /sesión siguiente/);
+});
+
+Then('se informa de que el wiki queda deshabilitado', function () {
+  assert.match(this.toggle.report, /queda deshabilitado/);
+});
+
+Then('el agente dispone del comando `\\/toggle-wiki`', function () {
+  const commands = skillsSupport.discoverCommands(this.session.agent, this.project.dir).map((c) => c.name);
+  assert.ok(commands.includes('/toggle-wiki'), `${this.session.agent}: ${commands}`);
+});
+
+Given('un clon del proyecto en el que se acaba de habilitar el wiki con `\\/toggle-wiki`', function () {
+  cloneWithWiki(this, 'deshabilitado').addCommittedWiki();
+  toggleWiki(this, 'Claude Code');
+  assert.equal(this.project.wikiEnabled(), true, JSON.stringify(this.toggle.runs, null, 2));
+});
+
+Then('`.wiki\\/` tiene como fuentes los productos del proyecto, fijados al commit actual', function () {
+  const found = manifests(this.project);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  const [manifest] = found;
+  assert.equal(manifest.revision, this.beforeToggle.head);
+  for (const product of ['README.md', '.agents/hooks/session-bootstrap.sh', 'openspec/config.yaml']) {
+    assert.ok(manifest.paths.includes(product), `${product} is not a source: ${manifest.paths}`);
+  }
+  for (const prefix of ['openspec/specs/', 'adr/']) {
+    assert.ok(manifest.paths.some((p) => p.startsWith(prefix)), `no source under ${prefix}`);
+  }
+  assert.deepEqual(manifest.paths.sort(), [...this.toggle.proposal.sources].sort());
+});
+
+Then('las fuentes no incluyen lo generado ni la copia del motor', function () {
+  const [manifest] = manifests(this.project);
+  const wrong = manifest.paths.filter((p) => /(^|\/)(node_modules|\.extracted|reports)\/|(^|\/)package-lock\.json$|\.lock$|^\.agents\/wiki-engine(\/|\.)/.test(p));
+  assert.deepEqual(wrong, []);
+});
+
+Then('no existe `.wiki\\/`', function () {
+  assert.equal(fs.existsSync(this.project.path('.wiki')), false);
+});
+
+Then('ningún archivo del proyecto ha cambiado', function () {
+  assert.deepEqual(this.project.gitStatus(), this.beforeToggle.status);
+  assert.deepEqual(this.project.stagedFiles(), []);
+});
+
+Given('la plantilla del proyecto', function () {
+  this.template = require('../support/project').REPO_ROOT;
+});
+
+When('se comprueba el ajuste del wiki del proyecto', function () {
+  this.templateEngine = JSON.parse(fs.readFileSync(require('node:path').join(this.template, '.agents', 'wiki', 'engine.json'), 'utf8'));
+});
+
+// The template declares it: a missing field would also leave it disabled,
+// but the template says so explicitly
+Then('el wiki está deshabilitado', function () {
+  assert.strictEqual(this.templateEngine.enabled, false, JSON.stringify(this.templateEngine));
 });
 
 // --- Motor del wiki ------------------------------------------------------------
