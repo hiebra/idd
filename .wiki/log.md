@@ -132,3 +132,9 @@
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ll | "allow-user-requested-merges" → raw/notes/2026-11-22-ll-allow-user-requested-merges.md (3 lessons, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, allow-user-requested-merges @cac0041): 1 manifest, 16 paths pinned, 0 skipped
+
+## [2026-11-22] compile | archivado de allow-user-requested-merges (idd@cac0041) en ciclo-de-un-change-y-autopilot, origen-de-openspec-git-discipline y flujo-wiki-first; librarian scan sin hallazgos
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed

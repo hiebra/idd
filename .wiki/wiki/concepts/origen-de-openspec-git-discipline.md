@@ -2,6 +2,7 @@
 title: "openspec-git-discipline: una regla heredada sin justificación registrada"
 category: concept
 sources:
+  - raw/repos/2026-11-22-idd-cac0041-allow-user-requested-merges.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md
   - raw/repos/2026-11-21-intent-driven-template-a8b8231-git-discipline.md
@@ -59,6 +60,7 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 
 - **ADR-0013 sustituye a ADR-0007** (`idd@6d6e79c:adr/0012-model-creates-change-branches-plugin-stages.md`): mantiene el ciclo de una rama y una fusión, pero el modelo ya puede crear la rama del change (siempre desde la rama de origen y con su nombre) y cambiar de rama temporal con `branch-change.mjs list | start | switch`, y en el autopilot no pide commits porque el plugin prepara el stage. La copia de la skill se reescribió otra vez con esas reglas (`idd@6d6e79c:.agents/skills/openspec-git-discipline/SKILL.md`).
 - **ADR-0015 sustituye a ADR-0007** (`idd@5d7f5b0:adr/0013-git-discipline-two-forms-and-ephemeral-commits.md`, en `manage-git-discipline`): la forma de una rama pasa a ser la recomendada, con `--no-ff`, y la forma canónica heredada vuelve a admitirse junto a ella, sin tratarla como una infracción. El motivo registrado es práctico: el agente conocía la canónica y cuestionaba la del proyecto. Sigue sin constar por qué el origen exige sus dos cruces de `main`. Al fusionar con `main` se renumeró a ADR-0015, porque `autopilot-sesion-operativa` ya había ocupado el 0013 y el 0014; en un contenedor efímero, el agente no usa las ramas que crea el modelo según ADR-0013 y trabaja solo en la rama de la sesión.
+- **ADR-0016 sustituye a ADR-0015** (`idd@cac00417c033f58d9a3298d4c7ff7e16f563f570:adr/0016-agent-merges-on-user-request.md`, en `allow-user-requested-merges`): cambia la regla de que el agente nunca fusiona. Fusiona cuando el usuario se lo pide en la conversación, con su ok a la resolución de conflictos, tras la puerta `check merge`, y por PR hacia una rama permanente en la nube. El motivo registrado vuelve a ser práctico: en la nube el usuario no puede ejecutar git, y en `manage-git-discipline` el agente tuvo que fusionar saltándose la puerta. La copia de la skill se reescribió otra vez (`idd@cac00417c033f58d9a3298d4c7ff7e16f563f570:.agents/skills/openspec-git-discipline/SKILL.md`).
 
 ## Lo que no se sabe
 
@@ -72,6 +74,7 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 
 ## Sources
 
+- [Collection: archivado de allow-user-requested-merges (idd@cac0041)](../../raw/repos/2026-11-22-idd-cac0041-allow-user-requested-merges.md): `adr/0016-agent-merges-on-user-request.md`, `.agents/openspec/branch-change.mjs`, `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `openspec/config.yaml`.
 - [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0013-model-creates-change-branches-plugin-stages.md`, `.agents/skills/openspec-git-discipline/SKILL.md`, `.agents/openspec/branch-change.mjs`.
 
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `.agents/skills/openspec-git-discipline/SKILL.md`, `.agents/openspec/branch-change.mjs`.
