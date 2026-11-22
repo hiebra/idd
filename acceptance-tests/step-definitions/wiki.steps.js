@@ -119,6 +119,63 @@ Given('el wiki del proyecto se ha deshabilitado', function () {
   this.project.disableWikiInVersionedFiles();
 });
 
+Given(new RegExp(`^el motor del wiki está instalado y expuesto a ${AGENT}$`), function (agent) {
+  cloneWithWiki(this, 'habilitado');
+  this.openSetupSession(agent);
+  assertEngineAt(this, agent, this.project.pinnedEngineRef());
+});
+
+Then(new RegExp(`^el motor del wiki no está disponible para ${AGENT}$`), function (agent) {
+  const { operations } = this.loadWikiEngine(agent);
+  assert.deepEqual(operations, { query: null, management: null }, `${agent}:\n${this.session.log}`);
+  for (const link of Object.keys(require('../support/project').ENGINE_LINKS)) {
+    assert.equal(fs.existsSync(this.project.engineLinkPath(link)), false, `${link} is still linked`);
+  }
+});
+
+Then('no dispone de la consulta de solo lectura del wiki', function () {
+  assert.equal(this.wikiEngine.operations.query, null, `${this.wikiEngine.agent}: ${JSON.stringify(this.wikiEngine)}`);
+});
+
+Then('no dispone de la gestión del wiki', function () {
+  assert.equal(this.wikiEngine.operations.management, null, `${this.wikiEngine.agent}: ${JSON.stringify(this.wikiEngine)}`);
+});
+
+Then('git no muestra como cambio nada de lo retirado', function () {
+  assert.deepEqual(this.project.gitStatus(), [], `session:\n${this.session.log}`);
+});
+
+// Claude Code: in .claude/settings.local.json, the user's own and not
+// versioned; OpenCode: in the environment it is launched from
+Given(new RegExp(`^el usuario tiene \`PROJECT_WIKI=off\` en el entorno de ${AGENT}$`), function (agent) {
+  if (agent === 'Claude Code') this.project.writeClaudeLocalSettings({ env: { PROJECT_WIKI: 'off' } });
+  else this.machine.userEnv.PROJECT_WIKI = 'off';
+});
+
+Then('el agente recibe la guía del wiki', function () {
+  assert.ok(deliveredContext(this).includes(this.guideAsDelivered()), `${this.session.agent}:\n${this.session.log}`);
+});
+
+// The archive guidance as `openspec instructions archive` gives it, for a
+// change ready to archive
+function archiveGuidanceOf(world) {
+  const name = openspec.addChangeReadyToArchive(world.ensureProject(), 'cambio-de-prueba');
+  return (openspec.archiveInstructions(world.project, name).operationGuidance ?? []).map(String);
+}
+
+function assertNoWiki(guidance) {
+  const mentions = guidance.filter((entry) => /wiki/i.test(entry));
+  assert.deepEqual(mentions, [], `the archive guidance mentions the wiki:\n${JSON.stringify(guidance, null, 2)}`);
+}
+
+Then('las indicaciones de archivado de OpenSpec no mencionan el wiki', function () {
+  assertNoWiki(archiveGuidanceOf(this));
+});
+
+Then('no mencionan el wiki', function () {
+  assertNoWiki(this.archiveGuidance.map(String));
+});
+
 // --- Motor del wiki ------------------------------------------------------------
 
 Given('un clon del proyecto sin el motor del wiki instalado', function () {

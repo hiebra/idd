@@ -45,10 +45,10 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 5. Arranque con el wiki deshabilitado: uno por paso pendiente; en cada uno, rojo → implementar → verde → commit
 
-- [ ] 5.1 `llm-wiki: Un proyecto con el wiki deshabilitado` y `session-bootstrap: El wiki se ha deshabilitado con el motor instalado`: pasos `las indicaciones de archivado de OpenSpec no mencionan el wiki`, `el motor del wiki está instalado y expuesto a <agente>`, `el motor del wiki no está disponible para <agente>` y `git no muestra como cambio nada de lo retirado`, en los dos agentes
-- [ ] 5.2 `llm-wiki: Sin operaciones del wiki con el wiki deshabilitado`: pasos `no dispone de la consulta de solo lectura del wiki` y `no dispone de la gestión del wiki`
-- [ ] 5.3 `llm-wiki: Una preferencia local no apaga el wiki del proyecto`: pasos `el usuario tiene \`PROJECT_WIKI=off\` en el entorno de <agente>` (en Claude Code, en `.claude/settings.local.json`; en OpenCode, en el entorno) y `el agente recibe la guía del wiki`
-- [ ] 5.4 `wiki-first-knowledge: Sin resincronización con el wiki deshabilitado`: paso `no mencionan el wiki`, sobre las indicaciones de archivado que devuelve `openspec instructions archive`
+- [x] 5.1 `llm-wiki: Un proyecto con el wiki deshabilitado` y `session-bootstrap: El wiki se ha deshabilitado con el motor instalado`: pasos `las indicaciones de archivado de OpenSpec no mencionan el wiki`, `el motor del wiki está instalado y expuesto a <agente>`, `el motor del wiki no está disponible para <agente>` y `git no muestra como cambio nada de lo retirado`, en los dos agentes
+- [x] 5.2 `llm-wiki: Sin operaciones del wiki con el wiki deshabilitado`: pasos `no dispone de la consulta de solo lectura del wiki` y `no dispone de la gestión del wiki`
+- [x] 5.3 `llm-wiki: Una preferencia local no apaga el wiki del proyecto`: pasos `el usuario tiene \`PROJECT_WIKI=off\` en el entorno de <agente>` (en Claude Code, en `.claude/settings.local.json`; en OpenCode, en el entorno) y `el agente recibe la guía del wiki`
+- [x] 5.4 `wiki-first-knowledge: Sin resincronización con el wiki deshabilitado`: paso `no mencionan el wiki`, sobre las indicaciones de archivado que devuelve `openspec instructions archive`
 
 ## 6. `/toggle-wiki` (D4): uno por paso pendiente; en cada uno, rojo → implementar → verde → commit
 
@@ -73,7 +73,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 ## 9. Estado de este repositorio (D2, D10)
 
 - [ ] 9.1 Poner `"enabled": false` en `.agents/wiki/engine.json` → verde 6.6 → commit
-- [ ] 9.2 En `openspec/config.yaml`, quitar los pasos de resincronización y reescribir la primera entrada de `operations.archive.guidance` sin mencionar el wiki. Comprobar con `wiki on` y `wiki off` que el bloque se inserta y se quita sin tocar lo demás → commit
+- [x] 9.2 En `openspec/config.yaml`, quitar los pasos de resincronización y reescribir la primera entrada de `operations.archive.guidance` sin mencionar el wiki. Comprobar con `wiki on` y `wiki off` que el bloque se inserta y se quita sin tocar lo demás → commit
 
 ## 10. Pruebas con OpenCode real y con Claude Code real (D9)
 
