@@ -43,8 +43,8 @@
 //   contenedor efímero (CLAUDE_CODE_CONTAINER_ID no vacía y
 //   CLAUDE_CODE_REMOTE=true), en la rama de la sesión guardada en
 //   `git config idd.sessionBranch`, si es temporal y los cambios pendientes
-//   son de una sola zona de spec-as-source (tasks.md es neutro; el resto de
-//   openspec/, specs; todo lo demás, código). No hace commit ni push: los
+//   son de una sola zona de spec-as-source (tasks.md y openspec/config.yaml
+//   son neutros; el resto de openspec/, specs; todo lo demás, código). No hace commit ni push: los
 //   autoriza, y su mensaje trae la orden de push.
 // Todo rechazo dice cómo seguir.
 //
@@ -219,10 +219,12 @@ export function isEphemeral(env = process.env) {
   return Boolean(env.CLAUDE_CODE_CONTAINER_ID) && env.CLAUDE_CODE_REMOTE === 'true';
 }
 
-// La zona de spec-as-source de una ruta: los tasks.md son neutros, el resto
-// de openspec/ es la zona de specs y todo lo demás, la de código
+// La zona de spec-as-source de una ruta: los tasks.md y openspec/config.yaml
+// son neutros (config.yaml es la configuración de OpenSpec, no una spec, y
+// /toggle-wiki lo cambia junto con código: D11 de add-project-wiki-toggle),
+// el resto de openspec/ es la zona de specs y todo lo demás, la de código
 export function zoneOf(file) {
-  if (path.posix.basename(file) === 'tasks.md') return null;
+  if (path.posix.basename(file) === 'tasks.md' || file === 'openspec/config.yaml') return null;
   return file.startsWith('openspec/') ? 'specs' : 'code';
 }
 
