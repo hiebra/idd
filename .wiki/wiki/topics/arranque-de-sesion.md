@@ -2,6 +2,7 @@
 title: "El arranque de sesión: núcleo neutral y un adaptador por agente"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-windows-support.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
   - raw/repos/2026-11-21-idd-1cf0792.md
@@ -61,6 +62,10 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - En OpenCode, el primer comando de la primera sesión espera a la instalación. En OpenCode Desktop y en `opencode run`, sin TUI, los avisos solo quedan en el log (ADR-0002).
 - Para desactivarlo todo en local: `disableAllHooks` en `.claude/settings.local.json`, o `"plugins": ["-session-bootstrap"]` en la configuración global de OpenCode. Solo el wiki: `PROJECT_WIKI=off` (`idd@f2be907:README.md`). Solo la regla de comentarios: `PROJECT_COMMENTS=off` (`idd@16e4617:README.md`).
 
+## Instalación del motor sin red
+
+El núcleo trata `repo` de `.agents/wiki/engine.json` como una URL de git cuando no tiene la forma `owner/name`, así que puede apuntar a un git bundle local con el tag fijado: `git clone --depth 1 --branch <ref>` funciona desde un bundle, sin cambiar el núcleo (comprobado el 2026-11-22; [lecciones de windows-support](../../raw/notes/2026-11-22-ll-windows-support.md), lección 1). El diagnóstico de Windows lo da por presente («OK (vendor)»).
+
 ## See Also
 
 - [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](carga-en-la-misma-sesion-por-agente.md))
@@ -78,3 +83,4 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - [Collection: archivado de add-quote-comment-rule](../../raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md): `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/session-start.sh`, `.claude/hooks/user-prompt-submit.sh`, `.claude/hooks/json.sh`, `adr/0010-agent-instructions-through-session-bootstrap.md`, `README.md`.
 - [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `.agents/hooks/session-bootstrap.sh`, `openspec/specs/session-bootstrap/spec.md`.
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `openspec/specs/session-bootstrap/spec.md`, `.opencode/plugins/session-bootstrap/tui.js`.
+- [Lessons Learned: soporte de Windows (windows-support)](../../raw/notes/2026-11-22-ll-windows-support.md): lección 1.

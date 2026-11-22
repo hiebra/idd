@@ -132,3 +132,5 @@
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ll | "modo auto e instalación de OpenCode" → raw/notes/2026-11-22-ll-modo-auto-instalar-opencode.md (1 lesson, 1 article updated)
+
+## [2026-11-22] ll | "soporte de Windows (windows-support)" → raw/notes/2026-11-22-ll-windows-support.md (7 lessons, 3 articles updated, 1 inventory record)

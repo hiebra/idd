@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-windows-support.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md
@@ -86,6 +87,8 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - **El servicio carga el plugin una vez por proyecto en el mismo proceso**: lo que se guarde en `globalThis` (generación, PID presentados) tiene que ir por directorio.
 - **Las sesiones que crea un plugin usan el modelo por defecto de la configuración**, no el elegido en la TUI.
 
+- **Ejecutar un CLI de npm desde el plugin**: como `node <bin del paquete>`, nunca por `node_modules/.bin/` (en Windows es un script de shell, y `spawn` no lanza su `.cmd` sin `shell: true`) ni con `process.execPath`, que en OpenCode es su propio binario, compilado con Bun. Así lo hace `openspecCommand()` en `lib/project.mjs` desde `windows-support` ([lecciones de windows-support](../../raw/notes/2026-11-22-ll-windows-support.md), lección 3; las dos causas son conocimiento interno, no comprobado en Windows).
+
 ## Cómo se verifica
 
 - **La suite** prueba el plugin en un OpenCode simulado con varias sesiones (`idd@772d0f0:acceptance-tests/support/agents/opencode-sim.mjs`). Es un proceso hijo que el World maneja por IPC, con un modelo guionizado por escenario y fallos inyectables. Lo que no está en las specs va en `core-tests/autopilot-next-step.test.js` y `core-tests/autopilot-plugin.test.js` (`idd@772d0f0:acceptance-tests/README.md`). El simulador ejecuta en cada recarga, y al cerrar, la limpieza que devuelve cada `setup`, respeta el `signal` de `events.on` y deja una traza en el terminal por cada suscripción viva al cerrar (`idd@99bdccd:acceptance-tests/support/agents/opencode-sim.mjs`).
@@ -116,3 +119,4 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `.opencode/plugins/openspec-autopilot/tui.js`, `acceptance-tests/support/agents/opencode-sim.mjs`, `openspec/changes/archive/2026-11-22-fix-tui-subscription-cleanup/design.md` y `tasks.md`.
 - [Collection: ADR-0011 tras la renumeración (idd@002f043)](../../raw/repos/2026-11-22-idd-002f043-adr-0011.md): `adr/0011-opencode-plugins-release-what-they-register.md`.
 - [Lessons Learned: suscripciones de la TUI de OpenCode y su limpieza](../../raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md): lecciones 1, 2 y 4 (las trazas al cerrar con `--standalone`, el contrato de limpieza que corrige la regla de la lección 5, y la prueba en OpenCode real sin tmux).
+- [Lessons Learned: soporte de Windows (windows-support)](../../raw/notes/2026-11-22-ll-windows-support.md): lección 3.
