@@ -201,6 +201,15 @@
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ll | "lecciones equivalentes al resolver una fusión en el wiki" → raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md (1 lesson, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, 288741b): archivado de guiar-revision-con-tests, 9 new, 0 skipped, 9 total candidates
+
+## [2026-11-22] compile | wiki/topics/ciclo-de-un-change-y-autopilot.md: la revisión de una task y del verify se guía con los tests de aceptación (guiar-revision-con-tests, idd@288741b)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "guiar-revision-con-tests (agente plan y sesión operativa)" → raw/notes/2026-11-22-ll-guiar-revision-con-tests.md (2 lessons, 1 article updated)
+
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ll | "soporte de Windows (windows-support)" → raw/notes/2026-11-22-ll-windows-support.md (7 lessons, 3 articles updated, 1 inventory record)
