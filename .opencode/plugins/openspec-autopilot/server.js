@@ -35,7 +35,7 @@ import { branchChange, changeState, validateErrors } from './lib/project.mjs';
 import { gitState, stage, treeClean, verdict } from './lib/git.mjs';
 import { describeProducts, productOf, reviewQueue, snapshotOf, stagePaths } from './lib/product.mjs';
 import { MODAL_BUTTON, directive, modalText } from './lib/screen.mjs';
-import { CONFIG_PATH, syncApplyGuidance } from './lib/apply-guidance.mjs';
+import { CONFIG_PATH, SYNC_TIMEOUT_MS, syncApplyGuidance, withTimeout } from './lib/apply-guidance.mjs';
 
 const ID = RPC.id;
 const REGISTRY = Symbol.for('openspec-autopilot.registry');
@@ -740,14 +740,23 @@ async function start(ctx) {
     }
   };
 
-  const syncGuidance = guard('apply-guidance', async () => {
+  const file = CONFIG_PATH.split(path.sep).join('/');
+  const adjustGuidance = async () => {
     const result = await syncApplyGuidance(directory, mode);
-    const file = CONFIG_PATH.split(path.sep).join('/');
     if (result.error) ui.notice(`openspec-autopilot: no se ha podido ajustar \`${file}\` al modo ${mode} (${result.error?.message ?? result.error}).`);
     else if (result.missing) ui.notice(`openspec-autopilot: no hay \`${file}\`; no se ajustan las indicaciones de apply al modo ${mode}.`);
     else if (result.written) ui.notice(`openspec-autopilot: he ajustado \`${file}\` al modo ${mode} (indicaciones de apply de una task por sesión); haz su commit aparte.`, 'info');
     if (result.written) await rebaseReviews();
     if (result.similar) ui.notice(`openspec-autopilot: \`${file}\` tiene un texto parecido a las indicaciones de una task por sesión que no reconozco; revísalo a mano.`);
+    return result;
+  };
+
+  // Con límite de tiempo (D4): si el ajuste se cuelga, el plugin arranca igual.
+  // El ajuste sigue en segundo plano y, si acaba, avisa como siempre.
+  const syncGuidance = guard('apply-guidance', async () => {
+    const late = adjustGuidance().catch((error) => log('apply-guidance:', error));
+    const result = await withTimeout(late, SYNC_TIMEOUT_MS);
+    if (result?.timedOut) ui.notice(`openspec-autopilot: el ajuste de \`${file}\` al modo ${mode} tarda más de ${SYNC_TIMEOUT_MS / 1000} s; sigo sin esperarlo.`);
     return result;
   });
 

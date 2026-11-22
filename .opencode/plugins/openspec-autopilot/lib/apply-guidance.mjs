@@ -55,6 +55,20 @@ const FIRST_WORDS = 'Standing instruction from the project owner';
 
 export const CONFIG_PATH = path.join('openspec', 'config.yaml');
 
+// Lo que puede tardar el ajuste al cargarse el plugin antes de dejar de esperarlo (design D4)
+export const SYNC_TIMEOUT_MS = 10000;
+
+// withTimeout(promise, ms) -> el resultado de la promesa, o { timedOut: true }
+//   si no acaba en `ms`. No cancela la promesa: solo deja de esperarla.
+export function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => resolve({ timedOut: true }), ms);
+    timer.unref?.();
+  });
+  return Promise.race([Promise.resolve(promise), timeout]).finally(() => clearTimeout(timer));
+}
+
 const indentOf = (line) => /^ */.exec(line)[0].length;
 const blank = (line) => line.trim() === '';
 const comment = (line) => line.trim().startsWith('#');

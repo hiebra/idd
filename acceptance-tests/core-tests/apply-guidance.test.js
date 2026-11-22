@@ -190,3 +190,19 @@ test('syncApplyGuidance returns read and write errors without throwing', async (
     fs.rmSync(unwritable, { recursive: true, force: true });
   }
 });
+
+// Design D4: the plugin stops waiting for a hung adjustment and starts anyway
+test('withTimeout gives the result in time and stops waiting after the limit', async () => {
+  const { withTimeout } = await load();
+  assert.deepEqual(await withTimeout(Promise.resolve({ written: true }), 1000), { written: true });
+  const hung = new Promise(() => {});
+  // The limit's timer is unref'd, as in the plugin, where OpenCode keeps the loop alive
+  const alive = setInterval(() => {}, 1000);
+  try {
+    const started = Date.now();
+    assert.deepEqual(await withTimeout(hung, 50), { timedOut: true });
+    assert.ok(Date.now() - started < 1000, 'withTimeout waited too long');
+  } finally {
+    clearInterval(alive);
+  }
+});
