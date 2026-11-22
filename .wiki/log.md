@@ -132,3 +132,7 @@
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ll | "modo auto e instalación de OpenCode" → raw/notes/2026-11-22-ll-modo-auto-instalar-opencode.md (1 lesson, 1 article updated)
+
+## [2026-11-22] ll | "fusión con --no-ff y trazabilidad" → raw/notes/2026-11-22-ll-fusion-no-ff-y-trazabilidad.md (3 lessons, 1 article updated)
+
+## [2026-11-22] inventory | task nombrar-el-change-en-el-titulo-de-la-fusion (active, p3)
