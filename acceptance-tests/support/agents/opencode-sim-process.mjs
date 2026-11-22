@@ -96,6 +96,11 @@ const OPS = {
     host.setRoute({ type: 'home', ...(directory ? { location: { directory } } : {}) });
     return waitScreen();
   },
+  // Worktrees: the user opens «Manage workspaces → New worktree»
+  newWorktreeDialog() {
+    host.newWorktreeDialog();
+    return host.state();
+  },
   // Worktrees: the user confirms «Name worktree» (a name, or generated with tab)
   async nameWorktree({ name = null }) {
     const directory = await host.nameWorktree({ name });
@@ -136,9 +141,17 @@ const OPS = {
     host.focus('focus');
     return waitScreen();
   },
-  // The user writes the first message in the home screen: the session exists from it
+  // The user writes the first message in the home screen: the session exists
+  // from it. With a pending worktree, OpenCode creates the worktree first and
+  // the session in it (checked with OpenCode 2.3.2)
   async openHome({ text, agent = 'build' }) {
-    const id = host.seedSession({ title: text.slice(0, 40), agent, directory: host.tuiLocation() });
+    let directory = host.tuiLocation();
+    if (host.pendingWorktree) {
+      const { name } = host.pendingWorktree;
+      host.pendingWorktree = null;
+      ({ directory } = await host.createWorktree({ name, via: 'tui' }));
+    }
+    const id = host.seedSession({ title: text.slice(0, 40), agent, directory });
     delete host.session(id).time.idle;
     host.startTurn(id, { text });
     host.setRoute({ type: 'session', sessionID: id });

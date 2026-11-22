@@ -68,6 +68,19 @@
 //     (`nameWorktree`, with a name or generated) creates the worktree and
 //     opens the home screen in it;
 //   - model responses' `git` effects run in their session's directory.
+// - The fixes after the tests with OpenCode 2.3.2 real (section 8 of tasks):
+//   - the server context has `location.project` ({ id, directory,
+//     canonical }) and no `project`;
+//   - a strategy's `remove` gets only { directory, force }, and an error from
+//     a strategy reaches the client wrapped ("Worktree strategy <id> failed
+//     to <operation>: <message>"), without `forceRequired`;
+//   - "dialog.move_session.new" does nothing until «Manage workspaces» is
+//     mounted, a moment after "session.move" (WORKSPACES_MOUNT_MS);
+//   - from the home screen, confirming «Name worktree» leaves the worktree
+//     pending ("(new worktree)"): it is created with the user's first
+//     message, in a session of the worktree with that message, and the TUI
+//     goes to that session. From a session, it is created at once and the
+//     TUI opens the home screen in it.
 //
 // The model is a script per scenario: rules matched against the session,
 // each with a queue of responses ({ text }, { tool: { name, input } }).
@@ -78,6 +91,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const BASE_SYSTEM = 'You are OpenCode (simulated system prompt).';
+// «Manage workspaces» takes a moment to mount after session.move
+export const WORKSPACES_MOUNT_MS = 60;
 const BUILTIN_TOOLS = ['edit', 'glob', 'grep', 'question', 'read', 'shell', 'skill', 'subagent', 'write'];
 const PROJECT_ID = 'prj_simulado';
 
@@ -89,6 +104,17 @@ const now = () => {
   return t;
 };
 const clone = (value) => (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
+
+
+// An error from a plugin's strategy, as OpenCode 2.3.2 passes it on: wrapped,
+// without forceRequired (only its own error classes keep it)
+async function wrapped(id, operation, fn) {
+  try {
+    return await fn();
+  } catch (error) {
+    throw new Error(`Worktree strategy ${id} failed to ${operation}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
 
 export class Host {
   constructor({ projectDir, plugin, dbFile, tui = true, pluginOptions = {}, failures = {}, tuiSilent = false, rpcLate = false, alreadyOpen = false, worktreesDir = null }) {
@@ -132,6 +158,7 @@ export class Host {
     this.openDialogs = [];
     // The keymap's dialogs: «Manage workspaces» and «Name worktree»
     this.workspaces = null;
+    this.pendingWorktree = null;
     this.out = { toasts: [], navigations: [], dialogs: [], archives: [], requests: [], crashes: [], toolErrors: [], logs: [], terminal: [], prompts: [], routes: [], rpcCalls: [], keymap: [], worktrees: [] };
     const original = console.error;
     console.error = (...args) => {
@@ -343,8 +370,7 @@ export class Host {
       return fn(input ?? {});
     };
     return {
-      location: { directory: dir },
-      project: { id: PROJECT_ID },
+      location: { directory: dir, workspaceID: undefined, project: { id: PROJECT_ID, directory: this.projectDir, canonical: this.projectDir } },
       options: clone(this.pluginOptions),
       rpc: {
         register: async (definition, handlers) => {
@@ -454,7 +480,11 @@ export class Host {
             },
           };
         },
-        create: op('worktree.create', async ({ name, branch } = {}) => host.createWorktree({ name, branch, via: 'plugin' })),
+        // The payload requires projectID, as in OpenCode 2.3.2
+        create: op('worktree.create', async ({ projectID, name, branch } = {}) => {
+          if (projectID !== PROJECT_ID) throw new Error(projectID === undefined ? 'Missing key\n  at ["projectID"]' : `unknown project ${projectID}`);
+          return host.createWorktree({ name, branch, via: 'plugin' });
+        }),
         remove: op('worktree.remove', async ({ directory, force } = {}) => host.removeWorktree({ directory, force })),
       },
     };
@@ -584,7 +614,7 @@ export class Host {
     try {
       let result;
       if (strategy) {
-        result = await strategy.create({ sourceDirectory: this.projectDir, directory, ...(branch !== undefined ? { branch } : {}) }, { signal: new AbortController().signal });
+        result = await wrapped(strategy.id, 'create', () => strategy.create({ sourceDirectory: this.projectDir, directory, ...(branch !== undefined ? { branch } : {}) }, { signal: new AbortController().signal }));
       } else {
         const added = spawnSync('git', ['worktree', 'add', '--detach', '--', directory, branch ?? 'HEAD'], { cwd: this.projectDir, encoding: 'utf8' });
         if (added.status !== 0) throw new Error(added.stderr.trim());
@@ -609,7 +639,8 @@ export class Host {
     } else {
       const registration = [...this.strategies].reverse().find((s) => s.strategy.id === owner);
       if (!registration) throw new Error(`the worktree strategy '${owner}' is not loaded`);
-      await registration.strategy.remove({ directory, sourceDirectory: this.projectDir, ...(force ? { force } : {}) }, { signal: new AbortController().signal });
+      // OpenCode 2.3.2 sends only { directory, force }
+      await wrapped(owner, 'remove', () => registration.strategy.remove({ directory, force }, { signal: new AbortController().signal }));
     }
     delete this.store.worktrees[directory];
     this.save();
@@ -620,12 +651,13 @@ export class Host {
   dispatch(name) {
     this.out.keymap.push(name);
     if (name === 'session.move') {
-      this.workspaces = { name: false };
+      this.workspaces = { name: false, mounted: Date.now() + WORKSPACES_MOUNT_MS };
       this.out.dialogs.push({ title: 'Manage workspaces', options: [], answer: null, open: true, kind: 'workspaces' });
       return true;
     }
     if (name === 'dialog.move_session.new') {
-      if (!this.workspaces) return false;
+      // Before «Manage workspaces» is mounted, the command does nothing
+      if (!this.workspaces || Date.now() < this.workspaces.mounted) return false;
       for (const d of this.out.dialogs) if (d.kind === 'workspaces') d.open = false;
       this.workspaces.name = true;
       this.out.dialogs.push({ title: 'Name worktree', options: [], answer: null, open: true, kind: 'name-worktree' });
@@ -634,12 +666,24 @@ export class Host {
     return false;
   }
 
-  // The user confirms «Name worktree» with a name, or generates it with tab:
-  // the TUI creates the worktree and opens the home screen in it
+  // The user opens «Manage workspaces» and presses ctrl+a (New worktree)
+  newWorktreeDialog() {
+    this.workspaces = { name: true, mounted: 0 };
+    this.out.dialogs.push({ title: 'Name worktree', options: [], answer: null, open: true, kind: 'name-worktree' });
+  }
+
+  // The user confirms «Name worktree» with a name, or generates it with tab.
+  // From the home screen, the worktree stays pending until the first
+  // message; from a session, the TUI creates it and opens its home screen
   async nameWorktree({ name = null }) {
     if (!this.workspaces?.name) throw new Error('the «Name worktree» dialog is not open');
     this.workspaces = null;
     for (const d of this.out.dialogs) if (d.kind === 'name-worktree') d.open = false;
+    if (this.route.type === 'home') {
+      this.pendingWorktree = { name: name || this.generatedName() };
+      this.out.routes.push({ type: 'home', pending: this.pendingWorktree.name });
+      return null;
+    }
     try {
       const { directory } = await this.createWorktree({ name, via: 'tui' });
       this.setRoute({ type: 'home', location: { directory } });

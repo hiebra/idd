@@ -340,6 +340,48 @@ Then('la TUI pasa a esa sesión', function () {
   assert.deepEqual(this.opencode.route, { type: 'session', sessionID: this.created }, detail(this));
 });
 
+// El primer mensaje de un worktree nuevo (design D10)
+const PDF_WORKTREE = 'exportar-pdf';
+
+Given('la TUI en la pantalla de inicio, con el worktree `exportar-pdf` pendiente de crear', async function () {
+  this.lifecycleProject();
+  ap.ensureRemote(this);
+  await ap.ensureOpenCode(this);
+  await this.opencodeCall('home');
+  await this.opencodeCall('newWorktreeDialog');
+  const { directory } = await this.opencodeCall('nameWorktree', { name: PDF_WORKTREE });
+  assert.equal(directory, null, 'desde la pantalla de inicio, el worktree no se crea hasta el primer mensaje');
+});
+
+When(/^el usuario envía "([^"]+)"$/, async function (text) {
+  this.firstText = text;
+  ({ sessionID: this.firstSession } = await this.opencodeCall('openHome', { text }));
+  await this.opencodeCall('settle');
+  this.opencode = await this.opencodeCall('waitScreen');
+});
+
+When('OpenCode crea el worktree `exportar-pdf` con ese mensaje en una sesión', function () {
+  const wt = worktreeOf(this, PDF_WORKTREE);
+  assert.ok(wt, `${JSON.stringify(ap.worktrees(this))}\n${detail(this)}`);
+  this.worktreeDir = wt.directory;
+  const first = this.opencode.sessions[this.firstSession];
+  assert.equal(first.location.directory, wt.directory, detail(this));
+  assert.equal(first.messages.find((x) => x.type === 'user')?.text, this.firstText, detail(this));
+});
+
+Then(/^se crea en el worktree una sesión operativa que arranca `openspec-new-change` con la descripción "([^"]+)"$/, function (text) {
+  const owner = ap.owners(this).find((s) => s.location?.directory === this.worktreeDir);
+  assert.ok(owner, detail(this));
+  assert.notEqual(owner.id, this.firstSession, detail(this));
+  const m = ap.metaOf(owner);
+  assert.deepEqual([m.branch, m.step.kind], [PDF_WORKTREE, 'new'], detail(this));
+  const instruction = ap.instructionOf(this, owner.id);
+  assert.match(instruction, /openspec-new-change/, instruction);
+  assert.ok(instruction.includes(text), instruction);
+  assert.doesNotMatch(instruction, /Pregunta al usuario qué quiere construir/, instruction);
+  this.created = owner.id;
+});
+
 Given('OpenCode abierto en la TUI en una rama temporal sin change ni sesión operativa', async function () {
   const project = this.lifecycleProject();
   this.branches.branch(project, ap.BRANCH);
@@ -1344,7 +1386,7 @@ Then('la rama `importar-datos` conserva sus commits', function () {
   assert.equal(ap.gitAt(this.worktreeResult.directory, 'rev-parse', 'HEAD').trim(), this.ownCommit);
 });
 
-Given(/^un worktree (?:recién creado en la rama nueva|en la rama) `importar-datos`$/, async function () {
+Given(/^un worktree (?:recién creado en la rama nueva|en la rama) `importar-datos`(?:, con (el árbol limpio|cambios sin commit))?$/, async function (tree) {
   this.lifecycleProject();
   ap.ensureRemote(this);
   await ap.ensureOpenCode(this);
@@ -1352,6 +1394,7 @@ Given(/^un worktree (?:recién creado en la rama nueva|en la rama) `importar-dat
   this.remoteMain = ap.gitAt(this.branches.remoteDir(this.project), 'rev-parse', 'refs/heads/main').trim();
   await createWorktree(this);
   assert.equal(this.worktreeResult.error, null, this.worktreeResult.error);
+  if (tree === 'cambios sin commit') fs.writeFileSync(path.join(this.worktreeResult.directory, 'sin-commit.txt'), 'pendiente\n');
 });
 
 When('el usuario hace un commit y un `git push` sin argumentos en el worktree', function () {
@@ -1408,10 +1451,25 @@ When('se quita ese worktree', async function () {
   this.removed = await this.opencodeCall('removeWorktree', { directory: this.worktreeResult.directory });
 });
 
-Then('la rama `importar-datos` sigue existiendo', function () {
+Then('el worktree ya no existe', function () {
   assert.equal(this.removed.error, null, JSON.stringify(this.removed.error));
   assert.equal(fs.existsSync(this.worktreeResult.directory), false);
+});
+
+Then('la rama `importar-datos` sigue existiendo', function () {
   assert.ok(this.branches.revParse(this.project, `refs/heads/${NEW_WORKTREE}`));
+});
+
+Then('el worktree sigue existiendo', function () {
+  assert.ok(this.removed.error, 'el worktree con cambios se ha quitado');
+  assert.ok(fs.existsSync(path.join(this.worktreeResult.directory, 'sin-commit.txt')));
+  assert.ok(ap.worktrees(this).some((w) => w.directory === this.worktreeResult.directory), JSON.stringify(ap.worktrees(this)));
+});
+
+Then('se dice que hay que hacer antes el commit o quitarlo con `git worktree remove --force`', function () {
+  const { message } = this.removed.error;
+  assert.match(message, /commit/, message);
+  assert.ok(message.includes('git worktree remove --force'), message);
 });
 
 // --- La TUI habla con el plugin del directorio de la ventana ---
