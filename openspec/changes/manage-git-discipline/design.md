@@ -92,7 +92,7 @@ Alternativa: detectar la rama de la sesión por el prefijo `claude/`, o por que 
 `session-bootstrap.sh`, en su modo por defecto, añade un paso `prepare_git` antes de instalar dependencias. Ese paso:
 - **Si el clon es superficial** (`git rev-parse --is-shallow-repository`), ejecuta `git fetch --unshallow --quiet` con `timeout`. Si falla, avisa.
 - **Solo en un contenedor efímero,** hace además `git fetch --quiet origin` para tener las referencias remotas al día. En un clon de un usuario no usa la red, salvo para completar un clon superficial.
-- **Pone al día cada rama permanente local** (`x-main`, leída con `node branch-change.mjs --json` si hay Node, o `main` si no) que no sea la rama del clon y sea ancestro de `origin/<rama>`. Usa `git update-ref refs/heads/<rama> <nuevo> <viejo>`, que no toca el árbol de trabajo. Si la rama ha divergido, avisa.
+- **Pone al día cada rama permanente local** (`x-main`, leída con `node branch-change.mjs env` si hay Node, o `main` si no; ese subcomando da también si la sesión es un contenedor efímero, para que la detección siga en un solo sitio) que no sea la rama del clon y sea ancestro de `origin/<rama>`. Usa `git update-ref refs/heads/<rama> <nuevo> <viejo>`, que no toca el árbol de trabajo. Si la rama ha divergido, avisa.
 - **En un contenedor efímero,** si no hay `idd.sessionBranch` y el clon está en una rama, la guarda con `git config idd.sessionBranch <rama>`. Es configuración local de `.git/`, no un archivo del árbol: el aviso de final de turno no lo ve.
 
 Como el resto del arranque, cualquier fallo solo avisa y la sesión arranca.
