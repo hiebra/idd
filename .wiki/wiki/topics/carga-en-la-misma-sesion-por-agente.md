@@ -3,7 +3,7 @@ title: "Qué carga cada agente y cuándo"
 category: topic
 sources:
   - raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md
-  - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
+  - raw/repos/2026-11-22-idd-002f043-adr-0011.md
   - raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md
   - raw/repos/2026-11-21-idd-1cf0792.md
 created: 2026-11-21
@@ -33,7 +33,7 @@ La plantilla aplica las tres cosas. El núcleo enlaza `.claude/skills/wiki-manag
 - **Precedencia ante un ID repetido.** **[heredado]** OpenCode busca en `.claude/skills`, `.agents/skills` y `.opencode/skills`, y gana `.claude/skills`. Es la lectura del código fuente de OpenCode recogida en `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/design.md` y en `idd@1cf0792:acceptance-tests/support/skills.js`. No se ha comprobado en ejecución con un ID repetido.
 - **`opencode run` deja el arranque a medias.** **[comprobado]** Tras `opencode run`, en un clon recién creado, no quedaron symlinks del motor y sí un `.agents/wiki-engine.tmp.<pid>`. **[inferencia]** Lo más probable es que el núcleo, que el plugin lanza en segundo plano, muera cuando `opencode run` termina al responder el modelo. En la TUI, que sigue abierta, no ocurre **[comprobado]**. El núcleo clona ahora en un temporal, lo sustituye con un renombrado y borra los restos cuyo proceso ya no existe.
 - **Contexto: por el hook `context`**, no por `AGENTS.md` ni `instructions`, que el usuario no puede desactivar. Ver [El hook context de OpenCode](../concepts/hook-context-opencode.md).
-- **Plugins locales: se recargan en caliente.** **[comprobado]** Editar los archivos del plugin, o sus `options` en la configuración, vuelve a ejecutar `setup` sin reiniciar ([lección 4](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md)). Antes, OpenCode ejecuta la función que devolvió el `setup` anterior; si la parte de TUI no la usa para darse de baja de sus eventos, su escuchador sigue vivo tras la recarga ([lección 5](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md), corregida en la [lección 2 de la limpieza](../../raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md); `idd@99bdccd:adr/0010-opencode-plugins-release-what-they-register.md`). **[comprobado]**
+- **Plugins locales: se recargan en caliente.** **[comprobado]** Editar los archivos del plugin, o sus `options` en la configuración, vuelve a ejecutar `setup` sin reiniciar ([lección 4](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md)). Antes, OpenCode ejecuta la función que devolvió el `setup` anterior; si la parte de TUI no la usa para darse de baja de sus eventos, su escuchador sigue vivo tras la recarga ([lección 5](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md), corregida en la [lección 2 de la limpieza](../../raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md); `idd@002f043:adr/0011-opencode-plugins-release-what-they-register.md`). **[comprobado]**
 
 ## Consecuencias para la plantilla
 
@@ -52,5 +52,5 @@ La plantilla aplica las tres cosas. El núcleo enlaza `.claude/skills/wiki-manag
 
 - [Lessons Learned](../../raw/notes/2026-11-21-ll-wiki-en-dos-agentes-2.md): lecciones 1, 2 y 5 y "Lo que no es de esta sesión".
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `idd@1cf0792:.agents/hooks/session-bootstrap.sh`, `idd@1cf0792:.claude/hooks/session-start.sh`, `idd@1cf0792:acceptance-tests/support/skills.js`, `idd@1cf0792:openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md` y `design.md`.
-- [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `adr/0010-opencode-plugins-release-what-they-register.md`.
+- [Collection: ADR-0011 tras la renumeración (idd@002f043)](../../raw/repos/2026-11-22-idd-002f043-adr-0011.md): `adr/0011-opencode-plugins-release-what-they-register.md`.
 - [Lessons Learned: suscripciones de la TUI de OpenCode y su limpieza](../../raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md): lección 2.

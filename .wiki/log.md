@@ -95,3 +95,7 @@
 ## [2026-11-22] inventory | volver-a-comprobar-apis-de-sesion-al-subir-opencode → updated (cleanup contract replaces the surviving RPC listeners; last_checked 2026-11-22)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, 002f043, ADR-0011 tras la renumeración): 2 new, 0 skipped, 2 total candidates
+
+## [2026-11-22] refresh | ciclo-de-un-change-y-autopilot, carga-en-la-misma-sesion-por-agente e inventario volver-a-comprobar-apis-de-sesion-al-subir-opencode: el ADR de limpieza de los plugins se cita como ADR-0011 en idd@002f043 (ADR-0010 es el de add-quote-comment-rule)

@@ -23,7 +23,7 @@ Con OpenCode 2.3.2 se comprobaron tres comportamientos que obligan a rodeos o a 
 
 - `ctx.session.update` ignora `archived`, así que se archiva desde la parte de TUI.
 - Las tools de un plugin solo existen en Code Mode salvo `options: { codemode: false }`.
-- OpenCode ejecuta como limpieza la función que devuelve el `setup` de cada parte, antes de cada recarga en caliente y al cerrar, y `events.on(nombre, manejador, { signal })` se da de baja al abortarse el `signal`. Los plugins lo usan para liberar sus suscripciones (ADR-0010). Sin eso, el escuchador de la carga anterior sigue vivo tras cada recarga (lo que registró la lección 5 del 2026-11-21) y, con `--standalone`, cada suscripción viva deja una traza `ECONNRESET` al cerrar.
+- OpenCode ejecuta como limpieza la función que devuelve el `setup` de cada parte, antes de cada recarga en caliente y al cerrar, y `events.on(nombre, manejador, { signal })` se da de baja al abortarse el `signal`. Los plugins lo usan para liberar sus suscripciones (ADR-0011). Sin eso, el escuchador de la carga anterior sigue vivo tras cada recarga (lo que registró la lección 5 del 2026-11-21) y, con `--standalone`, cada suscripción viva deja una traza `ECONNRESET` al cerrar.
 
 Además, el plugin y el OpenCode simulado de la suite (`acceptance-tests/support/agents/opencode-sim.mjs`) se apoyan en este contrato, comprobado al implementar el change (tasks 1.1 a 1.5 y 12.2 de add-openspec-autopilot):
 
