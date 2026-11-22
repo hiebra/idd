@@ -187,6 +187,21 @@
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
+## [2026-11-22] ingest | Opinión del usuario: la spec en la rama de origen y las dos formas del ciclo (raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md)
+
+## [2026-11-22] ll | "conflictos entre deltas de changes concurrentes" → raw/notes/2026-11-22-ll-conflictos-entre-deltas-concurrentes.md (3 lessons, 0 articles updated)
+
+## [2026-11-22] compile | 2 sources → 1 new article, 2 updated (conflictos-entre-deltas-concurrentes, origen-de-openspec-git-discipline, ciclo-de-un-change-y-autopilot)
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, idd@e9fced1): 16 new, 0 skipped, 16 total candidates (raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md)
+## [2026-11-22] compile | 1 source → 0 new articles, 4 updated (ciclo-de-un-change-y-autopilot, origen-de-openspec-git-discipline, flujo-wiki-first, conflictos-entre-deltas-concurrentes)
+
+## [2026-11-22] ll | "git-discipline-standard-with-exception" → raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md (5 lessons, 4 articles updated)
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "lecciones equivalentes al resolver una fusión en el wiki" → raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md (1 lesson, 1 article updated)
+
 ## [2026-11-22] ingest-collection | idd via git (manifest-only, 288741b): archivado de guiar-revision-con-tests, 9 new, 0 skipped, 9 total candidates
 
 ## [2026-11-22] compile | wiki/topics/ciclo-de-un-change-y-autopilot.md: la revisión de una task y del verify se guía con los tests de aceptación (guiar-revision-con-tests, idd@288741b)
