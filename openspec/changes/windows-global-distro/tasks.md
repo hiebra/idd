@@ -117,6 +117,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
     - `session-bootstrap` y `openspec-autopilot` no cambian: este change solo añade requisitos, y ninguno coincide con los de `main` (el de LF y el del CLI con `node`).
     - El requisito de LF sigue sirviendo con el núcleo en Node: los hooks de Claude Code siguen siendo de bash, y el núcleo procesa la guía, el recordatorio y la regla de comentarios. No se retira.
   - `openspec validate` y `lint:specs` sin errores. La suite pasa 268 de 283 escenarios; los 15 restantes son los de `windows-readiness`, que necesitan `pwsh`.
+  - En el workflow (run 45079491565, push de `644bd0e` a la rama, sin tag) los dos jobs pasan. En Linux pasan los 283 escenarios, entre ellos los de `windows-readiness`, `test:core` (170), el lint y `test:release`. En Windows pasan los 8 escenarios.
 - [ ] 7.3 Adaptar el diagnóstico `Test-OfflineInstall.ps1` a la instalación global: el schema en `<data>\openspec\schemas`, el motor en `<data>\idd\wiki-engine`, y las skills y los plugins copiados a `<config>\opencode` (`%XDG_CONFIG_HOME%` o `%USERPROFILE%\.config`). Con sus escenarios de `windows-readiness`, rojo → verde → commit
 - [ ] 7.4 Verificar en Windows 11 real, y anotar aquí el resultado:
   - el diagnóstico con PowerShell 5.1 y con PowerShell 7;
