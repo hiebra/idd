@@ -12,7 +12,7 @@
 #
 # Un disparo manual (workflow_dispatch) pasa los dos primeros jobs sin
 # publicar nada: monta los artefactos con un tag local, v0.0.0-ci, que no se
-# sube.
+# sube. Un tag de prueba con -ci (por ejemplo, v0.0.0-ci1) tampoco publica.
 
 name: release
 
@@ -95,7 +95,8 @@ jobs:
         run: npm run test:windows
 
   publish:
-    if: github.ref_type == 'tag'
+    # Un tag de prueba (v<x.y.z>-ci…) pasa los dos jobs sin publicar nada
+    if: github.ref_type == 'tag' && !contains(github.ref_name, '-ci')
     needs: [linux, windows]
     runs-on: ubuntu-latest
     permissions:
