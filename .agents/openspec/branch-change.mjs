@@ -558,6 +558,30 @@ export function listBranches(dir = process.cwd()) {
   return result;
 }
 
+// Las ramas a las que proponer la fusión tras el archive (design D6 de
+// allow-user-requested-merges): cada rama de `x-main`, en el orden de la
+// lista, salvo las que no tienen origin/<rama> (con un aviso) y las cuyo
+// origin/<rama> ya contiene HEAD. `bringFirst`: HEAD no contiene
+// origin/<rama> y hay que traerla antes. En una rama permanente o con HEAD
+// separado no da ninguna. No hace `git fetch`.
+export function mergeTargets(dir = process.cwd()) {
+  const { permanent, warning } = readPermanent(dir);
+  const warnings = warning ? [warning] : [];
+  const branch = git(dir, 'symbolic-ref', '--short', '-q', 'HEAD').out || null;
+  if (!branch || permanent.includes(branch)) return { branch, targets: [], warnings };
+  const targets = [];
+  for (const name of permanent) {
+    const ref = `refs/remotes/origin/${name}`;
+    if (!git(dir, 'rev-parse', '-q', '--verify', ref).ok) {
+      warnings.push(`no existe 'origin/${name}': no se propone la fusión con '${name}' (haz antes \`git fetch origin ${name}\`)`);
+      continue;
+    }
+    if (git(dir, 'merge-base', '--is-ancestor', 'HEAD', ref).ok) continue;
+    targets.push({ branch: name, bringFirst: !git(dir, 'merge-base', '--is-ancestor', ref, 'HEAD').ok });
+  }
+  return { branch, targets, warnings };
+}
+
 const dirty = (dir) => git(dir, 'status', '--porcelain').out !== '';
 const COMMIT_FIRST = 'el árbol de trabajo tiene cambios sin commit: haz antes el commit o guárdalos (git stash)';
 
@@ -599,6 +623,15 @@ function main(argv) {
     const result = argv[0] === 'start' ? startBranch(dir, argv[1]) : switchBranch(dir, argv[1]);
     process.stdout.write(`${JSON.stringify(result)}\n`);
     return result.ok ? 0 : 1;
+  }
+  if (argv[0] === 'merge-targets') {
+    const result = mergeTargets(dir);
+    if (argv.includes('--json')) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    else {
+      for (const t of result.targets) process.stdout.write(`${t.branch}${t.bringFirst ? `\t(trae antes origin/${t.branch})` : ''}\n`);
+      for (const w of result.warnings) process.stderr.write(`aviso: ${w}\n`);
+    }
+    return 0;
   }
   if (argv[0] === 'list') {
     const branches = listBranches(dir);
