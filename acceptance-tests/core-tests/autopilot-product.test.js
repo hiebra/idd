@@ -212,3 +212,30 @@ test('the working branch of a session and a checkout inside it (D1 of autopilot-
   assert.equal(sessionDir({ location: { directory: '/wt' }, metadata: { openspec: { worktree: '/clon' } } }), '/wt');
   assert.equal(sessionDir({ metadata: { openspec: { worktree: '/clon' } } }), '/clon');
 });
+
+// D1 of autopilot-rama-por-sesion: the first metadata of a session. The TUI's
+// screen read the session before it had any, and meanwhile the prompt hook of
+// `autopilot` made it the owner; the screen's write must not leave it free.
+test('the first metadata does not overwrite an owner written in the meantime', async () => {
+  const { firstMeta, meta, KEY } = await load('state.mjs');
+  const owner = { v: 1, worktree: '/p', branch: 'feature/x', role: 'owner', step: { kind: 'new' }, seq: 1, phase: 'running' };
+  const store = { id: 'ses_1', metadata: {} };
+  const api = {
+    get: async () => structuredClone(store),
+    update: async ({ metadata }) => {
+      store.metadata = structuredClone(metadata);
+    },
+  };
+  const stale = structuredClone(store);
+  // The concurrent prompt hook takes control
+  store.metadata = { [KEY]: owner };
+  const written = await firstMeta(api, stale, { worktree: '/p', branch: 'feature/x' });
+  assert.deepEqual(meta(store), owner);
+  assert.deepEqual(written, owner);
+
+  // A session that still has none gets its working branch, free
+  const fresh = { id: 'ses_2', metadata: {} };
+  const api2 = { get: async () => structuredClone(fresh), update: async ({ metadata }) => { fresh.metadata = structuredClone(metadata); } };
+  await firstMeta(api2, structuredClone(fresh), { worktree: '/p', branch: 'feature/x' });
+  assert.deepEqual(meta(fresh), { v: 1, worktree: '/p', branch: 'feature/x', role: 'free' });
+});

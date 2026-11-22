@@ -47,7 +47,7 @@ import path from 'node:path';
 import { RPC, TIMEOUT_MS } from './lib/rpc.mjs';
 import { describe, discrepancy, next, stepFromState, waitsForCommit, zoneOf } from './lib/next-step.mjs';
 import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, WORKTREE_TOOL, closedPrompt, foreignPrompt, reminderPrompt, resumeCommand, stepPrompt } from './lib/prompts.mjs';
-import { allSessions, branchMoved, branchSessions, changeSessions, isArchived, isWorking, leftFrom, meta, nextSeq, owners, sessionDir, winner, writeMeta } from './lib/state.mjs';
+import { allSessions, branchMoved, firstMeta, branchSessions, changeSessions, isArchived, isWorking, leftFrom, meta, nextSeq, owners, sessionDir, winner, writeMeta } from './lib/state.mjs';
 import { branchChange, changeState, switchTo, validateErrors } from './lib/project.mjs';
 import { currentBranch, gitState, stage, treeClean, verdict } from './lib/git.mjs';
 import { describeProducts, productOf, reviewQueue, snapshotOf, stagePaths } from './lib/product.mjs';
@@ -302,7 +302,7 @@ async function start(ctx) {
     const m = meta(session);
     if (!m) {
       if (!head) return null;
-      return writeMeta(api, session.id, { worktree: directory, branch: head, role: 'free' });
+      return firstMeta(api, session, { worktree: directory, branch: head });
     }
     if (!m.worktree) return m;
     const patch = branchMoved({ meta: m, head, pluginCheckout: registry.checkouts[directory] ?? null });

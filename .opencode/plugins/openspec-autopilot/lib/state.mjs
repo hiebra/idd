@@ -49,6 +49,16 @@ export async function writeMeta(api, sessionID, patch) {
   return written;
 }
 
+// La primera metadata de una sesión que no la tiene: su rama de trabajo, como
+// sesión libre (design D1 de autopilot-rama-por-sesion). Se decide con la
+// sesión recién leída, no con la recibida: si mientras tanto otra llamada (el
+// hook prompt de `autopilot`) ya le ha escrito metadata, no se toca.
+export async function firstMeta(api, session, { worktree, branch }) {
+  const current = meta(await api.get({ sessionID: session.id }));
+  if (current) return current;
+  return writeMeta(api, session.id, { worktree, branch, role: 'free' });
+}
+
 // Todas las sesiones, archivadas incluidas: list() devuelve { data, cursor }
 // por páginas (comprobado con OpenCode 2.3.2, task 12.2)
 export async function allSessions(api, { pageSize = 100, maxPages = 50 } = {}) {
