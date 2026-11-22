@@ -843,12 +843,26 @@ async function start(ctx) {
     return url ? `${url}/server/${Buffer.from(url).toString('base64')}/session/${sessionID}` : null;
   };
 
-  const newWorktree = guard('worktree', async (input) => {
+  // El proyecto: ctx.location.project en OpenCode 2.3.2 (no hay ctx.project), o
+  // el de la sesión que llama a la tool
+  const projectOf = async (context) => {
+    const id = ctx.location?.project?.id ?? ctx.project?.id;
+    if (id) return id;
+    if (!context?.sessionID) return undefined;
+    try {
+      return (await api.get({ sessionID: context.sessionID }))?.projectID;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const newWorktree = guard('worktree', async (input, context) => {
     if (!ctx.worktree?.create) return { content: 'Este OpenCode no deja al plugin crear worktrees: crea el worktree desde la TUI («Manage workspaces») o con el botón de la web.' };
+    const projectID = await projectOf(context);
     const name = typeof input?.name === 'string' && input.name.trim() ? input.name.trim() : undefined;
     let created;
     try {
-      created = await ctx.worktree.create({ ...(ctx.project?.id ? { projectID: ctx.project.id } : {}), ...(name ? { name } : {}) });
+      created = await ctx.worktree.create({ ...(projectID ? { projectID } : {}), ...(name ? { name } : {}) });
     } catch (error) {
       return { content: `No se ha creado el worktree: ${error?.message ?? error}` };
     }
@@ -911,7 +925,7 @@ async function start(ctx) {
         'Crea un worktree nuevo del proyecto en una rama con su mismo nombre (desde la rama de origen del remoto) y, en él, la sesión operativa que arranca openspec-new-change. Úsala solo cuando el usuario pida un worktree nuevo. Devuelve el enlace a esa sesión, o su título y su id.',
       options: { codemode: false },
       input: { type: 'object', properties: { name: { type: 'string', description: 'Nombre del worktree y de su rama, en kebab-case; sin él, lo genera OpenCode.' } } },
-      execute: async (input) => (await newWorktree(input)) ?? { content: 'openspec-autopilot no ha podido crear el worktree.' },
+      execute: async (input, context) => (await newWorktree(input, context)) ?? { content: 'openspec-autopilot no ha podido crear el worktree.' },
     });
   });
   // La estrategia de worktree (D5): la registra cada instancia con el mismo id
