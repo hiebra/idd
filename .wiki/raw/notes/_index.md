@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-fusion-supuestos-invalidados.md](2026-11-22-ll-fusion-supuestos-invalidados.md) | 1 lección: al fusionar main, lo que llega sin conflicto puede apoyarse en lo que el change cambió (las revisiones con plan) | lessons-learned, git, merge, openspec-autopilot, llm-wiki | 2026-11-22 |
 | [2026-11-22-ll-archivado-autopilot-plan-explore.md](2026-11-22-ll-archivado-autopilot-plan-explore.md) | 4 lecciones del archivado de autopilot-plan-explore: la task del archive, el banco con OpenCode real (ESC [ Z y opencode serve propio), las referencias del motor y las búsquedas sin los informes generados | lessons-learned, openspec, archive, opencode, testing, llm-wiki | 2026-11-22 |
 | [2026-11-22-ll-cucumber-rerun.md](2026-11-22-ll-cucumber-rerun.md) | 1 lección: --format rerun lista los fallos, pero @rerun.txt se suma a las rutas del perfil y no acota; se repiten con --name | lessons-learned, acceptance-tests, cucumber-js | 2026-11-22 |
 | [2026-11-22-ll-apply-guidance-timeout.md](2026-11-22-ll-apply-guidance-timeout.md) | 1 lección: un temporizador con unref() no mantiene vivo node --test, y un test cancelado no cuenta como fail | lessons-learned, core-tests, node-test, openspec-autopilot | 2026-11-22 |
@@ -44,6 +45,7 @@ Last updated: 2026-11-22
 
 ## Recent Changes
 
+- 2026-11-22: Lección sobre los supuestos que invalida un change al fusionar main
 - 2026-11-22: Lecciones del archivado de autopilot-plan-explore
 - 2026-11-22: Lección sobre los contadores del wiki en una fusión
 - 2026-11-22: Lección de check commit

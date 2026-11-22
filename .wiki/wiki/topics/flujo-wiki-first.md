@@ -2,6 +2,7 @@
 title: "El flujo wiki-first"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-fusion-supuestos-invalidados.md
   - raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md
   - raw/repos/2026-11-22-idd-fc31fe5-reorder-wiki-resync.md
   - raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md
@@ -91,6 +92,7 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 - **La guidance de archivado solo añade pasos**: el workflow de archive no le deja saltarse su pregunta sobre el sync de specs ni cambiar sus flags, así que no puede forzar el sync (`idd@a62cf14:.claude/skills/openspec-archive-change/SKILL.md`). Con deltas aplicables se sincroniza siempre; archivar sin sincronizar es para changes sin cambios de comportamiento, mejor declarados con `skip_specs: true` en su `.openspec.yaml`, o para syncs bloqueados ([lecciones sobre la guidance de archivado](../../raw/notes/2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md); [docs/cli.md de OpenSpec](../../raw/articles/2026-11-22-openspec-docs-cli-archive.md); si las specs ya se sincronizaron con `/opsx:sync`, el archive ofrece archivar sin más: [docs/opsx.md](../../raw/articles/2026-11-22-openspec-docs-opsx-sync.md), [docs/commands.md](../../raw/articles/2026-11-22-openspec-docs-commands-sync-archive.md)).
 - **`openspec archive --yes` no avisa de tasks pendientes**: la advertencia la da el workflow, que cuenta las tasks con `openspec list --json`. Compruébalas antes de usar la CLI con `--yes` ([lecciones de git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md), lección 3).
 - **Al resolver una fusión con conflictos en el wiki**, busca antes en el lado que llega lecciones equivalentes a las propias: dos changes concurrentes pueden registrar lo mismo. Conserva una sola viñeta, cita las dos notas y quédate con la versión mejor comprobada ([lecciones de la fusión en el wiki](../../raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md), lección 1).
+- **Lo que llega sin conflicto también puede contradecir el change**: git solo marca las líneas que tocan los dos lados. Al fusionar `main` en la rama de `autopilot-plan-explore`, que hace nacer las revisiones con build, entraron limpios un punto del wiki y un test que daban por hecho que corren con plan, y el test pasaba igual. Busca en el diff de `main` desde el merge-base los términos de lo que el change cambió y corrige lo que se apoye en el supuesto anterior ([lección de los supuestos invalidados en una fusión](../../raw/notes/2026-11-22-ll-fusion-supuestos-invalidados.md), lección 1).
 - **Los contadores del wiki en una fusión**: si chocan las estadísticas de `.wiki/_index.md` o `inventory/_index.md`, no elijas un lado: cuéntalas sobre el disco tras la fusión, y los activos del inventario por su `status:`. En las dos fusiones de `windows-support` con `main`, ningún lado acertaba, y el lint del motor no compara esos contadores con el disco ([lección de los contadores en una fusión](../../raw/notes/2026-11-22-ll-fusion-wiki-contadores.md), lección 1).
 - **Un lint en `PASS` tras `--fix` no prueba que las fuentes nuevas estén compiladas**: el arreglo de cobertura aparca la fuente sin artículo en `wiki/references/uncompiled-source-coverage.md` y el lint pasa. Las notas de lecciones del archivado se compilan antes del lint ([lecciones de lint --fix y librarian 1.0.0](../../raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md), lección 1).
 - **`librarian scan` 1.0.0 no revisa contenido**: solo puntúa antigüedad y forma, y escribe en `.librarian/` y `log.md`. Lo que contradice un change lo clasifica `/wiki:refresh` sobre los artículos que citan las rutas tocadas ([lecciones de lint --fix y librarian 1.0.0](../../raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md), lección 2).
@@ -114,6 +116,7 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 
 ## Sources
 
+- [Lessons Learned: lo que llega de main puede contradecir el change sin conflicto de git](../../raw/notes/2026-11-22-ll-fusion-supuestos-invalidados.md): lección 1.
 - [Lessons Learned: el archivado de autopilot-plan-explore](../../raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md): lección 1.
 - [Collection: archivado de reorder-wiki-resync (idd@fc31fe5)](../../raw/repos/2026-11-22-idd-fc31fe5-reorder-wiki-resync.md): `openspec/config.yaml`, `openspec/specs/wiki-first-knowledge/spec.md`.
 - [Lessons Learned: lint --fix y librarian scan del motor 1.0.0](../../raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md): lecciones 1 y 2.

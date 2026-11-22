@@ -293,3 +293,5 @@
 ## [2026-11-22] merge | origin/main (reorder-wiki-resync) en la rama de autopilot-plan-explore: conflictos del wiki unidos, sin lecciones equivalentes; contadores recontados (57 fuentes, 13 artículos, 8 registros, 7 activos)
 
 ## [2026-11-22] merge | origin/main (apply-one-task-per-session-in-normal-mode) en la rama de autopilot-plan-explore: conflictos del wiki unidos; «Lo que se mantiene» cita ADR-0025 sin «y su agente»; contadores recontados (60 fuentes, 13 artículos, 8 registros, 7 activos)
+
+## [2026-11-22] ll | "lo que llega de main puede contradecir el change sin conflicto de git" → raw/notes/2026-11-22-ll-fusion-supuestos-invalidados.md (1 lesson, 1 article updated: flujo-wiki-first)
