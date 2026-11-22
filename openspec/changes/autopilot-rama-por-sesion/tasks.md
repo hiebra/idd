@@ -19,15 +19,15 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 2. Núcleo puro (zona de código), con `core-tests`
 
-- [ ] 2.1 `lib/worktree.mjs` (D5): `create`, `remove` y `list` de la estrategia sobre git, con la rama de origen de `readPermanent`. Tests con repositorios reales y un remoto desnudo en `core-tests/autopilot-worktree.test.js`:
+- [x] 2.1 `lib/worktree.mjs` (D5): `create`, `remove` y `list` de la estrategia sobre git, con la rama de origen de `readPermanent`. Tests con repositorios reales y un remoto desnudo en `core-tests/autopilot-worktree.test.js`:
   - rama nueva desde `origin/<rama de origen>`, `--no-track`, y push sin argumentos que crea `origin/<rama>`, sin cambiar `push.autoSetupRemote`;
   - rama existente;
   - rama sacada en otro directorio;
   - `fetch` fallido;
   - `branch` ignorado;
   - `remove` que conserva la rama y pide `forceRequired` con cambios.
-- [ ] 2.2 `lib/screen.mjs` (D3, D4): la directiva al entrar en una sesión (`toast`, checkout, `back`) y en una pantalla de inicio o una sesión nueva (`modal` con sus opciones según el árbol), con la ruta anterior. Tests en `core-tests/autopilot-product.test.js`.
-- [ ] 2.3 `lib/state.mjs` (D1): la rama de trabajo en la metadata, el cambio de rama detectado dentro de una sesión y el paso a `free`. Tests en `core-tests/autopilot-product.test.js`.
+- [x] 2.2 `lib/screen.mjs` (D3, D4): la directiva al entrar en una sesión (`toast`, checkout, `back`) y en una pantalla de inicio o una sesión nueva (`modal` con sus opciones según el árbol), con la ruta anterior. Tests en `core-tests/autopilot-product.test.js`.
+- [x] 2.3 `lib/state.mjs` (D1): la rama de trabajo en la metadata, el cambio de rama detectado dentro de una sesión y el paso a `free`. Tests en `core-tests/autopilot-product.test.js`.
 
 ## 3. Ramas (zona de código): `openspec-change-lifecycle`
 

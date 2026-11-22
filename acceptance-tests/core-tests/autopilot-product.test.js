@@ -3,7 +3,9 @@
 // Core tests of the plugin's pure logic added by autopilot-sesion-operativa:
 // the evaluable product (lib/product.mjs, design D7), the review verdict by
 // git (lib/git.mjs, D8, with real repositories) and what the TUI does with
-// each screen (lib/screen.mjs, D4).
+// each screen (lib/screen.mjs, D4), and, from autopilot-rama-por-sesion,
+// entering a session (D3), the modal of `/new` (D4) and the working branch of
+// each session (lib/state.mjs, D1).
 //
 // Run with: npm run test:core
 
@@ -136,13 +138,77 @@ test('the signature changes with any change of the repository', async () => {
   }
 });
 
-test('what the TUI does with each screen', async () => {
-  const { directive, modalText } = await load('screen.mjs');
-  const op = { id: 'ses_op', title: 'artefacto design de x', change: 'x' };
-  assert.deepEqual(directive({ route: { type: 'home' }, operational: null }), { action: 'none' });
-  assert.deepEqual(directive({ route: { type: 'home' }, operational: op }), { action: 'modal', sessionID: 'ses_op', title: op.title, change: 'x' });
-  assert.deepEqual(directive({ route: { type: 'session', sessionID: 'ses_op' }, operational: op }), { action: 'validate' });
-  assert.deepEqual(directive({ route: { type: 'session', sessionID: 'ses_old' }, operational: op, routeSession: { id: 'ses_old', archived: true } }), { action: 'none' });
-  assert.equal(directive({ route: { type: 'session', sessionID: 'ses_free' }, operational: op, routeSession: { id: 'ses_free', archived: false } }).action, 'modal');
-  assert.equal(modalText({ change: 'x', title: 'T' }), 'Mientras se edita el change x en modo autopilot, solo se puede operar con su sesión operativa «T».');
+test('entering a session: its branch, or back to the previous window (D3 of autopilot-rama-por-sesion)', async () => {
+  const { enterSession } = await load('screen.mjs');
+  const target = { id: 'ses_op', dir: '/wt/x', branch: 'feature/x', archived: false };
+  const base = { target, fromDir: '/clon', head: 'feature/x', clean: true, working: null, permanent: ['main'], origin: 'main' };
+  // Another directory, already in its branch: a toast with the branch and the directory
+  const other = enterSession(base);
+  assert.equal(other.action, 'toast');
+  assert.match(other.message, /feature\/x/);
+  assert.match(other.message, /\/wt\/x/);
+  // The same directory and its branch: nothing
+  assert.deepEqual(enterSession({ ...base, fromDir: '/wt/x' }), { action: 'none' });
+  assert.deepEqual(enterSession({ ...base, fromDir: null }), { action: 'none' });
+  // The same directory, another branch: checkout of a temporary branch, or of the origin branch
+  const same = { ...base, target: { ...target, dir: '/clon' }, fromDir: '/clon', head: 'main' };
+  assert.deepEqual(enterSession(same), { action: 'checkout', branch: 'feature/x', via: 'switch' });
+  assert.deepEqual(enterSession({ ...same, target: { ...same.target, branch: 'main' }, head: 'feature/x' }), { action: 'checkout', branch: 'main', via: 'origin' });
+  // Another permanent branch: nothing but a toast
+  const develop = enterSession({ ...same, target: { ...same.target, branch: 'develop' }, permanent: ['develop', 'main'] });
+  assert.equal(develop.action, 'toast');
+  assert.match(develop.message, /permanente/);
+  // Dirty tree, or another session working: back, saying why
+  const dirty = enterSession({ ...same, clean: false });
+  assert.equal(dirty.action, 'back');
+  assert.equal(dirty.reason, 'dirty');
+  assert.match(dirty.message, /cambios sin commit/);
+  assert.match(dirty.message, /commit/);
+  assert.match(dirty.message, /worktree/);
+  const working = enterSession({ ...same, working: 'Otra sesión' });
+  assert.deepEqual([working.action, working.reason], ['back', 'working']);
+  assert.match(working.message, /sesión trabajando/);
+  // Archived sessions, or sessions without a working branch: nothing
+  assert.deepEqual(enterSession({ ...same, target: { ...same.target, archived: true } }), { action: 'none' });
+  assert.deepEqual(enterSession({ ...same, target: { ...same.target, branch: null } }), { action: 'none' });
+});
+
+test("the modal of `/new`: its options by the tree, and where it does not show (D4 of autopilot-rama-por-sesion)", async () => {
+  const { newWindow, OPTION } = await load('screen.mjs');
+  const operational = { id: 'ses_op', title: 'T', change: 'x', branch: 'feature/x' };
+  const home = { type: 'home', location: { directory: '/clon' } };
+  const clean = newWindow({ route: home, operational, temporary: true, clean: true });
+  assert.equal(clean.action, 'modal');
+  assert.deepEqual(clean.options, [OPTION.worktree, OPTION.origin]);
+  assert.match(clean.message, /«T»/);
+  assert.deepEqual(newWindow({ route: home, operational, temporary: true, clean: false }).options, [OPTION.worktree]);
+  assert.deepEqual(OPTION.worktree.title, 'Crear un worktree nuevo');
+  assert.deepEqual(OPTION.origin.title, 'Cambiar a la rama de origen');
+  // A new session (no messages) too; a session with messages, the operational one, no operational session or a permanent branch, no
+  assert.equal(newWindow({ route: { type: 'session', sessionID: 'ses_n' }, isNew: true, operational, temporary: true, clean: true }).action, 'modal');
+  assert.deepEqual(newWindow({ route: { type: 'session', sessionID: 'ses_n' }, isNew: false, operational, temporary: true, clean: true }), { action: 'none' });
+  assert.deepEqual(newWindow({ route: { type: 'session', sessionID: 'ses_op' }, isNew: true, routeIsOperational: true, operational, temporary: true, clean: true }), { action: 'none' });
+  assert.deepEqual(newWindow({ route: home, operational: null, temporary: true, clean: true }), { action: 'none' });
+  assert.deepEqual(newWindow({ route: home, operational, temporary: false, clean: true }), { action: 'none' });
+});
+
+test('the working branch of a session and a checkout inside it (D1 of autopilot-rama-por-sesion)', async () => {
+  const { branchMoved, leftFrom, sessionDir } = await load('state.mjs');
+  const owner = { v: 1, worktree: '/clon', branch: 'feature/x', role: 'owner', step: { kind: 'task', id: '3' } };
+  assert.equal(branchMoved({ meta: owner, head: 'feature/x' }), null);
+  assert.equal(branchMoved({ meta: owner, head: null }), null, 'a detached HEAD changes nothing');
+  assert.equal(branchMoved({ meta: null, head: 'main' }), null);
+  // The operational session leaves its branch: free, not archived, remembering the branch it left
+  assert.deepEqual(branchMoved({ meta: owner, head: 'main' }), { branch: 'main', role: 'free', phase: 'left', leftFrom: 'feature/x', resumed: false });
+  // Another session just follows its branch
+  assert.deepEqual(branchMoved({ meta: { ...owner, role: 'free' }, head: 'main' }), { branch: 'main' });
+  // A checkout made by the plugin does not count
+  assert.equal(branchMoved({ meta: owner, head: 'main', pluginCheckout: { from: 'feature/x', to: 'main' } }), null);
+  assert.deepEqual(branchMoved({ meta: owner, head: 'main', pluginCheckout: { from: 'otra', to: 'main' } }).role, 'free');
+  // The sessions a branch resumes when the directory goes back to it
+  const s = (id, m) => ({ id, metadata: { openspec: { v: 1, ...m } } });
+  const sessions = [s('a', { worktree: '/clon', leftFrom: 'feature/x', resumed: false }), s('b', { worktree: '/clon', leftFrom: 'feature/x', resumed: true }), s('c', { worktree: '/wt', leftFrom: 'feature/x' })];
+  assert.deepEqual(leftFrom(sessions, { worktree: '/clon', branch: 'feature/x' }).map((x) => x.id), ['a']);
+  assert.equal(sessionDir({ location: { directory: '/wt' }, metadata: { openspec: { worktree: '/clon' } } }), '/wt');
+  assert.equal(sessionDir({ metadata: { openspec: { worktree: '/clon' } } }), '/clon');
 });
