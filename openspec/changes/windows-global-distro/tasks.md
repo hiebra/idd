@@ -54,7 +54,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - `idd-slim-<versión>.zip`.
 
   → los escenarios de 5.3 en verde → commit
-- [ ] 5.5 Steps de `windows-global-install` que se pueden comprobar en Linux sobre el zip: qué instala y que el schema es idéntico al de origen. Rojo → implementar lo que falte en `build.mjs` → verde → commit
+- [x] 5.5 Steps de `windows-global-install` que se pueden comprobar en Linux sobre el zip: qué instala y que el schema es idéntico al de origen. Rojo → implementar lo que falte en `build.mjs` → verde → commit
 
 ## 6. El `.bat` y la suite de Windows (D6, D7)
 

@@ -95,6 +95,37 @@ class GlobalInstall {
     }
   }
 
+  // What the release's .bat installs, from its zip, without Windows: data/
+  // into <data>, config/ into <config>, the SKILL.md of openspec-git-discipline
+  // from its pieces with the absolute path of the installed script, and
+  // installed.txt and version in <data>\idd (design D6)
+  installFromZip(zip, version) {
+    const { unzip } = require('./release');
+    const unpacked = unzip(zip, path.join(this.root, 'unpacked'));
+    for (const [from, to] of [['data', this.data], ['config', this.config]]) {
+      fs.mkdirSync(to, { recursive: true });
+      fs.cpSync(path.join(unpacked, from), to, { recursive: true });
+    }
+    const dir = this.skillDir(GIT_DISCIPLINE);
+    const pieces = path.join(unpacked, 'pieces', GIT_DISCIPLINE);
+    const script = path.join(dir, 'scripts', 'branch-change.mjs');
+    fs.writeFileSync(
+      path.join(dir, 'SKILL.md'),
+      fs.readFileSync(path.join(pieces, 'SKILL.head.md'), 'utf8') +
+        `El script es: \`${script}\`\n` +
+        fs.readFileSync(path.join(pieces, 'SKILL.tail.md'), 'utf8')
+    );
+    const home = path.join(this.data, 'idd');
+    fs.copyFileSync(path.join(unpacked, 'installed.txt'), path.join(home, 'installed.txt'));
+    fs.writeFileSync(path.join(home, 'version'), `${version}\n`);
+    fs.rmSync(unpacked, { recursive: true, force: true });
+    return this;
+  }
+
+  get schemaDir() {
+    return path.join(this.data, 'openspec', 'schemas', 'intent-driven');
+  }
+
   // The session bootstrap and the comments rule, as the release installs them
   installSession({ engine }) {
     this.installPlugin('session-bootstrap');
