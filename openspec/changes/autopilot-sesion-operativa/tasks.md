@@ -60,11 +60,11 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
   - en el autopilot no pide commits;
   - fuera de él, los pide como antes;
   - se actualizan las señales de alarma.
-- [ ] 6.2 `README.md`: "El ciclo de un change" y "Automatizar el ciclo en OpenCode":
+- [x] 6.2 `README.md`: "El ciclo de un change" y "Automatizar el ciclo en OpenCode":
   - sesión operativa, producto, revisión por git y modo auto;
   - UI web, OpenCode Desktop y `opencode run`, con su degradación;
   - ADR-0012 y ADR-0013.
-- [ ] 6.3 `acceptance-tests/README.md`: lo nuevo del simulador y de `core-tests`.
+- [x] 6.3 `acceptance-tests/README.md`: lo nuevo del simulador y de `core-tests`.
 
 ## 7. Suite completa
 
