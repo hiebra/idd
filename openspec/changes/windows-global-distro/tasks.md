@@ -110,7 +110,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 8. Documentación y cierre
 
-- [ ] 8.1 README:
+- [x] 8.1 README:
   - las dos variantes;
   - cómo instalar y actualizar en Windows con el `.bat`;
   - cómo pasar un proyecto existente a la variante adelgazada;

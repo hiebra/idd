@@ -18,6 +18,67 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 - **Arranque de sesión** que prepara el proyecto en los dos agentes (ver abajo).
 - **El ciclo de un change en una rama y una sola fusión con `--no-ff`** como forma recomendada, con la forma canónica de intent-driven también admitida, igual en los dos agentes, y en OpenCode 2 un plugin que lo automatiza con una sesión por paso (ver abajo).
 
+## Dos variantes: completa y adelgazada
+
+La plantilla se usa de dos formas, y cada release publica las dos con su versión semántica:
+
+| | Plantilla completa | Variante adelgazada |
+|---|---|---|
+| Qué es | este repositorio, con todo dentro del proyecto | un zip de la release, `idd-slim-<versión>.zip` |
+| Agentes y plataformas | Claude Code y OpenCode 2, en Linux, macOS y Windows | OpenCode 2 en Windows |
+| Schema, skills, plugins y motor del wiki | copias en el proyecto (`openspec/schemas/`, `.agents/`, `.opencode/`, `.claude/`) | instalados una sola vez en la máquina, compartidos por todos sus proyectos |
+| Actualizar | proyecto a proyecto | un solo paso por máquina: ejecutar el `.bat` de la release nueva |
+
+Un proyecto adelgazado solo guarda lo que es suyo:
+- `openspec/config.yaml`, con `schema: intent-driven`;
+- `.wiki/`;
+- `package.json`, con OpenSpec fijado;
+- los ADRs de `adr/`;
+- `openspec/specs/` sin ninguna spec;
+- una suite de aceptación vacía y en verde, lista para sus propias specs.
+
+No hereda las specs ni la suite de la plantilla, que describen y prueban la plantilla completa, ni sus changes ni sus herramientas de release. Lo que en la plantilla completa vive en el proyecto lo aporta la instalación global, y su arranque de sesión, su autopilot y su regla de comentarios solo actúan en proyectos que declaran `schema: intent-driven`. Un proyecto que tenga los suyos propios, como un clon de la plantilla completa, usa los suyos y la instalación global no hace nada en él.
+
+Las decisiones están en [ADR-0023](adr/0023-session-bootstrap-core-in-node.md), el núcleo del arranque en Node, y [ADR-0024](adr/0024-windows-global-install-and-slim-template.md), la instalación global y la variante adelgazada.
+
+### Instalar y actualizar en Windows
+
+Descarga de la release el instalador, `idd-<versión>.bat`, y ejecútalo, con doble clic o desde `cmd`. Solo necesita `curl.exe` y `tar.exe`, que vienen con Windows 10 y 11: ni git ni Node. Instala en las mismas ubicaciones que usan OpenSpec y OpenCode:
+
+| | Con XDG | Sin XDG |
+|---|---|---|
+| `<data>`: el schema (`openspec\schemas\intent-driven`) y el motor del wiki (`idd\wiki-engine`) | `%XDG_DATA_HOME%` | `%LOCALAPPDATA%` |
+| `<config>`: las skills (`opencode\skills`) y los plugins (`opencode\plugins`) | `%XDG_CONFIG_HOME%` | `%USERPROFILE%\.config` |
+
+- **Actualizar** es ejecutar el `.bat` de la release nueva. Sustituye por completo lo que instaló la anterior, según la lista que guarda en `<data>\idd\installed.txt`, sin tocar tus otras skills ni tus otros plugins de `<config>\opencode`.
+- **Si ya está instalada esa versión** (`<data>\idd\version`), no descarga nada ni cambia nada.
+- **Si algo falla**, la versión guardada no cambia y basta con volver a ejecutarlo.
+- **Volver atrás** es ejecutar el `.bat` de una release anterior.
+- **Desinstalar** es borrar a mano lo que lista `installed.txt` y `<data>\idd`.
+
+Cada proyecto sigue necesitando Node.js 22.12 o superior con npm, porque el arranque de sesión instala sus dependencias y pone su OpenSpec en el `PATH`.
+
+### Crear un proyecto adelgazado o pasar a esa variante uno existente
+
+- **Un proyecto nuevo:** descomprime `idd-slim-<versión>.zip`, de la misma release que el `.bat` instalado, en el directorio del proyecto, y abre OpenCode en él.
+- **Un proyecto existente creado desde la plantilla completa:** borra `openspec/schemas/`, `.agents/`, `.opencode/` y `.claude/` y ejecuta el `.bat`. Sus specs y su suite son suyas, así que se quedan: quita también las specs y los steps heredados de la plantilla que ya no apliquen. Para volver a la variante completa, restaura esos directorios desde la plantilla.
+
+### Publicar una release
+
+Las releases salen de los tags `v<x.y.z>`. Al subir uno, el workflow `.github/workflows/release.yml` hace tres cosas:
+
+1. En Linux, pasa `test:core`, el lint de las specs, la suite y `test:release`, que comprueba que el schema y las skills que la plantilla no mantiene como propias son los de su origen en el commit de `.agents/release/origins.json`. Después monta los tres artefactos desde el tag con `node scripts/release/build.mjs --repo . --tag v<x.y.z> --out dist`.
+2. En Windows, pasa `test:windows`, los escenarios que ejecutan el `.bat` real con `cmd.exe`.
+3. Si los dos pasan, publica la release del tag con `idd-<versión>.bat`, `idd-global-<versión>.zip` y `idd-slim-<versión>.zip`.
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+Un tag con `-ci`, como `v0.0.0-ci1`, prueba el workflow sin publicar nada: pasa los dos jobs y se salta la publicación. Bórralo después.
+
+Al cambiar una skill del origen o el schema, actualiza `.agents/release/origins.json` con el commit nuevo. Las tres skills propias (`openspec-git-discipline`, `acceptance-test-authoring` y `spec-as-source`) se mantienen al día con el origen a mano, porque el origen no tiene tags.
+
 ## Requisitos
 
 - Node.js 22.12 o superior (`engines.node` en `package.json`), con npm.
@@ -293,7 +354,7 @@ npx openspec --version
 
 ## Qué heredan los proyectos creados desde la plantilla
 
-Además de los archivos de arriba, un proyecto creado desde la plantilla hereda su registro de OpenSpec, como cualquier proyecto que ya se haya trabajado con él:
+Además de los archivos de arriba, un proyecto creado desde la plantilla completa hereda su registro de OpenSpec, como cualquier proyecto que ya se haya trabajado con él. Uno creado desde la variante adelgazada solo hereda los ADRs y `.wiki/` (ver [Dos variantes](#dos-variantes-completa-y-adelgazada)):
 
 - **Specs** en `openspec/specs/`: describen el comportamiento que el proyecto hereda (por ejemplo, `session-bootstrap`). Un change del proyecto que lo altere las modifica como cualquier otra spec.
 - **ADRs** en `adr/`: las decisiones duraderas de la plantilla, vigentes también para el proyecto mientras ningún ADR posterior las sustituya.
