@@ -7,6 +7,15 @@
 import { Host } from './opencode-sim.mjs';
 
 let host = null;
+
+// Longer than the TUI's poll (300 ms), then until nothing is pending
+async function waitScreen() {
+  await new Promise((resolve) => setTimeout(resolve, 450));
+  await host.settle();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  await host.settle();
+  return host.state();
+}
 // What escapes the plugin's promises or timers would crash OpenCode's process
 process.on('uncaughtException', (error) => host?.crash('uncaught exception', error));
 process.on('unhandledRejection', (error) => host?.crash('unhandled rejection', error));
@@ -80,6 +89,35 @@ const OPS = {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
     return host.state();
+  },
+  // The TUI's screen: what the user sees changes, and the TUI notices it in its next poll
+  async home() {
+    host.setRoute({ type: 'home' });
+    return waitScreen();
+  },
+  async goto({ sessionID }) {
+    host.setRoute({ type: 'session', sessionID });
+    return waitScreen();
+  },
+  async blur() {
+    host.focus('blur');
+    return waitScreen();
+  },
+  async focus() {
+    host.focus('focus');
+    return waitScreen();
+  },
+  // The user writes the first message in the home screen: the session exists from it
+  async openHome({ text, agent = 'build' }) {
+    const id = host.seedSession({ title: text.slice(0, 40), agent });
+    delete host.session(id).time.idle;
+    host.startTurn(id, { text });
+    host.setRoute({ type: 'session', sessionID: id });
+    await waitScreen();
+    return { sessionID: id, state: host.state() };
+  },
+  async waitScreen() {
+    return waitScreen();
   },
   fail({ failures }) {
     Object.assign(host.failures, failures);

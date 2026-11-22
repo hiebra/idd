@@ -51,7 +51,7 @@ Lo que cambia según el agente es cómo se dispara, cómo se ajusta el `PATH` y 
 
 La primera sesión de cada clon tarda más, porque instala las dependencias; las siguientes no instalan nada si nada ha cambiado, sea cual sea el agente que hizo la instalación. El arranque nunca impide que la sesión arranque: si algo falla, avisa con el prefijo `session-start:` y lo reintenta en la siguiente sesión.
 
-En OpenCode Desktop y en `opencode run` (sin interfaz de terminal) el arranque funciona igual, pero los avisos solo quedan en el log de OpenCode. El plugin se ha probado con OpenCode 2.3.2.
+En la UI web (`opencode pair`, `opencode serve`), en OpenCode Desktop y en `opencode run` (sin interfaz de terminal) el arranque funciona igual, pero los avisos solo quedan en el log de OpenCode: esos clientes no cargan la parte de TUI de los plugins del proyecto. El plugin se ha probado con OpenCode 2.3.2.
 
 El comportamiento exacto está en las specs [`openspec/specs/session-bootstrap/spec.md`](openspec/specs/session-bootstrap/spec.md) y [`openspec/specs/agent-skills/spec.md`](openspec/specs/agent-skills/spec.md), y la decisión en [`adr/0002-agent-neutral-session-bootstrap.md`](adr/0002-agent-neutral-session-bootstrap.md).
 
@@ -154,7 +154,7 @@ Con `PROJECT_COMMENTS=off`, el agente no recibe ni la regla ni el recordatorio. 
 
 ## El ciclo de un change
 
-Cada change se hace entero en **una rama temporal**: propuesta, implementación, archive y resincronización del wiki, y llega a la rama de origen en **una sola fusión** ([ADR-0007](adr/0007-single-branch-change-lifecycle.md)). El archive se hace en la rama temporal, antes de esa fusión. Los commits y la fusión los hace siempre el usuario; los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki.
+Cada change se hace entero en **una rama temporal**: propuesta, implementación, archive y resincronización del wiki, y llega a la rama de origen en **una sola fusión** ([ADR-0013](adr/0013-model-creates-change-branches-plugin-stages.md), que sustituye a ADR-0007). El archive se hace en la rama temporal, antes de esa fusión. La rama temporal la puede crear el modelo, siempre desde la rama de origen y con el nombre del change. Los commits y la fusión los hace siempre el usuario: fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y espera tu commit.
 
 - **Ramas permanentes:** la lista `x-main` de `openspec/config.yaml`, o `main` si no está. La última es la rama de origen, de la que salen las temporales. Cualquier otra rama local es temporal; con HEAD separado no hay ninguna.
 
@@ -170,23 +170,48 @@ Cada change se hace entero en **una rama temporal**: propuesta, implementación,
   ```
 
 - **Las puertas** (proponer, apply, archive) las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive> [<change>]`, que la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es una copia del origen reescrita a propósito: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
+- **Las ramas temporales** las maneja el modelo con el mismo módulo, nunca con git a mano, y nunca con el árbol sucio:
+
+  ```bash
+  node .agents/openspec/branch-change.mjs list            # las ramas temporales con su change
+  node .agents/openspec/branch-change.mjs start <change>  # crea la rama del change desde la rama de origen
+  node .agents/openspec/branch-change.mjs switch <rama>   # cambia a una rama temporal
+  ```
 
 ## Automatizar el ciclo en OpenCode
 
-En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` encadena los pasos del change de la rama, cada uno en una sesión nueva con el workflow y el agente que tocan, y archiva la anterior ([ADR-0008](adr/0008-openspec-autopilot-plugin.md)):
+En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` recorre el change de la rama paso a paso, cada paso en una sesión nueva con el workflow y el agente que tocan, y archiva la anterior ([ADR-0014](adr/0014-autopilot-verifies-product-and-closes-reviews-with-git.md), que sustituye a ADR-0008). Lo que se ha producido y cuándo se cierra una revisión no lo decide el modelo: lo decide el plugin con el CLI de OpenSpec y con git.
 
-- Solo actúa con la TUI, en una rama temporal con un change o sin ninguno. Sin TUI (`opencode run`, OpenCode Desktop), en una rama permanente o con HEAD separado, no hace nada. Con varios changes en la rama, avisa y tampoco.
-- Al abrir una sesión: si la rama no tiene change, la sesión toma el control y arranca `openspec-new-change` con tu primer mensaje; si tiene un change sin sesión dueña, la sesión toma el control y sigue por el paso de `openspec status`; si la dueña está trabajando, la nueva queda libre; si está parada, el plugin pregunta si ir a ella o archivarla y seguir en la nueva.
-- Cada paso termina cuando el modelo llama a la tool `openspec_handoff`. En el modo normal, tras cada artefacto, cada task y el verify hay una sesión de revisión guiada por el modelo, y el cierre de la revisión lo confirmas tú en la TUI. Una revisión no satisfactoria lleva a `openspec-update-change` y a una revisión del plan.
-- Antes de empezar un paso, el árbol de trabajo tiene que estar limpio: si no, la sesión espera a que hagas el commit.
+- **La sesión operativa.** En cada rama hay una sola sesión viva en autopilot. Al abrir OpenCode en la TUI sin ella, el plugin la crea y la arranca solo: con el paso que diga `openspec status` si la rama tiene change, o con `openspec-new-change` si no lo tiene (también en una rama permanente: el modelo te pide la descripción y crea la rama del change). Cualquier otra ventana (la pantalla de inicio, `/new`, otra sesión, o cualquiera de ellas al volver al terminal) muestra un modal de un botón que lleva a la sesión operativa. Con HEAD separado no hace nada; con varios changes en la rama, avisa y tampoco.
+- **El producto de cada paso.** Al empezar un paso, el plugin guarda qué artefactos están hechos y qué tasks marcadas. Cuando la sesión queda en reposo, compara: lo que ha cambiado es el producto. Sin producto no pasa nada (la tool `openspec_handoff` lo dice). Con producto, el plugin lo pasa al stage de git y sigue, aunque el modelo no haya llamado a la tool o haya hecho más de lo que tocaba.
+- **La revisión, en el modo normal.** Tras cada artefacto, cada task, el verify y cada `openspec-update-change` se abre una sesión de revisión, una por producto, en la que el modelo te guía sin tocar archivos. La revisión la cierras tú con git, y se cierra cuando envías tu siguiente mensaje:
+  - **haz el commit** de lo que hay en el stage: revisión satisfactoria, y se sigue con el paso siguiente;
+  - **saca todo del stage** (`git restore --staged .`) y escribe tus conclusiones: revisión no satisfactoria. Lo sacado se queda en el árbol, y tu mensaje llega a `openspec-update-change` como conclusiones (si es una sola palabra, se toman las del modelo), seguido de una revisión del plan;
+  - mientras quede algo en el stage sin commit, la revisión sigue y tus mensajes llegan al modelo.
+
+  La revisión del verify empieza con el árbol limpio: para darla por buena sin cambiar nada, haz un commit vacío (`git commit --allow-empty -m "verify revisado"`).
+- **Los commits.** Ningún modelo te pide commits. Además de las revisiones, el plugin espera tu commit tras el archive y tras la resincronización del wiki, que van en commits separados.
+- **Al volver a la sesión operativa** (al entrar o al recuperar el foco), el plugin la comprueba. Si HEAD cambió de rama, sigue las reglas de la rama actual. Si su change ya no está en la rama, la archiva y empieza uno nuevo. Si esperaba tu commit y ya está hecho, arranca el paso. Si su paso no encaja con `openspec status`, te lo explica en un modal y no lo arregla.
 - Las lecciones candidatas de cada sesión quedan en su metadata, nunca en el repositorio, y llegan a la resincronización del wiki tras el archive, que solo registra las que confirmes.
-- El estado (qué sesión tiene el control y qué paso hizo cada una) vive solo en la metadata de las sesiones de OpenCode.
+- El estado (qué sesión es la operativa y qué paso hizo cada una) vive solo en la metadata de las sesiones de OpenCode.
 
-En Claude Code no hay plugin: los mismos workflows se lanzan a mano (`/openspec-new-change`, `/openspec-continue-change`, `/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`), con el mismo ciclo y el mismo resultado versionado ([ADR-0006](adr/0006-agent-asymmetry-policy.md)).
+### Con la UI web, OpenCode Desktop y `opencode run`
+
+La lógica vive en la parte de servidor del plugin y funciona con cualquier cliente: el producto, el stage, el cierre de las revisiones por git, el encadenado de sesiones y la validación. La interfaz (el modal, el foco, navegar a una sesión y archivarla) solo existe en la TUI, porque OpenCode 2.3.2 no ejecuta en la UI web (`opencode pair`, `opencode serve`) la interfaz de los plugins de un proyecto, y OpenCode Desktop solo con una API experimental que el plugin no usa. Sin TUI:
+
+- en una sesión que no es la operativa, el modelo sabe que ahí no se opera y te dice cuál es la operativa;
+- la sesión del paso siguiente se crea y se pone a trabajar, pero tienes que abrirla tú desde la lista; su título dice el paso;
+- las sesiones terminadas no se archivan: quedan marcadas y se archivan la próxima vez que abras la TUI;
+- el autopilot no arranca solo: escribe `autopilot` como primer mensaje de una sesión nueva en una rama sin sesión operativa;
+- los avisos solo quedan en el log de OpenCode.
+
+`opencode run "…"` en una rama temporal no arranca nada por accidente; con `opencode run autopilot` sí.
+
+En Claude Code no hay plugin: los mismos workflows se lanzan a mano (`/openspec-new-change`, `/openspec-continue-change`, `/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`), con el mismo ciclo y el mismo resultado versionado ([ADR-0006](adr/0006-agent-asymmetry-policy.md)). Ahí los workflows sí te piden el commit.
 
 ### Modo auto
 
-El modo auto quita las sesiones de revisión: el ciclo solo se para cuando un workflow pregunta algo, en cada cambio entre la zona de specs y la de código (para tu commit) y si el verify encuentra problemas críticos. Es una preferencia de cada usuario: el proyecto no la fija. Actívalo en tu configuración global de OpenCode, `~/.config/opencode/opencode.json`, con la ruta del plugin en tu clon:
+El modo auto quita las sesiones de revisión: el producto de cada paso pasa al stage y se sigue. El ciclo solo se para cuando un workflow pregunta algo (la sesión queda en reposo sin producto), en cada cambio entre la zona de specs y la de código, hasta que hagas el commit, y si el verify encuentra problemas críticos, que revisas en la misma sesión y cierras con git como una revisión. Es una preferencia de cada usuario: el proyecto no la fija. Actívalo en tu configuración global de OpenCode, `~/.config/opencode/opencode.json`, con la ruta del plugin en tu clon:
 
 ```json
 {
@@ -206,7 +231,7 @@ Quítalo en tu configuración global de OpenCode, como el arranque de sesión:
 }
 ```
 
-Así no se carga la parte de servidor, que es la que orquesta; la de TUI se sigue cargando, pero sin servidor no hace nada. Las sesiones que ya tenían el control siguen siendo sesiones normales.
+Así no se carga la parte de servidor, que es la que orquesta; la de TUI se sigue cargando, pero sin servidor no hace nada. Las sesiones que eran operativas siguen siendo sesiones normales.
 
 ## Ejecutar la suite de aceptación
 

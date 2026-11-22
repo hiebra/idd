@@ -86,3 +86,65 @@ test('a change deleted in the branch does not count, and an archived one stops b
   fs.rmSync(path.join(dir, 'openspec', 'changes', 'viejo'), { recursive: true });
   assert.equal(branchChange(dir).kind, 'none');
 });
+
+// --- list, start and switch (autopilot-sesion-operativa, design D12, ADR-0013) ---
+
+function addChange(dir, name) {
+  fs.mkdirSync(path.join(dir, 'openspec', 'changes', name), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'openspec', 'changes', name, '.openspec.yaml'), 'schema: intent-driven\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', name);
+}
+
+test('start: the change branch always comes out of the origin branch, with the change name', async (t) => {
+  const { startBranch } = await import(MODULE);
+  const dir = repo(t);
+  const origin = git(dir, 'rev-parse', 'main').trim();
+  git(dir, 'checkout', '-q', '-b', 'otra');
+  addChange(dir, 'otra');
+  assert.equal(startBranch(dir, 'Exportar Datos').ok, false, 'not kebab-case');
+  assert.equal(startBranch(dir, 'main').ok, false, 'a permanent branch');
+  const created = startBranch(dir, 'exportar-datos');
+  assert.equal(created.ok, true, created.message);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'exportar-datos');
+  assert.equal(git(dir, 'rev-parse', 'HEAD').trim(), origin);
+  assert.match(startBranch(dir, 'exportar-datos').message, /ya existe/);
+  fs.writeFileSync(path.join(dir, 'sucio.txt'), 'x');
+  const dirty = startBranch(dir, 'otro-cambio');
+  assert.equal(dirty.ok, false);
+  assert.match(dirty.message, /stash/);
+});
+
+test('start: from origin/<branch> when the origin branch is only remote', async (t) => {
+  const { startBranch } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'checkout', '-q', '-b', 'temporal');
+  git(dir, 'branch', '-q', '-D', 'main');
+  const created = startBranch(dir, 'exportar-datos');
+  assert.equal(created.ok, true, created.message);
+  assert.equal(git(dir, 'rev-parse', 'HEAD').trim(), git(dir, 'rev-parse', 'origin/main').trim());
+});
+
+test('list: the temporary branches with their change; switch: only to an existing temporary branch', async (t) => {
+  const { listBranches, switchBranch } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'checkout', '-q', '-b', 'exportar-datos');
+  addChange(dir, 'exportar-datos');
+  git(dir, 'checkout', '-q', '-b', 'dos', 'main');
+  addChange(dir, 'uno');
+  addChange(dir, 'dos');
+  git(dir, 'checkout', '-q', '-b', 'vacia', 'main');
+  git(dir, 'checkout', '-q', 'main');
+  const list = listBranches(dir);
+  const by = Object.fromEntries(list.map((b) => [b.branch, b]));
+  assert.deepEqual(Object.keys(by).sort(), ['dos', 'exportar-datos', 'vacia']);
+  assert.deepEqual([by['exportar-datos'].kind, by['exportar-datos'].change], ['active', 'exportar-datos']);
+  assert.equal(by.dos.kind, 'several');
+  assert.deepEqual([by.vacia.kind, by.vacia.change], ['none', null]);
+  assert.equal(switchBranch(dir, 'main').ok, false);
+  assert.equal(switchBranch(dir, 'no-existe').ok, false);
+  const switched = switchBranch(dir, 'exportar-datos');
+  assert.equal(switched.ok, true, switched.message);
+  assert.equal(listBranches(dir).find((b) => b.current).branch, 'exportar-datos');
+});

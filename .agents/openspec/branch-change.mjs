@@ -23,8 +23,14 @@
 // CLI:
 //   node .agents/openspec/branch-change.mjs --json
 //   node .agents/openspec/branch-change.mjs check <propose|apply|archive> [<change>]
-// `check` imprime { ok, message } en JSON y sale con 0 si la puerta se abre y
-// con 1 si no.
+//   node .agents/openspec/branch-change.mjs list [--json]
+//   node .agents/openspec/branch-change.mjs start <change>
+//   node .agents/openspec/branch-change.mjs switch <rama>
+// `check`, `start` y `switch` imprimen { ok, message } en JSON y salen con 0
+// si se puede seguir y con 1 si no. `list` da las ramas temporales con su
+// change; `start` crea la rama del change desde la rama de origen y cambia a
+// ella; `switch` cambia a una rama temporal (ADR-0013, design D12 de
+// autopilot-sesion-operativa). Ni `start` ni `switch` actúan con el árbol sucio.
 //
 // Sin dependencias: solo módulos node:.
 
@@ -172,8 +178,91 @@ export function check(dir, gate, name) {
   return { ok: true, message: `Se puede ${verb} '${name}' en la rama temporal '${state.branch}'.`, state };
 }
 
+// La rama de origen como referencia de git: la local, o la de origin
+function originRef(dir, origin) {
+  return [`refs/heads/${origin}`, `refs/remotes/origin/${origin}`].find((candidate) => git(dir, 'rev-parse', '--verify', '-q', candidate).ok) ?? null;
+}
+
+// Las ramas temporales con su change: [{ branch, current, kind, change, changes }]
+export function listBranches(dir = process.cwd()) {
+  const { permanent } = readPermanent(dir);
+  const origin = permanent.at(-1);
+  const ref = originRef(dir, origin);
+  const current = git(dir, 'symbolic-ref', '--short', '-q', 'HEAD').out;
+  const names = git(dir, 'for-each-ref', '--format=%(refname:short)', 'refs/heads/').out.split('\n').filter(Boolean);
+  const result = [];
+  for (const branch of names) {
+    if (permanent.includes(branch)) continue;
+    if (branch === current) {
+      const state = branchChange(dir);
+      result.push({ branch, current: true, kind: state.kind, change: state.change, changes: state.changes.map((c) => c.name) });
+      continue;
+    }
+    if (!ref) {
+      result.push({ branch, current: false, kind: 'unknown', change: null, changes: [] });
+      continue;
+    }
+    const base = git(dir, 'merge-base', branch, ref);
+    if (!base.ok) {
+      result.push({ branch, current: false, kind: 'unknown', change: null, changes: [] });
+      continue;
+    }
+    const diff = git(dir, 'diff', '--name-only', base.out, branch, '--', CHANGES).out.split('\n').filter(Boolean);
+    const tree = new Set(git(dir, 'ls-tree', '-r', '--name-only', branch, '--', CHANGES).out.split('\n').filter(Boolean));
+    const changes = changesOf(diff.filter((file) => tree.has(file)));
+    const unique = new Set(changes.map((c) => c.name));
+    let kind = 'none';
+    if (unique.size > 1) kind = 'several';
+    else if (unique.size === 1) kind = changes.some((c) => c.state === 'active') ? 'active' : 'archived';
+    result.push({ branch, current: false, kind, change: unique.size === 1 ? changes[0].name : null, changes: [...unique] });
+  }
+  return result;
+}
+
+const dirty = (dir) => git(dir, 'status', '--porcelain').out !== '';
+const COMMIT_FIRST = 'el árbol de trabajo tiene cambios sin commit: haz antes el commit o guárdalos (git stash)';
+
+// Crea la rama temporal de un change desde la rama de origen y cambia a ella
+export function startBranch(dir, name) {
+  const { permanent } = readPermanent(dir);
+  const origin = permanent.at(-1);
+  if (!name || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return { ok: false, message: `El nombre del change tiene que ser kebab-case ('${name ?? ''}').` };
+  if (permanent.includes(name)) return { ok: false, message: `'${name}' es una rama permanente.` };
+  if (dirty(dir)) return { ok: false, message: `No se crea la rama '${name}': ${COMMIT_FIRST}.` };
+  if (git(dir, 'rev-parse', '--verify', '-q', `refs/heads/${name}`).ok) return { ok: false, message: `La rama '${name}' ya existe: cambia a ella con 'switch ${name}'.` };
+  const ref = originRef(dir, origin);
+  if (!ref) return { ok: false, message: `No se encuentra la rama de origen '${origin}' (ni local ni en origin).` };
+  const created = spawnSync('git', ['switch', '-q', '-c', name, ref.replace(/^refs\/(heads|remotes)\//, '')], { cwd: dir, encoding: 'utf8', timeout: 10000 });
+  if (created.status !== 0) return { ok: false, message: `git switch ha fallado: ${(created.stderr ?? '').trim()}` };
+  if (ref.startsWith('refs/remotes/')) git(dir, 'branch', '-q', '--unset-upstream');
+  return { ok: true, message: `Creada la rama temporal '${name}' desde '${origin}'; el clon está en ella.` };
+}
+
+// Cambia a una rama temporal que ya existe
+export function switchBranch(dir, name) {
+  const { permanent } = readPermanent(dir);
+  if (!name) return { ok: false, message: 'Falta el nombre de la rama.' };
+  if (permanent.includes(name)) return { ok: false, message: `'${name}' es una rama permanente: el change se trabaja en una rama temporal.` };
+  if (!git(dir, 'rev-parse', '--verify', '-q', `refs/heads/${name}`).ok) return { ok: false, message: `La rama '${name}' no existe: créala con 'start <change>'.` };
+  if (dirty(dir)) return { ok: false, message: `No se cambia a '${name}': ${COMMIT_FIRST}.` };
+  const switched = spawnSync('git', ['switch', '-q', name], { cwd: dir, encoding: 'utf8', timeout: 10000 });
+  if (switched.status !== 0) return { ok: false, message: `git switch ha fallado: ${(switched.stderr ?? '').trim()}` };
+  return { ok: true, message: `El clon está en la rama temporal '${name}'.` };
+}
+
 function main(argv) {
   const dir = process.cwd();
+  if (argv[0] === 'start' || argv[0] === 'switch') {
+    const result = argv[0] === 'start' ? startBranch(dir, argv[1]) : switchBranch(dir, argv[1]);
+    process.stdout.write(`${JSON.stringify(result)}\n`);
+    return result.ok ? 0 : 1;
+  }
+  if (argv[0] === 'list') {
+    const branches = listBranches(dir);
+    if (argv.includes('--json')) process.stdout.write(`${JSON.stringify(branches, null, 2)}\n`);
+    else for (const b of branches) process.stdout.write(`${b.current ? '*' : ' '} ${b.branch}\t${b.change ?? (b.kind === 'none' ? '(sin change)' : `(${b.kind})`)}\n`);
+    return 0;
+  }
   if (argv[0] === 'check') {
     const result = check(dir, argv[1], argv[2]);
     process.stdout.write(`${JSON.stringify({ ok: result.ok, message: result.message })}\n`);
