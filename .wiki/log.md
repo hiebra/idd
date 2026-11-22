@@ -323,3 +323,5 @@
 ## [2026-11-22] ingest | SmartBear: buenas prácticas de revisión de código (raw/articles/2026-11-22-smartbear-buenas-practicas-revision-de-codigo.md)
 
 ## [2026-11-22] ll | "planificación de limite-de-verificacion-y-mcp-de-depuracion" → raw/notes/2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion.md (5 lessons, 0 articles updated)
+
+## [2026-11-22] ll | "task 1.2 de limite-de-verificacion-y-mcp-de-depuracion" → raw/notes/2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion-2.md (1 lesson, 1 article updated)

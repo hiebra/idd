@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion-2.md](2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion-2.md) | 1 lección: --name de cucumber-js filtra por escenario; el nombre de un requisito (Rule:) no selecciona nada | lessons-learned, acceptance-tests, cucumber-js | 2026-11-22 |
 | [2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion.md](2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion.md) | 5 lecciones de la planificación de limite-de-verificacion-y-mcp-de-depuracion: texto tras la casilla de una task, ## Purpose en deltas nuevas, ajv estricto con if/then, git merge-tree y openliberty.io desde la nube | lessons-learned, openspec, json-schema, git, liberty | 2026-11-22 |
 | [2026-11-22-ll-fusion-supuestos-invalidados.md](2026-11-22-ll-fusion-supuestos-invalidados.md) | 1 lección: al fusionar main, lo que llega sin conflicto puede apoyarse en lo que el change cambió (las revisiones con plan) | lessons-learned, git, merge, openspec-autopilot, llm-wiki | 2026-11-22 |
 | [2026-11-22-ll-archivado-autopilot-plan-explore.md](2026-11-22-ll-archivado-autopilot-plan-explore.md) | 4 lecciones del archivado de autopilot-plan-explore: la task del archive, el banco con OpenCode real (ESC [ Z y opencode serve propio), las referencias del motor y las búsquedas sin los informes generados | lessons-learned, openspec, archive, opencode, testing, llm-wiki | 2026-11-22 |
