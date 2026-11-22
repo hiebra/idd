@@ -24,15 +24,16 @@ Antes de numerar se hizo `git fetch`. El número más alto en `origin/main` era 
 - ADR-0015: dos formas del ciclo y commits en contenedores efímeros. Sigue en vigor.
 - ADR-0018: en OpenCode, una instrucción opcional tiene su propio plugin. Sigue en vigor; `response-comments` se instala también de forma global.
 - ADR-0002: núcleo del arranque en bash. Lo sustituye ADR-0023.
-- ADR-0017 (rama `claude/vigilant-cori-oo4t14`, change `windows-support`, aún no en `main`): Windows con Git Bash. Lo sustituye ADR-0023 en lo del núcleo, por decisión del usuario.
+- ADR-0017 (change `windows-support`, ya en `main`): en Windows solo OpenCode 2, con LF en el repositorio y un diagnóstico en PowerShell. Se reescribió para no decidir nada del núcleo, así que ADR-0023 no lo sustituye: es compatible con él.
 - ADR-0021 (rama `claude/nifty-pascal-wkvbq0`, change del ON/OFF del wiki, aún no en `main`): el wiki desactivado por defecto con un ajuste del proyecto. Se tiene en cuenta en ADR-0024.
 
 ## New Durable ADRs Created
 
-- [ADR-0023: El núcleo del arranque de sesión es un script de Node](../../../adr/0023-session-bootstrap-core-in-node.md). Sustituye a ADR-0002 y a ADR-0017.
+- [ADR-0023: El núcleo del arranque de sesión es un script de Node](../../../adr/0023-session-bootstrap-core-in-node.md). Sustituye a ADR-0002.
 - [ADR-0024: Instalación global para Windows y variante adelgazada como artefactos de cada release](../../../adr/0024-windows-global-install-and-slim-template.md).
 
 ## Coordination Before Archive
 
-- **Si `windows-support` se abandona sin fusionarse**, se quita ADR-0017 del `Supersedes` de ADR-0023 antes de que llegue a `main`.
+- ADR-0017 ya está fuera del `Supersedes` de ADR-0023 (2026-11-22), porque `windows-support` se redujo a lo que no depende del núcleo.
+- ADR-0020, ya en `main`, sustituye a ADR-0013, al que cita ADR-0024 por la ubicación de `branch-change.mjs`. Al integrar la rama de origen (task 7.1), ADR-0024 tiene que citar ADR-0020 en su lugar.
 - **Si `check archive` avisa de que el 0023 o el 0024 ya existen** en la rama de origen, se renumeran estos dos ADRs y sus referencias.
