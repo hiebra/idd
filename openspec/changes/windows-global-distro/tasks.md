@@ -135,6 +135,12 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - el autopilot: `server.js`, `lib/project.mjs`, `lib/prompts.mjs` y `lib/screen.mjs`. Hay que conservar a la vez lo de ADR-0022 y lo nuestro (`branchScript()`, el control de una rama de uno en uno con `claim` y `contend`, y que una sesión que acaba de pasar el control no se trate como ajena);
   - `openspec-git-discipline`: `SKILL.md` (otra vez la línea «El script es: …») y `branch-change.mjs`;
   - `README.md`, `acceptance-tests/README.md`, `openspec/config.yaml` y los tests, steps y soporte de la suite: `autopilot-product`, `prepare-git`, `wiki-markers`, `autopilot.steps.js`, `change-lifecycle.steps.js`, `opencode-sim.js`, `opencode-sim.mjs` y `machine.js`.
+  - Lo averiguado al empezar (2026-11-22, fusión abortada, sin cambios): lo grande es el núcleo. `main` añadió a `session-bootstrap.sh` unas 280 líneas:
+    - el wiki está habilitado solo si `.agents/wiki/engine.json` dice `"enabled": true` (ya no vale `PROJECT_WIKI=off`), con `wiki_enabled`, `set_enabled` y `fetch_engine` separada de `install_wiki_engine`;
+    - un modo nuevo, `wiki <status|on|off> <dir>`, que usa `/toggle-wiki`: edita a mano `openspec/config.yaml` entre las marcas `# wiki:archive-guidance:begin` y `# wiki:archive-guidance:end` (con un `awk` de ~100 líneas), lista las fuentes de la ingesta inicial y pasa al stage `engine.json` y `config.yaml`; y `warn_stale_block`;
+    - la guía, el recordatorio, `opencode-note.md` y `archive-guidance.yaml` se buscan en `../wiki/` respecto al script, no en el proyecto (D8 de `add-project-wiki-toggle`); el modo global y el zip de la release (`build.mjs`, que copia esos textos junto al plugin) tienen que seguir ese cambio, y añadir `archive-guidance.yaml`;
+    - `prepare_git` no mueve una rama permanente sacada en otro worktree.
+  - Lo más cómodo es portar con ese mismo contrato: primero los tests de `core-tests/` de `main` (`wiki-markers`, `prepare-git`) contra `session-bootstrap.mjs`, y después el código. `main` también trae la skill `/toggle-wiki`.
   - Después: rehacer los deltas de `session-bootstrap` y `openspec-autopilot` sobre las specs nuevas, hacer que ADR-0024 tenga en cuenta ADR-0021 y ADR-0022, y que el instalador y la variante adelgazada incluyan el ajuste del wiki. Orden recomendado: la 7.5, después la 7.4 en Windows y por último la 8.3, porque la 7.5 cambia código que la 7.4 verifica.
 
 ## 8. Documentación y cierre
