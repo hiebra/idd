@@ -28,7 +28,7 @@ summary: "Un change se hace en una rama temporal con una sola fusión, y el chan
 - **Una rama temporal y una sola fusión**: propuesta, implementación, archive y resincronización del wiki van en la rama, y el archive se hace en ella, antes de fusionar. Nunca en una rama permanente.
 - **Ramas permanentes**: la lista `x-main` de `openspec/config.yaml`, o `main` si no está. La última es la rama de origen. Cualquier otra rama local es temporal, y con HEAD separado no hay ninguna. Una `x-main` con otra forma se trata como ausente y avisa. OpenSpec 1.17.0 acepta claves `x-*` sin avisos ([lecciones](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md), lección 8).
 - **El change de la rama se lee de git**: es el que ha cambiado en `openspec/changes/` desde el merge-base con la rama de origen, con commit o sin él. No se apunta en ningún sitio. Lo calcula `idd@772d0f0:.agents/openspec/branch-change.mjs` (`--json`), sin dependencias y el mismo para los dos agentes (D1 del design).
-- **Las puertas** (proponer, apply, archive) las decide `branch-change.mjs check <propose|apply|archive> [<change>]`, que imprime `{ ok, message }` y sale con 0 o 1. La skill `openspec-git-discipline` manda ejecutarlo y obedecerlo (ver [su origen](../concepts/origen-de-openspec-git-discipline.md)).
+- **Las puertas** (proponer, apply, archive) las decide `branch-change.mjs check <propose|apply|archive> [<change>]`, que imprime `{ ok, message }` y sale con 0 o 1. La skill `openspec-git-discipline` manda ejecutarlo y obedecerlo (ver [[origen-de-openspec-git-discipline|su origen]] ([su origen](../concepts/origen-de-openspec-git-discipline.md))).
 - **Los commits y las fusiones los hace el usuario**: los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki.
 - **Antes de proponer, busca las decisiones previas**: el schema solo pide leer los ADRs en el paso `design`, pero una propuesta puede chocar con un ADR en vigor sobre el mismo mecanismo. En `add-quote-comment-rule`, la primera propuesta usaba `AGENTS.md`, que ADR-0005 ya había descartado, y hubo que rehacerla al escribir las specs ([lecciones de add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md), lección 3).
 
@@ -84,10 +84,10 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## See Also
 
-- [openspec-git-discipline: una regla heredada sin justificación registrada](../concepts/origen-de-openspec-git-discipline.md)
-- [La suite de aceptación y spec-as-source](suite-de-aceptacion-y-spec-as-source.md)
-- [El hook context de OpenCode](../concepts/hook-context-opencode.md)
-- [El flujo wiki-first](flujo-wiki-first.md)
+- [[origen-de-openspec-git-discipline|openspec-git-discipline: una regla heredada sin justificación registrada]] ([openspec-git-discipline: una regla heredada sin justificación registrada](../concepts/origen-de-openspec-git-discipline.md))
+- [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](suite-de-aceptacion-y-spec-as-source.md))
+- [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md))
+- [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](flujo-wiki-first.md))
 
 ## Sources
 

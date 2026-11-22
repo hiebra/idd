@@ -30,7 +30,7 @@ summary: "Cómo comenta el usuario partes de una respuesta del agente sin que co
 
 - **Por el arranque de sesión, no por `AGENTS.md`**: la primera versión iba en `AGENTS.md` con un `CLAUDE.md` que lo importaba. Se descartó porque esos archivos no se pueden desactivar en local, la misma razón por la que ADR-0005 los descartó para la guía del wiki (`idd@16e4617:openspec/changes/archive/2026-11-21-add-quote-comment-rule/proposal.md`).
 - **Al empezar la sesión**, el adaptador de cada agente entrega la regla (modo `comments-rule` del núcleo). **Con cada mensaje que la activa**, entrega además un recordatorio breve (`.agents/comments/reminder.md`, 600 caracteres como máximo); los demás mensajes no lo llevan (design D2).
-- **Qué mensajes la activan lo decide el núcleo**, una sola función en bash (`activates_comments` en `idd@16e4617:.agents/hooks/session-bootstrap.sh`), para no tener una copia por adaptador (ADR-0002). En Claude Code, el `UserPromptSubmit` lee el `prompt` con `json_field` (`idd@16e4617:.claude/hooks/json.sh`), solo con bash porque Node puede faltar. En OpenCode, el hook `context` pregunta por el último mensaje del usuario (ver [El hook context de OpenCode](hook-context-opencode.md)).
+- **Qué mensajes la activan lo decide el núcleo**, una sola función en bash (`activates_comments` en `idd@16e4617:.agents/hooks/session-bootstrap.sh`), para no tener una copia por adaptador (ADR-0002). En Claude Code, el `UserPromptSubmit` lee el `prompt` con `json_field` (`idd@16e4617:.claude/hooks/json.sh`), solo con bash porque Node puede faltar. En OpenCode, el hook `context` pregunta por el último mensaje del usuario (ver [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](hook-context-opencode.md))).
 - **Se desactiva** con `PROJECT_COMMENTS=off`, independiente de `PROJECT_WIKI` (`idd@16e4617:README.md`).
 
 ## La decisión general: ADR-0010
@@ -45,10 +45,10 @@ summary: "Cómo comenta el usuario partes de una respuesta del agente sin que co
 
 ## See Also
 
-- [El arranque de sesión](../topics/arranque-de-sesion.md)
-- [El hook context de OpenCode](hook-context-opencode.md)
-- [El flujo wiki-first](../topics/flujo-wiki-first.md)
-- [La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md)
+- [[arranque-de-sesion|El arranque de sesión]] ([El arranque de sesión](../topics/arranque-de-sesion.md))
+- [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](hook-context-opencode.md))
+- [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](../topics/flujo-wiki-first.md))
+- [[suite-de-aceptacion-y-spec-as-source|La suite de aceptación y spec-as-source]] ([La suite de aceptación y spec-as-source](../topics/suite-de-aceptacion-y-spec-as-source.md))
 
 ## Sources
 

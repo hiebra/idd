@@ -7,3 +7,13 @@ acceptance-tests/reports/
 .claude/skills/wiki-manager
 .claude/commands/wiki
 .opencode/skills/wiki-query
+
+# Obsidian: la bóveda es .wiki/ (la raíz de la wiki, como recomienda llm-wiki).
+# Se versiona la configuración que crea el motor del wiki; el estado personal
+# de Obsidian (espacio de trabajo, plugins, caché) y cualquier otra bóveda, no.
+.obsidian/
+!.wiki/.obsidian/
+.wiki/.obsidian/*
+!.wiki/.obsidian/app.json
+!.wiki/.obsidian/appearance.json
+!.wiki/.obsidian/graph.json
