@@ -969,6 +969,14 @@ Then(/^su mensaje no da ninguna orden de push a `([^`]+)`$/, function (target) {
   assert.doesNotMatch(this.gate.message, /commit-tree/, JSON.stringify(this.gate));
 });
 
+// The title of the PR (name-change-in-merge-title, D5)
+
+Then(/^su mensaje indica que el PR lleve el título `([^`]+)`, también si ya estaba abierto$/, function (title) {
+  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
+  assert.ok(this.gate.message.includes(`con el título \`${title}\``), JSON.stringify(this.gate));
+  assert.match(this.gate.message, /si el PR ya está abierto, ponle ese título/, JSON.stringify(this.gate));
+});
+
 // merge-targets (D6)
 
 Given('ni `origin\\/main` ni `origin\\/develop` contienen la rama', function () {
