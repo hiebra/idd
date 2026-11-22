@@ -1,16 +1,33 @@
 // Parte de servidor del plugin openspec-autopilot para OpenCode 2
-// (ADR-0014; design de add-openspec-autopilot y de autopilot-sesion-operativa).
+// (ADR-0022; design de add-openspec-autopilot, de autopilot-sesion-operativa y
+// de autopilot-rama-por-sesion).
 // Toda la lógica del ciclo vive aquí y funciona con cualquier cliente (TUI,
 // UI web, OpenCode Desktop, `opencode run`); la TUI solo pone la interfaz
 // (tui.js), pedida por el RPC del plugin (D1).
 //
-// - Sesión operativa (D2): una sola sesión viva por rama, la dueña del change
-//   en la metadata de OpenCode (lib/state.mjs). Ninguna otra toma el control
-//   mientras sea válida.
-// - Arranque (D3): al presentarse una TUI nueva (otro PID), si la rama no
-//   tiene sesión operativa, se crea y se arranca sola.
-// - Ventanas ajenas (D4) y validación (D5): la TUI informa de cada pantalla
-//   (`screen`) y el servidor responde con la directiva de lib/screen.mjs.
+// - Una instancia por directorio (D2 de autopilot-rama-por-sesion): OpenCode
+//   carga el plugin una vez por directorio (el checkout principal y cada
+//   worktree), y cada instancia solo crea, valida y encadena las sesiones de
+//   su directorio.
+// - Sesión operativa (D2): una sola sesión viva por rama temporal, la dueña del
+//   change en la metadata de OpenCode (lib/state.mjs). Ninguna otra toma el
+//   control mientras sea válida. En una rama permanente no se crea, arranca,
+//   archiva ni encadena nada (D8 de autopilot-rama-por-sesion).
+// - Arranque (D3): al presentarse una TUI nueva (otro PID), si la rama
+//   temporal no tiene sesión operativa, se crea y se arranca sola.
+// - La rama de trabajo de cada sesión (D1 de autopilot-rama-por-sesion): se
+//   compara con HEAD en `screen` (al recuperar el foco), en `prompt` y en
+//   reposo. Si la sesión ha hecho un checkout, cambia su rama; si era la
+//   operativa, deja de serlo, y al volver el directorio a esa rama otra sesión
+//   operativa retoma el paso.
+// - Pantallas (D3 y D4 de autopilot-rama-por-sesion) y validación (D5): la TUI
+//   informa de cada pantalla (`screen`). Entrar en una sesión pone su rama (o
+//   vuelve a la ventana anterior si no se puede); la pantalla de inicio o una
+//   sesión nueva en una rama temporal con sesión operativa muestran el modal
+//   de `/new`; la sesión operativa se valida.
+// - Worktrees (D5 y D6 de autopilot-rama-por-sesion): la estrategia de
+//   lib/worktree.mjs y la tool openspec_worktree, que crea el worktree con su
+//   sesión operativa.
 // - Cada paso empieza con un mensaje en su sesión (D6) y se le recuerda en
 //   cada petición (hook context).
 // - Producto evaluable (D7): al quedar la sesión en reposo, el plugin compara
@@ -42,17 +59,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { RPC, TIMEOUT_MS } from './lib/rpc.mjs';
 import { describe, discrepancy, next, stepFromState, waitsForCommit, zoneOf } from './lib/next-step.mjs';
-import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, closedPrompt, explorePrompt, exploreReminderPrompt, foreignPrompt, planNoticeText, reminderPrompt, resumeCommand, returnPrompt, stepPrompt } from './lib/prompts.mjs';
+import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, WORKTREE_TOOL, closedPrompt, explorePrompt, exploreReminderPrompt, foreignPrompt, planNoticeText, reminderPrompt, resumeCommand, returnPrompt, stepPrompt } from './lib/prompts.mjs';
 import { agentTurn, transition, turnKey } from './lib/agent-turn.mjs';
-import { allSessions, branchSessions, changeSessions, isArchived, isWorking, meta, nextSeq, owners, winner, writeMeta } from './lib/state.mjs';
-import { branchChange, changeState, validateErrors, wikiEnabled } from './lib/project.mjs';
-import { gitState, stage, treeClean, verdict } from './lib/git.mjs';
+import { allSessions, branchMoved, firstMeta, branchSessions, changeSessions, isArchived, isWorking, leftFrom, meta, nextSeq, owners, sessionDir, winner, writeMeta } from './lib/state.mjs';
+import { branchChange, changeState, switchTo, validateErrors, wikiEnabled } from './lib/project.mjs';
+import { currentBranch, gitState, stage, treeClean, verdict } from './lib/git.mjs';
 import { describeProducts, productOf, reviewQueue, snapshotOf, stagePaths } from './lib/product.mjs';
-import { MODAL_BUTTON, directive, modalText } from './lib/screen.mjs';
+import { checkedOut, enterSession, newWindow } from './lib/screen.mjs';
+import { strategy as worktreeStrategy } from './lib/worktree.mjs';
 import { CONFIG_PATH, SYNC_TIMEOUT_MS, syncApplyGuidance, withTimeout } from './lib/apply-guidance.mjs';
 
 const ID = RPC.id;
 const REGISTRY = Symbol.for('openspec-autopilot.registry');
+// Los reintentos para leer el primer mensaje de un worktree nuevo (design D10)
+const FIRST_MESSAGE_RETRY_MS = [100, 200, 400, 800];
+const FIRST_MESSAGE_MAX_AGE_MS = 30000;
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
 const VERB = {
@@ -92,7 +113,7 @@ function clientBridge(ctx, gen, registry, directory, onFirst) {
       }, TIMEOUT_MS[op] ?? 10000);
       timer.unref?.();
       pending.set(id, { instance, resolve, reject, timer });
-      Promise.resolve(registration.events.emit('request', { id, instance, op, args })).catch((error) => {
+      Promise.resolve(registration.events.emit('request', { id, instance, directory, op, args })).catch((error) => {
         clearTimeout(timer);
         pending.delete(id);
         reject(error);
@@ -127,7 +148,7 @@ function clientBridge(ctx, gen, registry, directory, onFirst) {
         const seen = (registry.pids[directory] ??= []);
         const first = pid !== '' && !seen.includes(pid);
         if (first) seen.push(pid);
-        await onFirst({ first });
+        await onFirst({ first, route: input?.route ?? null });
         return { ok: true, first };
       },
       reply: async (input) => {
@@ -145,7 +166,7 @@ function clientBridge(ctx, gen, registry, directory, onFirst) {
     try {
       registration = await ctx.rpc.register(RPC, all);
       // Tras una recarga del servidor, la TUI ya cargada se vuelve a presentar
-      Promise.resolve(registration.events.emit('hello-request', { gen })).catch((error) => log('hello-request:', error));
+      Promise.resolve(registration.events.emit('hello-request', { gen, directory })).catch((error) => log('hello-request:', error));
     } catch (error) {
       log('rpc:', error);
     }
@@ -192,7 +213,8 @@ async function start(ctx) {
     }
   };
 
-  const actionable = (bc) => Boolean(bc?.branch) && ['none', 'active', 'archived', 'permanent'].includes(bc.kind);
+  // Solo en una rama temporal con un change o sin ninguno (D8 de autopilot-rama-por-sesion)
+  const actionable = (bc) => Boolean(bc?.branch) && ['none', 'active', 'archived'].includes(bc.kind);
 
   // Si una dueña sigue siendo válida en el estado de la rama (D2)
   const validFor = (bc) => (session) => {
@@ -202,7 +224,7 @@ async function start(ctx) {
     if (m.phase === 'chaining') return true;
     if (m.change) return bc.change === m.change && (bc.kind === 'active' || bc.kind === 'archived');
     // El paso new: el change que acaba de crear es su producto
-    return bc.kind === 'none' || bc.kind === 'permanent' || (m.step?.kind === 'new' && bc.kind === 'active');
+    return bc.kind === 'none' || (m.step?.kind === 'new' && bc.kind === 'active');
   };
 
   const opOf = async (bc) => {
@@ -211,6 +233,20 @@ async function start(ctx) {
     const valid = live.filter(validFor(bc));
     const invalid = live.filter((s) => !validFor(bc)(s));
     return { op: winner(valid), invalid, sessions };
+  };
+
+  // Escribir y comprobar dos veces: la sesión que acaba de tomar el control
+  // puede haber comprobado antes de que otra que lo tomaba a la vez escribiera
+  // su metadata; tras una pausa breve, las dos ven a las dos y gana la más
+  // antigua. Devuelve la ganadora si no es `sessionID`, o null.
+  const CLAIM_RECHECK_MS = 150;
+  const lostTo = async (bc, sessionID) => {
+    for (const wait of [0, CLAIM_RECHECK_MS]) {
+      if (wait) await new Promise((resolve) => setTimeout(resolve, wait).unref?.());
+      const { op } = await opOf(bc);
+      if (op && op.id !== sessionID) return op;
+    }
+    return null;
   };
 
   const archiveOrMark = async (sessionID) => {
@@ -275,14 +311,45 @@ async function start(ctx) {
     return '';
   };
 
+  // --- La rama de trabajo de cada sesión (D1 de autopilot-rama-por-sesion) ---
+
+  // El último checkout que hizo el plugin en este directorio: no es un cambio
+  // de rama dentro de una sesión
+  registry.checkouts ??= {};
+  const pluginCheckout = (from, to) => {
+    registry.checkouts[directory] = { from, to };
+  };
+
+  // Guarda la rama de trabajo de una sesión que todavía no la tiene, o la
+  // actualiza si la sesión ha hecho un checkout. Devuelve la metadata al día.
+  const trackBranch = async (session) => {
+    if (!session || isArchived(session)) return meta(session);
+    const dir = sessionDir(session) ?? directory;
+    if (dir !== directory) return meta(session);
+    const head = await currentBranch(directory);
+    const m = meta(session);
+    if (!m) {
+      if (!head) return null;
+      return firstMeta(api, session, { worktree: directory, branch: head });
+    }
+    if (!m.worktree) return m;
+    const patch = branchMoved({ meta: m, head, pluginCheckout: registry.checkouts[directory] ?? null });
+    if (!patch) return m;
+    const written = await writeMeta(api, session.id, patch);
+    if (patch.leftFrom) {
+      ui.toast(`openspec-autopilot: la sesión «${session.title}» ha pasado a la rama ${head}, así que deja de ser la sesión operativa de ${patch.leftFrom}. Al volver a ${patch.leftFrom}, otra sesión operativa retomará el paso.`, 'info');
+    }
+    return written;
+  };
+
   // --- Empezar un paso (D6, D7) ---
 
-  const takeSnapshot = async (m) => {
-    const git = await gitState(directory);
+  const takeSnapshot = async (m, dir = directory) => {
+    const git = await gitState(dir);
     let state = null;
     if (m.change && ['artifact', 'task', 'archive', 'verify'].includes(m.step.kind)) {
       try {
-        state = await changeState(directory, m.change);
+        state = await changeState(dir, m.change);
       } catch (error) {
         log('snapshot:', error?.message ?? error);
       }
@@ -291,8 +358,8 @@ async function start(ctx) {
   };
 
   // Deja la sesión lista para su paso y devuelve la instrucción; con `send`, la envía
-  const startStep = async (sessionID, m, { send = true } = {}) => {
-    const { snapshot, git } = await takeSnapshot(m);
+  const startStep = async (sessionID, m, { send = true, dir = directory } = {}) => {
+    const { snapshot, git } = await takeSnapshot(m, dir);
     const isReview = m.step.kind === 'review';
     const review = isReview ? { ...(m.review ?? {}), git: { head: git.head, signature: git.signature } } : m.review;
     const patch = { phase: isReview ? 'review' : 'running', snapshot, handoff: null, ...(isReview ? { review } : {}), ...(m.noticeAtStart ? { noticeAtStart: null } : {}) };
@@ -318,7 +385,7 @@ async function start(ctx) {
   };
 
   // La sesión operativa de la rama, creándola si no hay ninguna válida (D3)
-  const ensureOperational = async (bc, { go = false } = {}) => {
+  const ensureOperational = async (bc, { go = false, description = '' } = {}) => {
     if (!actionable(bc) || bc.kind === 'archived') return null;
     const { op, invalid, sessions } = await opOf(bc);
     for (const s of invalid) {
@@ -330,14 +397,18 @@ async function start(ctx) {
     const step = bc.kind === 'active' ? stepFromState(state) : { kind: 'new' };
     if (step.kind === 'blocked') throw new Error(`openspec status no da ningún artefacto listo para ${bc.change}`);
     const clean = await treeClean(directory);
-    const created = await createStep({ branch: bc.branch, change: bc.change ?? null, step, seq: nextSeq(sessions), zone: null, wait: !clean });
+    const created = await createStep({ branch: bc.branch, change: bc.change ?? null, step, seq: nextSeq(sessions), zone: null, wait: !clean, extra: step.kind === 'new' && description ? { description } : {} });
     // Escribir y comprobar: si otra TUI ha creado otra a la vez, gana la más antigua
-    const { op: first } = await opOf(bc);
-    if (first && first.id !== created.id) {
+    const first = await lostTo(bc, created.id);
+    if (first) {
       await release(await api.get({ sessionID: created.id }), 'lost');
       return { session: first, created: false };
     }
     if (!clean) ui.toast(`openspec-autopilot: haz el commit de los cambios pendientes; ${describe(step, bc.change)} empezará con el árbol limpio.`);
+    // La rama retoma el paso de las sesiones que la dejaron al cambiar de rama (D1)
+    for (const s of leftFrom(await allSessions(api).catch(() => []), { worktree: directory, branch: bc.branch })) {
+      await writeMeta(api, s.id, { resumed: true }).catch((error) => log('resumed:', error?.message ?? error));
+    }
     if (go) await navigate(created.id);
     return { session: created, created: true };
   };
@@ -358,6 +429,30 @@ async function start(ctx) {
     }
   };
 
+  // La sesión con que OpenCode crea un worktree desde la pantalla de inicio:
+  // de este directorio, sin paso y con mensajes del usuario (design D10)
+  const firstMessage = async (route) => {
+    if (route?.type !== 'session' || !route.sessionID) return '';
+    let s = null;
+    try {
+      s = await api.get({ sessionID: route.sessionID });
+    } catch {
+      return '';
+    }
+    if (!s || isArchived(s) || (sessionDir(s) ?? directory) !== directory || meta(s)?.step) return '';
+    // Solo una sesión recién creada: no la conversación de una sesión anterior
+    const created = Number(s.time?.created ?? 0);
+    if (!created || Date.now() - created > FIRST_MESSAGE_MAX_AGE_MS) return '';
+    // El mensaje puede guardarse un poco después de que la TUI entre en la sesión
+    for (const pause of [0, ...FIRST_MESSAGE_RETRY_MS]) {
+      if (pause) await new Promise((resolve) => setTimeout(resolve, pause));
+      const text = await userText(s.id);
+      if (text) return text;
+    }
+    return '';
+  };
+
+
   // Los avisos pendientes se vuelven a pedir a una TUI con otro PID; tras una
   // recarga (el mismo PID) el modal anterior sigue en pantalla (D5)
   const pendingNotices = async () => {
@@ -371,7 +466,7 @@ async function start(ctx) {
     }
   };
 
-  const onFirst = guard('hello', async ({ first }) => {
+  const onFirst = guard('hello', async ({ first, route }) => {
     await archivePending();
     if (!first) return;
     await pendingNotices();
@@ -386,7 +481,8 @@ async function start(ctx) {
       return;
     }
     try {
-      await ensureOperational(bc, { go: true });
+      const description = bc.kind === 'none' ? await firstMessage(route) : '';
+      await ensureOperational(bc, { go: true, description });
     } catch (error) {
       await failed('no se ha podido crear la sesión operativa', error, null);
     }
@@ -423,34 +519,98 @@ async function start(ctx) {
     return { action: 'none' };
   };
 
+  // Los avisos que acompañan a una directiva
+  const withToast = (d, message) => (message ? { ...d, toast: { message, variant: 'info' } } : d);
+
+  // Entrar en una sesión es pasar a su rama (D3 de autopilot-rama-por-sesion)
+  const enter = async (session, m, previous) => {
+    const head = await currentBranch(directory);
+    const others = (await allSessions(api).catch(() => [])).filter((s) => s.id !== session.id && !isArchived(s) && (sessionDir(s) ?? directory) === directory && isWorking(s));
+    const { permanent, origin } = await branchChange(directory);
+    const d = enterSession({
+      target: { id: session.id, dir: directory, branch: m?.branch ?? null, archived: isArchived(session) },
+      fromDir: previous?.directory ?? null,
+      head,
+      clean: await treeClean(directory),
+      working: others[0]?.title ?? null,
+      permanent,
+      origin,
+    });
+    if (d.action !== 'checkout') return d;
+    const result = await switchTo(directory, d.branch, d.via);
+    if (!result.ok) return { action: 'back', reason: 'checkout', message: `openspec-autopilot: no se ha podido cambiar a la rama ${d.branch}: ${result.message}` };
+    pluginCheckout(head, d.branch);
+    return { action: 'toast', message: checkedOut(d.branch, directory) };
+  };
+
   const onScreen = guard('screen', async (input) => {
     const route = input?.route ?? { type: 'home' };
-    const bc = await branchChange(directory);
-    if (!actionable(bc)) return { action: 'none' };
-    const { op, invalid } = await opOf(bc);
-    // Una dueña cuyo change ya no está en la rama: se libera y se actúa como al arrancar
-    if (!op && invalid.some((s) => !isWorking(s))) {
-      const ensured = await ensureOperational(bc);
-      return ensured?.created ? { action: 'navigate', sessionID: ensured.session.id } : { action: 'none' };
-    }
+    const previous = input?.previous ?? null;
+    let notice = null;
     let routeSession = null;
     if (route.type === 'session' && route.sessionID) {
+      let s = null;
       try {
-        const s = await api.get({ sessionID: route.sessionID });
-        routeSession = { id: s.id, archived: isArchived(s), meta: meta(s), working: isWorking(s) };
+        s = await api.get({ sessionID: route.sessionID });
       } catch {
-        routeSession = null;
+        s = null;
+      }
+      // Solo las sesiones de este directorio
+      if (s && (sessionDir(s) ?? directory) === directory) {
+        // Al recuperar el foco en la misma sesión, un checkout hecho en ella
+        // cambia su rama (D1); al entrar en ella, el plugin pone su rama (D3)
+        const m = input?.reason === 'focus' ? await trackBranch(s) : meta(s) ?? (await trackBranch(s));
+        if (input?.reason !== 'focus' && !isArchived(s)) {
+          const d = await enter(s, m, previous);
+          if (d.action === 'back') return { action: 'back', message: d.message };
+          if (d.action === 'toast') notice = d.message;
+        }
+        s = await api.get({ sessionID: route.sessionID });
+        routeSession = { id: s.id, archived: isArchived(s), meta: meta(s), working: isWorking(s), messages: null };
       }
     }
-    // La sesión operativa de otra rama tras cambiar HEAD: las reglas de la rama actual
-    if (!op && routeSession?.meta?.role === 'owner' && !routeSession.archived && routeSession.meta.branch !== bc.branch && !routeSession.working) {
+    const bc = await branchChange(directory);
+    if (!actionable(bc)) return withToast({ action: 'none' }, notice);
+    const { op, invalid, sessions } = await opOf(bc);
+    // Una dueña cuyo change ya no está en la rama, o una rama que vuelve tras
+    // quedarse sin sesión operativa al cambiar de rama (D1): como al arrancar
+    if (!op && (invalid.some((s) => !isWorking(s)) || leftFrom(await allSessions(api).catch(() => sessions), { worktree: directory, branch: bc.branch }).length > 0)) {
       const ensured = await ensureOperational(bc);
-      return ensured?.created ? { action: 'navigate', sessionID: ensured.session.id } : { action: 'none' };
+      return withToast(ensured?.created ? { action: 'navigate', sessionID: ensured.session.id } : { action: 'none' }, notice);
     }
-    const d = directive({ route, operational: op ? { id: op.id, title: op.title, change: meta(op).change } : null, routeSession });
-    if (d.action === 'modal') return { ...d, message: modalText(d), button: MODAL_BUTTON };
-    if (d.action === 'validate') return validate(op, bc);
-    return d;
+    if (op && routeSession?.id === op.id) {
+      if (meta(op).branch !== bc.branch) return withToast({ action: 'none' }, notice);
+      return withToast(await validate(op, bc), notice);
+    }
+    // El modal de `/new` (D4): la pantalla de inicio o una sesión sin mensajes
+    let isNew = false;
+    if (route.type === 'session' && routeSession && !routeSession.archived) {
+      try {
+        const messages = await api.context({ sessionID: routeSession.id });
+        isNew = !Array.isArray(messages) || messages.filter((msg) => msg?.type === 'user' || msg?.type === 'assistant').length === 0;
+      } catch {
+        isNew = false;
+      }
+    }
+    if (route.type === 'session' && !routeSession) return withToast({ action: 'none' }, notice);
+    const clean = await treeClean(directory);
+    const d = newWindow({
+      route,
+      isNew,
+      routeIsOperational: routeSession?.id === op?.id,
+      operational: op ? { id: op.id, title: op.title, change: meta(op).change, branch: bc.branch } : null,
+      temporary: true,
+      clean,
+    });
+    return withToast(d, notice);
+  });
+
+  // «Cambiar a la rama de origen» del modal de `/new` (D4, D7)
+  const onOrigin = guard('origin', async () => {
+    const head = await currentBranch(directory);
+    const result = await switchTo(directory, null, 'origin');
+    if (result.ok) pluginCheckout(head, (await currentBranch(directory)) ?? null);
+    return result;
   });
 
   const ui = clientBridge(ctx, gen, registry, directory, onFirst);
@@ -602,7 +762,8 @@ async function start(ctx) {
   const onIdle = guard('idle', async ({ sessionID }) => {
     if (chaining.has(sessionID)) return;
     const session = await api.get({ sessionID });
-    let m = meta(session);
+    // Un checkout dentro de la sesión le cambia la rama (D1)
+    let m = await trackBranch(session);
     if (!m || m.role !== 'owner' || isArchived(session) || !m.step) return;
     const noticed = await changedInPlan(session, m);
     m = { ...m, planTurn: null };
@@ -692,7 +853,8 @@ async function start(ctx) {
     const session = await api.get({ sessionID });
     await rememberTurn(session, input?.messageID);
     if (text.startsWith(MARK) || isArchived(session)) return;
-    const m = meta(session);
+    // La rama de trabajo: se guarda la primera vez y cambia con un checkout (D1)
+    const m = await trackBranch(session);
     if (m?.role === 'owner') {
       if (m.phase === 'review') return reviewPrompted(session, m, input);
       // Un prompt con el aviso pendiente cuenta como acuse (D5)
@@ -733,8 +895,8 @@ async function start(ctx) {
     const nm = { worktree: directory, branch: bc.branch, change: bc.change ?? null, role: 'owner', step, seq: nextSeq(sessions), phase: 'starting', zone: null, ...(typeof input?.messageID === 'string' ? { turnMessage: input.messageID } : {}) };
     await writeMeta(api, sessionID, nm);
     // Escribir y comprobar: si otra sesión ha tomado el control a la vez, gana la más antigua
-    const { op: first } = await opOf(bc);
-    if (first && first.id !== sessionID) {
+    const first = await lostTo(bc, sessionID);
+    if (first) {
       await writeMeta(api, sessionID, { role: 'free', phase: 'lost' });
       input.prompt.text = foreignPrompt({ change: meta(first).change, title: first.title, sessionID: first.id });
       return;
@@ -883,6 +1045,58 @@ async function start(ctx) {
     return { content: text || '(la sesión no tiene mensajes de texto)' };
   });
 
+  // --- Un worktree nuevo con su sesión operativa (D6 de autopilot-rama-por-sesion) ---
+
+  // La dirección del servidor para el enlace de la web: la opción serverUrl
+  // del plugin; OpenCode 2.3.2 no da al plugin la dirección con que se conectó
+  // el navegador (task 4.9)
+  const serverUrl = () => {
+    const url = typeof ctx.options?.serverUrl === 'string' ? ctx.options.serverUrl.trim().replace(/\/+$/, '') : '';
+    return url || null;
+  };
+  const sessionLink = (sessionID) => {
+    const url = serverUrl();
+    return url ? `${url}/server/${Buffer.from(url).toString('base64')}/session/${sessionID}` : null;
+  };
+
+  // El proyecto: ctx.location.project en OpenCode 2.3.2 (no hay ctx.project), o
+  // el de la sesión que llama a la tool
+  const projectOf = async (context) => {
+    const id = ctx.location?.project?.id ?? ctx.project?.id;
+    if (id) return id;
+    if (!context?.sessionID) return undefined;
+    try {
+      return (await api.get({ sessionID: context.sessionID }))?.projectID;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const newWorktree = guard('worktree', async (input, context) => {
+    if (!ctx.worktree?.create) return { content: 'Este OpenCode no deja al plugin crear worktrees: crea el worktree desde la TUI («Manage workspaces») o con el botón de la web.' };
+    const projectID = await projectOf(context);
+    const name = typeof input?.name === 'string' && input.name.trim() ? input.name.trim() : undefined;
+    let created;
+    try {
+      created = await ctx.worktree.create({ ...(projectID ? { projectID } : {}), ...(name ? { name } : {}) });
+    } catch (error) {
+      return { content: `No se ha creado el worktree: ${error?.message ?? error}` };
+    }
+    const dir = created?.directory;
+    if (!dir) return { content: 'OpenCode no ha devuelto el directorio del worktree.' };
+    const branch = await currentBranch(dir);
+    const step = { kind: 'new' };
+    const nm = { worktree: dir, branch, change: null, role: 'owner', step, seq: 1, phase: 'starting', zone: null };
+    const session = await api.create({ title: describe(step, null), agent: WORKFLOW.new.agent, location: { directory: dir }, metadata: { openspec: { v: 1, ...nm } } });
+    await startStep(session.id, nm, { dir });
+    const link = sessionLink(session.id);
+    return {
+      content:
+        `Creado el worktree ${dir} en la rama ${branch ?? '(sin rama)'}, con la sesión operativa «${session.title}» (id ${session.id}), que ya ha arrancado openspec-new-change. ` +
+        (link ? `Da al usuario este enlace para abrirla en la web: ${link}` : `Di al usuario que la abra en la web por su título «${session.title}» o su id ${session.id}.`),
+    };
+  });
+
   // --- Compactación ---
 
   const onCompaction = guard('compaction', async (input) => {
@@ -961,24 +1175,52 @@ async function start(ctx) {
       input: { type: 'object', properties: { sessionID: { type: 'string' } }, required: ['sessionID'] },
       execute: async (input, context) => (await readSession(input, context)) ?? { content: 'openspec-autopilot no ha podido leer la sesión.' },
     });
+    editor.add({
+      name: WORKTREE_TOOL,
+      description:
+        'Crea un worktree nuevo del proyecto en una rama con su mismo nombre (desde la rama de origen del remoto) y, en él, la sesión operativa que arranca openspec-new-change. Úsala solo cuando el usuario pida un worktree nuevo. Devuelve el enlace a esa sesión, o su título y su id.',
+      options: { codemode: false },
+      input: { type: 'object', properties: { name: { type: 'string', description: 'Nombre del worktree y de su rama, en kebab-case; sin él, lo genera OpenCode.' } } },
+      execute: async (input, context) => (await newWorktree(input, context)) ?? { content: 'openspec-autopilot no ha podido crear el worktree.' },
+    });
   });
+  // La estrategia de worktree (D5): la registra cada instancia con el mismo id
+  let worktreeRegistration = null;
+  try {
+    worktreeRegistration = (await ctx.worktree?.transform?.((editor) => editor.add(worktreeStrategy))) ?? null;
+  } catch (error) {
+    log('worktree:', error);
+  }
   // El acuse del aviso: por la sesión, no por una petición en memoria (D5)
   const onAck = guard('ack', async (input) => ({ ok: await releaseNotice(String(input?.sessionID ?? '')) }));
   await syncGuidance();
-  await ui.start({ screen: async (input) => (await onScreen(input)) ?? { action: 'none' }, ack: async (input) => (await onAck(input)) ?? { ok: false } });
+  await ui.start({
+    screen: async (input) => (await onScreen(input)) ?? { action: 'none' },
+    origin: async (input) => (await onOrigin(input)) ?? { ok: false, message: 'openspec-autopilot no ha podido cambiar de rama.' },
+    ack: async (input) => (await onAck(input)) ?? { ok: false },
+  });
   await api.hook('prompt', onPrompt);
   await api.hook('context', onContext);
   await api.hook('experimental.idle', onIdle);
   await api.hook('compaction', onCompaction);
+  // Al descargarse, suelta la estrategia de worktree (ADR-0011)
+  return async () => {
+    try {
+      await worktreeRegistration?.dispose?.();
+    } catch (error) {
+      log('worktree dispose:', error);
+    }
+  };
 }
 
 export default {
   id: ID,
   async setup(ctx) {
     try {
-      await start(ctx);
+      return await start(ctx);
     } catch (error) {
       log('setup:', error);
+      return undefined;
     }
   },
 };

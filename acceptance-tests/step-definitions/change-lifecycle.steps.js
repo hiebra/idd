@@ -796,6 +796,28 @@ Then('la instrucción dice que el modelo no haga commits ni pase nada al stage',
   assert.match(this.instruction, /no pases nada al stage/);
 });
 
+// --- Volver a la rama de origen (autopilot-rama-por-sesion, design D7) ---
+
+Given(/^el clon está en una rama temporal `([^`]+)`, (con el árbol limpio|con cambios sin commit)$/, function (branch, tree) {
+  const project = this.lifecycleProject();
+  this.branches.branch(project, branch);
+  if (tree === 'con cambios sin commit') fs.appendFileSync(project.path('README.md'), '\nCambio sin commit.\n');
+});
+
+When('se vuelve a la rama de origen con `branch-change.mjs`', function () {
+  this.result = runBranchChange(this, 'origin');
+});
+
+Then('el clon queda en la rama de origen', function () {
+  assert.equal(this.result.exitCode, 0, JSON.stringify(this.result));
+  assert.equal(this.branches.currentBranch(this.project), 'main');
+});
+
+Then(/^el clon sigue en la rama `([^`]+)`$/, function (branch) {
+  assert.equal(this.result.exitCode, 1, JSON.stringify(this.result));
+  assert.equal(this.branches.currentBranch(this.project), branch);
+});
+
 // --- Las fusiones que pide el usuario (allow-user-requested-merges) ---------------
 
 // The temporary branch of a check merge scenario: one commit of its own, and
@@ -881,6 +903,32 @@ Given(/^el clon está en la rama temporal `([^`]+)`, que contiene `origin\/main`
   temporaryBranchWithRemote(this, name, { containing: true });
 });
 
+// The changes the temporary branch of a check merge scenario carries
+// (name-change-in-merge-title, D7), on top of the branch that already contains
+// origin/main: each one in progress or archived, and with a commit, because the
+// gate does not let merge with a dirty tree
+Given(
+  /^la rama temporal lleva (solo código, sin ningún change|el change (?:en curso|archivado) `[^`]+`|los changes en curso `[^`]+` e `[^`]+`)$/,
+  function (what) {
+    const project = this.project;
+    const names = [...what.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+    const archived = what.includes('archivado');
+    for (const name of names) {
+      this.branches.addChange(project, name, { planned: archived });
+      this.branches.commitAll(project, `propuesta de ${name}`);
+      if (archived) {
+        this.branches.archiveChange(project, name);
+        this.branches.commitAll(project, `archiva ${name}`);
+      }
+    }
+    assert.deepEqual(project.gitStatus(), [], 'the gate needs a clean tree');
+    const state = this.branches.branchChange(project);
+    assert.deepEqual(state.changes.map((c) => c.name), names, describeState(state));
+    assert.ok(state.changes.every((c) => c.state === (archived ? 'archived' : 'active')), describeState(state));
+    assert.ok(this.branches.contains(project, 'HEAD', 'origin/main'), 'the branch still contains origin/main');
+  }
+);
+
 When('se ejecuta la puerta `check merge` hacia la rama temporal', function () {
   this.gate = this.branches.checkGate(this.project, 'merge', this.tempBranch, { ephemeral: Boolean(this.ephemeral) });
 });
@@ -924,6 +972,17 @@ Then('el commit que da esa orden tiene el árbol de la rama temporal y los padre
   assert.equal(this.branches.currentBranch(project), this.tempBranch, 'the clone did not change branch');
 });
 
+// The title of the merge (name-change-in-merge-title, D1, D4): the order is
+// run without its push, so the commit stays as a loose object, and the title
+// is read from the commit it makes, not from the text of the message
+Then(/^el commit de fusión que da su orden se titula `([^`]+)`$/, function (title) {
+  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
+  const commitTree = commandsOf(this.gate.message).find((c) => /^commit=\$\(git commit-tree /.test(c));
+  assert.ok(commitTree, JSON.stringify(this.gate));
+  const commit = shell(this, `${commitTree} && echo "$commit"`);
+  assert.equal(git(this.project.dir, 'log', '-1', '--format=%s', commit).trim(), title, JSON.stringify(this.gate));
+});
+
 Then(/^su mensaje indica abrir un PR de `([^`]+)` contra `([^`]+)` y fusionarlo con un commit de fusión, no con squash$/, function (from, into) {
   assert.ok(this.gate.message.includes(`PR de \`${from}\` contra \`${into}\``), JSON.stringify(this.gate));
   assert.match(this.gate.message, /commit de fusión, no con squash/, JSON.stringify(this.gate));
@@ -934,6 +993,25 @@ Then(/^su mensaje no da ninguna orden de push a `([^`]+)`$/, function (target) {
     assert.doesNotMatch(command, new RegExp(`(refs/heads/|\\s)${target}\\b`), JSON.stringify(this.gate));
   }
   assert.doesNotMatch(this.gate.message, /commit-tree/, JSON.stringify(this.gate));
+});
+
+// The title of the PR (name-change-in-merge-title, D5)
+
+Then(/^su mensaje indica que el PR lleve el título `([^`]+)`, también si ya estaba abierto$/, function (title) {
+  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
+  assert.ok(this.gate.message.includes(`con el título \`${title}\``), JSON.stringify(this.gate));
+  assert.match(this.gate.message, /si el PR ya está abierto, ponle ese título/, JSON.stringify(this.gate));
+});
+
+Then('su mensaje recomienda ese mismo título para el commit de fusión', function () {
+  assert.match(this.gate.message, /recomienda al usuario[^.]*ese mismo título en el commit de fusión/, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /el que propone GitHub nombra la rama de la sesión/, JSON.stringify(this.gate));
+});
+
+// Without a change the gate gives no title: the agent titles the PR, as before
+Then('su mensaje no da ningún título para el PR', function () {
+  assert.doesNotMatch(this.gate.message, /título/, JSON.stringify(this.gate));
+  assert.doesNotMatch(this.gate.message, /Merge \S+ into /, JSON.stringify(this.gate));
 });
 
 // merge-targets (D6)
@@ -1015,6 +1093,27 @@ Then('indica que las uniones mecánicas pueden ir agrupadas, pero también entra
 
 Then('indica no hacer el commit de fusión sin el ok del usuario', function () {
   assertIn(section(this, 'merge'), /Sin el ok del usuario no hagas el commit de fusión/, 'the merge section');
+});
+
+// The title of the merge in the skill (name-change-in-merge-title, D6)
+
+Then('indica que el título de la fusión es el que da la puerta `check merge`, que nombra el change de la rama', function () {
+  const merges = section(this, 'merge');
+  assertIn(merges, /El título de la fusión nombra el change/, 'the merge section');
+  assertIn(merges, /Es el que da la puerta, `Merge <change> into <destino>`/, 'the merge section');
+  assertIn(merges, /-m "Merge <change> into <destino>"/, 'the merge section');
+});
+
+Then('indica poner ese título al PR y recomendarlo para su commit de fusión', function () {
+  const merges = section(this, 'merge');
+  assertIn(merges, /Si la rama lleva algún change, ponle al PR el título de la fusión que da la puerta/, 'the merge section');
+  assertIn(merges, /si el PR ya está abierto, cámbiaselo/, 'the merge section');
+  assertIn(merges, /recomienda al usuario ese mismo título en el commit de fusión/, 'the merge section');
+  assertIn(merges, /el que propone GitHub nombra la rama de la sesión/, 'the merge section');
+});
+
+Then('indica que un PR sin change lo titula el agente, como hasta ahora', function () {
+  assertIn(section(this, 'merge'), /Si la rama no lleva ningún change, la puerta no da título: titula tú el PR[^\n]*como hasta ahora/, 'the merge section');
 });
 
 // The merge proposal is its own entry of the archive guidance, outside the

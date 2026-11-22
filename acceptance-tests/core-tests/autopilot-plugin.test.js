@@ -16,6 +16,9 @@
 //   does not chain (Modo auto);
 // - no exception leaves setup, the hooks, the tools or the RPC handlers, and
 //   every wait is bounded.
+// - autopilot-rama-por-sesion D4: «Crear un worktree nuevo» tries the name
+//   dialog again when «Manage workspaces» mounts slowly, and says how to
+//   open it when it never opens.
 //
 // Run with: npm run test:core
 
@@ -156,7 +159,8 @@ test('without a TUI, a new session only takes control with `autopilot`', async (
   const { sessionID } = await w.opencodeCall('open', { text: 'Quiero exportar los datos' });
   const all = ap.sessions(w);
   assert.equal(all.length, 1);
-  assert.equal(ap.metaOf(all[0]), null);
+  // Only its working branch, as a free session (D1 of autopilot-rama-por-sesion)
+  assert.deepEqual(ap.metaOf(all[0]), { v: 1, worktree: w.project.dir, branch: ap.BRANCH, role: 'free' });
   assert.deepEqual(ap.injected(w, sessionID), []);
   // The tool says so instead of closing anything
   await ap.scriptTool(w, sessionID, 'openspec_handoff', {});
@@ -370,6 +374,61 @@ test("the user's description in the new step reaches the next steps", async (t) 
   const next = ap.onlyOwner(w);
   assert.deepEqual(ap.metaOf(next).step, { kind: 'artifact', id: 'proposal' }, ap.describeSessions(w));
   assert.match(ap.instructionOf(w, next.id), /exportar los datos a CSV con una cabecera/);
+});
+
+test('the worktree strategy: one registration across reloads and worktree instances, and none once the plugin is unloaded (ADR-0011)', async (t) => {
+  const w = world(t);
+  w.branches.addRemote(w.project, { push: ['main'] });
+  await w.startOpenCode();
+  assert.deepEqual(w.opencode.strategies.map((s) => s.id), ['openspec-autopilot']);
+  await w.opencodeCall('reload');
+  await w.opencodeCall('reload');
+  assert.deepEqual(w.opencode.strategies.map((s) => s.id), ['openspec-autopilot'], JSON.stringify(w.opencode.strategies));
+  const { directory, error } = await w.opencodeCall('createWorktree', { name: 'importar-datos', via: 'web', branch: 'HEAD' });
+  assert.equal(error, null, error);
+  assert.equal(ap.branchAt(directory), 'importar-datos');
+  // The TUI enters the worktree: its instance registers the strategy again, with the same id
+  await w.opencodeCall('home', { directory });
+  assert.ok(w.opencode.instances.includes(directory), JSON.stringify(w.opencode.instances));
+  assert.deepEqual(w.opencode.strategies.map((s) => s.id), ['openspec-autopilot'], JSON.stringify(w.opencode.strategies));
+  // Every TUI call goes to the instance of the directory the TUI is in
+  const screens = w.opencode.rpcCalls.filter((c) => c.method === 'screen');
+  assert.equal(screens.at(-1).directory, directory, JSON.stringify(screens));
+  await w.opencodeCall('close');
+  assert.deepEqual(w.opencode.strategies, []);
+  assert.deepEqual(w.opencode.crashes, []);
+});
+
+// D4 of autopilot-rama-por-sesion: «Crear un worktree nuevo» opens «Name
+// worktree» after a pause; if «Manage workspaces» is still mounting, it tries
+// once more, and if it still does not open, it says how to open it
+async function chooseNewWorktree(t, workspacesMountMs) {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode({ alreadyOpen: true, workspacesMountMs });
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  await w.opencodeCall('goto', { sessionID: owner });
+  await w.opencodeCall('dialogWait', { on: true });
+  await w.opencodeCall('home');
+  assert.ok(ap.lastModal(w)?.open, ap.describeSessions(w));
+  await w.opencodeCall('answers', { answers: [{ choose: 'Crear un worktree nuevo' }], settle: true });
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  await w.opencodeCall('settle');
+  return w;
+}
+
+test('the name dialog opens on the second try when «Manage workspaces» mounts slowly', async (t) => {
+  const w = await chooseNewWorktree(t, 400);
+  assert.deepEqual(w.opencode.keymap, ['session.move', 'dialog.move_session.new', 'dialog.move_session.new']);
+  assert.ok(w.opencode.dialogs.some((d) => d.kind === 'name-worktree' && d.open), JSON.stringify(w.opencode.dialogs));
+  assert.equal(w.opencode.toasts.some((x) => /diálogo de nombre/.test(x.message)), false);
+});
+
+test('when the name dialog never opens, the TUI says how to open it', async (t) => {
+  const w = await chooseNewWorktree(t, 5000);
+  assert.deepEqual(w.opencode.keymap, ['session.move', 'dialog.move_session.new', 'dialog.move_session.new']);
+  assert.equal(w.opencode.dialogs.some((d) => d.kind === 'name-worktree'), false);
+  assert.ok(w.opencode.toasts.some((x) => /no se ha podido abrir el diálogo de nombre/.test(x.message) && /ctrl\+a/.test(x.message)), JSON.stringify(w.opencode.toasts));
 });
 
 // autopilot-plan-explore (D2): what the plugin injects with the plan agent

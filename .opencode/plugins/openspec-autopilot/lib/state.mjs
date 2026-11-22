@@ -3,10 +3,15 @@
 //
 //   { v: 1, worktree, branch, change, role: "owner" | "free",
 //     step: { kind, id, of }, seq, phase, zone, injected, handoff, review,
-//     lessons }
+//     lessons, leftFrom, resumed }
 //
 // La dueña es la sesión no archivada de ese worktree y esa rama con
-// role "owner". La metadata se escribe siempre entera (lección 2: update la
+// role "owner". `branch` es la rama de trabajo de la sesión (design D1 de
+// autopilot-rama-por-sesion): la que tenía HEAD en su directorio al crearse, y
+// la nueva si se hace un checkout dentro de la sesión. Una dueña que cambia
+// así de rama pasa a "free" con phase "left" y `leftFrom`, la rama que deja;
+// cuando el directorio vuelve a ella, la sesión operativa nueva retoma el
+// paso y la sesión anterior queda con `resumed`. La metadata se escribe siempre entera (lección 2: update la
 // sustituye), leyendo con get, combinando y escribiendo, y se vuelve a leer
 // para confirmarlo, porque una operación sin error no prueba nada (lección 1).
 
@@ -42,6 +47,16 @@ export async function writeMeta(api, sessionID, patch) {
     }
   }
   return written;
+}
+
+// La primera metadata de una sesión que no la tiene: su rama de trabajo, como
+// sesión libre (design D1 de autopilot-rama-por-sesion). Se decide con la
+// sesión recién leída, no con la recibida: si mientras tanto otra llamada (el
+// hook prompt de `autopilot`) ya le ha escrito metadata, no se toca.
+export async function firstMeta(api, session, { worktree, branch }) {
+  const current = meta(await api.get({ sessionID: session.id }));
+  if (current) return current;
+  return writeMeta(api, session.id, { worktree, branch, role: 'free' });
 }
 
 // Todas las sesiones, archivadas incluidas: list() devuelve { data, cursor }
@@ -91,4 +106,29 @@ export function changeSessions(sessions, change) {
 
 export function nextSeq(sessions) {
   return sessions.reduce((max, s) => Math.max(max, meta(s)?.seq ?? 0), 0) + 1;
+}
+
+// El directorio de una sesión: el suyo en OpenCode, o el de su metadata
+export function sessionDir(session) {
+  return session?.location?.directory ?? session?.directory ?? meta(session)?.worktree ?? null;
+}
+
+// Si una sesión ha cambiado de rama dentro de sí misma (design D1): su rama de
+// trabajo no es la de HEAD y no ha sido el plugin quien ha hecho el checkout
+// (pluginCheckout: el último que hizo en el directorio, { from, to }).
+// Devuelve null o el parche de la metadata.
+export function branchMoved({ meta: m, head, pluginCheckout = null }) {
+  if (!m?.branch || !head || m.branch === head) return null;
+  if (pluginCheckout && pluginCheckout.to === head && pluginCheckout.from === m.branch) return null;
+  if (m.role === 'owner') return { branch: head, role: 'free', phase: 'left', leftFrom: m.branch, resumed: false };
+  return { branch: head };
+}
+
+// Las sesiones que dejaron de ser la operativa de una rama al cambiar de rama
+// y que la rama todavía no ha retomado
+export function leftFrom(sessions, { worktree, branch }) {
+  return sessions.filter((s) => {
+    const m = meta(s);
+    return m && m.worktree === worktree && m.leftFrom === branch && !m.resumed;
+  });
 }

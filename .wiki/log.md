@@ -247,6 +247,20 @@
 ## [2026-11-22] compile | lección de reorder-wiki-resync en suite-de-aceptacion-y-spec-as-source; inventario sin cambios
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md (2 lessons, 1 articles updated)
+
+## [2026-11-22] ll | "pruebas de autopilot-rama-por-sesion en OpenCode 2.3.2 real" → raw/notes/2026-11-22-ll-pruebas-opencode-real-autopilot.md (7 lessons, 3 articles updated, 1 inventory record updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, autopilot-rama-por-sesion @812f22d): 1 new, 0 skipped, 38 total candidates
+
+## [2026-11-22] refresh | archivado de autopilot-rama-por-sesion (idd@812f22d): 3 artículos actualizados (ciclo-de-un-change-y-autopilot, arranque-de-sesion, suite-de-aceptacion-y-spec-as-source)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "archive de autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-archive-autopilot-rama-por-sesion.md (2 lessons, 1 articles updated)
+
+## [2026-11-22] ll | "fusión de main con autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md (2 lessons, 2 articles updated)
 ## [2026-11-22] ll | "límite de tiempo de syncGuidance (apply-one-task-per-session-in-normal-mode)" → raw/notes/2026-11-22-ll-apply-guidance-timeout.md (1 lesson, 1 article updated)
 
 ## [2026-11-22] ingest-collection | idd via git (manifest-only, apply-one-task-per-session-in-normal-mode @ f9f014c): 1 manifest, 15 paths pinned, 0 children, 15 total candidates
@@ -295,3 +309,13 @@
 ## [2026-11-22] merge | origin/main (apply-one-task-per-session-in-normal-mode) en la rama de autopilot-plan-explore: conflictos del wiki unidos; «Lo que se mantiene» cita ADR-0025 sin «y su agente»; contadores recontados (60 fuentes, 13 artículos, 8 registros, 7 activos)
 
 ## [2026-11-22] ll | "lo que llega de main puede contradecir el change sin conflicto de git" → raw/notes/2026-11-22-ll-fusion-supuestos-invalidados.md (1 lesson, 1 article updated: flujo-wiki-first)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, idd@4b8d2b3, archivado de name-change-in-merge-title): 1 new, 0 skipped, 12 total candidates
+
+## [2026-11-22] refresh | 1 articles checked (ciclo-de-un-change-y-autopilot), 0 new raw revisions (la revisión es el manifiesto idd@4b8d2b3), 1 updated, 0 verified, 0 flagged, 0 retracted
+
+## [2026-11-22] inventory | archivado de name-change-in-merge-title: nombrar-el-change-en-el-titulo-de-la-fusion → archived; nuevo sanear-el-nombre-de-la-rama-en-las-ordenes-de-las-puertas; nuevo caso en la-task-del-archive-no-es-un-checkbox
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "main avanza mientras corre la suite de una fusión" → raw/notes/2026-11-22-ll-main-avanza-durante-la-suite.md (1 lesson, 1 article updated)
