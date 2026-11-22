@@ -16,7 +16,7 @@ verified: 2026-11-21
 tags: [openspec, openspec-git-discipline, git, procedencia, skills]
 confidence: high
 volatility: warm
-summary: "La skill openspec-git-discipline exige cruzar main dos veces por change (la propuesta antes de apply y la implementación antes de archive) y archivar desde main. Ni este proyecto ni su origen registran por qué; la única discusión es la issue 11 del origen, abierta y sin respuesta. ADR-0007 sustituye esas puertas en este proyecto, y la copia de la skill se reescribió con ellas en add-openspec-autopilot."
+summary: "La skill openspec-git-discipline exige cruzar main dos veces por change (la propuesta antes de apply y la implementación antes de archive) y archivar desde main. Ni este proyecto ni su origen registran por qué; la única discusión es la issue 11 del origen, abierta y sin respuesta. ADR-0007 sustituye esas puertas en este proyecto, y la copia de la skill se reescribió con ellas en add-openspec-autopilot; ADR-0013, que sustituye a ADR-0007 en manage-git-discipline, vuelve a admitir la forma canónica junto a la recomendada."
 ---
 
 # openspec-git-discipline: una regla heredada sin justificación registrada

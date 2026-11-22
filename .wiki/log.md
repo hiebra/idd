@@ -89,3 +89,9 @@
 ## [2026-11-22] ingest-collection | idd via git (manifest-only, manage-git-discipline @5d7f5b0): 1 manifest, 24 paths pinned, 0 skipped
 
 ## [2026-11-22] refresh | ciclo-de-un-change-y-autopilot, arranque-de-sesion, flujo-wiki-first y origen-de-openspec-git-discipline con el archivado de manage-git-discipline (idd@5d7f5b0)
+
+## [2026-11-22] ll | 4 lecciones de manage-git-discipline confirmadas por el usuario (raw/notes/2026-11-22-ll-manage-git-discipline.md)
+
+## [2026-11-22] compile | lecciones de manage-git-discipline en suite-de-aceptacion-y-spec-as-source y ciclo-de-un-change-y-autopilot; correcciones del librarian en flujo-wiki-first y origen-de-openspec-git-discipline
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed

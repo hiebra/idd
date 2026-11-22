@@ -71,7 +71,7 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 - las lecciones del paso 4 parten de las lecciones candidatas que haya recibido la sesión de las sesiones del change (en OpenCode, de su metadata) y, si no hay, de la sesión en curso.
 
 - **Antes de mover el change**, revisa los enlaces relativos de sus artefactos que salen del change: el archive lo baja un nivel y necesitan un `../` más. Citar por la ruta desde la raíz del repositorio lo evita ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 1).
-- **Las rutas que tocó el change** salen de sus propios commits si la rama lleva más de un change; el diff de la rama contra `main` mezcla los de ambos. Con el ciclo de ADR-0007 una rama lleva un solo change, y el plugin no actúa en una rama con varios ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 2).
+- **Las rutas que tocó el change** salen de sus propios commits si la rama lleva más de un change; el diff de la rama contra `main` mezcla los de ambos. Con la forma recomendada (ADR-0013, que sustituye a ADR-0007) una rama temporal lleva un solo change, y el plugin no actúa en una rama con varios ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 2).
 
 ## El motor
 

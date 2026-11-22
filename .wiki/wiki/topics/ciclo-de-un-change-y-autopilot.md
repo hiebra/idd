@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md
   - raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md
@@ -29,6 +30,7 @@ Desde `manage-git-discipline`, el ciclo lo fija `idd@5d7f5b0:adr/0013-git-discip
 - **Las puertas** (`check propose|apply|archive|commit`) imprimen `{ ok, message }`, salen con 0 o 1 y admiten las dos formas: proponer o aplicar en la rama de origen deja seguir con un aviso, y archivar allí solo si no quedan tasks. Todo rechazo dice cómo seguir. La skill `openspec-git-discipline` manda ejecutarlas y obedecerlas (ver [su origen](../concepts/origen-de-openspec-git-discipline.md)).
 - **Quién hace los commits**: fuera de la nube, el usuario; los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki. En un contenedor efímero (`CLAUDE_CODE_CONTAINER_ID` y `CLAUDE_CODE_REMOTE=true`), el agente hace commit y push sin preguntar en la rama de la sesión que guardó el arranque (`git config idd.sessionBranch`), con commits provisionales si hace falta y después de que `check commit` lo autorice. Nunca fusiona ni toca otras ramas. Ningún commit mezcla la zona de specs con la de código.
 - **Números de ADR sin choques**: `rules.adr` de `idd@5d7f5b0:openspec/config.yaml` manda hacer `git fetch` y tomar el número más alto de `adr/` en todas las ramas remotas, y `check archive` detiene el archive si un ADR nuevo de la rama repite un número de la rama de origen. Ocurrió en el propio archive de `manage-git-discipline`: entre tanto habían llegado a `main` un ADR-0011 y un ADR-0012 de otras ramas, y el ADR del change se renumeró de 0011 a 0013 (`idd@5d7f5b0:openspec/changes/archive/2026-11-22-manage-git-discipline/adr.md`).
+- **Probar el módulo en otra rama, con un worktree**: `branch-change.mjs` está versionado, así que al cambiar de rama se ejecuta la versión de esa rama, y la suite copia el árbol que haya en ese momento. Para ver cómo responde el módulo nuevo en `main`, se crea un worktree de `main` y se ejecuta allí el módulo de la rama de trabajo ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 3).
 - **Antes de proponer, busca las decisiones previas**: el schema solo pide leer los ADRs en el paso `design`, pero una propuesta puede chocar con un ADR en vigor sobre el mismo mecanismo. En `add-quote-comment-rule`, la primera propuesta usaba `AGENTS.md`, que ADR-0005 ya había descartado, y hubo que rehacerla al escribir las specs ([lecciones de add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md), lección 3).
 
 ## La asimetría entre agentes
@@ -92,3 +94,4 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - [Lessons Learned: APIs de sesión de OpenCode 2.3.2 para orquestar un change](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md): lecciones 1 a 10.
 - [Lessons Learned: add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md): lección 3.
 - [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `adr/0013-git-discipline-two-forms-and-ephemeral-commits.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.agents/openspec/branch-change.mjs`, `openspec/config.yaml`, `README.md`, `openspec/changes/archive/2026-11-22-manage-git-discipline/adr.md`.
+- [Lessons Learned: manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md): lección 3.
