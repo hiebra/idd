@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md](2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md) | Manifiesto de lo que tocó git-discipline-standard-with-exception en el commit del archivado (idd@e9fced1) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-5d7f5b0-manage-git-discipline.md](2026-11-22-idd-5d7f5b0-manage-git-discipline.md) | Manifiesto de lo que tocó manage-git-discipline en el commit del archivado (idd@5d7f5b0) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md](2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md) | Manifiesto de lo que tocó autopilot-sesion-operativa en el commit del archivado (idd@6d6e79c) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md](2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md) | Manifiesto de lo que tocó replace-gherkin-lint-with-gplint en el commit del archivado (idd@d355c01) | collection, collection-manifest, git | 2026-11-22 |

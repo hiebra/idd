@@ -19,7 +19,7 @@ summary: "Dos changes en curso con deltas sobre la misma capability pueden choca
 
 ## Qué detecta cada forma
 
-| Caso | Misma rama: forma canónica, los dos se archivan en la rama de origen | Ramas separadas: forma recomendada, cada uno se archiva en su rama |
+| Caso | Misma rama: la regla, los dos se archivan en la rama de origen | Ramas separadas: la excepción de ADR-0020, cada uno se archiva en su rama |
 |---|---|---|
 | A elimina un requirement que B modifica | `archive` de B se aborta: `MODIFIED failed … - not found` | Conflicto de git al fusionar, o el mismo aborto |
 | A añade un escenario y el MODIFIED de B no lo incluye | `archive` de B se aborta: `Refresh the change spec before archiving to avoid dropping scenarios` | Conflicto de git al fusionar |

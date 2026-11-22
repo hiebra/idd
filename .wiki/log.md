@@ -153,3 +153,6 @@
 
 ## [2026-11-22] compile | 2 sources → 1 new article, 2 updated (conflictos-entre-deltas-concurrentes, origen-de-openspec-git-discipline, ciclo-de-un-change-y-autopilot)
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, idd@e9fced1): 16 new, 0 skipped, 16 total candidates (raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md)
+## [2026-11-22] compile | 1 source → 0 new articles, 4 updated (ciclo-de-un-change-y-autopilot, origen-de-openspec-git-discipline, flujo-wiki-first, conflictos-entre-deltas-concurrentes)
