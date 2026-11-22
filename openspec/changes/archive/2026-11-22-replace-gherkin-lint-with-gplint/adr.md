@@ -31,4 +31,4 @@ ADR-0001 no está en vigor: lo sustituye ADR-0002.
 
 ## New Durable ADRs Created
 
-- [ADR-0012](../../../adr/0012-spec-lint-with-gplint.md): el lint de las specs usa `gplint`, con una configuración fijada común a los dos stacks.
+- [ADR-0012](../../../../adr/0012-spec-lint-with-gplint.md): el lint de las specs usa `gplint`, con una configuración fijada común a los dos stacks.
