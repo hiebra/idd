@@ -29,4 +29,4 @@ El resto del design no requiere ADR, porque son detalles de implementación: có
 
 ## New Durable ADRs Created
 
-- [ADR-0017](../../../adr/0017-windows-support-opencode-lf-diagnostic.md): En Windows se soporta solo OpenCode 2, con LF en el repositorio y un diagnóstico en PowerShell
+- [ADR-0017](../../../../adr/0017-windows-support-opencode-lf-diagnostic.md): En Windows se soporta solo OpenCode 2, con LF en el repositorio y un diagnóstico en PowerShell
