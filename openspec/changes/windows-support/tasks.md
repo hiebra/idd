@@ -23,7 +23,8 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
   - Resultado: sin el cambio, el plugin lanza el primer `bash` del PATH, el de WSL simulado, y el Git Bash simulado no recibe ninguna llamada al núcleo. Con `coreBash()` (`git --exec-path` → `<raíz>/bin/bash.exe`, y si no `%ProgramFiles%\Git\bin\bash.exe`), el núcleo se ejecuta con Git Bash y `openspec --version` da la versión fijada. Por eso el rojo de 2.4 solo se ve tras esta task: hasta ahora, el plugin no lanzaba el Git Bash simulado, que es el que ve el proyecto con otra ruta.
 - [x] 2.6 "Windows sin Git for Windows": con `win32` y sin `git` ni `%ProgramFiles%\Git\bin\bash.exe`, el plugin avisa de que el arranque necesita Git for Windows, no lanza el núcleo y la sesión arranca.
   - Resultado: sin el cambio, no hay aviso de Git for Windows. Con él, el plugin avisa, no lanza el núcleo y la sesión arranca.
-- [ ] 2.7 En `core-tests/`, pruebas de la búsqueda de Git Bash que no están en las specs: `--exec-path` bajo `mingw64` y bajo `mingw32`, un `git` del `PATH` que no es de Git for Windows y una ruta con espacios.
+- [x] 2.7 En `core-tests/`, pruebas de la búsqueda de Git Bash que no están en las specs: `--exec-path` bajo `mingw64` y bajo `mingw32`, un `git` del `PATH` que no es de Git for Windows y una ruta con espacios.
+  - Resultado: `core-tests/opencode-git-bash.test.js`, cinco casos (`mingw64`, `mingw32`, una ruta con espacios, un `git` que no es de Git for Windows con la instalación por defecto, y sin ninguno de los dos, que avisa y no lanza bash). Pasan los cinco.
 
 ## 3. Autopilot (zona de código)
 
