@@ -148,3 +148,73 @@ test('list: the temporary branches with their change; switch: only to an existin
   assert.equal(switched.ok, true, switched.message);
   assert.equal(listBranches(dir).find((b) => b.current).branch, 'exportar-datos');
 });
+
+// --- check commit with a merge in progress (allow-user-requested-merges, D3) ---
+
+const EPHEMERAL = { CLAUDE_CODE_CONTAINER_ID: 'container_suite', CLAUDE_CODE_REMOTE: 'true' };
+const IDENTITY = ['-c', 'user.name=suite', '-c', 'user.email=suite@example.invalid'];
+
+function write(dir, rel, content) {
+  fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+  fs.writeFileSync(path.join(dir, rel), content);
+}
+
+// A session branch `claude/x` with a merge of main in progress that touches
+// `files` (path -> content in main), without conflicts
+function mergeInProgress(t, files) {
+  const dir = repo(t);
+  git(dir, 'checkout', '-q', '-b', 'claude/x');
+  git(dir, 'config', 'idd.sessionBranch', 'claude/x');
+  write(dir, 'src/propio.js', 'propio\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'propio');
+  git(dir, 'checkout', '-q', 'main');
+  for (const [rel, content] of Object.entries(files)) write(dir, rel, content);
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'main');
+  git(dir, 'checkout', '-q', 'claude/x');
+  git(dir, ...IDENTITY, 'merge', '-q', '--no-commit', '--no-ff', 'main');
+  return dir;
+}
+
+test('check commit with a merge: `=======` with more text on its line is not a marker', async (t) => {
+  const { checkCommit } = await import(MODULE);
+  const dir = mergeInProgress(t, {
+    'docs/a.md': 'Título\n======= y más\n',
+    'src/b.js': '// <<<<<<<HEAD sin espacio\n  >>>>>>> sangrado\n',
+    'openspec/changes/x/design.md': 'x\n',
+  });
+  const gate = checkCommit(dir, EPHEMERAL);
+  assert.equal(gate.ok, true, gate.message);
+  assert.match(gate.message, /git commit --no-edit/);
+  for (const line of ['=======', '<<<<<<< HEAD', '>>>>>>> main', '<<<<<<<']) {
+    write(dir, 'src/b.js', `x\n${line}\ny\n`);
+    const marked = checkCommit(dir, EPHEMERAL);
+    assert.equal(marked.ok, false, line);
+    assert.match(marked.message, /src\/b\.js/, line);
+  }
+});
+
+test('check commit with a merge: a deleted or binary file is skipped', async (t) => {
+  const { checkCommit } = await import(MODULE);
+  const dir = mergeInProgress(t, { 'bin/data.bin': Buffer.from([0, 1, 2, ...Buffer.from('\n<<<<<<< HEAD\n')]), 'src/c.js': 'c\n' });
+  fs.rmSync(path.join(dir, 'src', 'c.js'));
+  fs.rmSync(path.join(dir, 'src', 'propio.js'));
+  assert.match(git(dir, 'diff', '--name-only', 'HEAD'), /src\/propio\.js/, 'a deleted file the merge touches');
+  const gate = checkCommit(dir, EPHEMERAL);
+  assert.equal(gate.ok, true, gate.message);
+});
+
+test('check commit without a merge in progress still checks the zones', async (t) => {
+  const { checkCommit } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'checkout', '-q', '-b', 'claude/x');
+  git(dir, 'config', 'idd.sessionBranch', 'claude/x');
+  write(dir, 'src/a.js', '<<<<<<< HEAD\n');
+  assert.equal(checkCommit(dir, EPHEMERAL).ok, true, 'markers are only checked in a merge');
+  write(dir, 'openspec/changes/x/design.md', 'x\n');
+  const mixed = checkCommit(dir, EPHEMERAL);
+  assert.equal(mixed.ok, false);
+  assert.match(mixed.message, /mezclan la zona de specs/);
+  assert.equal(checkCommit(dir, {}).ok, false, 'outside an ephemeral container');
+});

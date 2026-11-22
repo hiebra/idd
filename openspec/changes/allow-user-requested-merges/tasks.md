@@ -17,8 +17,8 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 ## 2. El commit de fusión en `check commit` (D3): rojo → implementar → verde → commit
 
 - [x] 2.1 `La puerta check commit admite un commit de fusión resuelto`: el Scenario Outline `El commit de una fusión con la puerta check commit`, con los pasos `hay una fusión en curso de \`origin/main\` que toca …`, `los conflictos están resueltos y sin marcadores`, `\`src/exportar.js\` tiene un conflicto sin resolver`, `\`src/exportar.js\` está resuelto pero conserva un marcador \`<<<<<<<\``, `la puerta no deja seguir e indica resolver …` y `la puerta no deja seguir e indica quitar los marcadores de …`. Rojo: la fila resuelta se rechaza por mezclar zonas. Implementar D3 (`MERGE_HEAD`, `--diff-filter=U`, marcadores en `git diff --name-only HEAD`) → verde → commit
-- [ ] 2.2 Añadir a `core-tests/branch-change.test.js` los casos que no están en las specs: `=======` en una línea con más texto no es marcador, un archivo borrado o binario se salta, y sin fusión en curso las zonas se siguen comprobando → commit
-- [ ] 2.3 Comprobar que los escenarios vigentes de `check commit` (`Cuándo deja hacer commit la puerta check commit`, `La puerta check commit comprueba las zonas`) siguen en verde
+- [x] 2.2 Añadir a `core-tests/branch-change.test.js` los casos que no están en las specs: `=======` en una línea con más texto no es marcador, un archivo borrado o binario se salta, y sin fusión en curso las zonas se siguen comprobando → commit
+- [x] 2.3 Comprobar que los escenarios vigentes de `check commit` (`Cuándo deja hacer commit la puerta check commit`, `La puerta check commit comprueba las zonas`) siguen en verde
 
 ## 3. La puerta `check merge` (D4, D5): rojo → implementar → verde → commit
 
