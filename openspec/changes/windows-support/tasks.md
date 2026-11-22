@@ -4,7 +4,8 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 1. Preparación
 
-- [ ] 1.1 Dejar `pwsh` (PowerShell 7) disponible en la sesión: proponer al usuario añadir su instalación al script de configuración del entorno de la nube (Open Question 1 del design: paquete de Microsoft o tarball de GitHub) y, aprobada, instalarlo en esta sesión. Comprobar `pwsh -v`. Sin `pwsh` no se puede hacer la sección 4.
+- [x] 1.1 Dejar `pwsh` (PowerShell 7) disponible en la sesión: proponer al usuario añadir su instalación al script de configuración del entorno de la nube (Open Question 1 del design: paquete de Microsoft o tarball de GitHub) y, aprobada, instalarlo en esta sesión. Comprobar `pwsh -v`. Sin `pwsh` no se puede hacer la sección 4.
+  - Resultado: entorno personal `idd` (para `hiebra/idd`) con un script de configuración que instala PowerShell 7.4.6 desde el tarball de las releases de GitHub en `/opt/microsoft/powershell/7`, con `pwsh` en `/usr/local/bin`. El script se probó en esta sesión, y `pwsh -v` da 7.4.6.
 - [ ] 1.2 Ejecutar la suite con el delta del change: los escenarios nuevos de `windows-readiness`, `session-bootstrap` y `openspec-autopilot` salen con pasos sin definir, y el resto pasa. Anotar aquí el resultado.
 
 ## 2. Arranque de sesión en Windows (zona de código): por escenario, rojo → implementar → verde → commit
