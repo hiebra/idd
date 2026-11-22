@@ -61,17 +61,26 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 6. Suite completa
 
-- [ ] 6.1 Ejecutar la suite completa con los deltas del change, `npm run test:core` y `npm run lint:specs`: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado. Ejecutar `openspec validate autopilot-rama-por-sesion --type change --strict`.
+- [x] 6.1 Ejecutar la suite completa con los deltas del change, `npm run test:core` y `npm run lint:specs`: todos los escenarios pasan, cero pasos pendientes o sin definir, informe HTML generado. Ejecutar `openspec validate autopilot-rama-por-sesion --type change --strict`.
+  - Resultado (2026-11-22): 221 escenarios y 1157 pasos, todos en verde, sin pendientes ni sin definir, e informe HTML en `acceptance-tests/reports/`; `test:core`, 119 de 119; `lint:specs`, sin errores. `openspec validate` sin `--strict` da el change por válido; con `--strict`, ningún `[ERROR]` y 43 avisos de los tipos que ya dan las specs vigentes, como en los changes anteriores: 28 escenarios en bloques `gherkin` sin WHEN/GIVEN ni THEN, 11 requisitos con «DEBE» en lugar de SHALL/MUST y 4 de más de 500 caracteres.
+  - Al ejecutar `test:core` salió intermitente «two sessions taking control at once» (también con el plugin anterior, 1 de cada 6): la sesión que toma el control podía comprobar antes de que otra que lo tomaba a la vez escribiera su metadata. El plugin comprueba ahora otra vez tras una pausa breve (`lostTo` en `server.js`); 10 de 10.
 
 ## 7. Pruebas end-to-end en OpenCode 2.3.2 real (fuera del repositorio)
 
 Con el banco del design: clon desechable de esta rama, TUI `--standalone` en tmux, web con Playwright y una contraseña de servidor, y un remoto desnudo local. Anotar aquí cada resultado; lo que no se pueda automatizar queda como verificación manual pendiente, con sus pasos.
 
+Estado (2026-11-22): pendientes. En la sesión que implementó las secciones 1 a 6 no había OpenCode 2.3.2: npm solo tiene `opencode-ai` 1.19.6, y la serie 2 está solo en los tags del repositorio. Los pasos de cada una quedan como verificación manual, con el banco de arriba; `git -C <clon> worktree list`, `git -C <worktree> status -sb` y la metadata de las sesiones (`openspec`) bastan para leer los resultados.
+
 - [ ] 7.1 TUI: crear un worktree desde «Manage workspaces» (con nombre escrito y generado con `tab`) y desde el modal de `/new`; comprobar la rama, su origen y el primer push.
+  - Pasos: en `main`, «Manage workspaces → New worktree» con el nombre `prueba-a` y otro generado con `tab`; en una rama temporal con sesión operativa, `/new` y «Crear un worktree nuevo». En cada uno: `git status -sb` da la rama con el nombre del worktree, sin upstream; `git rev-parse HEAD` es el de `origin/main` tras el fetch; un commit y `git push` sin argumentos crean `origin/<rama>`; `git config --get push.autoSetupRemote` sigue igual. Al entrar en el worktree, la TUI pasa a una sesión operativa que arranca `openspec-new-change`.
 - [ ] 7.2 TUI: saltar entre la sesión de la rama de origen y la operativa de un worktree, y entre dos sesiones del mismo directorio (checkout, árbol sucio, otra sesión trabajando).
+  - Pasos: desde una sesión de `main`, entrar en la operativa del worktree (aviso con rama y directorio, sin checkout, y la barra con `<directorio>:<rama>`); volver a la de `main`. En el mismo directorio, entrar en la operativa de otra rama con el árbol limpio (checkout y aviso), con un cambio sin commit (vuelve a la sesión anterior con el aviso) y con otra sesión del directorio trabajando (vuelve con el aviso). Comprobar que la parte de TUI llama a la instancia del worktree (el log del plugin del worktree recibe `screen`).
 - [ ] 7.3 TUI: un checkout dentro de la sesión operativa (merge asistido) y la vuelta a la rama, que retoma el paso.
+  - Pasos: en la sesión operativa a mitad de una task, pedir al modelo `git checkout main`; al quedar en reposo, la metadata de la sesión tiene `branch: main`, `role: free` y `leftFrom: <rama>`, sin archivarse. Volver a la rama (`git checkout <rama>`) y recuperar el foco de la TUI en la pantalla de inicio: se crea una sesión operativa que retoma esa task, y la anterior queda con `resumed: true`.
 - [ ] 7.4 Web: crear un worktree con su botón y pidiéndoselo al modelo; comprobar la sesión operativa nueva y el enlace o el título y el id.
+  - Pasos: en la web, el botón de crear worktree (con y sin referencia de partida): la rama es la del nombre y la referencia se ignora. En una sesión ajena de una rama temporal con sesión operativa, el modelo ofrece el worktree; al pedírselo, llama a `openspec_worktree`, y existe una sesión del worktree operativa de su rama que arranca `openspec-new-change`. Sin `serverUrl`, el modelo da título e id; con `serverUrl`, el enlace `/server/<base64>/session/<id>` abre esa sesión. Comprobar también si el contexto del plugin trae la dirección del servidor (task 4.9), y si `ctx.session.create` acepta `location: { directory }` para crear la sesión en el worktree.
 - [ ] 7.5 Recarga en caliente del plugin: la estrategia no se duplica, y al descargar el plugin OpenCode vuelve a la estrategia git.
+  - Pasos: con la TUI abierta, tocar `server.js` para que OpenCode recargue el plugin dos veces y crear un worktree: nace en su rama, una sola vez. Quitar el plugin (`"plugins": ["-openspec-autopilot"]`) y crear otro: nace con HEAD separado (la estrategia git). Comprobar que `remove` de un worktree con cambios pide confirmación para forzar (`forceRequired`).
 
 ## 8. Cierre
 

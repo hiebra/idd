@@ -204,6 +204,20 @@ async function start(ctx) {
     return { op: winner(valid), invalid, sessions };
   };
 
+  // Escribir y comprobar dos veces: la sesión que acaba de tomar el control
+  // puede haber comprobado antes de que otra que lo tomaba a la vez escribiera
+  // su metadata; tras una pausa breve, las dos ven a las dos y gana la más
+  // antigua. Devuelve la ganadora si no es `sessionID`, o null.
+  const CLAIM_RECHECK_MS = 150;
+  const lostTo = async (bc, sessionID) => {
+    for (const wait of [0, CLAIM_RECHECK_MS]) {
+      if (wait) await new Promise((resolve) => setTimeout(resolve, wait).unref?.());
+      const { op } = await opOf(bc);
+      if (op && op.id !== sessionID) return op;
+    }
+    return null;
+  };
+
   const archiveOrMark = async (sessionID) => {
     if (ui.ready()) {
       try {
@@ -352,8 +366,8 @@ async function start(ctx) {
     const clean = await treeClean(directory);
     const created = await createStep({ branch: bc.branch, change: bc.change ?? null, step, seq: nextSeq(sessions), zone: null, wait: !clean });
     // Escribir y comprobar: si otra TUI ha creado otra a la vez, gana la más antigua
-    const { op: first } = await opOf(bc);
-    if (first && first.id !== created.id) {
+    const first = await lostTo(bc, created.id);
+    if (first) {
       await release(await api.get({ sessionID: created.id }), 'lost');
       return { session: first, created: false };
     }
@@ -710,8 +724,8 @@ async function start(ctx) {
     const nm = { worktree: directory, branch: bc.branch, change: bc.change ?? null, role: 'owner', step, seq: nextSeq(sessions), phase: 'starting', zone: null };
     await writeMeta(api, sessionID, nm);
     // Escribir y comprobar: si otra sesión ha tomado el control a la vez, gana la más antigua
-    const { op: first } = await opOf(bc);
-    if (first && first.id !== sessionID) {
+    const first = await lostTo(bc, sessionID);
+    if (first) {
       await writeMeta(api, sessionID, { role: 'free', phase: 'lost' });
       input.prompt.text = foreignPrompt({ change: meta(first).change, title: first.title, sessionID: first.id });
       return;
