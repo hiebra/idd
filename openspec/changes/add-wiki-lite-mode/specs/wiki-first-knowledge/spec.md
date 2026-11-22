@@ -21,16 +21,15 @@ And no indica discernir qué peticiones requieren conocimiento
 #### Scenario Outline: La guía del modo lite nombra la operación de lectura de cada agente
 
 ```gherkin
-Given el usuario ha elegido el modo lite del wiki para sí mismo en <agente>
-And una sesión de <agente> abierta en el proyecto
+Given una sesión de <agente> abierta en un proyecto con el wiki habilitado en el modo lite
 When se revisa con qué operación indica la guía consultar el wiki
 Then nombra <operación>
 And no nombra `wiki-manager` para consultar
 
 Examples:
-  | agente      | operación                 |
-  | Claude Code | `/wiki:query --local`     |
-  | OpenCode    | la skill `wiki-query`     |
+  | agente      | operación             |
+  | Claude Code | `/wiki:query --local` |
+  | OpenCode    | la skill `wiki-query` |
 ```
 
 #### Scenario: Fuera de la consulta, la guía es la misma en los dos modos
@@ -41,15 +40,24 @@ When se compara con la guía del modo full
 Then solo cambia lo que indica sobre cuándo consultar el wiki
 ```
 
+#### Scenario: En el modo lite, las indicaciones de archivado resincronizan el wiki
+
+```gherkin
+Given un proyecto con el wiki habilitado en el modo lite
+And un change del proyecto listo para archivar
+When se consultan las indicaciones de archivado de OpenSpec para ese change
+Then incluyen resincronizar el wiki del proyecto, igual que en el modo full
+```
+
 ## MODIFIED Requirements
 
 ### Requirement: Guía del wiki en cada agente soportado, desde una única fuente
-El proyecto DEBE tener una única guía del wiki, en un solo archivo que contiene lo común a los dos modos del wiki y lo propio de cada uno. Cada agente soportado (Claude Code y OpenCode 2 o superior) DEBE recibir en el contexto de cada sesión la guía del modo del usuario, sin configurar nada tras clonar, y NO DEBE recibir lo propio del otro modo. La guía DEBE ser breve, porque ocupa contexto en todas las sesiones.
+El proyecto DEBE tener una única guía del wiki, en un solo archivo que contiene lo común a los dos modos del wiki y lo propio de cada uno. Con el wiki del proyecto habilitado, cada agente soportado (Claude Code y OpenCode 2 o superior) DEBE recibir en el contexto de cada sesión la guía del modo del proyecto, sin configurar nada tras clonar, y NO DEBE recibir lo propio del otro modo. La guía DEBE ser breve, porque ocupa contexto en todas las sesiones.
 
 #### Scenario Outline: El agente recibe la guía del wiki
 
 ```gherkin
-Given un clon del proyecto
+Given un clon del proyecto con el wiki habilitado
 When se abre una sesión de <agente> en el proyecto
 Then el contexto de la sesión incluye la guía del wiki
 And esa guía procede del único archivo de guía del proyecto
@@ -64,8 +72,7 @@ Examples:
 #### Scenario Outline: En el modo lite, la guía sale del mismo archivo
 
 ```gherkin
-Given un clon del proyecto
-And el usuario ha elegido el modo lite del wiki para sí mismo en <agente>
+Given un clon del proyecto con el wiki habilitado en el modo lite
 When se abre una sesión de <agente> en el proyecto
 Then el contexto de la sesión incluye la guía del wiki
 And esa guía procede del único archivo de guía del proyecto
@@ -92,7 +99,7 @@ And indica consultar primero el wiki del proyecto y después el hub del usuario,
 #### Scenario Outline: La guía nombra la operación de lectura de cada agente
 
 ```gherkin
-Given una sesión de <agente> abierta en el proyecto
+Given una sesión de <agente> abierta en un proyecto con el wiki habilitado en el modo full
 When se revisa con qué operación indica la guía consultar el wiki
 Then nombra <operación>
 And no nombra `wiki-manager` para consultar
@@ -116,13 +123,42 @@ And excluye las operaciones sobre el código que no requieren conocimiento
 And indica que el agente discierne en cada caso
 ```
 
+### Requirement: Preguntar cuando el wiki no responde
+La guía DEBE indicar al agente que, si el wiki no responde a una consulta, pregunte al usuario antes de seguir y le ofrezca: responder con su conocimiento interno, indicando que no viene del wiki; investigar fuera y registrar lo encontrado en el wiki; o no hacer nada más. En el modo `full`, la consulta es la de una petición que requiere conocimiento; en el modo `lite`, la que el usuario ha pedido expresamente.
+
+#### Scenario: La guía ofrece las tres opciones ante un hueco
+
+```gherkin
+Given la guía del wiki del proyecto en el modo full
+When se revisa qué indica cuando el wiki no responde
+Then indica preguntar al usuario antes de seguir
+And ofrece estas opciones:
+  | opción                                                      |
+  | responder con conocimiento interno, indicando su origen     |
+  | investigar fuera y registrar lo encontrado en el wiki       |
+  | no hacer nada más                                           |
+```
+
+#### Scenario: En el modo lite, la guía ofrece las mismas opciones ante un hueco
+
+```gherkin
+Given la guía del wiki del proyecto en el modo lite
+When se revisa qué indica cuando el wiki no responde a una consulta que pidió el usuario
+Then indica preguntar al usuario antes de seguir
+And ofrece estas opciones:
+  | opción                                                      |
+  | responder con conocimiento interno, indicando su origen     |
+  | investigar fuera y registrar lo encontrado en el wiki       |
+  | no hacer nada más                                           |
+```
+
 ### Requirement: Recordatorio del flujo en cada mensaje
-Cada agente soportado DEBE recibir, con cada mensaje del usuario, un recordatorio del flujo del wiki que remita a la guía, con cada operación nombrada como se invoca en ese agente. En el modo `full`, DEBE recordar consultar antes de responder con la operación de solo lectura y preguntar ante un hueco. En el modo `lite`, DEBE recordar no consultar el wiki salvo que el usuario lo pida expresamente, y NO DEBE recordar consultar antes de responder. En los dos modos DEBE recordar apuntar como candidato lo que se comprueba y proponer ingerir lo que se encuentra en internet. NO DEBE nombrar las lecciones aprendidas, que se proponen en un punto de cierre. NO DEBE ocupar más de 600 caracteres. Si no se puede generar, el mensaje del usuario DEBE llegar al agente igualmente.
+Con el wiki del proyecto habilitado, cada agente soportado DEBE recibir, con cada mensaje del usuario, un recordatorio del flujo del wiki que remita a la guía, con cada operación nombrada como se invoca en ese agente. En el modo `full`, DEBE recordar consultar antes de responder con la operación de solo lectura y preguntar ante un hueco. En el modo `lite`, DEBE recordar no consultar el wiki salvo que el usuario lo pida expresamente, y NO DEBE recordar consultar antes de responder. En los dos modos DEBE recordar apuntar como candidato lo que se comprueba y proponer ingerir lo que se encuentra en internet. NO DEBE nombrar las lecciones aprendidas, que se proponen en un punto de cierre. NO DEBE ocupar más de 600 caracteres. Si no se puede generar, el mensaje del usuario DEBE llegar al agente igualmente.
 
 #### Scenario Outline: El agente recibe el recordatorio con cada mensaje
 
 ```gherkin
-Given una sesión de <agente> abierta en el proyecto
+Given una sesión de <agente> abierta en un proyecto con el wiki habilitado
 When el usuario envía un mensaje
 Then el agente recibe el mensaje junto con el recordatorio del flujo del wiki
 And el recordatorio recuerda consultar antes de responder y preguntar ante un hueco
@@ -141,8 +177,7 @@ Examples:
 #### Scenario Outline: En el modo lite, el recordatorio no pide consultar antes de responder
 
 ```gherkin
-Given el usuario ha elegido el modo lite del wiki para sí mismo en <agente>
-And una sesión de <agente> abierta en el proyecto
+Given una sesión de <agente> abierta en un proyecto con el wiki habilitado en el modo lite
 When el usuario envía un mensaje
 Then el agente recibe el mensaje junto con el recordatorio del flujo del wiki
 And el recordatorio recuerda no consultar el wiki salvo que el usuario lo pida expresamente
@@ -162,7 +197,7 @@ Examples:
 #### Scenario Outline: Un fallo del recordatorio no bloquea el mensaje
 
 ```gherkin
-Given una sesión de <agente> abierta en el proyecto
+Given una sesión de <agente> abierta en un proyecto con el wiki habilitado
 And el recordatorio del flujo del wiki no se puede generar
 When el usuario envía un mensaje
 Then el agente recibe el mensaje del usuario
