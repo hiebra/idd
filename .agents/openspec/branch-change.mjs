@@ -174,31 +174,190 @@ export function branchChange(dir = process.cwd()) {
   return { ...base, branch, originRef: ref, kind, changes, change };
 }
 
-// Las puertas del ciclo (design D2): propose, apply y archive
-export function check(dir, gate, name) {
+// Un contenedor efímero (design D4 de manage-git-discipline): la sesión en
+// la nube, con CLAUDE_CODE_CONTAINER_ID no vacía y CLAUDE_CODE_REMOTE=true
+export function isEphemeral(env = process.env) {
+  return Boolean(env.CLAUDE_CODE_CONTAINER_ID) && env.CLAUDE_CODE_REMOTE === 'true';
+}
+
+// La zona de spec-as-source de una ruta: los tasks.md son neutros, el resto
+// de openspec/ es la zona de specs y todo lo demás, la de código
+export function zoneOf(file) {
+  if (path.posix.basename(file) === 'tasks.md') return null;
+  return file.startsWith('openspec/') ? 'specs' : 'code';
+}
+
+// Las rutas con cambios sin commit o sin seguimiento
+function pendingPaths(dir) {
+  const status = spawnSync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], { cwd: dir, encoding: 'utf8', timeout: 10000 });
+  const entries = (status.stdout ?? '').split('\0').filter(Boolean);
+  const paths = [];
+  for (let i = 0; i < entries.length; i++) {
+    const code = entries[i].slice(0, 2);
+    paths.push(entries[i].slice(3));
+    // Un renombrado trae después la ruta de origen
+    if (/[RC]/.test(code)) paths.push(entries[++i]);
+  }
+  return paths;
+}
+
+const ADR = /^adr\/(\d{4})-[^/]*\.md$/;
+
+function adrNumber(file) {
+  return ADR.exec(file)?.[1] ?? null;
+}
+
+// Los ADRs con número repetido (design D6): dos del árbol de trabajo con el
+// mismo número, o uno nuevo de la rama con el número de otro de la rama de
+// origen. Devuelve un mensaje de rechazo, o null.
+function adrClash(dir, state) {
+  let files = [];
+  try {
+    files = fs.readdirSync(path.join(dir, 'adr')).map((name) => `adr/${name}`);
+  } catch {
+    return null;
+  }
+  const renumber = 'renumera los ADRs nuevos de la rama con el siguiente número libre (mira `adr/` en todas las ramas de origin tras un `git fetch`), actualiza sus referencias y vuelve a ejecutar la puerta';
+  if (state.originRef) {
+    const mergeBase = git(dir, 'merge-base', 'HEAD', state.originRef);
+    if (mergeBase.ok) {
+      const added = [
+        ...git(dir, 'diff', '--name-only', '--diff-filter=A', mergeBase.out, '--', 'adr/').out.split('\n'),
+        ...git(dir, 'ls-files', '--others', '--exclude-standard', '--', 'adr/').out.split('\n'),
+      ].filter((file) => adrNumber(file) && fs.existsSync(path.join(dir, file)));
+      const inOrigin = git(dir, 'ls-tree', '--name-only', `${state.originRef}:adr/`).out.split('\n').filter(Boolean).map((name) => `adr/${name}`);
+      for (const file of added) {
+        const other = inOrigin.find((o) => o !== file && adrNumber(o) === adrNumber(file));
+        if (other) {
+          return `El ADR nuevo '${file}' usa el número ${adrNumber(file)}, que ya tiene '${other}' en la rama de origen '${state.origin}': ${renumber}.`;
+        }
+      }
+    }
+  }
+  const seen = new Map();
+  for (const file of files.filter(adrNumber)) {
+    const number = adrNumber(file);
+    if (seen.has(number)) return `Hay dos ADRs con el número ${number} ('${seen.get(number)}' y '${file}'): ${renumber}.`;
+    seen.set(number, file);
+  }
+  return null;
+}
+
+// Las tasks sin hacer del tasks.md de un change en curso del árbol de
+// trabajo, o null si no tiene tasks.md
+function pendingTasks(dir, name) {
+  let text;
+  try {
+    text = fs.readFileSync(path.join(dir, CHANGES, name, 'tasks.md'), 'utf8');
+  } catch {
+    return null;
+  }
+  return text.split('\n').filter((line) => /^\s*- \[ \]/.test(line)).length;
+}
+
+function activeHere(dir, name) {
+  return Boolean(name) && fs.existsSync(path.join(dir, CHANGES, name, 'proposal.md'));
+}
+
+// La puerta commit (design D4): los commits y el push del agente en la rama
+// de la sesión de un contenedor efímero
+export function checkCommit(dir, env = process.env) {
   const state = branchChange(dir);
-  const temp = 'el change se trabaja en una rama temporal que sale de la rama de origen';
+  const deny = (message) => ({ ok: false, message, state });
+  if (!isEphemeral(env)) {
+    return deny('La sesión no está en un contenedor efímero: los commits los hace el usuario. Pídele el commit y espera a que lo haga o te diga que sigas sin él.');
+  }
+  const saved = git(dir, 'config', '--get', 'idd.sessionBranch');
+  const branch = state.branch;
+  if (!saved.ok || !saved.out) {
+    return deny('No hay rama de la sesión guardada (git config idd.sessionBranch): el agente solo hace commits en la rama de la sesión. Pide el commit al usuario; el arranque de la sesión la guarda en la siguiente sesión.');
+  }
+  if (branch !== saved.out) {
+    const where = branch ? `la rama '${branch}'` : 'un HEAD separado';
+    return deny(`El clon está en ${where} y la rama de la sesión es '${saved.out}': los commits del agente van solo a la rama de la sesión. No cambies de rama tú; pide al usuario cómo seguir.`);
+  }
+  if (state.permanent.includes(branch)) {
+    return deny(`'${branch}' es una rama permanente: los commits del agente van solo a una rama temporal. Pide el commit al usuario.`);
+  }
+  const zones = { specs: [], code: [] };
+  for (const file of pendingPaths(dir)) {
+    const zone = zoneOf(file);
+    if (zone) zones[zone].push(file);
+  }
+  if (zones.specs.length > 0 && zones.code.length > 0) {
+    return deny(
+      `Los cambios pendientes mezclan la zona de specs (${zones.specs.join(', ')}) y la de código (${zones.code.join(', ')}): ` +
+        'un commit es de una sola zona. Aparta una de ellas (por ejemplo, `git stash push -- <rutas>`), haz el commit de la otra y vuelve a ejecutar la puerta.'
+    );
+  }
+  return { ok: true, message: `Se puede hacer commit en la rama de la sesión '${branch}'; después, el push: git push -u origin ${branch}`, state };
+}
+
+// Las puertas del ciclo (design D2 de add-openspec-autopilot, D3 de
+// manage-git-discipline): propose, apply, archive y commit
+export function check(dir, gate, name, { env = process.env } = {}) {
+  if (gate === 'commit') return checkCommit(dir, env);
+  const state = branchChange(dir);
+  const newBranch = `crea una rama temporal desde la rama de origen ('git switch -c <rama> ${state.origin}') y sigue en ella`;
   const named = state.changes.map((c) => c.name).join(', ');
   const deny = (message) => ({ ok: false, message, state });
-  if (!['propose', 'apply', 'archive'].includes(gate)) return deny(`puerta desconocida '${gate}'`);
+  const allow = (message) => ({ ok: true, message, state });
+  if (!['propose', 'apply', 'archive'].includes(gate)) return deny(`puerta desconocida '${gate}': usa propose, apply, archive o commit.`);
+  if (gate !== 'propose' && !name) return deny(`Falta el nombre del change para la puerta '${gate}': check ${gate} <change>.`);
+
   if (state.kind === 'permanent') {
-    const where = state.branch ? `la rama permanente '${state.branch}'` : 'un HEAD separado';
-    if (gate === 'archive') return deny(`El archive se hace en la rama temporal del change, no en ${where}.`);
-    return deny(`El clon está en ${where}: ${temp} '${state.origin}'.`);
+    if (!state.branch) return deny(`El clon está en un HEAD separado: ${newBranch}.`);
+    const where = `la rama permanente '${state.branch}'`;
+    if (gate === 'propose') {
+      return allow(`Se puede proponer en ${where} (forma canónica), pero la forma recomendada es proponer en una rama temporal: ${newBranch}.`);
+    }
+    if (!activeHere(dir, name)) {
+      if (gate === 'archive') {
+        return deny(`El archive se hace en la rama temporal del change, no en ${where}, donde '${name}' no está en curso: cambia a la rama temporal de '${name}' y archiva allí.`);
+      }
+      return deny(`'${name}' no está en curso en ${where}: el apply se hace en la rama temporal del change; cambia a ella, o ${newBranch} si su propuesta ya está en '${state.origin}'.`);
+    }
+    if (gate === 'apply') {
+      return allow(`Se puede aplicar '${name}' en ${where} (forma canónica), pero la forma recomendada es aplicarlo en una rama temporal: ${newBranch}.`);
+    }
+    const pending = pendingTasks(dir, name);
+    if (pending === null) return deny(`'${name}' no tiene tasks.md: en ${where} solo se archiva un change con todas sus tasks hechas.`);
+    if (pending > 0) {
+      return deny(`A '${name}' le faltan tasks por hacer (${pending}): en ${where} solo se archiva un change con todas sus tasks hechas. Termínalas en su rama temporal y fusiónala antes de archivar.`);
+    }
+    const clash = adrClash(dir, state);
+    if (clash) return deny(clash);
+    return allow(`Se puede archivar '${name}' en ${where} (forma canónica): todas sus tasks están hechas.`);
   }
-  if (state.kind === 'unknown') return deny(`No se puede leer el change de la rama: ${state.warnings.at(-1)}.`);
-  if (state.kind === 'several') return deny(`La rama '${state.branch}' tiene varios changes (${named}); tiene que quedar uno solo.`);
+
+  if (state.kind === 'unknown') {
+    return deny(`No se puede leer el change de la rama: ${state.warnings.at(-1)}. Trae la rama de origen ('git fetch origin ${state.origin}') y vuelve a ejecutar la puerta.`);
+  }
+  if (state.kind === 'several') {
+    return deny(
+      `La rama '${state.branch}' tiene varios changes (${named}); tiene que quedar uno solo: lleva cada uno de los demás a su propia rama temporal ` +
+        `('git switch -c <rama> ${state.origin}' y mueve allí su directorio de openspec/changes/), quítalos de esta y vuelve a ejecutar la puerta.`
+    );
+  }
   if (gate === 'propose') {
-    if (state.kind === 'none') return { ok: true, message: `La rama '${state.branch}' no tiene change: se puede proponer uno.`, state };
-    return deny(`La rama '${state.branch}' ya tiene el change '${state.change}': un change por rama.`);
+    if (state.kind === 'none') return allow(`La rama '${state.branch}' no tiene change: se puede proponer uno.`);
+    return deny(`La rama '${state.branch}' ya tiene el change '${state.change}': un change por rama. Para proponer otro, ${newBranch}.`);
   }
-  if (!name) return deny(`Falta el nombre del change para la puerta '${gate}'.`);
-  if (state.kind !== 'active' || state.change !== name) {
-    const has = state.kind === 'none' ? 'no tiene ningún change en curso' : `tiene el change ${state.kind === 'archived' ? 'archivado' : 'en curso'} '${state.change}'`;
-    return deny(`El ${gate} de '${name}' se hace en su rama temporal, y la rama '${state.branch}' ${has}.`);
+  if (state.kind === 'active' && state.change === name) {
+    if (gate === 'archive') {
+      const clash = adrClash(dir, state);
+      if (clash) return deny(clash);
+      return allow(`Se puede archivar '${name}' en la rama temporal '${state.branch}'.`);
+    }
+    return allow(`Se puede aplicar '${name}' en la rama temporal '${state.branch}'.`);
   }
-  const verb = gate === 'apply' ? 'aplicar' : 'archivar';
-  return { ok: true, message: `Se puede ${verb} '${name}' en la rama temporal '${state.branch}'.`, state };
+  // El apply canónico: la propuesta ya está en la rama de origen y la rama aún no la ha modificado
+  if (gate === 'apply' && state.kind === 'none' && activeHere(dir, name) && state.originRef &&
+    git(dir, 'rev-parse', '-q', '--verify', `${state.originRef}:${CHANGES}${name}/proposal.md`).ok) {
+    return allow(`Se puede aplicar '${name}' en la rama temporal '${state.branch}': su propuesta ya está en la rama de origen '${state.origin}' (forma canónica).`);
+  }
+  const has = state.kind === 'none' ? 'no tiene ningún change en curso' : `tiene el change ${state.kind === 'archived' ? 'archivado' : 'en curso'} '${state.change}'`;
+  return deny(`El ${gate} de '${name}' se hace en su rama temporal, y la rama '${state.branch}' ${has}: cambia a la rama temporal de '${name}', o ${newBranch} si su propuesta ya está en '${state.origin}'.`);
 }
 
 function main(argv) {

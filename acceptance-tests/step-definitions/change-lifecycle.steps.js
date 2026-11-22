@@ -338,3 +338,165 @@ Given('en la rama temporal se crea después el change `importar-datos`', functio
   assert.equal(this.branches.currentBranch(this.project), TEMP_BRANCH);
   this.branches.addChange(this.project, 'importar-datos');
 });
+
+// --- La puerta check commit (manage-git-discipline, D4) ---------------------------
+
+const SESSION_BRANCH = 'claude/exportar';
+
+function writePending(project, rel) {
+  const file = project.path(rel);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.appendFileSync(file, 'Cambio pendiente.\n');
+}
+
+// Whether the session runs in an ephemeral container: for the gates the suite
+// runs, and for the machine the session bootstrap opens on
+function setEphemeral(world, ephemeral, saved) {
+  world.ephemeral = ephemeral;
+  world.machine.ephemeral = ephemeral;
+  if (saved !== undefined) world.branches.setSessionBranch(world.ensureProject(), saved);
+}
+
+Given('un clon en la rama temporal `claude\\/exportar` con cambios pendientes en una sola zona', function () {
+  const project = this.lifecycleProject();
+  this.branches.branch(project, SESSION_BRANCH);
+  writePending(project, 'src/exportar.js');
+});
+
+Given(
+  /^la sesión está en un contenedor efímero (sin rama(?: de la sesión)? guardada|con `([^`]+)` guardada(?: como rama de la sesión)?)$/,
+  function (_, saved) {
+    setEphemeral(this, true, saved ?? null);
+  }
+);
+
+Given(/^(?:la sesión no está|una sesión que no está) en un contenedor efímero$/, function () {
+  setEphemeral(this, false);
+});
+
+Given(/^un contenedor efímero con `([^`]+)` guardada como rama de la sesión$/, function (saved) {
+  this.lifecycleProject();
+  setEphemeral(this, true, saved);
+});
+
+Given('el clon está en la rama `main` con cambios pendientes', function () {
+  assert.equal(this.branches.currentBranch(this.project), 'main');
+  writePending(this.project, 'src/exportar.js');
+});
+
+Given('el clon está en la rama temporal `claude\\/exportar`', function () {
+  this.branches.branch(this.project, SESSION_BRANCH);
+});
+
+Given(/^hay cambios pendientes en (.+)$/, function (list) {
+  const paths = [...list.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+  assert.ok(paths.length > 0, `no paths in: ${list}`);
+  for (const rel of paths) writePending(this.project, rel);
+});
+
+When(/^se ejecuta la puerta `check (commit|propose)`$/, function (gate) {
+  this.gate = this.branches.checkGate(this.lifecycleProject(), gate, null, { ephemeral: Boolean(this.ephemeral) });
+});
+
+Then('la puerta deja seguir', function () {
+  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 0, JSON.stringify(this.gate));
+});
+
+Then('la puerta no deja seguir', function () {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1, JSON.stringify(this.gate));
+});
+
+Then('se indica que los commits del agente van solo a una rama temporal', function () {
+  assert.match(this.gate.message, /commits del agente van solo a una rama temporal/, JSON.stringify(this.gate));
+});
+
+Then('se indica que los commits los hace el usuario', function () {
+  assert.match(this.gate.message, /los commits los hace el usuario/, JSON.stringify(this.gate));
+});
+
+// --- Las dos formas del ciclo en las puertas (manage-git-discipline, D3) ----------
+
+Given('la rama de origen no tiene ningún change en curso', function () {
+  const project = this.project;
+  const active = git(project.dir, 'ls-tree', '-d', '--name-only', 'main:openspec/changes/').split('\n').filter((d) => d && d !== 'archive');
+  assert.deepEqual(active, []);
+});
+
+Then('se avisa de que la forma recomendada es proponer en una rama temporal', function () {
+  assert.match(this.gate.message, /forma recomendada es proponer en una rama temporal/, JSON.stringify(this.gate));
+});
+
+Then('su mensaje dice cómo dejar un solo change en la rama', function () {
+  assert.match(this.gate.message, /tiene que quedar uno solo/, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /lleva .* a su propia rama temporal/, JSON.stringify(this.gate));
+});
+
+Given('una rama de origen con el change en curso `exportar-datos` sin tasks hechas', function () {
+  const project = this.lifecycleProject();
+  this.branches.addChange(project, 'exportar-datos', { planned: true, tasks: [{ id: '1.1', done: false }, { id: '1.2', done: false }] });
+  this.branches.commitAll(project, 'propuesta de exportar-datos fusionada');
+});
+
+When('se lanza el apply de `exportar-datos` en la rama temporal', function () {
+  this.gate = this.branches.checkGate(this.project, 'apply', 'exportar-datos');
+});
+
+Then('el apply no se detiene', function () {
+  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 0);
+});
+
+Given(/^la rama de origen tiene el change en curso `exportar-datos` con (todas las tasks hechas|tasks sin hacer)$/, function (tasks) {
+  const project = this.project;
+  const done = tasks === 'todas las tasks hechas';
+  this.branches.addChange(project, 'exportar-datos', { planned: true, tasks: [{ id: '1.1', done: true }, { id: '1.2', done }] });
+  this.branches.commitAll(project, 'implementación de exportar-datos fusionada');
+});
+
+Given('la rama de origen no tiene el change en curso `exportar-datos`', function () {
+  assert.equal(fs.existsSync(this.project.path('openspec', 'changes', 'exportar-datos')), false);
+});
+
+When('se lanza la puerta `check archive` de `exportar-datos`', function () {
+  this.gate = this.branches.checkGate(this.project, 'archive', 'exportar-datos');
+});
+
+Then('la puerta no deja seguir e indica que faltan tasks por hacer', function () {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1);
+  assert.match(this.gate.message, /faltan tasks por hacer/, JSON.stringify(this.gate));
+});
+
+// --- Números de ADR (manage-git-discipline, D6) ---------------------------------
+
+const ADR_FILE = /^(\d{4})-.*\.md$/;
+
+Given(/^la rama temporal añade el ADR `(adr\/\d{4}-[a-z0-9-]+\.md)`$/, function (rel) {
+  const project = this.project;
+  fs.writeFileSync(project.path(rel), `# ${path.basename(rel, '.md')}\n\n- Status: accepted\n`);
+  this.branches.commitAll(project, `añade ${rel}`);
+});
+
+// The origin branch's adr/ ends at the given ADR (any other with that number
+// or a higher one is removed), and the temporary branch brings it in
+Given(/^la rama de origen tiene (hasta )?`adr\/(\d{4})-([a-z0-9-]+)\.md`$/, function (_, number, slug) {
+  const project = this.project;
+  const back = this.branches.currentBranch(project);
+  this.branches.checkout(project, 'main');
+  for (const file of fs.readdirSync(project.path('adr'))) {
+    const m = ADR_FILE.exec(file);
+    if (m && m[1] >= number) fs.rmSync(project.path('adr', file));
+  }
+  fs.writeFileSync(project.path('adr', `${number}-${slug}.md`), `# ${number}-${slug}\n\n- Status: accepted\n`);
+  this.branches.commitAll(project, `adr/ de la rama de origen hasta ${number}`);
+  this.branches.checkout(project, back);
+  git(project.dir, 'merge', '-q', '--no-edit', 'main');
+});
+
+Then(/^la puerta no deja seguir e indica renumerar `(\d{4})`$/, function (number) {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1);
+  assert.match(this.gate.message, new RegExp(`renumera.*${number}`), JSON.stringify(this.gate));
+});
