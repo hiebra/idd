@@ -1078,6 +1078,14 @@ Then('indica que el título de la fusión es el que da la puerta `check merge`, 
   assertIn(merges, /-m "Merge <change> into <destino>"/, 'the merge section');
 });
 
+Then('indica poner ese título al PR y recomendarlo para su commit de fusión', function () {
+  const merges = section(this, 'merge');
+  assertIn(merges, /Si la rama lleva algún change, ponle al PR el título de la fusión que da la puerta/, 'the merge section');
+  assertIn(merges, /si el PR ya está abierto, cámbiaselo/, 'the merge section');
+  assertIn(merges, /recomienda al usuario ese mismo título en el commit de fusión/, 'the merge section');
+  assertIn(merges, /el que propone GitHub nombra la rama de la sesión/, 'the merge section');
+});
+
 When('se revisa qué dicen sobre lo que sigue al commit del wiki', function () {
   const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
   const guidance = (openspecSupport.archiveInstructions(this.project, name).operationGuidance ?? []).map(String);
