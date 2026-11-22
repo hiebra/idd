@@ -427,8 +427,12 @@ export function checkCommit(dir, env = process.env) {
 // archivados, sin repetir y en el orden de `changes`; sin ninguno, la rama.
 // Solo nombra los changes con nombre kebab-case, porque el título va dentro
 // de una orden de shell y el nombre de un directorio puede traer cualquier cosa.
+function titleChanges(state) {
+  return [...new Set(state.changes.map((c) => c.name))].filter((name) => KEBAB.test(name));
+}
+
 export function mergeTitle(state, target) {
-  const names = [...new Set(state.changes.map((c) => c.name))].filter((name) => KEBAB.test(name));
+  const names = titleChanges(state);
   return `Merge ${names.length > 0 ? names.join(', ') : state.branch} into ${target}`;
 }
 
@@ -478,14 +482,18 @@ export function checkMerge(dir, target, source, env = process.env) {
       );
     }
     if (isEphemeral(env)) {
-      // El PR lleva el título de la fusión, y se recomienda para su commit de
-      // fusión (design D5 de name-change-in-merge-title)
-      const title = mergeTitle(state, target);
+      // El PR de una rama con change lleva el título de la fusión, y se
+      // recomienda para su commit de fusión. Sin change, la puerta no da
+      // título: el PR lo titula el agente, como antes (design D5 de
+      // name-change-in-merge-title)
+      const title = titleChanges(state).length > 0 ? mergeTitle(state, target) : null;
       return allow(
         `Se puede llevar la rama de la sesión '${branch}' a '${target}' por PR: sube la rama (\`git push -u origin ${branch}\`), ` +
-          `abre un PR de \`${branch}\` contra \`${target}\` con las herramientas de GitHub de la sesión, con el título \`${title}\` (si el PR ya está abierto, ponle ese título), ` +
-          `y recomienda al usuario fusionarlo con un commit de fusión, no con squash, y con ese mismo título en el commit de fusión: el que propone GitHub nombra la rama de la sesión, no el change. ` +
-          `En un contenedor efímero no hagas push a '${target}': el PR lo fusiona el usuario.`
+          `abre un PR de \`${branch}\` contra \`${target}\` con las herramientas de GitHub de la sesión` +
+          (title ? `, con el título \`${title}\` (si el PR ya está abierto, ponle ese título),` : '') +
+          ' y recomienda al usuario fusionarlo con un commit de fusión, no con squash' +
+          (title ? ', y con ese mismo título en el commit de fusión: el que propone GitHub nombra la rama de la sesión, no el change' : '') +
+          `. En un contenedor efímero no hagas push a '${target}': el PR lo fusiona el usuario.`
       );
     }
     return allow(

@@ -982,6 +982,12 @@ Then('su mensaje recomienda ese mismo título para el commit de fusión', functi
   assert.match(this.gate.message, /el que propone GitHub nombra la rama de la sesión/, JSON.stringify(this.gate));
 });
 
+// Without a change the gate gives no title: the agent titles the PR, as before
+Then('su mensaje no da ningún título para el PR', function () {
+  assert.doesNotMatch(this.gate.message, /título/, JSON.stringify(this.gate));
+  assert.doesNotMatch(this.gate.message, /Merge \S+ into /, JSON.stringify(this.gate));
+});
+
 // merge-targets (D6)
 
 Given('ni `origin\\/main` ni `origin\\/develop` contienen la rama', function () {

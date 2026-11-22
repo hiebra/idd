@@ -351,11 +351,21 @@ test('merge title: a directory of openspec/changes/ that is not kebab-case stays
   assert.equal(gate.ok, true, gate.message);
   assert.ok(gate.message.includes('-m "Merge exportar-datos into main"'), gate.message);
   for (const name of odd) assert.ok(!gate.message.includes(name), `${name}: ${gate.message}`);
-  // Without any kebab-case change left, the title names the branch
+  // Nor to the title of the PR, in an ephemeral container
+  git(dir, 'config', 'idd.sessionBranch', 'feature/x');
+  const pr = checkMerge(dir, 'main', undefined, EPHEMERAL);
+  assert.equal(pr.ok, true, pr.message);
+  assert.ok(pr.message.includes('con el título `Merge exportar-datos into main`'), pr.message);
+  for (const name of odd) assert.ok(!pr.message.includes(name), `${name}: ${pr.message}`);
+  // Without any kebab-case change left, the title names the branch, and the PR gets no title
   fs.rmSync(path.join(dir, 'openspec', 'changes', 'exportar-datos'), { recursive: true });
   git(dir, 'add', '-A');
   git(dir, 'commit', '-q', '-m', 'sin exportar-datos');
   assert.equal(mergeTitle(branchChange(dir), 'main'), 'Merge feature/x into main');
+  const untitled = checkMerge(dir, 'main', undefined, EPHEMERAL);
+  assert.equal(untitled.ok, true, untitled.message);
+  assert.doesNotMatch(untitled.message, /título/);
+  for (const name of odd) assert.ok(!untitled.message.includes(name), `${name}: ${untitled.message}`);
 });
 
 test('merge title: a change in progress and archived under the same name is named once', async (t) => {
