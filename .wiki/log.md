@@ -130,3 +130,5 @@
 ## [2026-11-22] compile | lecciones de manage-git-discipline en suite-de-aceptacion-y-spec-as-source y ciclo-de-un-change-y-autopilot; correcciones del librarian en flujo-wiki-first y origen-de-openspec-git-discipline
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "allow-user-requested-merges" → raw/notes/2026-11-22-ll-allow-user-requested-merges.md (3 lessons, 1 article updated)

@@ -3,6 +3,7 @@ title: "La suite de aceptación y spec-as-source"
 category: topic
 sources:
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
+  - raw/notes/2026-11-22-ll-allow-user-requested-merges.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md
   - raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md
@@ -57,6 +58,9 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - **Variables del entorno real**: la suite hereda el entorno de la máquina que la ejecuta. En la nube eso incluye `CLAUDE_CODE_CONTAINER_ID` y `CLAUDE_CODE_REMOTE`, que hacen que el proyecto se crea en un contenedor efímero. `cleanEnv` y `sessionEnv` las quitan y solo las pone el escenario que las pide; cualquier variable real que cambie el comportamiento debe tratarse igual (`idd@5d7f5b0:acceptance-tests/support/machine.js`; [lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 4).
 - **Regex con grupos opcionales**: cucumber pasa un argumento por cada grupo capturante y decide por la aridad si la función es de callback. Un grupo opcional que no captura descuadra la cuenta y el paso se cuelga hasta el timeout. Solo deben capturar los grupos que la función recibe ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 2).
 - **Duración en la nube**: el entorno firma cada commit, también los de los repos de prueba, y la suite entera tarda 15-20 minutos. Conviene ejecutarla en segundo plano e iterar con `--name` ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 1).
+- **La copia del proyecto sale del disco en cada escenario:** con la suite en marcha no se edita nada de lo que se copia (todo salvo `.git`, `acceptance-tests/` y `.wiki/`), y los cambios en los pasos no cuentan hasta la siguiente pasada ([lecciones de allow-user-requested-merges](../../raw/notes/2026-11-22-ll-allow-user-requested-merges.md), lección 1).
+- **Acotar una pasada:** las rutas que se pasan a `cucumber-js` se suman a las del perfil (`effectivePaths()`); solo `--name` o los tags acotan ([lecciones de allow-user-requested-merges](../../raw/notes/2026-11-22-ll-allow-user-requested-merges.md), lección 2).
+- **Prueba de core intermitente:** `two sessions taking control at once` falla con la máquina cargada. `test:core` no se ejecuta a la vez que cucumber, y si falla, se repite sola ([lecciones de allow-user-requested-merges](../../raw/notes/2026-11-22-ll-allow-user-requested-merges.md), lección 3).
 
 ## Su límite
 
