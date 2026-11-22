@@ -56,3 +56,16 @@ When se abre una sesión de OpenCode en el proyecto
 Then no se descarga ningún motor del wiki
 And las operaciones del wiki usan el motor de la instalación global
 ```
+
+### Requirement: El arranque global cede ante el del proyecto
+Si el proyecto tiene su propio arranque de sesión para OpenCode, el arranque instalado de forma global NO DEBE hacer nada en ese proyecto: actúa solo el del proyecto.
+
+#### Scenario: Proyecto de la plantilla completa en una máquina con la instalación global
+
+```gherkin
+Given el arranque de sesión instalado de forma global
+And un clon de la plantilla completa, con su propio arranque de sesión
+When se abre una sesión de OpenCode en el proyecto
+Then el arranque se ejecuta una sola vez
+And es el del proyecto
+```

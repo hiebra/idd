@@ -47,7 +47,7 @@ El `.bat` DEBE instalar:
 - el schema `intent-driven` sin modificar respecto a su origen (`intent-driven-dev/openspec-schemas`), en la versión que fija la release;
 - las skills que declara el `skills.txt` del schema, en la versión que fija la release: las del origen (`intent-driven-dev/skills`) sin modificar salvo las que la plantilla mantiene como propias;
 - la skill `openspec-git-discipline` con su `scripts/branch-change.mjs`, y en su `SKILL.md` la ruta absoluta de ese script;
-- la skill de consulta del wiki del motor;
+- las skills del motor del wiki que usa OpenCode, la de consulta y la de gestión;
 - los plugins `openspec-autopilot` y `session-bootstrap`, este con la guía y el recordatorio del wiki y la regla de comentarios;
 - el motor del wiki en la versión que fija la release.
 
@@ -61,6 +61,7 @@ Then OpenSpec resuelve el schema `intent-driven` instalado
 And OpenCode encuentra cada skill del `skills.txt` del schema una sola vez
 And OpenCode carga los plugins `openspec-autopilot` y `session-bootstrap`
 And dispone de la consulta de solo lectura del wiki
+And dispone de la gestión del wiki
 ```
 
 #### Scenario: El SKILL.md da la ruta del script instalado

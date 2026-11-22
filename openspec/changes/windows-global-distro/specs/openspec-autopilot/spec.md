@@ -33,3 +33,15 @@ When se abre una sesión de OpenCode en la TUI
 Then el plugin no crea, archiva ni encadena ninguna sesión
 And no se muestra ningún aviso del plugin
 ```
+
+### Requirement: El plugin global cede ante el del proyecto
+Si el proyecto tiene su propio plugin `openspec-autopilot`, el instalado de forma global NO DEBE hacer nada en ese proyecto.
+
+#### Scenario: Proyecto de la plantilla completa en una máquina con la instalación global
+
+```gherkin
+Given el plugin instalado de forma global
+And un clon de la plantilla completa, con su propio plugin `openspec-autopilot`
+When se abre una sesión de OpenCode en la TUI
+Then solo actúa el plugin del proyecto
+```
