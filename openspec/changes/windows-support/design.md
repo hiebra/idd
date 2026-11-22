@@ -84,7 +84,7 @@ La suite lo prueba simulando Windows en el host de OpenCode: fija `process.platf
 
 ### D6. El autopilot ejecuta el CLI con Node, sin el enlace de binarios
 
-`openspecBin` pasa a resolver el CLI del proyecto desde `node_modules/@fission-ai/openspec/package.json` (su campo `bin.openspec`) y lo ejecuta con `process.execPath`, es decir, `node <script>`. Funciona igual en todos los sistemas y no depende de `node_modules/.bin/`. Si el paquete no está instalado, usa el `openspec` del `PATH`, como hasta ahora.
+El plugin pasa a resolver el CLI del proyecto desde `node_modules/@fission-ai/openspec/package.json` (su campo `bin.openspec`) y lo ejecuta con el `node` del `PATH`, es decir, `node <script>`. No usa `process.execPath`: en OpenCode es el propio binario de OpenCode, compilado con Bun, no Node (se vio al implementar la task 3.1). El `node` del `PATH` es el que exige el proyecto. Funciona igual en todos los sistemas y no depende de `node_modules/.bin/`. Si el paquete no está instalado, usa el `openspec` del `PATH`, como hasta ahora.
 
 Alternativa: `spawn` con `shell: true` en Windows. Habría que citar los argumentos (hay rutas y textos del usuario) y el comportamiento sería distinto en cada sistema.
 
