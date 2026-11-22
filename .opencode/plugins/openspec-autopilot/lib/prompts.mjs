@@ -1,5 +1,7 @@
 // Los textos del plugin (design D6, D8, D9, D10 y D13 de
-// autopilot-sesion-operativa): la instrucción con la que arranca cada paso,
+// autopilot-sesion-operativa, y D1 y D2 de guiar-revision-con-tests, que
+// añaden a la revisión de una task y del verify la verificación guiada con
+// los tests de aceptación y la depuración): la instrucción con la que arranca cada paso,
 // el recordatorio de cada petición, el aviso de las sesiones ajenas y el
 // workflow y el agente de cada paso. Ningún texto pide commits: el plugin
 // pasa el producto al stage y el usuario hace el commit (ADR-0013).
@@ -91,6 +93,14 @@ export function stepPrompt({ step, change, description = '', conclusions = '', i
 const WHAT = (step) =>
   ({ artifact: `el artefacto \`${step.id}\``, task: `la task ${step.label ?? step.id}`, verify: 'el informe del verify', plan: 'los cambios en el plan' })[step.of] ?? step.id;
 
+// La verificación guiada de lo que es código: una task o el verify (design D1 y
+// D2 de guiar-revision-con-tests). El plugin no ejecuta nada: lo hace el
+// modelo, y la depuración, el usuario.
+const ACCEPTANCE = (step, change) =>
+  `Guía la verificación con los escenarios de aceptación del change: en las specs de \`openspec/changes/${change}/specs/\`, localiza los que cubren ${step.of === 'verify' ? 'el change (en el verify, todos)' : WHAT(step)}, recórrelos con el usuario como guion de lo que hay que comprobar y ejecútalos con el runner de aceptación del proyecto (el que documente su suite), solo esos salvo en el verify; explica qué pasa y qué falla. ` +
+  'Haz que las ejecuciones no dejen en el árbol de trabajo archivos que git no ignore, porque la revisión la cierra git. ' +
+  'Si lo revisado incluye código fuente que se puede ejecutar, ofrece al usuario ejecutarlo en modo depuración: dale la orden exacta para lanzarlo con el depurador del stack del proyecto (por ejemplo, el escenario de aceptación que lo ejercita, bajo `node --inspect-brk` en JavaScript o `python -m debugpy --wait-for-client` en Python) y dónde le conviene poner los puntos de ruptura. Esa orden la ejecuta el usuario en su terminal, no tú: se queda esperando al depurador.';
+
 export function reviewPrompt({ step, change, review = null }) {
   const errors = review?.errors?.length ? `\n\n\`openspec validate\` da estos errores en el change; señálalos en la revisión:\n\n${review.errors.map((e) => `- ${e}`).join('\n')}` : '';
   const verify = step.of === 'verify' && review?.report ? `\n\nInforme del verify:\n\n${review.report}` : '';
@@ -100,7 +110,7 @@ export function reviewPrompt({ step, change, review = null }) {
       : 'Lo que hay que revisar está en el stage de git (`git diff --cached`). Para darla por buena, el usuario hace el commit; para rechazarla, lo saca del stage (`git restore --staged .`) y escribe sus conclusiones.';
   return (
     `${MARK} Esta sesión es la revisión humana de ${WHAT(step)} de \`${change}\`. No modifiques ningún archivo, no hagas commits y no pidas commits.${errors}${verify}\n\n` +
-    `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas. ${staged} ` +
+    `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas.${step.of === 'task' || step.of === 'verify' ? ` ${ACCEPTANCE(step, change)}` : ''} ${staged} ` +
     `La revisión la cierra git cuando el usuario envía su siguiente mensaje, no tú. Si das tus conclusiones, pásalas con \`${HANDOFF_TOOL}\` en \`conclusions\`. ${LESSONS}`
   );
 }

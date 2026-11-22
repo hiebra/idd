@@ -4,12 +4,12 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 1. Pasos y reviewPrompt (zona de código): rojo → implementar → verde → commit
 
-- [ ] 1.1 <!-- openspec-autopilot: Las revisiones de código se guían con los tests de aceptación --> Definir los pasos: abrir la revisión de la task 3 y la del verify, y las aserciones sobre la instrucción. Ver que fallan con el `reviewPrompt` actual. Implementar D1 y D2 en `.opencode/plugins/openspec-autopilot/lib/prompts.mjs`.
-- [ ] 1.2 <!-- openspec-autopilot: La revisión de un artefacto del plan no ejecuta tests ni código --> Definir los pasos y ver que pasa con 1.1 y que fallaría si el bloque se añadiera a todas las revisiones.
+- [x] 1.1 <!-- openspec-autopilot: Las revisiones de código se guían con los tests de aceptación --> Definir los pasos: abrir la revisión de la task 3 y la del verify, y las aserciones sobre la instrucción. Ver que fallan con el `reviewPrompt` actual. Implementar D1 y D2 en `.opencode/plugins/openspec-autopilot/lib/prompts.mjs`.
+- [x] 1.2 <!-- openspec-autopilot: La revisión de un artefacto del plan no ejecuta tests ni código --> Definir los pasos y ver que pasa con 1.1 y que fallaría si el bloque se añadiera a todas las revisiones.
 
 ## 2. Documentación (zona de código)
 
-- [ ] 2.1 Actualizar el comentario de cabecera de `prompts.mjs` con el bloque de verificación.
+- [x] 2.1 Actualizar el comentario de cabecera de `prompts.mjs` con el bloque de verificación.
 
 ## 3. Cierre
 
