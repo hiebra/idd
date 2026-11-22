@@ -192,3 +192,7 @@
 ## [2026-11-22] compile | wiki/topics/ciclo-de-un-change-y-autopilot.md: la revisión de una task y del verify se guía con los tests de aceptación (guiar-revision-con-tests, idd@288741b)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "guiar-revision-con-tests (agente plan y sesión operativa)" → raw/notes/2026-11-22-ll-guiar-revision-con-tests.md (2 lessons, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed

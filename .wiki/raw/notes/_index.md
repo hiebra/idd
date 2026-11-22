@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-guiar-revision-con-tests.md](2026-11-22-ll-guiar-revision-con-tests.md) | 2 lecciones de guiar-revision-con-tests: el agente plan ejecuta la shell sin pedir permiso y las pruebas del autopilot valen solo en su sesión operativa | lessons-learned, opencode, openspec-autopilot | 2026-11-22 |
 | [2026-11-22-ll-allow-user-requested-merges-2.md](2026-11-22-ll-allow-user-requested-merges-2.md) | 2 correcciones de allow-user-requested-merges: la suite tardó 6-7 minutos y la prueba intermitente falla también en la pasada de core | lessons-learned, acceptance-tests, node-test | 2026-11-22 |
 | [2026-11-22-ll-allow-user-requested-merges.md](2026-11-22-ll-allow-user-requested-merges.md) | 3 lecciones de allow-user-requested-merges: la copia del proyecto sale del disco, las rutas de cucumber-js se suman a las del perfil y una prueba de core intermitente | lessons-learned, acceptance-tests, cucumber, node-test | 2026-11-22 |
 | [2026-11-22-ll-worktrees-opencode-desde-main.md](2026-11-22-ll-worktrees-opencode-desde-main.md) | 3 lecciones: OpenCode crea worktrees con --detach sobre HEAD, commands.start va en la base de datos y rama --no-track desde origin/main publicable | lessons-learned, opencode, worktree, git | 2026-11-22 |
