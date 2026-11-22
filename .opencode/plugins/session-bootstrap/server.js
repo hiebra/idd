@@ -6,11 +6,13 @@
 // - Antes de cada comando de shell, espera al núcleo, pone el openspec del
 //   proyecto por delante en el PATH del comando y exporta CLAUDE_PLUGIN_ROOT
 //   con el motor del wiki, para que sus skills encuentren su helper.
-// - Entrega la guía del wiki, la regla de comentarios y sus recordatorios por
-//   mensaje que prepara el núcleo, con el hook "context" de la sesión, que se
-//   ejecuta antes de cada petición al modelo y no guarda lo que añade: la guía
-//   y la regla van al system y cada recordatorio, como mensaje del usuario, justo antes del último mensaje del
-//   usuario, como hace el modo Plan de OpenCode. Así nunca se acumulan.
+// - Entrega la guía del wiki y su recordatorio por mensaje que prepara el
+//   núcleo, con el hook "context" de la sesión, que se ejecuta antes de cada
+//   petición al modelo y no guarda lo que añade: la guía va al system y el
+//   recordatorio, como mensaje del usuario, justo antes del último mensaje del
+//   usuario, como hace el modo Plan de OpenCode. Así nunca se acumulan. La
+//   regla de comentarios la entrega su propio plugin, response-comments
+//   (ADR-0018).
 // - Los avisos llegan a la TUI (tui.js) por el RPC del plugin: el método
 //   warnings() devuelve los acumulados y el evento "warning" trae los nuevos.
 // - Nunca lanza una excepción hacia OpenCode: un fallo se convierte en aviso.
@@ -63,21 +65,16 @@ const RPC = {
 
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
-// Ejecuta el núcleo en un modo que imprime un texto para el agente (guide,
-// reminder, comments-rule o comments-reminder, que lee `input` por stdin) y
-// resuelve con ese texto, o con "" si no hay o falla; nunca rechaza
-function coreText(directory, mode, input = null) {
+// Ejecuta el núcleo en un modo que imprime un texto para el agente (guide o
+// reminder) y resuelve con ese texto, o con "" si no hay o falla; nunca rechaza
+function coreText(directory, mode) {
   return new Promise((resolve) => {
     let stdout = "";
     try {
       const child = spawn("bash", [path.join(directory, CORE), mode, "opencode", directory], {
         cwd: directory,
-        stdio: [input === null ? "ignore" : "pipe", "pipe", "ignore"],
+        stdio: ["ignore", "pipe", "ignore"],
       });
-      if (input !== null) {
-        child.stdin.on("error", () => {});
-        child.stdin.end(input);
-      }
       child.stdout.on("data", (chunk) => (stdout += chunk));
       child.on("error", () => resolve(""));
       child.on("close", (code) => resolve(code === 0 ? stdout.trim() : ""));
@@ -89,8 +86,7 @@ function coreText(directory, mode, input = null) {
 }
 
 // Añade al system de una petición al modelo los textos de sesión (la guía
-// del wiki y la regla de comentarios) y, justo antes del último mensaje del
-// usuario, cada recordatorio. Lanza si la petición no se deja cambiar; quien
+// del wiki) y, justo antes del último mensaje del usuario, cada recordatorio. Lanza si la petición no se deja cambiar; quien
 // la llama lo captura
 function addContext(input, systemTexts, reminders) {
   for (const text of systemTexts) if (text) input.system.push({ type: "text", text });
@@ -100,18 +96,6 @@ function addContext(input, systemTexts, reminders) {
     const at = messages.at(-1)?.role === "user" ? messages.length - 1 : messages.length;
     messages.splice(at, 0, { role: "user", content: [{ type: "text", text: reminder }] });
   }
-}
-
-// El texto del último mensaje del usuario de una petición al modelo, o null
-function lastUserText(messages) {
-  const last = [...messages].reverse().find((m) => m.role === "user");
-  if (!last) return null;
-  if (typeof last.content === "string") return last.content;
-  if (!Array.isArray(last.content)) return null;
-  return last.content
-    .filter((part) => part?.type === "text" && typeof part.text === "string")
-    .map((part) => part.text)
-    .join("\n");
 }
 
 // Ejecuta el núcleo y resuelve con { bin, engine, warnings }; nunca rechaza
@@ -176,25 +160,12 @@ export default {
     // fallar la petición al modelo, así que todo va dentro de try/catch
     try {
       const directory = ctx.location.directory;
-      let comments = { message: null, reminder: Promise.resolve("") };
-      const texts = Promise.all([
-        coreText(directory, "guide"),
-        coreText(directory, "reminder"),
-        coreText(directory, "comments-rule"),
-      ]);
+      const texts = Promise.all([coreText(directory, "guide"), coreText(directory, "reminder")]);
       Promise.resolve(
         ctx.session.hook("context", async (input) => {
           try {
-            const [guide, reminder, rule] = await texts;
-            // El recordatorio de comentarios depende del mensaje: el núcleo
-            // decide, y solo se le pregunta cuando cambia el último mensaje
-            // del usuario (design D4 de add-quote-comment-rule)
-            const message = lastUserText(input.messages);
-            if (message !== null && message !== comments.message) {
-              comments = { message, reminder: coreText(directory, "comments-reminder", message) };
-            }
-            const commentsReminder = message === null ? "" : await comments.reminder;
-            addContext(input, [guide, rule], [reminder, commentsReminder]);
+            const [guide, reminder] = await texts;
+            addContext(input, [guide], [reminder]);
           } catch (error) {
             log("context:", error);
           }

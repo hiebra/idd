@@ -13,8 +13,8 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 3. Plugin `response-comments` (D2, D3, D4)
 
-- [ ] 3.1 Steps: `un clon del proyecto sin el plugin de comentarios de OpenCode` y `el usuario cita "<fragmento>" desde la web de OpenCode con el comentario "<comentario>"`. Rojo
-- [ ] 3.2 Crear `.opencode/plugins/response-comments/server.js` y quitar la parte de comentarios de `session-bootstrap/server.js` → verde → commit
+- [x] 3.1 Steps: `un clon del proyecto sin el plugin de comentarios de OpenCode` y `el usuario cita "<fragmento>" desde la web de OpenCode con el comentario "<comentario>"`. Rojo
+- [x] 3.2 Crear `.opencode/plugins/response-comments/server.js` y quitar la parte de comentarios de `session-bootstrap/server.js` → verde → commit
 
 ## 4. Regla y recordatorio (D6)
 

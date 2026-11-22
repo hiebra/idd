@@ -1,7 +1,7 @@
 'use strict';
 
 // Steps of response-comments (add-quote-comment-rule,
-// update-comment-closing-and-quotes). As with the wiki guide,
+// update-comment-closing-and-quotes, update-comment-phrase-and-opencode-marker). As with the wiki guide,
 // the suite cannot check that the model follows the rule: it checks what the
 // template guarantees through the agent adapters (design D6).
 
@@ -93,6 +93,20 @@ const REMINDER = path.join('.agents', 'comments', 'reminder.md');
 function commentsReminder(world) {
   return fs.readFileSync(path.join(world.ensureProject().dir, REMINDER), 'utf8').trim();
 }
+
+// OpenCode loads every local plugin it finds; without this one, the session
+// has only the bootstrap (ADR-0018)
+Given('un clon del proyecto sin el plugin de comentarios de OpenCode', function () {
+  fs.rmSync(path.join(this.ensureProject().dir, '.opencode', 'plugins', 'response-comments'), { recursive: true, force: true });
+});
+
+// A quote from OpenCode's web reaches the context hook as text inside the
+// user message (D1b of update-comment-phrase-and-opencode-marker)
+When(/^el usuario cita "([^"]+)" desde la web de OpenCode con el comentario "([^"]+)"$/, function (fragment, comment) {
+  this.sendMessage(
+    `\nThe user quoted the following from la respuesta:\n> ${fragment}\n\nThe user made the following comment regarding this quote: ${comment}`
+  );
+});
 
 // The rest of the line is the message: the examples carry single and double quotes
 When(/^el usuario envía el mensaje (.+)$/, function (text) {
