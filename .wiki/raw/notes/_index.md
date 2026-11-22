@@ -8,6 +8,12 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-allow-user-requested-merges-2.md](2026-11-22-ll-allow-user-requested-merges-2.md) | 2 correcciones de allow-user-requested-merges: la suite tardó 6-7 minutos y la prueba intermitente falla también en la pasada de core | lessons-learned, acceptance-tests, node-test | 2026-11-22 |
+| [2026-11-22-ll-allow-user-requested-merges.md](2026-11-22-ll-allow-user-requested-merges.md) | 3 lecciones de allow-user-requested-merges: la copia del proyecto sale del disco, las rutas de cucumber-js se suman a las del perfil y una prueba de core intermitente | lessons-learned, acceptance-tests, cucumber, node-test | 2026-11-22 |
+| [2026-11-22-ll-worktrees-opencode-desde-main.md](2026-11-22-ll-worktrees-opencode-desde-main.md) | 3 lecciones: OpenCode crea worktrees con --detach sobre HEAD, commands.start va en la base de datos y rama --no-track desde origin/main publicable | lessons-learned, opencode, worktree, git | 2026-11-22 |
+| [2026-11-22-ll-update-comment-phrase-and-opencode-marker.md](2026-11-22-ll-update-comment-phrase-and-opencode-marker.md) | Lecciones de update-comment-phrase-and-opencode-marker: cita de la web de OpenCode, validate --strict y una prueba intermitente | lessons-learned, opencode, response-comments, openspec, acceptance-tests | 2026-11-22 |
+| [2026-11-22-ll-update-comment-closing-and-quotes.md](2026-11-22-ll-update-comment-closing-and-quotes.md) | 3 lecciones de update-comment-closing-and-quotes: citas de la app de Claude, H1 en delta specs y escenarios renombrados | lessons-learned, claude-code, response-comments, openspec | 2026-11-22 |
+| [2026-11-22-ll-fusion-no-ff-y-trazabilidad.md](2026-11-22-ll-fusion-no-ff-y-trazabilidad.md) | 3 lecciones: la regla de una zona no afecta a la fusión, --no-ff mantiene en main los commits citados y el título de la fusión debe nombrar el change | lessons-learned, git, no-ff, trazabilidad | 2026-11-22 |
 | [2026-11-22-ll-git-discipline-standard-with-exception.md](2026-11-22-ll-git-discipline-standard-with-exception.md) | 5 lecciones de git-discipline-standard-with-exception: validate y los escenarios de un MODIFIED, check commit y los archivos sin seguimiento, archive --yes y las tasks, una puerta que bloquea su propio change y cucumber-js con --name | lessons-learned, openspec, git, cucumber | 2026-11-22 |
 | [2026-11-22-ll-conflictos-entre-deltas-concurrentes.md](2026-11-22-ll-conflictos-entre-deltas-concurrentes.md) | 3 lecciones: el archive aborta con deltas que ya no casan, dos MODIFIED con los mismos escenarios se sobrescriben en silencio en la misma rama (en ramas separadas, conflicto de git) y los ADR en la rama de origen reservan su número | lessons-learned, openspec, archive, delta-specs | 2026-11-22 |
 | [2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md](2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md) | Opinión del usuario: la spec en la rama de origen no choca salvo por los ADR, el apply va en rama si hay concurrencia, y la plantilla mantiene las dos formas porque sus proyectos pueden tener varias ramas permanentes | openspec-git-discipline, opinion-del-usuario | 2026-11-22 |
@@ -29,6 +35,13 @@ Last updated: 2026-11-22
 
 - 2026-11-22: Lecciones sobre conflictos entre deltas concurrentes y opinión del usuario sobre la spec en la rama de origen
 
+- 2026-11-22: Correcciones de las lecciones de allow-user-requested-merges
+
+- 2026-11-22: Lecciones de allow-user-requested-merges
+
+- 2026-11-22: 3 lecciones de worktrees de OpenCode desde origin/main
+
+- 2026-11-22: Lecciones de la fusión con --no-ff y la trazabilidad
 - 2026-11-22: Lecciones sobre la guidance de archivado y archivar sin sincronizar
 
 - 2026-11-22: Lecciones de replace-gherkin-lint-with-gplint

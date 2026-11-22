@@ -6,9 +6,9 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 27 raw documents
-- Articles: 11 compiled wiki articles
-- Inventory records: 4 tracked items
+- Sources: 44 raw documents
+- Articles: 12 compiled wiki articles
+- Inventory records: 5 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
 - Last compiled: 2026-11-22
@@ -33,6 +33,10 @@ Last updated: 2026-11-22
 - 2026-11-22: Resincronizado con git-discipline-standard-with-exception (ADR-0020): manifiesto idd@e9fced1, 4 artículos actualizados y 5 lecciones
 
 - 2026-11-22: Conflictos entre deltas concurrentes (lecciones y concepto nuevo) y la hipótesis del usuario sobre el motivo de la forma canónica
+
+- 2026-11-22: Compilado el concepto worktrees-de-opencode (2 fuentes)
+
+- 2026-11-22: Worktrees de OpenCode 2.3.2 (fuente) y 3 lecciones sobre crearlos desde origin/main
 
 - 2026-11-22: 3 páginas de la documentación de OpenSpec (archive y sync) y 2 lecciones sobre la guidance de archivado; flujo-wiki-first actualizado
 

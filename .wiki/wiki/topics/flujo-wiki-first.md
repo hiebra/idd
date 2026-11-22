@@ -4,6 +4,7 @@ category: topic
 sources:
   - raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md
   - raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md
+  - raw/repos/2026-11-22-idd-cac0041-allow-user-requested-merges.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-f2be907-readme.md
@@ -74,7 +75,8 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 
 - la resincronización se hace en la rama donde se archiva, después del commit del archivado: según la regla, la rama de origen; con la única excepción (`x-main-protected: true`), la rama temporal del change, antes de fusionarla (ADR-0020, que sustituye a ADR-0015 y ADR-0013; `idd@e9fced13c91f96140ab9058110551d9ea29db385:openspec/config.yaml`);
 - las rutas que tocó el change salen del diff entre el merge-base de la rama con la rama de origen y el commit del archivado, más sus specs y sus ADRs; si se archiva en la rama de origen, del diff desde el primer padre del commit que trajo su `proposal.md` a esa rama hasta el commit del archivado;
-- las lecciones del paso 4 parten de las lecciones candidatas que haya recibido la sesión de las sesiones del change (en OpenCode, de su metadata) y, si no hay, de la sesión en curso.
+- las lecciones del paso 4 parten de las lecciones candidatas que haya recibido la sesión de las sesiones del change (en OpenCode, de su metadata) y, si no hay, de la sesión en curso;
+- desde `allow-user-requested-merges`, un paso 8: tras el commit del wiki, el agente propone fusionar la rama del change con cada rama de `x-main`, en el orden de la lista, solo con las que da `branch-change.mjs merge-targets`; el usuario puede saltarse cualquiera, y en un contenedor efímero la fusión con una rama permanente se hace por PR (ADR-0016; `idd@cac00417c033f58d9a3298d4c7ff7e16f563f570:openspec/config.yaml`).
 
 - **Antes de mover el change**, revisa los enlaces relativos de sus artefactos que salen del change: el archive lo baja un nivel y necesitan un `../` más. Citar por la ruta desde la raíz del repositorio lo evita ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 1).
 - **Las rutas que tocó el change** salen de sus propios commits si la rama lleva más de un change; el diff de la rama contra `main` mezcla los de ambos. Con la excepción de ADR-0020 una rama temporal lleva un solo change, y el plugin no actúa en una rama con varios ([lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md), lección 2).
@@ -101,6 +103,7 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 
 - [Lessons Learned: git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md): lección 3.
 - [Collection: archivado de git-discipline-standard-with-exception (idd@e9fced1)](../../raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md): `openspec/config.yaml`.
+- [Collection: archivado de allow-user-requested-merges (idd@cac0041)](../../raw/repos/2026-11-22-idd-cac0041-allow-user-requested-merges.md): `openspec/config.yaml`.
 - [Collection: repositorio de la plantilla intent-driven](../../raw/repos/2026-11-21-idd-1cf0792.md): `adr/0004-wiki-first-project-knowledge.md`, `adr/0005-wiki-engine-through-session-bootstrap.md`, `openspec/specs/llm-wiki/spec.md`, `openspec/specs/wiki-first-knowledge/spec.md`, `.agents/wiki/guide.md`, `.agents/wiki/reminder.md`, `openspec/config.yaml`, `acceptance-tests/step-definitions/wiki.steps.js`, `openspec/changes/archive/2026-11-21-add-llm-wiki-support/tasks.md`.
 - [Lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md): enlaces relativos al archivar y rutas que tocó un change.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.

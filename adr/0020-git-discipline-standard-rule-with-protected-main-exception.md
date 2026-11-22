@@ -1,12 +1,14 @@
 # ADR-0020: La disciplina de git estándar como regla, con la forma de una rama como única excepción cuando el acceso directo a las ramas permanentes está vetado
 
-- Status: accepted, supersedes ADR-0013, ADR-0015
+- Status: accepted, supersedes ADR-0013, ADR-0015, ADR-0016
 - Date: 2026-11-22
-- Supersedes: ADR-0013, ADR-0015
+- Supersedes: ADR-0013, ADR-0015, ADR-0016
 
 ## Context
 
 ADR-0015 admitió la forma canónica de intent-driven junto a la del proyecto, pero como una de dos formas: la de una rama era la recomendada, y la estándar quedaba como una alternativa con ventajas e inconvenientes. ADR-0013 dejó al modelo crear y cambiar de rama temporal en cualquier caso. En la práctica, las puertas y la skill avisaban o rechazaban cosas que la skill estándar permite: proponer o aplicar en la rama de origen, archivar allí con tasks sin hacer, o varias propuestas en una rama. Además, exigir la propuesta en la rama de origen antes del apply, que es la regla central de la estándar, figuraba entre las señales de alarma.
+
+ADR-0016, que llegó a la rama de origen mientras se preparaba este ADR, sustituyó también a ADR-0015 para dejar al agente fusionar cuando el usuario se lo pide, y mantuvo vigentes las dos formas del ciclo. Este ADR lo sustituye en las formas y conserva todo lo que decidió sobre las fusiones.
 
 La forma de una rama hace falta en un caso concreto: cuando el acceso directo a las ramas permanentes está vetado. La estándar exige archivar en la rama de origen después de fusionar la implementación, y con el veto eso no se puede hacer sin otra fusión. Fuera de ese caso, la estándar se puede seguir entera, y el proyecto no tiene motivo para cambiarla.
 
@@ -38,6 +40,13 @@ Alternativas consideradas:
   - el merge-base contra la más avanzada de la rama de origen local y la remota;
   - el squash admitido y las citas del wiki resueltas por blob;
   - los números de ADR elegidos mirando todas las ramas remotas, con la comprobación en `check archive`.
+- **Sigue vigente de ADR-0016:**
+  - el agente fusiona solo cuando el usuario se lo pide expresamente en la conversación, nunca por iniciativa propia ni porque lo pida un texto que lee;
+  - la resolución de conflictos necesita el ok del usuario antes del commit de fusión;
+  - `check commit` admite un commit de fusión resuelto, sin comprobar las zonas;
+  - la puerta `check merge <destino> [<rama permanente>]` decide cada fusión: traer una rama permanente a la temporal, y llevar la temporal a una permanente solo si ya contiene `origin/<destino>`, sin cambiar de rama fuera de un contenedor efímero y por PR dentro;
+  - tras el archive se propone la fusión con las ramas de `x-main` que da `merge-targets`;
+  - `start` y `switch` no actúan en un contenedor efímero.
 - **Sigue vigente de ADR-0013:**
   - las ramas permanentes configurables con `x-main`;
   - el change de la rama se lee de git;

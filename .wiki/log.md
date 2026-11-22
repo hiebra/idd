@@ -145,6 +145,46 @@
 
 ## [2026-11-22] inventory | tema abierto: declarar skip_specs al proponer un change sin specs (inventory/candidates/declarar-skip-specs-al-proponer-un-change-sin-specs.md)
 
+## [2026-11-22] ll | "fusión con --no-ff y trazabilidad" → raw/notes/2026-11-22-ll-fusion-no-ff-y-trazabilidad.md (3 lessons, 1 article updated)
+
+## [2026-11-22] inventory | task nombrar-el-change-en-el-titulo-de-la-fusion (active, p3)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, update-comment-closing-and-quotes @ c4d6b27): 1 manifest, 13 files pinned
+
+## [2026-11-22] ll | "update-comment-closing-and-quotes" → raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md (3 lessons, 2 articles updated)
+
+## [2026-11-22] ll | "allow-user-requested-merges" → raw/notes/2026-11-22-ll-allow-user-requested-merges.md (3 lessons, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, allow-user-requested-merges @cac0041): 1 manifest, 16 paths pinned, 0 skipped
+
+## [2026-11-22] compile | archivado de allow-user-requested-merges (idd@cac0041) en ciclo-de-un-change-y-autopilot, origen-de-openspec-git-discipline y flujo-wiki-first; librarian scan sin hallazgos
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, update-comment-phrase-and-opencode-marker @ 1657745): 1 manifest, 18 files pinned
+
+## [2026-11-22] refresh | update-comment-phrase-and-opencode-marker @ 1657745: 4 articles refreshed (regla-de-comentarios, hook-context-opencode, arranque-de-sesion, suite-de-aceptacion-y-spec-as-source)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "update-comment-phrase-and-opencode-marker" → raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md (3 lessons, 3 articles updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest | OpenCode 2.3.2: worktrees (raw/articles/2026-11-22-opencode-2-worktrees.md)
+
+## [2026-11-22] ll | "worktrees de OpenCode desde origin/main" → raw/notes/2026-11-22-ll-worktrees-opencode-desde-main.md (3 lessons)
+
+## [2026-11-22] compile | 2 sources → 1 new article, 2 updated (worktrees-de-opencode; See Also en ciclo-de-un-change-y-autopilot, hook-context-opencode)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed; contadores de fuentes corregidos a mano (35)
+
+## [2026-11-22] ll | "allow-user-requested-merges (fusiones con main)" → raw/notes/2026-11-22-ll-allow-user-requested-merges-2.md (2 lessons, 1 article updated)
+
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
 
 ## [2026-11-22] ingest | Opinión del usuario: la spec en la rama de origen y las dos formas del ciclo (raw/notes/2026-11-22-usuario-por-que-la-spec-en-la-rama-de-origen.md)

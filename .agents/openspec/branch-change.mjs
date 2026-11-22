@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // El change de la rama (openspec-change-lifecycle, design D1 de
-// add-openspec-autopilot, D1 a D6 de manage-git-discipline y D1 y D2 de
-// git-discipline-standard-with-exception): un módulo
+// add-openspec-autopilot, D1 a D6 de manage-git-discipline, D3 a D7 de
+// allow-user-requested-merges y D1 y D2 de git-discipline-standard-with-exception):
+// un módulo
 // neutral, común a los dos agentes, que lee de git qué change tiene la rama
 // actual y decide las puertas del ciclo. Lo importa el plugin de OpenCode y lo
 // ejecutan los workflows de OpenSpec desde la skill openspec-git-discipline.
@@ -52,12 +53,30 @@
 //   `git config idd.sessionBranch`, si es temporal y los cambios pendientes
 //   son de una sola zona de spec-as-source (tasks.md es neutro; el resto de
 //   openspec/, specs; todo lo demás, código). No hace commit ni push: los
-//   autoriza, y su mensaje trae la orden de push.
+//   autoriza, y su mensaje trae la orden de push. Con una fusión en curso
+//   (existe MERGE_HEAD) no mira las zonas, porque los commits que trae ya las
+//   respetaban: exige que no quede ningún conflicto sin resolver
+//   (`git diff --diff-filter=U`) ni ningún marcador (`<<<<<<<`, `=======` o
+//   `>>>>>>>` al principio de línea) en los archivos que toca la fusión, y
+//   da `git commit --no-edit` (ADR-0016).
+// - merge <rama de destino> [<rama permanente>]: las fusiones que pide el
+//   usuario (ADR-0016). No deja con el árbol sucio, ni en un contenedor
+//   efímero fuera de la rama de la sesión. Si el destino es la rama temporal
+//   actual, trae `origin/<rama permanente>` (por defecto, la de origen) y da
+//   `git merge --no-edit`. Si es una rama permanente, solo deja si la rama
+//   actual ya contiene `origin/<destino>` (si no, pide traerla antes); fuera
+//   de un contenedor efímero da la fusión sin cambiar de rama
+//   (`git commit-tree HEAD^{tree} -p origin/<destino> -p HEAD` y
+//   `git push origin <commit>:refs/heads/<destino>`), y dentro, abrir un PR
+//   contra el destino, sin ninguna orden de push a él. No fusiona: da la
+//   orden. Cualquier otro destino, no.
 // Todo rechazo dice cómo seguir.
 //
 // CLI:
 //   node .agents/openspec/branch-change.mjs --json
 //   node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit> [<change>]
+//   node .agents/openspec/branch-change.mjs check merge <rama de destino> [<rama permanente>]
+//   node .agents/openspec/branch-change.mjs merge-targets [--json]
 //   node .agents/openspec/branch-change.mjs list [--json]
 //   node .agents/openspec/branch-change.mjs start <change>
 //   node .agents/openspec/branch-change.mjs switch <rama>
@@ -68,9 +87,14 @@
 // change; `start` crea la rama del change desde la referencia de origen
 // (`originRef`) y cambia a ella; `switch` cambia a una rama temporal (ADR-0013,
 // design D12 de autopilot-sesion-operativa). Ni `start` ni `switch` actúan con
-// el árbol sucio. El modelo solo los usa con la excepción, o si el usuario lo
-// pide (ADR-0020); en un contenedor efímero no los usa: trabaja solo en la
-// rama de la sesión. `env` imprime, para el arranque de
+// el árbol sucio. En un contenedor efímero no actúan: salen con 1, antes de
+// comprobar nada más, y su mensaje dice que se siga en la rama de la sesión
+// (ADR-0016). Fuera de él, el modelo solo los usa con la excepción, o si el
+// usuario lo pide (ADR-0020). `merge-targets` da, tras el archive, las ramas de `x-main` a
+// las que proponer la fusión, en el orden de la lista: omite las que no
+// tienen origin/<rama> (con un aviso) y las cuyo origin/<rama> ya contiene
+// HEAD, y marca con `bringFirst` las que hay que traer antes; no hace
+// `git fetch` (ADR-0016). `env` imprime, para el arranque de
 // sesión, `ephemeral=true` o `ephemeral=false` y
 // `permanent=<ramas separadas por espacios>`.
 //
@@ -314,6 +338,53 @@ function activeHere(dir, name) {
   return Boolean(name) && fs.existsSync(path.join(dir, CHANGES, name, 'proposal.md'));
 }
 
+// Un marcador de conflicto al principio de línea (design D3 de
+// allow-user-requested-merges): `<<<<<<<` y `>>>>>>>` solos o seguidos de un
+// espacio, y `=======` como línea entera
+const CONFLICT_MARKER = /^(?:<{7}(?: |$)|={7}$|>{7}(?: |$))/m;
+
+// Los archivos tocados por la fusión en curso (con stage o sin él) que
+// conservan un marcador de conflicto; se saltan los borrados y los binarios
+function filesWithMarkers(dir) {
+  const touched = git(dir, 'diff', '--name-only', 'HEAD').out.split('\n').filter(Boolean);
+  return touched.filter((file) => {
+    let content;
+    try {
+      content = fs.readFileSync(path.join(dir, file));
+    } catch {
+      return false;
+    }
+    if (content.includes(0)) return false;
+    return CONFLICT_MARKER.test(content.toString('utf8'));
+  });
+}
+
+// El commit de una fusión en curso (design D3 de allow-user-requested-merges):
+// no se comprueban las zonas, porque cada commit que trae la fusión ya las
+// respetaba; sí que no quede ningún conflicto sin resolver ni ningún marcador
+function checkMergeCommit(dir, branch, state) {
+  const deny = (message) => ({ ok: false, message, state });
+  const unresolved = git(dir, 'diff', '--name-only', '--diff-filter=U').out.split('\n').filter(Boolean);
+  if (unresolved.length > 0) {
+    return deny(
+      `La fusión en curso tiene conflictos sin resolver en ${unresolved.join(', ')}: resuélvelos, presenta la resolución al usuario y, con su ok, ` +
+        'pásalos al stage (`git add <rutas>`) y vuelve a ejecutar la puerta. Para descartar la fusión: `git merge --abort`.'
+    );
+  }
+  const marked = filesWithMarkers(dir);
+  if (marked.length > 0) {
+    return deny(
+      `La fusión en curso conserva marcadores de conflicto (\`<<<<<<<\`, \`=======\` o \`>>>>>>>\` al principio de línea) en ${marked.join(', ')}: ` +
+        'quita los marcadores, pasa los archivos al stage (`git add <rutas>`) y vuelve a ejecutar la puerta.'
+    );
+  }
+  return {
+    ok: true,
+    message: `Se puede hacer el commit de la fusión en curso en la rama de la sesión '${branch}', si el usuario dio el ok a la resolución: git commit --no-edit; después, el push: git push -u origin ${branch}`,
+    state,
+  };
+}
+
 // La puerta commit (design D4): los commits y el push del agente en la rama
 // de la sesión de un contenedor efímero
 export function checkCommit(dir, env = process.env) {
@@ -334,6 +405,7 @@ export function checkCommit(dir, env = process.env) {
   if (state.permanent.includes(branch)) {
     return deny(`'${branch}' es una rama permanente: los commits del agente van solo a una rama temporal. Pide el commit al usuario.`);
   }
+  if (git(dir, 'rev-parse', '-q', '--verify', 'MERGE_HEAD').ok) return checkMergeCommit(dir, branch, state);
   const zones = { specs: [], code: [] };
   for (const file of pendingPaths(dir)) {
     const zone = zoneOf(file);
@@ -348,16 +420,83 @@ export function checkCommit(dir, env = process.env) {
   return { ok: true, message: `Se puede hacer commit en la rama de la sesión '${branch}'; después, el push: git push -u origin ${branch}`, state };
 }
 
+// La puerta merge (design D4 de allow-user-requested-merges): las fusiones
+// del ciclo. `target` es la rama de destino; `source`, la rama permanente que
+// se trae a la rama actual (por defecto, la rama de origen). No fusiona: da
+// la orden.
+export function checkMerge(dir, target, source, env = process.env) {
+  const state = branchChange(dir);
+  const deny = (message) => ({ ok: false, message, state });
+  const allow = (message) => ({ ok: true, message, state });
+  const branch = state.branch;
+  if (!target) return deny('Falta la rama de destino: check merge <rama de destino> [<rama permanente>].');
+  if (dirty(dir)) return deny(`No se fusiona: ${COMMIT_FIRST}.`);
+  if (isEphemeral(env)) {
+    const saved = git(dir, 'config', '--get', 'idd.sessionBranch');
+    if (!saved.ok || !saved.out || branch !== saved.out) {
+      const where = branch ? `la rama '${branch}'` : 'un HEAD separado';
+      const session = saved.ok && saved.out ? `la rama de la sesión es '${saved.out}'` : 'no hay rama de la sesión guardada (git config idd.sessionBranch)';
+      return deny(`El clon está en ${where} y ${session}: en un contenedor efímero solo se fusiona en la rama de la sesión. No cambies de rama tú; pide al usuario cómo seguir.`);
+    }
+  }
+  const remote = (name) => git(dir, 'rev-parse', '-q', '--verify', `refs/remotes/origin/${name}`).ok;
+  const contains = (ancestor) => git(dir, 'merge-base', '--is-ancestor', ancestor, 'HEAD').ok;
+
+  // Traer una rama permanente a la rama temporal actual
+  if (target === branch && !state.permanent.includes(branch)) {
+    const from = source ?? state.origin;
+    if (!state.permanent.includes(from)) return deny(`'${from}' no es una rama permanente: check merge solo trae a la rama temporal una rama de x-main.`);
+    if (!remote(from)) return deny(`No existe 'origin/${from}': trae la rama con \`git fetch origin ${from}\` y vuelve a ejecutar la puerta.`);
+    if (contains(`refs/remotes/origin/${from}`)) {
+      return allow(`La rama '${branch}' ya contiene \`origin/${from}\`: no hay nada que traer.`);
+    }
+    return allow(
+      `Se puede traer \`origin/${from}\` a la rama temporal '${branch}': \`git fetch origin ${from}\` y \`git merge --no-edit origin/${from}\`. ` +
+        'Si hay conflictos, resuélvelos y presenta al usuario cada decisión de la resolución; sin su ok no hagas el commit de fusión. ' +
+        'En un contenedor efímero, el commit pasa por `check commit`; fuera de él, el commit (`git commit --no-edit`) lo hace el usuario.'
+    );
+  }
+  // Llevar la rama temporal actual a una rama permanente
+  if (state.permanent.includes(target) && branch && !state.permanent.includes(branch)) {
+    if (!remote(target)) return deny(`No existe 'origin/${target}': trae la rama con \`git fetch origin ${target}\` y vuelve a ejecutar la puerta.`);
+    if (!contains(`refs/remotes/origin/${target}`)) {
+      return deny(
+        `La rama '${branch}' no contiene \`origin/${target}\`: trae antes \`origin/${target}\` a la rama temporal con la puerta ` +
+          `\`node .agents/openspec/branch-change.mjs check merge ${branch} ${target}\`, para que no haya conflictos que resolver en '${target}', y vuelve a ejecutar esta.`
+      );
+    }
+    if (isEphemeral(env)) {
+      return allow(
+        `Se puede llevar la rama de la sesión '${branch}' a '${target}' por PR: sube la rama (\`git push -u origin ${branch}\`), ` +
+          `abre un PR de \`${branch}\` contra \`${target}\` con las herramientas de GitHub de la sesión y recomienda al usuario fusionarlo con un commit de fusión, no con squash. ` +
+          `En un contenedor efímero no hagas push a '${target}': el PR lo fusiona el usuario.`
+      );
+    }
+    return allow(
+      `Se puede llevar la rama temporal '${branch}' a '${target}' sin cambiar de rama, con el commit que daría \`git merge --no-ff\` desde '${target}': ` +
+        `\`commit=$(git commit-tree HEAD^{tree} -p origin/${target} -p HEAD -m "Merge ${branch} into ${target}")\` y \`git push origin "$commit":refs/heads/${target}\`; ` +
+        `después, \`git fetch origin ${target}\`. Si el push se deniega, da al usuario la orden exacta, con el commit ya creado, y detente; ` +
+        `si el remoto lo rechaza por no ser un avance rápido, trae otra vez \`origin/${target}\` y repite la puerta.`
+    );
+  }
+  return deny(
+    `check merge no admite el destino '${target}' desde ${branch ? `la rama '${branch}'` : 'un HEAD separado'}: ` +
+      'trae una rama permanente a la rama temporal actual (`check merge <rama actual> [<rama permanente>]`) o lleva la rama temporal actual a una rama permanente (`check merge <rama permanente>`).'
+  );
+}
+
 // Las puertas del ciclo (design D2 de add-openspec-autopilot, D3 de
-// manage-git-discipline): propose, apply, archive y commit
-export function check(dir, gate, name, { env = process.env } = {}) {
+// manage-git-discipline, D4 de allow-user-requested-merges): propose, apply,
+// archive, commit y merge
+export function check(dir, gate, name, { env = process.env, source = null } = {}) {
   if (gate === 'commit') return checkCommit(dir, env);
+  if (gate === 'merge') return checkMerge(dir, name, source ?? undefined, env);
   const state = branchChange(dir);
   const newBranch = `crea una rama temporal desde la rama de origen ('git switch -c <rama> ${state.origin}') y sigue en ella`;
   const named = state.changes.map((c) => c.name).join(', ');
   const deny = (message) => ({ ok: false, message, state });
   const allow = (message, warning = null) => ({ ok: true, message, ...(warning ? { warning } : {}), state });
-  if (!['propose', 'apply', 'archive'].includes(gate)) return deny(`puerta desconocida '${gate}': usa propose, apply, archive o commit.`);
+  if (!['propose', 'apply', 'archive'].includes(gate)) return deny(`puerta desconocida '${gate}': usa propose, apply, archive, commit o merge.`);
   if (gate !== 'propose' && !name) return deny(`Falta el nombre del change para la puerta '${gate}': check ${gate} <change>.`);
 
   if (state.kind === 'permanent') {
@@ -484,11 +623,40 @@ export function listBranches(dir = process.cwd()) {
   return result;
 }
 
+// Las ramas a las que proponer la fusión tras el archive (design D6 de
+// allow-user-requested-merges): cada rama de `x-main`, en el orden de la
+// lista, salvo las que no tienen origin/<rama> (con un aviso) y las cuyo
+// origin/<rama> ya contiene HEAD. `bringFirst`: HEAD no contiene
+// origin/<rama> y hay que traerla antes. En una rama permanente o con HEAD
+// separado no da ninguna. No hace `git fetch`.
+export function mergeTargets(dir = process.cwd()) {
+  const { permanent, warning } = readPermanent(dir);
+  const warnings = warning ? [warning] : [];
+  const branch = git(dir, 'symbolic-ref', '--short', '-q', 'HEAD').out || null;
+  if (!branch || permanent.includes(branch)) return { branch, targets: [], warnings };
+  const targets = [];
+  for (const name of permanent) {
+    const ref = `refs/remotes/origin/${name}`;
+    if (!git(dir, 'rev-parse', '-q', '--verify', ref).ok) {
+      warnings.push(`no existe 'origin/${name}': no se propone la fusión con '${name}' (haz antes \`git fetch origin ${name}\`)`);
+      continue;
+    }
+    if (git(dir, 'merge-base', '--is-ancestor', 'HEAD', ref).ok) continue;
+    targets.push({ branch: name, bringFirst: !git(dir, 'merge-base', '--is-ancestor', ref, 'HEAD').ok });
+  }
+  return { branch, targets, warnings };
+}
+
 const dirty = (dir) => git(dir, 'status', '--porcelain').out !== '';
 const COMMIT_FIRST = 'el árbol de trabajo tiene cambios sin commit: haz antes el commit o guárdalos (git stash)';
 
+// En un contenedor efímero, start y switch no actúan (design D7 de
+// allow-user-requested-merges, ADR-0016): se comprueba antes que nada
+const SESSION_ONLY = 'En un contenedor efímero el agente trabaja solo en la rama de la sesión: sigue en la rama de la sesión y, si hace falta otra rama, pídesela al usuario.';
+
 // Crea la rama temporal de un change desde la rama de origen y cambia a ella
-export function startBranch(dir, name) {
+export function startBranch(dir, name, env = process.env) {
+  if (isEphemeral(env)) return { ok: false, message: `No se crea la rama '${name ?? ''}'. ${SESSION_ONLY}` };
   const { permanent } = readPermanent(dir);
   const origin = permanent.at(-1);
   if (!name || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return { ok: false, message: `El nombre del change tiene que ser kebab-case ('${name ?? ''}').` };
@@ -504,7 +672,8 @@ export function startBranch(dir, name) {
 }
 
 // Cambia a una rama temporal que ya existe
-export function switchBranch(dir, name) {
+export function switchBranch(dir, name, env = process.env) {
+  if (isEphemeral(env)) return { ok: false, message: `No se cambia a la rama '${name ?? ''}'. ${SESSION_ONLY}` };
   const { permanent } = readPermanent(dir);
   if (!name) return { ok: false, message: 'Falta el nombre de la rama.' };
   if (permanent.includes(name)) return { ok: false, message: `'${name}' es una rama permanente: el change se trabaja en una rama temporal.` };
@@ -526,6 +695,15 @@ function main(argv) {
     process.stdout.write(`${JSON.stringify(result)}\n`);
     return result.ok ? 0 : 1;
   }
+  if (argv[0] === 'merge-targets') {
+    const result = mergeTargets(dir);
+    if (argv.includes('--json')) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    else {
+      for (const t of result.targets) process.stdout.write(`${t.branch}${t.bringFirst ? `\t(trae antes origin/${t.branch})` : ''}\n`);
+      for (const w of result.warnings) process.stderr.write(`aviso: ${w}\n`);
+    }
+    return 0;
+  }
   if (argv[0] === 'list') {
     const branches = listBranches(dir);
     if (argv.includes('--json')) process.stdout.write(`${JSON.stringify(branches, null, 2)}\n`);
@@ -533,7 +711,7 @@ function main(argv) {
     return 0;
   }
   if (argv[0] === 'check') {
-    const result = check(dir, argv[1], argv[2]);
+    const result = check(dir, argv[1], argv[2], { source: argv[3] ?? null });
     const out = { ok: result.ok, message: result.message, ...(result.warning ? { warning: result.warning } : {}) };
     process.stdout.write(`${JSON.stringify(out)}\n`);
     return result.ok ? 0 : 1;

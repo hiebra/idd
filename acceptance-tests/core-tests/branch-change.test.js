@@ -111,15 +111,15 @@ test('start: the change branch always comes out of the origin branch, with the c
   const origin = git(dir, 'rev-parse', 'main').trim();
   git(dir, 'checkout', '-q', '-b', 'otra');
   addChange(dir, 'otra');
-  assert.equal(startBranch(dir, 'Exportar Datos').ok, false, 'not kebab-case');
-  assert.equal(startBranch(dir, 'main').ok, false, 'a permanent branch');
-  const created = startBranch(dir, 'exportar-datos');
+  assert.equal(startBranch(dir, 'Exportar Datos', {}).ok, false, 'not kebab-case');
+  assert.equal(startBranch(dir, 'main', {}).ok, false, 'a permanent branch');
+  const created = startBranch(dir, 'exportar-datos', {});
   assert.equal(created.ok, true, created.message);
   assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'exportar-datos');
   assert.equal(git(dir, 'rev-parse', 'HEAD').trim(), origin);
-  assert.match(startBranch(dir, 'exportar-datos').message, /ya existe/);
+  assert.match(startBranch(dir, 'exportar-datos', {}).message, /ya existe/);
   fs.writeFileSync(path.join(dir, 'sucio.txt'), 'x');
-  const dirty = startBranch(dir, 'otro-cambio');
+  const dirty = startBranch(dir, 'otro-cambio', {});
   assert.equal(dirty.ok, false);
   assert.match(dirty.message, /stash/);
 });
@@ -130,7 +130,7 @@ test('start: from origin/<branch> when the origin branch is only remote', async 
   git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
   git(dir, 'checkout', '-q', '-b', 'temporal');
   git(dir, 'branch', '-q', '-D', 'main');
-  const created = startBranch(dir, 'exportar-datos');
+  const created = startBranch(dir, 'exportar-datos', {});
   assert.equal(created.ok, true, created.message);
   assert.equal(git(dir, 'rev-parse', 'HEAD').trim(), git(dir, 'rev-parse', 'origin/main').trim());
 });
@@ -151,9 +151,176 @@ test('list: the temporary branches with their change; switch: only to an existin
   assert.deepEqual([by['exportar-datos'].kind, by['exportar-datos'].change], ['active', 'exportar-datos']);
   assert.equal(by.dos.kind, 'several');
   assert.deepEqual([by.vacia.kind, by.vacia.change], ['none', null]);
-  assert.equal(switchBranch(dir, 'main').ok, false);
-  assert.equal(switchBranch(dir, 'no-existe').ok, false);
-  const switched = switchBranch(dir, 'exportar-datos');
+  assert.equal(switchBranch(dir, 'main', {}).ok, false);
+  assert.equal(switchBranch(dir, 'no-existe', {}).ok, false);
+  const switched = switchBranch(dir, 'exportar-datos', {});
   assert.equal(switched.ok, true, switched.message);
   assert.equal(listBranches(dir).find((b) => b.current).branch, 'exportar-datos');
+});
+
+// --- check commit with a merge in progress (allow-user-requested-merges, D3) ---
+
+const EPHEMERAL = { CLAUDE_CODE_CONTAINER_ID: 'container_suite', CLAUDE_CODE_REMOTE: 'true' };
+const IDENTITY = ['-c', 'user.name=suite', '-c', 'user.email=suite@example.invalid'];
+
+function write(dir, rel, content) {
+  fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+  fs.writeFileSync(path.join(dir, rel), content);
+}
+
+// A session branch `claude/x` with a merge of main in progress that touches
+// `files` (path -> content in main), without conflicts
+function mergeInProgress(t, files) {
+  const dir = repo(t);
+  git(dir, 'checkout', '-q', '-b', 'claude/x');
+  git(dir, 'config', 'idd.sessionBranch', 'claude/x');
+  write(dir, 'src/propio.js', 'propio\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'propio');
+  git(dir, 'checkout', '-q', 'main');
+  for (const [rel, content] of Object.entries(files)) write(dir, rel, content);
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'main');
+  git(dir, 'checkout', '-q', 'claude/x');
+  git(dir, ...IDENTITY, 'merge', '-q', '--no-commit', '--no-ff', 'main');
+  return dir;
+}
+
+test('check commit with a merge: `=======` with more text on its line is not a marker', async (t) => {
+  const { checkCommit } = await import(MODULE);
+  const dir = mergeInProgress(t, {
+    'docs/a.md': 'Título\n======= y más\n',
+    'src/b.js': '// <<<<<<<HEAD sin espacio\n  >>>>>>> sangrado\n',
+    'openspec/changes/x/design.md': 'x\n',
+  });
+  const gate = checkCommit(dir, EPHEMERAL);
+  assert.equal(gate.ok, true, gate.message);
+  assert.match(gate.message, /git commit --no-edit/);
+  for (const line of ['=======', '<<<<<<< HEAD', '>>>>>>> main', '<<<<<<<']) {
+    write(dir, 'src/b.js', `x\n${line}\ny\n`);
+    const marked = checkCommit(dir, EPHEMERAL);
+    assert.equal(marked.ok, false, line);
+    assert.match(marked.message, /src\/b\.js/, line);
+  }
+});
+
+test('check commit with a merge: a deleted or binary file is skipped', async (t) => {
+  const { checkCommit } = await import(MODULE);
+  const dir = mergeInProgress(t, { 'bin/data.bin': Buffer.from([0, 1, 2, ...Buffer.from('\n<<<<<<< HEAD\n')]), 'src/c.js': 'c\n' });
+  fs.rmSync(path.join(dir, 'src', 'c.js'));
+  fs.rmSync(path.join(dir, 'src', 'propio.js'));
+  assert.match(git(dir, 'diff', '--name-only', 'HEAD'), /src\/propio\.js/, 'a deleted file the merge touches');
+  const gate = checkCommit(dir, EPHEMERAL);
+  assert.equal(gate.ok, true, gate.message);
+});
+
+test('check commit without a merge in progress still checks the zones', async (t) => {
+  const { checkCommit } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'checkout', '-q', '-b', 'claude/x');
+  git(dir, 'config', 'idd.sessionBranch', 'claude/x');
+  write(dir, 'src/a.js', '<<<<<<< HEAD\n');
+  assert.equal(checkCommit(dir, EPHEMERAL).ok, true, 'markers are only checked in a merge');
+  write(dir, 'openspec/changes/x/design.md', 'x\n');
+  const mixed = checkCommit(dir, EPHEMERAL);
+  assert.equal(mixed.ok, false);
+  assert.match(mixed.message, /mezclan la zona de specs/);
+  assert.equal(checkCommit(dir, {}).ok, false, 'outside an ephemeral container');
+});
+
+// --- check merge (allow-user-requested-merges, D4) ---
+
+test('check merge: another temporary branch or a detached HEAD as target is refused', async (t) => {
+  const { checkMerge } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'branch', 'otra');
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  const other = checkMerge(dir, 'otra', undefined, {});
+  assert.equal(other.ok, false);
+  assert.match(other.message, /no admite el destino 'otra'/);
+  assert.equal(checkMerge(dir, undefined, undefined, {}).ok, false, 'without a target');
+  assert.equal(checkMerge(dir, 'feature/x', 'otra', {}).ok, false, 'bringing a temporary branch');
+  git(dir, 'checkout', '-q', '--detach');
+  const detached = checkMerge(dir, 'main', undefined, {});
+  assert.equal(detached.ok, false);
+  assert.match(detached.message, /HEAD separado/);
+  git(dir, 'checkout', '-q', 'main');
+  assert.equal(checkMerge(dir, 'main', undefined, {}).ok, false, 'from a permanent branch');
+});
+
+test('check merge: without origin/<target> it asks to fetch it', async (t) => {
+  const { checkMerge } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  for (const target of ['main', 'feature/x']) {
+    const gate = checkMerge(dir, target, undefined, {});
+    assert.equal(gate.ok, false, target);
+    assert.match(gate.message, /git fetch origin main/, target);
+  }
+});
+
+test('check merge: bringing a permanent branch the branch already contains, nothing to do', async (t) => {
+  const { checkMerge } = await import(MODULE);
+  const dir = repo(t, 'schema: intent-driven\nx-main: [main, develop]\n');
+  git(dir, 'add', '-A');
+  git(dir, 'branch', 'develop');
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'update-ref', 'refs/remotes/origin/develop', 'develop');
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  write(dir, 'src/a.js', 'a\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'a');
+  for (const source of [undefined, 'main']) {
+    const gate = checkMerge(dir, 'feature/x', source, {});
+    assert.equal(gate.ok, true, gate.message);
+    assert.match(gate.message, /no hay nada que traer/);
+    assert.doesNotMatch(gate.message, /git merge/);
+  }
+  // In an ephemeral container, only in the session branch
+  assert.equal(checkMerge(dir, 'feature/x', undefined, EPHEMERAL).ok, false, 'without a session branch');
+  git(dir, 'config', 'idd.sessionBranch', 'feature/x');
+  assert.equal(checkMerge(dir, 'feature/x', undefined, EPHEMERAL).ok, true);
+});
+
+// --- merge-targets (allow-user-requested-merges, D6) ---
+
+test('merge-targets: bringFirst, a branch of x-main without origin, and none from a permanent branch or a detached HEAD', async (t) => {
+  const { mergeTargets } = await import(MODULE);
+  const dir = repo(t, 'schema: intent-driven\nx-main: [main, release, develop]\n');
+  git(dir, 'branch', 'develop');
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'update-ref', 'refs/remotes/origin/develop', 'develop');
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  write(dir, 'src/a.js', 'a\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'a');
+  // origin/develop moves ahead: the branch has to bring it first
+  git(dir, 'checkout', '-q', 'develop');
+  write(dir, 'src/d.js', 'd\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'd');
+  git(dir, 'update-ref', 'refs/remotes/origin/develop', 'develop');
+  git(dir, 'checkout', '-q', 'feature/x');
+  const result = mergeTargets(dir);
+  assert.deepEqual(result.targets, [{ branch: 'main', bringFirst: false }, { branch: 'develop', bringFirst: true }]);
+  assert.match(result.warnings.join('\n'), /origin\/release/);
+  assert.equal(result.branch, 'feature/x');
+  git(dir, 'checkout', '-q', 'main');
+  assert.deepEqual(mergeTargets(dir).targets, []);
+  git(dir, 'checkout', '-q', '--detach', 'feature/x');
+  assert.deepEqual(mergeTargets(dir).targets, []);
+});
+
+test('start and switch refuse in an ephemeral container before anything else', async (t) => {
+  const { startBranch, switchBranch } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'branch', 'otra');
+  fs.writeFileSync(path.join(dir, 'sucio.txt'), 'x');
+  for (const result of [startBranch(dir, 'exportar-datos', EPHEMERAL), startBranch(dir, 'main', EPHEMERAL), switchBranch(dir, 'otra', EPHEMERAL)]) {
+    assert.equal(result.ok, false);
+    assert.match(result.message, /sigue en la rama de la sesión/);
+    assert.doesNotMatch(result.message, /stash|permanente/);
+  }
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'main');
 });

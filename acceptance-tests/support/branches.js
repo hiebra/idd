@@ -14,6 +14,13 @@
 // squash merge, a shallow clone (`--depth 1` from file://) with or without
 // access to its remote, and the environment of an ephemeral container for
 // branch-change.mjs and the session bootstrap's core.
+//
+// For allow-user-requested-merges it also builds merges: a merge in progress
+// of origin/main with conflicts on given paths (unresolved, resolved, or
+// resolved with a marker left), temporary branches that contain
+// origin/<branch> or are contained in it, and the gate `check merge`,
+// `merge-targets`, `start` and `switch` run inside an ephemeral container or
+// outside one.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -143,9 +150,10 @@ function branchChange(project) {
   return JSON.parse(result.stdout);
 }
 
-// A gate of the cycle, as the openspec-git-discipline skill runs it
-function checkGate(project, gate, name, { ephemeral = false } = {}) {
-  const result = spawnSync(process.execPath, [BRANCH_CHANGE, 'check', gate, ...(name ? [name] : [])], {
+// A subcommand of .agents/openspec/branch-change.mjs of the copy, inside an
+// ephemeral container or outside one: { exitCode, stdout, stderr, json }
+function runBranchChange(project, args, { ephemeral = false } = {}) {
+  const result = spawnSync(process.execPath, [BRANCH_CHANGE, ...args], {
     cwd: project.dir,
     encoding: 'utf8',
     env: sessionEnv({ ephemeral }),
@@ -154,10 +162,34 @@ function checkGate(project, gate, name, { ephemeral = false } = {}) {
   try {
     json = JSON.parse(result.stdout);
   } catch {
-    // reported below
+    // not JSON
   }
-  if (!json) throw new Error(`branch-change check failed (${result.status}):\n${result.stdout}\n${result.stderr}`);
-  return { ...json, exitCode: result.status };
+  return { exitCode: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '', json };
+}
+
+// A gate of the cycle, as the openspec-git-discipline skill runs it. `name`
+// is the change, or the target branch of `check merge`; `args` go after it
+// (the permanent branch to bring with `check merge`).
+function checkGate(project, gate, name, { ephemeral = false, args = [] } = {}) {
+  const result = runBranchChange(project, ['check', gate, ...(name ? [name] : []), ...args], { ephemeral });
+  if (!result.json) throw new Error(`branch-change check failed (${result.exitCode}):\n${result.stdout}\n${result.stderr}`);
+  return { ...result.json, exitCode: result.exitCode };
+}
+
+// The branches to propose the merge to after the archive (allow-user-requested-merges, D6)
+function mergeTargets(project, { ephemeral = false } = {}) {
+  const result = runBranchChange(project, ['merge-targets', '--json'], { ephemeral });
+  if (result.exitCode !== 0 || !result.json) throw new Error(`branch-change merge-targets failed (${result.exitCode}):\n${result.stdout}\n${result.stderr}`);
+  return result.json;
+}
+
+// `start` and `switch` of branch-change.mjs, inside an ephemeral container or outside one
+function startBranch(project, name, options) {
+  return runBranchChange(project, ['start', name], options);
+}
+
+function switchBranch(project, name, options) {
+  return runBranchChange(project, ['switch', name], options);
 }
 
 // --- Remote, shallow clones and ephemeral containers (manage-git-discipline) ---
@@ -214,6 +246,62 @@ function remoteCommit(project, files, { branch: name = 'main', message = 'commit
   }
   git(project.dir, 'fetch', '-q', 'origin');
   return revParse(project, `refs/remotes/origin/${name}`);
+}
+
+// --- Merges (allow-user-requested-merges) ---
+
+// Whether `ancestor` is contained in `ref`
+function contains(project, ref, ancestor) {
+  return spawnSync('git', ['merge-base', '--is-ancestor', ancestor, ref], { cwd: project.dir }).status === 0;
+}
+
+// Brings a ref into the current branch with a merge commit, without conflicts
+function bringIn(project, ref = 'origin/main') {
+  git(project.dir, 'merge', '-q', '--no-edit', '--no-ff', ref);
+}
+
+// Makes origin/<into> contain a local branch, with the merge commit that
+// `git merge --no-ff` would make on <into>, pushed to the remote
+function mergeIntoRemote(project, from, into = 'main') {
+  const commit = git(project.dir, 'commit-tree', `${from}^{tree}`, '-p', `origin/${into}`, '-p', from, '-m', `Merge ${from} into ${into}`).trim();
+  git(project.dir, 'push', '-q', 'origin', `${commit}:refs/heads/${into}`);
+  git(project.dir, 'fetch', '-q', 'origin');
+  return commit;
+}
+
+const CONFLICT_LOCAL = (rel) => `// ${rel}, versión de la rama temporal\n`;
+const CONFLICT_REMOTE = (rel) => `// ${rel}, versión de la rama de origen\n`;
+
+// A merge in progress of `from` (origin/<branch>) into the current branch: a
+// commit on the remote branch touches every path of `touches`, and the current
+// branch has its own commit on each path of `conflicts`, so those conflict.
+// Returns the paths git leaves unresolved.
+function mergeInProgress(project, { touches, conflicts = [], from = 'origin/main' } = {}) {
+  const remoteBranch = from.replace(/^origin\//, '');
+  for (const rel of conflicts) {
+    const file = project.path(rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, CONFLICT_LOCAL(rel));
+  }
+  if (conflicts.length > 0) commitAll(project, 'cambios de la rama temporal');
+  remoteCommit(project, Object.fromEntries(touches.map((rel) => [rel, CONFLICT_REMOTE(rel)])), { branch: remoteBranch, message: 'cambios de la rama de origen' });
+  // --no-commit --no-ff: the merge stays in progress even without conflicts
+  spawnSync('git', ['-c', 'user.name=suite', '-c', 'user.email=suite@example.invalid', 'merge', '--no-commit', '--no-ff', from], { cwd: project.dir, encoding: 'utf8' });
+  if (!revParse(project, 'MERGE_HEAD')) throw new Error(`no merge in progress after merging ${from}`);
+  return unresolved(project);
+}
+
+function unresolved(project) {
+  return git(project.dir, 'diff', '--name-only', '--diff-filter=U').split('\n').filter(Boolean);
+}
+
+// Resolves a conflicted path and stages it; with `marker`, the resolution
+// keeps a conflict marker (`<<<<<<<`, `=======` or `>>>>>>>`)
+function resolveConflict(project, rel, { marker = null } = {}) {
+  const lines = [CONFLICT_LOCAL(rel), CONFLICT_REMOTE(rel)];
+  if (marker) lines.splice(1, 0, marker === '<<<<<<<' ? '<<<<<<< HEAD\n' : `${marker}\n`);
+  fs.writeFileSync(project.path(rel), lines.join(''));
+  git(project.dir, 'add', '--', rel);
 }
 
 function revParse(project, ref) {
@@ -286,7 +374,17 @@ module.exports = {
   writeArtifact,
   archiveChange,
   branchChange,
+  runBranchChange,
   checkGate,
+  mergeTargets,
+  startBranch,
+  switchBranch,
+  contains,
+  bringIn,
+  mergeIntoRemote,
+  mergeInProgress,
+  unresolved,
+  resolveConflict,
   openspec,
   openspecStatus,
   EPHEMERAL_VARS,
