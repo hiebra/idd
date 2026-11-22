@@ -37,7 +37,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 ## 5. `start` y `switch` en un contenedor efímero (D7): rojo → implementar → verde → commit
 
 - [x] 5.1 El Scenario Outline `En un contenedor efímero no se crea ni se cambia de rama`, con `se indica que se siga en la rama de la sesión` y los pasos de crear y cambiar de rama con el entorno del escenario. Rojo: `start` crea la rama. Implementar D7 (`env` en `startBranch` y `switchBranch`, comprobado antes que nada) → verde → commit
-- [ ] 5.2 Comprobar que los escenarios vigentes de `start`, `switch` y `list`, y los del autopilot, siguen en verde fuera de un contenedor efímero
+- [x] 5.2 Comprobar que los escenarios vigentes de `start`, `switch` y `list`, y los del autopilot, siguen en verde fuera de un contenedor efímero
 
 ## 6. La skill, las indicaciones de archivado y la documentación (D1, D2, D5, D6, D8): rojo → implementar → verde → commit
 
@@ -49,6 +49,6 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
 ## 7. Cierre
 
-- [ ] 7.1 Ejecutar la suite completa (`npm test`, `npm run test:core`, `npm run lint:specs`): todos los escenarios pasan, sin pasos pendientes ni sin definir, y se genera el informe HTML
-- [ ] 7.2 `openspec validate allow-user-requested-merges --type change --strict`, sin errores salvo los avisos de formato que ya dan las specs vigentes en español
-- [ ] 7.3 Comprobar a mano, en un repo de prueba fuera de la suite, una fusión real con conflictos de punta a punta: `check merge` hacia la rama temporal, `git merge`, `check commit` rechazando con marcadores y dejando tras resolverlos, y `check merge` hacia `main` con la orden de `commit-tree`, ejecutada y subida a un remoto bare
+- [x] 7.1 Ejecutar la suite completa (`npm test`, `npm run test:core`, `npm run lint:specs`): todos los escenarios pasan, sin pasos pendientes ni sin definir, y se genera el informe HTML
+- [x] 7.2 `openspec validate allow-user-requested-merges --type change --strict`, sin errores salvo los avisos de formato que ya dan las specs vigentes en español
+- [x] 7.3 Comprobar a mano, en un repo de prueba fuera de la suite, una fusión real con conflictos de punta a punta: `check merge` hacia la rama temporal, `git merge`, `check commit` rechazando con marcadores y dejando tras resolverlos, y `check merge` hacia `main` con la orden de `commit-tree`, ejecutada y subida a un remoto bare
