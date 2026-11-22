@@ -440,6 +440,10 @@ Then('la puerta no deja seguir e indica que la propuesta llegue antes a la rama 
   assert.match(this.gate.message, /propuesta[^.]*llegue antes a la rama de origen/, JSON.stringify(this.gate));
 });
 
+Then('se indica que el change no está en curso en la rama de origen', function () {
+  assert.match(this.gate.message, /no está en curso en la rama (de origen|permanente)/, JSON.stringify(this.gate));
+});
+
 Then('la puerta deja seguir', function () {
   assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
   assert.equal(this.gate.exitCode, 0, JSON.stringify(this.gate));

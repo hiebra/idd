@@ -301,18 +301,6 @@ function adrClash(dir, state) {
   return null;
 }
 
-// Las tasks sin hacer del tasks.md de un change en curso del árbol de
-// trabajo, o null si no tiene tasks.md
-function pendingTasks(dir, name) {
-  let text;
-  try {
-    text = fs.readFileSync(path.join(dir, CHANGES, name, 'tasks.md'), 'utf8');
-  } catch {
-    return null;
-  }
-  return text.split('\n').filter((line) => /^\s*- \[ \]/.test(line)).length;
-}
-
 function activeHere(dir, name) {
   return Boolean(name) && fs.existsSync(path.join(dir, CHANGES, name, 'proposal.md'));
 }
@@ -371,21 +359,16 @@ export function check(dir, gate, name, { env = process.env } = {}) {
     }
     if (!activeHere(dir, name)) {
       if (gate === 'archive') {
-        return deny(`El archive se hace en la rama temporal del change, no en ${where}, donde '${name}' no está en curso: cambia a la rama temporal de '${name}' y archiva allí.`);
+        return deny(`'${name}' no está en curso en ${where}: el archive se hace donde está en curso, en la rama de origen después de fusionar la implementación${state.protected ? ', o en su rama temporal (excepción: x-main-protected)' : ''}.`);
       }
       return deny(`'${name}' no está en curso en ${where}: el apply se hace en la rama temporal del change; cambia a ella, o ${newBranch} si su propuesta ya está en '${state.origin}'.`);
     }
     if (gate === 'apply') {
       return allow(`Se puede aplicar '${name}' en ${where}.`);
     }
-    const pending = pendingTasks(dir, name);
-    if (pending === null) return deny(`'${name}' no tiene tasks.md: en ${where} solo se archiva un change con todas sus tasks hechas.`);
-    if (pending > 0) {
-      return deny(`A '${name}' le faltan tasks por hacer (${pending}): en ${where} solo se archiva un change con todas sus tasks hechas. Termínalas en su rama temporal y fusiónala antes de archivar.`);
-    }
     const clash = adrClash(dir, state);
     if (clash) return deny(clash);
-    return allow(`Se puede archivar '${name}' en ${where} (forma canónica): todas sus tasks están hechas.`);
+    return allow(`Se puede archivar '${name}' en ${where}.`);
   }
 
   if (state.kind === 'unknown') {
