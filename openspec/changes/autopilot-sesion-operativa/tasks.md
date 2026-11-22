@@ -54,7 +54,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 6. Documentación (zona de código)
 
-- [ ] 6.1 `.claude/skills/openspec-git-discipline/SKILL.md` (copia reescrita a propósito, ADR-0012), a mano:
+- [x] 6.1 `.claude/skills/openspec-git-discipline/SKILL.md` (copia reescrita a propósito, ADR-0012), a mano:
   - el modelo crea la rama con `branch-change.mjs start` o cambia con `switch`/`list`;
   - en el autopilot no pide commits;
   - fuera de él, los pide como antes;
