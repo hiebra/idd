@@ -4,7 +4,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 1. Simulador y host (zona de código)
 
-- [ ] 1.1 En `acceptance-tests/support/agents/opencode-sim.mjs`, según D15:
+- [x] 1.1 En `acceptance-tests/support/agents/opencode-sim.mjs`, según D15:
   - el hook `prompt` (`{ sessionID, messageID, prompt: { text }, delivery }`, texto mutable), que corre antes de los `context` con cada mensaje de usuario, también con los de `session.prompt`;
   - rutas de pantalla propias (`ui.router.current()` ya no sale de las navegaciones), y las operaciones de abrir la pantalla de inicio, saltar a una sesión, quitar y devolver el foco, y escribir el primer mensaje desde la pantalla de inicio, que crea la sesión;
   - `renderer.on/off('focus' | 'blur')`;
@@ -14,8 +14,9 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
   - respuestas del modelo con efectos (`files`: escribir o borrar rutas del proyecto; `git`: órdenes de git) antes del texto o la tool.
 
   Los escenarios y `core-tests` que no cambian de comportamiento siguen en verde.
-- [ ] 1.2 En `acceptance-tests/support/autopilot.js` y `support/branches.js`: preparar el change, el stage y el árbol (commit, sacar del stage, sucio), y leer el stage de git, los modales y las directivas que recibe la TUI.
-- [ ] 1.3 Ejecutar la suite con los deltas del change. Los escenarios nuevos salen con pasos sin definir, y los de los requisitos retirados o modificados que cambian de comportamiento fallan; el resto pasa. Anotar aquí el recuento.
+- [x] 1.2 En `acceptance-tests/support/autopilot.js` y `support/branches.js`: preparar el change, el stage y el árbol (commit, sacar del stage, sucio), y leer el stage de git, los modales y las directivas que recibe la TUI.
+- [x] 1.3 Ejecutar la suite con los deltas del change. Los escenarios nuevos salen con pasos sin definir, y los de los requisitos retirados o modificados que cambian de comportamiento fallan; el resto pasa. Anotar aquí el recuento.
+  - Resultado: no se ejecutó una fase en rojo aislada antes de implementar: el simulador, los pasos y el plugin se escribieron juntos. La primera ejecución de la suite completa con los deltas dio 162 escenarios: 156 en verde, 3 ambiguos (un paso duplicado) y 3 fallos; uno de ellos era un bug real del plugin (la validación de la pantalla tomaba por inválida la sesión del paso `new` en cuanto existía su change y creaba otra operativa), corregido en `validFor`.
 
 ## 2. Núcleo puro del plugin (zona de código), con `core-tests`
 

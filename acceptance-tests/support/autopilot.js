@@ -29,12 +29,48 @@ async function prepareChange(world, { artifacts = ['proposal', 'specs', 'design'
 }
 
 function ownerMeta(world, step, extra = {}) {
-  return { v: 1, worktree: world.project.dir, branch: BRANCH, change: CHANGE, role: 'owner', step, seq: 1, phase: 'running', zone: null, injected: true, ...extra };
+  return { v: 1, worktree: world.project.dir, branch: BRANCH, change: CHANGE, role: 'owner', step, seq: 1, phase: 'running', zone: null, snapshot: snapshotNow(world), ...extra };
 }
 
+// The photo of the change the plugin takes when a step starts (design D7 of
+// autopilot-sesion-operativa), from the real CLI of the copy
+function snapshotNow(world, change = CHANGE) {
+  const project = world.project;
+  const dir = project.path('openspec', 'changes', change);
+  if (!fs.existsSync(dir)) return { change: null, artifacts: [], tasks: [], git: null };
+  const status = world.branches.openspecStatus(project, change);
+  const apply = world.branches.openspec(project, ['instructions', 'apply', '--change', change, '--json']);
+  let tasks = [];
+  try {
+    tasks = JSON.parse(apply.stdout).tasks ?? [];
+  } catch {
+    tasks = [];
+  }
+  return {
+    change,
+    artifacts: (status.artifacts ?? []).filter((a) => a.status === 'done').map((a) => a.id),
+    tasks: tasks.filter((t) => t.done).map((t) => String(t.id)),
+    git: null,
+  };
+}
+
+// OpenCode already open (not starting): its TUI has presented itself before
 async function ensureOpenCode(world, options = {}) {
-  if (!world.sim) await world.startOpenCode({ pluginOptions: world.pluginOptions ?? {}, ...options });
+  if (!world.sim) await world.startOpenCode({ pluginOptions: world.pluginOptions ?? {}, alreadyOpen: true, ...options });
   return world.sim;
+}
+
+// The paths in git's stage
+function staged(world) {
+  const { spawnSync } = require('node:child_process');
+  return spawnSync('git', ['diff', '--cached', '--name-only'], { cwd: world.project.dir, encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
+}
+
+function gitIn(world, ...args) {
+  const { spawnSync } = require('node:child_process');
+  const result = spawnSync('git', args, { cwd: world.project.dir, encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(`git ${args.join(' ')}: ${result.stderr}`);
+  return result.stdout;
 }
 
 // A session already in OpenCode's store
@@ -47,6 +83,7 @@ async function seed(world, { title, step, busy = false, archived = false, agent 
 async function refresh(world) {
   return world.opencodeCall('state');
 }
+
 
 const sessions = (world) => Object.values(world.opencode.sessions);
 const metaOf = (session) => session?.metadata?.openspec ?? null;
@@ -120,4 +157,7 @@ module.exports = {
   toasts,
   describeSessions,
   scriptTool,
+  snapshotNow,
+  staged,
+  gitIn,
 };
