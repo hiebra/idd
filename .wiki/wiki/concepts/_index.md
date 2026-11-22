@@ -2,12 +2,13 @@
 
 > Artículos sobre conceptos
 
-Last updated: 2026-11-21
+Last updated: 2026-11-22
 
 ## Contents
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [worktrees-de-opencode.md](worktrees-de-opencode.md) | OpenCode 2 crea worktrees con --detach sobre HEAD; estrategia de plugin para nacer desde origin/main | opencode, worktree, plugins, git | 2026-11-22 |
 | [regla-de-comentarios.md](regla-de-comentarios.md) | La regla de comentarios (''…'', cita '>' o cita de la web de OpenCode, cierre con p o r), ADR-0010 y ADR-0018 | response-comments, session-bootstrap, adr | 2026-11-22 |
 | [origen-de-openspec-git-discipline.md](origen-de-openspec-git-discipline.md) | openspec-git-discipline: una regla heredada sin justificación registrada | openspec-git-discipline, git, procedencia | 2026-11-21 |
 | [una-sola-copia-de-las-skills.md](una-sola-copia-de-las-skills.md) | Una sola copia de las skills, vista por cada agente | skills, adr, spec | 2026-11-21 |
