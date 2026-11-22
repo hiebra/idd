@@ -160,3 +160,5 @@
 ## [2026-11-22] compile | raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md → 3 artículos actualizados (agente build en todas las sesiones, exploración en plan, aviso de lo modificado en plan, contrato de OpenCode 2.3.2 de las tasks 1.1 a 1.4 y 7.2, simulador), 0 nuevos
 
 ## [2026-11-22] librarian | scanned 10 articles, 0 stale, 0 low-quality; 1 contradicción tras autopilot-plan-explore
+
+## [2026-11-22] ll | "el archivado de autopilot-plan-explore y su banco con OpenCode real" → raw/notes/2026-11-22-ll-archivado-autopilot-plan-explore.md (4 lessons, 0 articles updated)
