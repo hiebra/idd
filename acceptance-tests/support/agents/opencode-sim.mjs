@@ -47,6 +47,41 @@
 //   that writes in sessions; and model responses with effects on the project
 //   (`files`, `git`) before their text or tool call. What the plugin writes to
 //   console.error is kept in `logs`.
+// - autopilot-rama-por-sesion (design D9), as checked with OpenCode 2.3.2:
+//   - several directories of the same project (the main checkout and its
+//     worktrees), each session with its own (`location.directory`), and one
+//     instance of the server part per directory, loaded the first time the
+//     TUI enters it or one of its sessions works; the earlier ones stay alive.
+//     Hooks, tools and RPC handlers are per instance; a session's turn uses
+//     those of its directory, and a TUI call goes to the instance of the
+//     location it names (without one, to the directory the TUI started in);
+//   - the TUI's `context.location`, which follows its screen: a session's
+//     directory, or the location of a home route ({ type: "home", location });
+//   - `ctx.worktree.transform` with `add` of a strategy { id, create, remove,
+//     list }: the last one registered and still loaded is selected (one with
+//     the same id replaces the earlier), and a reload or unload drops the
+//     earlier ones, back to the bundled git strategy (`git worktree add --detach`). `ctx.worktree.create({ name })`,
+//     the TUI and the web create worktrees with it under a directory outside
+//     the clone; a worktree is removed with the strategy that created it;
+//   - `context.keymap.dispatch`: "session.move" opens «Manage workspaces» and
+//     then "dialog.move_session.new" opens «Name worktree»; confirming it
+//     (`nameWorktree`, with a name or generated) creates the worktree and
+//     opens the home screen in it;
+//   - model responses' `git` effects run in their session's directory.
+// - The fixes after the tests with OpenCode 2.3.2 real (section 8 of tasks):
+//   - the server context has `location.project` ({ id, directory,
+//     canonical }) and no `project`;
+//   - a strategy's `remove` gets only { directory, force }, and an error from
+//     a strategy reaches the client wrapped ("Worktree strategy <id> failed
+//     to <operation>: <message>"), without `forceRequired`;
+//   - "dialog.move_session.new" does nothing until «Manage workspaces» is
+//     mounted, a moment after "session.move" (WORKSPACES_MOUNT_MS, or the
+//     `workspacesMountMs` option);
+//   - from the home screen, confirming «Name worktree» leaves the worktree
+//     pending ("(new worktree)"): it is created with the user's first
+//     message, in a session of the worktree with that message, and the TUI
+//     goes to that session. From a session, it is created at once and the
+//     TUI opens the home screen in it.
 // - autopilot-plan-explore (design D6): an RPC delivery to the TUI whose
 //   listener waits on an open dialog (dialogWait) does not keep settle()
 //   waiting, as OpenCode's emit does not wait for the TUI; the scenario sees
@@ -71,8 +106,11 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const BASE_SYSTEM = 'You are OpenCode (simulated system prompt).';
+// «Manage workspaces» takes a moment to mount after session.move
+export const WORKSPACES_MOUNT_MS = 60;
 const PLAN_REMINDER = '<system-reminder>\nYou are in Plan mode (simulated): you must not make any edits; only read, search and plan.\n</system-reminder>';
 const BUILTIN_TOOLS = ['edit', 'glob', 'grep', 'question', 'read', 'shell', 'skill', 'subagent', 'write'];
+const PROJECT_ID = 'prj_simulado';
 
 let clock = 0;
 // Strictly increasing times, so that busy/idle comparisons are exact
@@ -83,29 +121,47 @@ const now = () => {
 };
 const clone = (value) => (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
 
+
+// An error from a plugin's strategy, as OpenCode 2.3.2 passes it on: wrapped,
+// without forceRequired (only its own error classes keep it)
+async function wrapped(id, operation, fn) {
+  try {
+    return await fn();
+  } catch (error) {
+    throw new Error(`Worktree strategy ${id} failed to ${operation}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 export class Host {
-  constructor({ projectDir, plugin, dbFile, tui = true, pluginOptions = {}, failures = {}, tuiSilent = false, rpcLate = false, alreadyOpen = false }) {
+  constructor({ projectDir, plugin, dbFile, tui = true, pluginOptions = {}, failures = {}, tuiSilent = false, rpcLate = false, alreadyOpen = false, worktreesDir = null, workspacesMountMs = WORKSPACES_MOUNT_MS }) {
     // OpenCode was already open: this process's TUI has presented itself
     // before, so loading the plugin is like a hot reload and not a start
     // (the registry the plugin keeps in globalThis, design D3 of
     // autopilot-sesion-operativa)
     if (alreadyOpen) globalThis[Symbol.for('openspec-autopilot.registry')] = { gens: {}, pids: { [projectDir]: [String(process.pid)] } };
     this.rpcLate = rpcLate;
-    this.route = { type: 'home' };
+    this.projectDir = projectDir;
+    // Where worktrees are created (OpenCode's data directory in the real one)
+    this.worktreesDir = worktreesDir ?? path.join(path.dirname(projectDir), `${path.basename(projectDir)}-worktrees`);
+    this.route = { type: 'home', location: { directory: projectDir } };
+    this.lastDir = projectDir;
     this.focusListeners = { focus: new Set(), blur: new Set() };
     // A TUI that never answers what the server asks it (its event listeners get nothing)
     this.tuiSilent = tuiSilent;
-    this.projectDir = projectDir;
     this.pluginDir = path.join(projectDir, '.opencode', 'plugins', plugin);
     this.dbFile = dbFile;
     this.withTui = tui;
     this.pluginOptions = pluginOptions;
     this.failures = { ...failures };
-    this.store = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile, 'utf8')) : { seq: 0, sessions: {} };
+    this.store = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile, 'utf8')) : { seq: 0, sessions: {}, worktrees: {} };
+    this.store.worktrees ??= {};
     this.generation = 0;
-    this.hooks = { prompt: [], context: [], 'experimental.idle': [], compaction: [] };
-    this.tools = new Map();
-    this.rpc = new Map(); // definition id -> { handlers, listeners: Map(name -> [{ fn, load }]) }
+    // One instance of the server part per directory: { dir, hooks, tools, loaded }
+    this.instances = new Map();
+    this.loading = new Map();
+    this.rpc = new Map(); // definition id -> { handlers: Map(dir -> handlers), listeners: Map(name -> [{ fn, load }]) }
+    // Worktree strategies registered by the instances: [{ strategy, dir, generation }]
+    this.strategies = [];
     // What each part's last setup returned to run at reload or close
     this.cleanups = [];
     // Loads of the TUI part, the first one is 1
@@ -116,7 +172,11 @@ export class Host {
     // With dialogWait, a dialog with no queued answer stays open until one arrives
     this.dialogWait = false;
     this.openDialogs = [];
-    this.out = { toasts: [], navigations: [], dialogs: [], archives: [], requests: [], crashes: [], toolErrors: [], logs: [], terminal: [], prompts: [], routes: [] };
+    // The keymap's dialogs: «Manage workspaces» and «Name worktree»
+    this.workspaces = null;
+    this.pendingWorktree = null;
+    this.workspacesMountMs = workspacesMountMs;
+    this.out = { toasts: [], navigations: [], dialogs: [], archives: [], requests: [], crashes: [], toolErrors: [], logs: [], terminal: [], prompts: [], routes: [], rpcCalls: [], keymap: [], worktrees: [] };
     const original = console.error;
     console.error = (...args) => {
       this.out.logs.push(args.map((a) => (a instanceof Error ? a.stack : typeof a === 'string' ? a : JSON.stringify(a))).join(' '));
@@ -131,6 +191,7 @@ export class Host {
     // Each tracked delivery and its state ({ blocked }), set while it waits on an open dialog
     this.deliveries = new Map();
     this.interrupted = new Set();
+    this.slugs = 0;
   }
 
   // --- bookkeeping ---------------------------------------------------------
@@ -189,19 +250,25 @@ export class Host {
     return session;
   }
 
+  dirOf(session) {
+    return session?.location?.directory ?? this.projectDir;
+  }
+
   info(session) {
     const { messages, ...info } = session;
     return clone(info);
   }
 
   // A session as it is stored, without going through the plugin (scenario setup)
-  seedSession({ title = 'Sesión', agent = 'build', metadata = {}, busy = false, archived = false, messages = [] } = {}) {
+  seedSession({ title = 'Sesión', agent = 'build', metadata = {}, busy = false, archived = false, messages = [], directory = this.projectDir } = {}) {
     const id = `ses_${String(++this.store.seq).padStart(4, '0')}`;
     const t = now();
     this.store.sessions[id] = {
       id,
       title,
       agent,
+      projectID: PROJECT_ID,
+      location: { directory },
       metadata: clone(metadata),
       time: { created: t, updated: t, ...(busy ? { busy: now() } : { busy: t, idle: now() }), ...(archived ? { archived: now() } : {}) },
       messages: clone(messages),
@@ -228,19 +295,13 @@ export class Host {
     await this.setup();
   }
 
-  // Runs setup again, as a hot reload does
+  // Runs setup again, as a hot reload does: every loaded instance and the TUI
   async setup() {
     await this.runCleanups();
     this.generation += 1;
-    this.hooks = { prompt: [], context: [], 'experimental.idle': [], compaction: [] };
-    this.tools = new Map();
-    const server = async () => {
-      try {
-        this.keepCleanup('server', await this.serverPart.setup(this.serverContext()));
-      } catch (error) {
-        this.crash('server setup', error);
-      }
-    };
+    const dirs = this.instances.size > 0 ? [...this.instances.keys()] : [this.projectDir];
+    // The strategies of the previous loads are disposed with them
+    this.strategies = this.strategies.filter((s) => s.generation === this.generation);
     const tui = async () => {
       if (!this.tuiPart) return;
       this.tuiLoad += 1;
@@ -252,14 +313,36 @@ export class Host {
     };
     if (this.rpcLate) {
       // The TUI part loads first: its calls find no RPC until the server registers it
-      for (const entry of this.rpc.values()) entry.handlers = null;
+      for (const entry of this.rpc.values()) entry.handlers.clear();
       await tui();
-      await server();
+      for (const dir of dirs) await this.setupServer(dir);
     } else {
-      await server();
+      for (const dir of dirs) await this.setupServer(dir);
       await tui();
     }
     await this.settle();
+  }
+
+  async setupServer(dir) {
+    const instance = { dir, hooks: { prompt: [], context: [], 'experimental.idle': [], compaction: [] }, tools: new Map(), generation: this.generation };
+    this.instances.set(dir, instance);
+    try {
+      this.keepCleanup('server', await this.serverPart.setup(this.serverContext(instance)));
+    } catch (error) {
+      this.crash('server setup', error);
+    }
+    return instance;
+  }
+
+  // The instance of the server part for a directory, loading it the first time
+  ensureInstance(dir) {
+    if (this.instances.has(dir) && !this.loading.has(dir)) return Promise.resolve(this.instances.get(dir));
+    if (!this.loading.has(dir)) {
+      const loading = this.setupServer(dir).finally(() => this.loading.delete(dir));
+      this.loading.set(dir, loading);
+      this.track(loading);
+    }
+    return this.loading.get(dir);
   }
 
   keepCleanup(part, returned) {
@@ -306,23 +389,29 @@ export class Host {
   }
 
   rpcEntry(id) {
-    if (!this.rpc.has(id)) this.rpc.set(id, { handlers: null, listeners: new Map() });
+    if (!this.rpc.has(id)) this.rpc.set(id, { handlers: new Map(), listeners: new Map() });
     return this.rpc.get(id);
   }
 
-  serverContext() {
+  // The selected worktree strategy: the last one registered by a live load
+  strategy() {
+    return this.strategies.at(-1)?.strategy ?? null;
+  }
+
+  serverContext(instance) {
     const host = this;
+    const dir = instance.dir;
     const op = (name, fn) => async (input) => {
       host.inject(name);
       return fn(input ?? {});
     };
     return {
-      location: { directory: this.projectDir },
+      location: { directory: dir, workspaceID: undefined, project: { id: PROJECT_ID, directory: this.projectDir, canonical: this.projectDir } },
       options: clone(this.pluginOptions),
       rpc: {
         register: async (definition, handlers) => {
           const entry = host.rpcEntry(definition.id);
-          entry.handlers = handlers;
+          entry.handlers.set(dir, handlers);
           return {
             events: {
               emit: (name, data) =>
@@ -343,19 +432,20 @@ export class Host {
       },
       session: {
         hook: async (name, callback) => {
-          if (!host.hooks[name]) host.hooks[name] = [];
-          host.hooks[name].push(callback);
+          if (!instance.hooks[name]) instance.hooks[name] = [];
+          instance.hooks[name].push(callback);
           return { async dispose() {} };
         },
-        create: op('session.create', ({ title = 'Nueva sesión', agent = 'build', metadata = {} }) => {
+        create: op('session.create', ({ title = 'Nueva sesión', agent = 'build', metadata = {}, location }) => {
           const id = `ses_${String(++host.store.seq).padStart(4, '0')}`;
           const t = now();
-          host.store.sessions[id] = { id, title, agent, metadata: clone(metadata), time: { created: t, updated: t }, messages: [] };
+          host.store.sessions[id] = { id, title, agent, projectID: PROJECT_ID, location: { directory: location?.directory ?? dir }, metadata: clone(metadata), time: { created: t, updated: t }, messages: [] };
           host.save();
           return host.info(host.store.sessions[id]);
         }),
         get: op('session.get', ({ sessionID }) => host.info(host.session(sessionID))),
-        // { data, cursor } by pages, newest first, as OpenCode 2.3.2 (task 12.2)
+        // { data, cursor } by pages, newest first, as OpenCode 2.3.2 (task 12.2);
+        // the sessions of the whole project, every worktree included
         list: op('session.list', ({ archived, limit = 5, cursor } = {}) => {
           const all = Object.values(host.store.sessions)
             .filter((s) => archived === undefined || Boolean(s.time.archived) === archived)
@@ -394,16 +484,42 @@ export class Host {
       tool: {
         transform: (fn) => {
           const editor = {
-            add: (tool) => host.tools.set(tool.name, tool),
-            list: () => [...host.tools.values()],
-            get: (id) => host.tools.get(id),
+            add: (tool) => instance.tools.set(tool.name, tool),
+            list: () => [...instance.tools.values()],
+            get: (id) => instance.tools.get(id),
             update() {},
-            remove: (id) => host.tools.delete(id),
+            remove: (id) => instance.tools.delete(id),
             namespace() {},
           };
           fn(editor);
           return { async dispose() {} };
         },
+      },
+      worktree: {
+        transform: async (fn) => {
+          const added = [];
+          const editor = {
+            // A strategy with the id of one already registered replaces it
+            add: (strategy) => {
+              const registration = { strategy, dir, generation: host.generation };
+              host.strategies = host.strategies.filter((s) => s.strategy.id !== strategy.id);
+              host.strategies.push(registration);
+              added.push(registration);
+            },
+          };
+          await fn(editor);
+          return {
+            async dispose() {
+              host.strategies = host.strategies.filter((s) => !added.includes(s));
+            },
+          };
+        },
+        // The payload requires projectID, as in OpenCode 2.3.2
+        create: op('worktree.create', async ({ projectID, name, branch } = {}) => {
+          if (projectID !== PROJECT_ID) throw new Error(projectID === undefined ? 'Missing key\n  at ["projectID"]' : `unknown project ${projectID}`);
+          return host.createWorktree({ name, branch, via: 'plugin' });
+        }),
+        remove: op('worktree.remove', async ({ directory, force } = {}) => host.removeWorktree({ directory, force })),
       },
     };
   }
@@ -412,11 +528,17 @@ export class Host {
     const host = this;
     return {
       options: clone(this.pluginOptions),
-      location: { directory: this.projectDir },
+      // It follows the TUI's screen (checked with OpenCode 2.3.2)
+      location: {
+        get directory() {
+          return host.tuiLocation();
+        },
+      },
       renderer: {
         on: (name, fn) => host.focusListeners[name]?.add(fn),
         off: (name, fn) => host.focusListeners[name]?.delete(fn),
       },
+      keymap: { dispatch: (name) => host.dispatch(name) },
       client: {
         rpc: (definition) => {
           const entry = host.rpcEntry(definition.id);
@@ -435,10 +557,14 @@ export class Host {
             },
           };
           for (const name of Object.keys(definition.methods ?? {})) {
-            client[name] = (input) => {
+            client[name] = (input, at) => {
+              const dir = at?.location?.directory ?? host.projectDir;
               const call = (async () => {
-                if (!entry.handlers) throw Object.assign(new Error('RPC is unavailable: ' + definition.id), { type: 'rpc.unavailable' });
-                return clone(await entry.handlers[name](clone(input), { signal: new AbortController().signal, error: (type, data) => ({ type, data }) }));
+                if (host.loading.has(dir)) await host.loading.get(dir);
+                const handlers = entry.handlers.get(dir);
+                host.out.rpcCalls.push({ method: name, directory: dir, ...(input?.route ? { route: clone(input.route) } : {}) });
+                if (!handlers) throw Object.assign(new Error('RPC is unavailable: ' + definition.id), { type: 'rpc.unavailable' });
+                return clone(await handlers[name](clone(input), { signal: new AbortController().signal, error: (type, data) => ({ type, data }) }));
               })();
               // A call in flight is work the scenario waits for
               host.pending.add(call);
@@ -495,8 +621,10 @@ export class Host {
             }
             else answer = { value: undefined };
             if (answer.delayMs) await new Promise((resolve) => setTimeout(resolve, answer.delayMs));
-            // Enter chooses the highlighted (first) option; Esc closes without choosing
-            const value = answer.key === 'enter' ? options.options[0]?.value : answer.key === 'esc' ? undefined : answer.value;
+            // Enter chooses the highlighted (first) option; Esc closes without choosing;
+            // `choose` picks the option with that title
+            const value =
+              answer.key === 'enter' ? options.options[0]?.value : answer.key === 'esc' ? undefined : answer.choose ? options.options.find((o) => o.title === answer.choose)?.value : answer.value;
             shown.answer = value ?? null;
             shown.key = answer.key ?? null;
             shown.open = false;
@@ -508,6 +636,107 @@ export class Host {
         },
       },
     };
+  }
+
+  // --- worktrees -----------------------------------------------------------
+
+  // The name OpenCode generates (Slug.create()) when the user does not write one
+  generatedName() {
+    this.slugs += 1;
+    return `rama-generada-${this.slugs}`;
+  }
+
+  // worktree.create, as the TUI, the web and ctx.worktree call it: the
+  // selected strategy, or the bundled git one (`--detach` on the starting ref)
+  async createWorktree({ name = null, branch = undefined, via = 'tui' } = {}) {
+    const chosen = name || this.generatedName();
+    let directory = path.join(this.worktreesDir, chosen);
+    for (let i = 2; fs.existsSync(directory); i += 1) directory = path.join(this.worktreesDir, `${chosen}-${i}`);
+    fs.mkdirSync(this.worktreesDir, { recursive: true });
+    const strategy = this.strategy();
+    const record = { via, name: chosen, branch: branch ?? null, strategy: strategy?.id ?? 'git', directory: null, error: null };
+    this.out.worktrees.push(record);
+    try {
+      let result;
+      if (strategy) {
+        result = await wrapped(strategy.id, 'create', () => strategy.create({ sourceDirectory: this.projectDir, directory, ...(branch !== undefined ? { branch } : {}) }, { signal: new AbortController().signal }));
+      } else {
+        const added = spawnSync('git', ['worktree', 'add', '--detach', '--', directory, branch ?? 'HEAD'], { cwd: this.projectDir, encoding: 'utf8' });
+        if (added.status !== 0) throw new Error(added.stderr.trim());
+        result = { directory };
+      }
+      record.directory = result?.directory ?? directory;
+      this.store.worktrees[record.directory] = { strategy: record.strategy };
+      this.save();
+      return { directory: record.directory, name: path.basename(record.directory), projectID: PROJECT_ID };
+    } catch (error) {
+      record.error = String(error?.message ?? error);
+      throw error;
+    }
+  }
+
+  // Removal uses the worktree's recorded strategy; a missing owner fails
+  async removeWorktree({ directory, force = false }) {
+    const owner = this.store.worktrees[directory]?.strategy ?? 'git';
+    if (owner === 'git') {
+      const removed = spawnSync('git', ['worktree', 'remove', ...(force ? ['--force'] : []), directory], { cwd: this.projectDir, encoding: 'utf8' });
+      if (removed.status !== 0) throw new Error(removed.stderr.trim());
+    } else {
+      const registration = [...this.strategies].reverse().find((s) => s.strategy.id === owner);
+      if (!registration) throw new Error(`the worktree strategy '${owner}' is not loaded`);
+      // OpenCode 2.3.2 sends only { directory, force }
+      await wrapped(owner, 'remove', () => registration.strategy.remove({ directory, force }, { signal: new AbortController().signal }));
+    }
+    delete this.store.worktrees[directory];
+    this.save();
+    return true;
+  }
+
+  // The TUI's keymap commands that the plugin may dispatch (design D4)
+  dispatch(name) {
+    this.out.keymap.push(name);
+    if (name === 'session.move') {
+      this.workspaces = { name: false, mounted: Date.now() + this.workspacesMountMs };
+      this.out.dialogs.push({ title: 'Manage workspaces', options: [], answer: null, open: true, kind: 'workspaces' });
+      return true;
+    }
+    if (name === 'dialog.move_session.new') {
+      // Before «Manage workspaces» is mounted, the command does nothing
+      if (!this.workspaces || Date.now() < this.workspaces.mounted) return false;
+      for (const d of this.out.dialogs) if (d.kind === 'workspaces') d.open = false;
+      this.workspaces.name = true;
+      this.out.dialogs.push({ title: 'Name worktree', options: [], answer: null, open: true, kind: 'name-worktree' });
+      return true;
+    }
+    return false;
+  }
+
+  // The user opens «Manage workspaces» and presses ctrl+a (New worktree)
+  newWorktreeDialog() {
+    this.workspaces = { name: true, mounted: 0 };
+    this.out.dialogs.push({ title: 'Name worktree', options: [], answer: null, open: true, kind: 'name-worktree' });
+  }
+
+  // The user confirms «Name worktree» with a name, or generates it with tab.
+  // From the home screen, the worktree stays pending until the first
+  // message; from a session, the TUI creates it and opens its home screen
+  async nameWorktree({ name = null }) {
+    if (!this.workspaces?.name) throw new Error('the «Name worktree» dialog is not open');
+    this.workspaces = null;
+    for (const d of this.out.dialogs) if (d.kind === 'name-worktree') d.open = false;
+    if (this.route.type === 'home') {
+      this.pendingWorktree = { name: name || this.generatedName() };
+      this.out.routes.push({ type: 'home', pending: this.pendingWorktree.name });
+      return null;
+    }
+    try {
+      const { directory } = await this.createWorktree({ name, via: 'tui' });
+      this.setRoute({ type: 'home', location: { directory } });
+      return directory;
+    } catch (error) {
+      this.out.toasts.push({ variant: 'error', message: String(error?.message ?? error) });
+      return null;
+    }
   }
 
   // --- execution -----------------------------------------------------------
@@ -543,7 +772,9 @@ export class Host {
     this.store.messageSeq = (this.store.messageSeq ?? 0) + 1;
     const messageID = `msg_${String(this.store.messageSeq).padStart(4, '0')}`;
     const prompt = { sessionID, messageID, prompt: { text: message.text }, delivery: 'steer' };
-    for (const hook of [...this.hooks.prompt]) {
+    // The instance of the session's directory runs its hooks and tools
+    await this.ensureInstance(this.dirOf(session));
+    for (const hook of [...this.instanceOf(session).hooks.prompt]) {
       try {
         await hook(prompt);
       } catch (error) {
@@ -563,8 +794,12 @@ export class Host {
     return true;
   }
 
-  visibleTools() {
-    return [...this.tools.values()].filter((tool) => tool.options?.codemode === false);
+  instanceOf(session) {
+    return this.instances.get(this.dirOf(session)) ?? { hooks: { prompt: [], context: [], 'experimental.idle': [], compaction: [] }, tools: new Map() };
+  }
+
+  visibleTools(session) {
+    return [...this.instanceOf(session).tools.values()].filter((tool) => tool.options?.codemode === false);
   }
 
   request(session) {
@@ -601,7 +836,7 @@ export class Host {
       system: [{ type: 'text', text: BASE_SYSTEM }],
       messages,
       options: {},
-      tools: Object.fromEntries([...BUILTIN_TOOLS.map((name) => [name, { description: name, input: {} }]), ...this.visibleTools().map((t) => [t.name, { description: t.description, input: t.input }])]),
+      tools: Object.fromEntries([...BUILTIN_TOOLS.map((name) => [name, { description: name, input: {} }]), ...this.visibleTools(session).map((t) => [t.name, { description: t.description, input: t.input }])]),
     };
   }
 
@@ -614,6 +849,7 @@ export class Host {
       if (m.stepKind && step?.kind !== m.stepKind) continue;
       if (m.stepId !== undefined && String(step?.id) !== String(m.stepId)) continue;
       if (m.agent && session.agent !== m.agent) continue;
+      if (m.directory && m.directory !== this.dirOf(session)) continue;
       if (m.afterTool !== undefined && m.afterTool !== (input.messages.at(-1)?.role === 'tool')) continue;
       return rule.responses.shift();
     }
@@ -629,7 +865,7 @@ export class Host {
       this.joinSteered(session);
       const input = this.request(session);
       let failed = null;
-      for (const hook of [...this.hooks.context]) {
+      for (const hook of [...this.instanceOf(session).hooks.context]) {
         try {
           await hook(input);
         } catch (error) {
@@ -656,9 +892,9 @@ export class Host {
       if (this.interrupted.delete(sessionID)) return this.interrupt(session);
       const response = this.scriptedResponse(session, input);
       if (response.delayMs) await new Promise((resolve) => setTimeout(resolve, response.delayMs));
-      this.applyEffects(response);
+      this.applyEffects(response, this.dirOf(session));
       if (response.tool) {
-        const tool = this.tools.get(response.tool.name);
+        const tool = this.instanceOf(session).tools.get(response.tool.name);
         const part = { type: 'tool', name: response.tool.name, state: { status: 'completed', input: clone(response.tool.input ?? {}), content: [] } };
         if (!tool || tool.options?.codemode !== false) {
           part.state.status = 'error';
@@ -686,7 +922,7 @@ export class Host {
       session.outcome = 'succeeded';
       session.time.idle = now();
       this.save();
-      for (const hook of [...this.hooks['experimental.idle']]) {
+      for (const hook of [...this.instanceOf(session).hooks['experimental.idle']]) {
         try {
           await hook({ sessionID, background: [] });
         } catch (error) {
@@ -697,10 +933,10 @@ export class Host {
     }
   }
 
-  // What a scripted response does in the project before answering
-  applyEffects(response) {
+  // What a scripted response does in the project before answering, in the session's directory
+  applyEffects(response, dir = this.projectDir) {
     for (const [rel, content] of Object.entries(response.files ?? {})) {
-      const file = path.join(this.projectDir, rel);
+      const file = path.join(dir, rel);
       if (content === null) fs.rmSync(file, { recursive: true, force: true });
       else {
         fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -708,16 +944,29 @@ export class Host {
       }
     }
     for (const args of response.git ?? []) {
-      const result = spawnSync('git', args, { cwd: this.projectDir, encoding: 'utf8' });
+      const result = spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
       if (result.status !== 0) this.crash('scripted git', new Error(`git ${args.join(' ')}: ${result.stderr}`));
     }
   }
 
   // --- the TUI's screen and the terminal's focus ---------------------------
 
+  // The directory the TUI is in: its session's, or its home screen's
+  tuiLocation() {
+    if (this.route.type === 'session') {
+      const session = this.store.sessions[this.route.sessionID];
+      if (session) return this.dirOf(session);
+    }
+    return this.route.location?.directory ?? this.lastDir;
+  }
+
   setRoute(route) {
-    this.route = route?.type === 'session' ? { type: 'session', sessionID: route.sessionID } : { type: 'home' };
+    if (route?.type === 'session') this.route = { type: 'session', sessionID: route.sessionID };
+    else this.route = { type: 'home', location: { directory: route?.location?.directory ?? this.tuiLocation() } };
+    this.lastDir = this.tuiLocation();
     this.out.routes.push(clone(this.route));
+    // Entering a directory loads its instance of the server part
+    if (this.withTui) this.ensureInstance(this.lastDir);
   }
 
   focus(name) {
@@ -740,7 +989,7 @@ export class Host {
   async compact(sessionID) {
     const session = this.session(sessionID);
     const input = { ...this.request(session), result: undefined };
-    for (const hook of [...this.hooks.compaction]) {
+    for (const hook of [...this.instanceOf(session).hooks.compaction]) {
       try {
         await hook(input);
       } catch (error) {
@@ -759,6 +1008,17 @@ export class Host {
   }
 
   state() {
-    return clone({ sessions: this.store.sessions, ...this.out, route: this.route, generation: this.generation, tuiLoad: this.tuiLoad, subscriptions: this.subscriptions(), closed: this.closed });
+    return clone({
+      sessions: this.store.sessions,
+      ...this.out,
+      route: this.route,
+      location: this.tuiLocation(),
+      instances: [...this.instances.keys()],
+      strategies: this.strategies.map((s) => ({ id: s.strategy.id, dir: s.dir, generation: s.generation })),
+      generation: this.generation,
+      tuiLoad: this.tuiLoad,
+      subscriptions: this.subscriptions(),
+      closed: this.closed,
+    });
   }
 }

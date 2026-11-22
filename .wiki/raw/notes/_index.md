@@ -8,6 +8,11 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-main-avanza-durante-la-suite.md](2026-11-22-ll-main-avanza-durante-la-suite.md) | 1 lección: main avanza mientras corre la suite de una fusión; git fetch otra vez antes del commit de fusión y tras el push | lessons-learned, git, merge | 2026-11-22 |
+| [2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md](2026-11-22-ll-fusion-main-autopilot-rama-por-sesion.md) | 2 lecciones de la fusión de main con autopilot-rama-por-sesion: el cierre común de un conflicto y el entorno del contenedor en el plugin | lessons-learned, git, merge | 2026-11-22 |
+| [2026-11-22-ll-pruebas-opencode-real-autopilot.md](2026-11-22-ll-pruebas-opencode-real-autopilot.md) | 7 lecciones de las pruebas de autopilot-rama-por-sesion en OpenCode 2.3.2 real: `@opencode/cli`, update-ref con worktrees, ctx.location.project, remove y forceRequired de una estrategia, keymap.dispatch y el worktree del primer mensaje, simulador primero y el banco | lessons-learned, opencode, worktrees, git, testing | 2026-11-22 |
+| [2026-11-22-ll-archive-autopilot-rama-por-sesion.md](2026-11-22-ll-archive-autopilot-rama-por-sesion.md) | 2 lecciones del archive de autopilot-rama-por-sesion: el aviso del cargador tras sincronizar un REMOVED y el sync por bloques | lessons-learned, openspec, archive | 2026-11-22 |
+| [2026-11-22-ll-autopilot-rama-por-sesion.md](2026-11-22-ll-autopilot-rama-por-sesion.md) | 2 lecciones de autopilot-rama-por-sesion: la `/` en las expresiones de Cucumber y `git switch` desde origin/ sin remoto configurado | lessons-learned, cucumber, git | 2026-11-22 |
 | [2026-11-22-ll-fusion-supuestos-invalidados.md](2026-11-22-ll-fusion-supuestos-invalidados.md) | 1 lección: al fusionar main, lo que llega sin conflicto puede apoyarse en lo que el change cambió (las revisiones con plan) | lessons-learned, git, merge, openspec-autopilot, llm-wiki | 2026-11-22 |
 | [2026-11-22-ll-archivado-autopilot-plan-explore.md](2026-11-22-ll-archivado-autopilot-plan-explore.md) | 4 lecciones del archivado de autopilot-plan-explore: la task del archive, el banco con OpenCode real (ESC [ Z y opencode serve propio), las referencias del motor y las búsquedas sin los informes generados | lessons-learned, openspec, archive, opencode, testing, llm-wiki | 2026-11-22 |
 | [2026-11-22-ll-cucumber-rerun.md](2026-11-22-ll-cucumber-rerun.md) | 1 lección: --format rerun lista los fallos, pero @rerun.txt se suma a las rutas del perfil y no acota; se repiten con --name | lessons-learned, acceptance-tests, cucumber-js | 2026-11-22 |
@@ -44,6 +49,10 @@ Last updated: 2026-11-22
 ## Categories
 
 ## Recent Changes
+
+- 2026-11-22: Lección sobre main que avanza durante la suite de una fusión
+- 2026-11-22: Lecciones de la fusión de main con autopilot-rama-por-sesion
+- 2026-11-22: Lecciones de autopilot-rama-por-sesion
 
 - 2026-11-22: Lección sobre los supuestos que invalida un change al fusionar main
 - 2026-11-22: Lecciones del archivado de autopilot-plan-explore

@@ -158,6 +158,35 @@ test('list: the temporary branches with their change; switch: only to an existin
   assert.equal(listBranches(dir).find((b) => b.current).branch, 'exportar-datos');
 });
 
+test('origin: back to the origin branch (the last of x-main) with the tree clean, and to no other permanent branch', async (t) => {
+  const { originBranch } = await import(MODULE);
+  const dir = repo(t, 'schema: intent-driven\nx-main: [main, develop]\n');
+  git(dir, 'checkout', '-q', '-b', 'develop');
+  git(dir, 'checkout', '-q', '-b', 'exportar-datos');
+  const back = originBranch(dir, {});
+  assert.equal(back.ok, true, back.message);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'develop');
+  assert.equal(originBranch(dir, {}).ok, true, 'already there');
+  git(dir, 'checkout', '-q', 'exportar-datos');
+  fs.writeFileSync(path.join(dir, 'sucio.txt'), 'x');
+  const dirty = originBranch(dir, {});
+  assert.equal(dirty.ok, false);
+  assert.match(dirty.message, /commit/);
+  assert.match(dirty.message, /stash/);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'exportar-datos');
+});
+
+test('origin: from origin/<branch> when the origin branch is only remote', async (t) => {
+  const { originBranch } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'checkout', '-q', '-b', 'temporal');
+  git(dir, 'branch', '-q', '-D', 'main');
+  const back = originBranch(dir, {});
+  assert.equal(back.ok, true, back.message);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'main');
+});
+
 // --- check commit with a merge in progress (allow-user-requested-merges, D3) ---
 
 const EPHEMERAL = { CLAUDE_CODE_CONTAINER_ID: 'container_suite', CLAUDE_CODE_REMOTE: 'true' };
@@ -312,12 +341,12 @@ test('merge-targets: bringFirst, a branch of x-main without origin, and none fro
   assert.deepEqual(mergeTargets(dir).targets, []);
 });
 
-test('start and switch refuse in an ephemeral container before anything else', async (t) => {
-  const { startBranch, switchBranch } = await import(MODULE);
+test('start, switch and origin refuse in an ephemeral container before anything else', async (t) => {
+  const { startBranch, switchBranch, originBranch } = await import(MODULE);
   const dir = repo(t);
   git(dir, 'branch', 'otra');
   fs.writeFileSync(path.join(dir, 'sucio.txt'), 'x');
-  for (const result of [startBranch(dir, 'exportar-datos', EPHEMERAL), startBranch(dir, 'main', EPHEMERAL), switchBranch(dir, 'otra', EPHEMERAL)]) {
+  for (const result of [startBranch(dir, 'exportar-datos', EPHEMERAL), startBranch(dir, 'main', EPHEMERAL), switchBranch(dir, 'otra', EPHEMERAL), originBranch(dir, EPHEMERAL)]) {
     assert.equal(result.ok, false);
     assert.match(result.message, /sigue en la rama de la sesión/);
     assert.doesNotMatch(result.message, /stash|permanente/);

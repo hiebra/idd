@@ -792,6 +792,28 @@ Then('la instrucción dice que el modelo no haga commits ni pase nada al stage',
   assert.match(this.instruction, /no pases nada al stage/);
 });
 
+// --- Volver a la rama de origen (autopilot-rama-por-sesion, design D7) ---
+
+Given(/^el clon está en una rama temporal `([^`]+)`, (con el árbol limpio|con cambios sin commit)$/, function (branch, tree) {
+  const project = this.lifecycleProject();
+  this.branches.branch(project, branch);
+  if (tree === 'con cambios sin commit') fs.appendFileSync(project.path('README.md'), '\nCambio sin commit.\n');
+});
+
+When('se vuelve a la rama de origen con `branch-change.mjs`', function () {
+  this.result = runBranchChange(this, 'origin');
+});
+
+Then('el clon queda en la rama de origen', function () {
+  assert.equal(this.result.exitCode, 0, JSON.stringify(this.result));
+  assert.equal(this.branches.currentBranch(this.project), 'main');
+});
+
+Then(/^el clon sigue en la rama `([^`]+)`$/, function (branch) {
+  assert.equal(this.result.exitCode, 1, JSON.stringify(this.result));
+  assert.equal(this.branches.currentBranch(this.project), branch);
+});
+
 // --- Las fusiones que pide el usuario (allow-user-requested-merges) ---------------
 
 // The temporary branch of a check merge scenario: one commit of its own, and

@@ -5,6 +5,12 @@
 // scenario needs, sessions already stored in the simulated OpenCode (the
 // change's earlier sessions, a stopped or working owner) and readers of what
 // the plugin did.
+//
+// autopilot-rama-por-sesion (task 1.2): the clone's bare remote with its
+// origin branch, worktrees outside the clone (where the simulated OpenCode
+// creates them), a change prepared in a worktree or in a branch that is not
+// checked out, sessions of a worktree, and readers of the branch of each
+// directory, the toasts and the options of the last modal.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -14,8 +20,8 @@ const CHANGE = 'exportar-datos';
 const MARK = '[openspec-autopilot]';
 
 // The planning artifacts written, in the schema's order; tasks are { id, done }
-async function prepareChange(world, { artifacts = ['proposal', 'specs', 'design', 'adr', 'tasks'], tasks = null, commit = true } = {}) {
-  const project = world.lifecycleProject();
+// `project` is the clone or one of its worktrees (projectAt)
+async function prepareChange(world, { artifacts = ['proposal', 'specs', 'design', 'adr', 'tasks'], tasks = null, commit = true, project = world.lifecycleProject() } = {}) {
   const b = world.branches;
   if (b.currentBranch(project) !== BRANCH) b.branch(project, BRANCH);
   const dir = project.path('openspec', 'changes', CHANGE);
@@ -29,13 +35,18 @@ async function prepareChange(world, { artifacts = ['proposal', 'specs', 'design'
 }
 
 function ownerMeta(world, step, extra = {}) {
-  return { v: 1, worktree: world.project.dir, branch: BRANCH, change: CHANGE, role: 'owner', step, seq: 1, phase: 'running', zone: null, snapshot: snapshotNow(world), ...extra };
+  const worktree = extra.worktree ?? world.project.dir;
+  return { v: 1, worktree, branch: BRANCH, change: CHANGE, role: 'owner', step, seq: 1, phase: 'running', zone: null, snapshot: snapshotNow(world, CHANGE, projectAt(worktree)), ...extra };
+}
+
+// A directory of the clone (the clone itself or a worktree) as the branch helpers take it
+function projectAt(dir) {
+  return { dir, path: (...parts) => path.join(dir, ...parts) };
 }
 
 // The photo of the change the plugin takes when a step starts (design D7 of
 // autopilot-sesion-operativa), from the real CLI of the copy
-function snapshotNow(world, change = CHANGE) {
-  const project = world.project;
+function snapshotNow(world, change = CHANGE, project = world.project) {
   const dir = project.path('openspec', 'changes', change);
   if (!fs.existsSync(dir)) return { change: null, artifacts: [], tasks: [], git: null };
   const status = world.branches.openspecStatus(project, change);
@@ -74,10 +85,85 @@ function gitIn(world, ...args) {
 }
 
 // A session already in OpenCode's store
-async function seed(world, { title, step, busy = false, archived = false, agent = 'build', meta = {}, messages = [] }) {
+// `directory` is the session's (a worktree's); its metadata names it as its worktree
+async function seed(world, { title, step, busy = false, archived = false, agent = 'build', meta = {}, messages = [], directory = null }) {
   await ensureOpenCode(world);
-  const metadata = step === null ? {} : { openspec: ownerMeta(world, step, meta) };
-  return world.opencodeCall('seed', { title, agent, metadata, busy, archived, messages });
+  const dir = directory ?? world.project.dir;
+  const metadata = step === null ? (Object.keys(meta).length > 0 ? { openspec: { v: 1, worktree: dir, ...meta } } : {}) : { openspec: ownerMeta(world, step, { worktree: dir, ...meta }) };
+  return world.opencodeCall('seed', { title, agent, metadata, busy, archived, messages, directory: dir });
+}
+
+// --- Remote, worktrees and branches of each directory (autopilot-rama-por-sesion) ---
+
+// The clone's bare remote with the origin branch pushed
+function ensureRemote(world) {
+  const project = world.lifecycleProject();
+  const remote = world.branches.remoteDir(project);
+  if (!fs.existsSync(remote)) world.branches.addRemote(project, { push: ['main'] });
+  return remote;
+}
+
+function remoteUnreachable(world) {
+  const remote = ensureRemote(world);
+  fs.renameSync(remote, `${remote}.inaccesible`);
+}
+
+// Where the simulated OpenCode creates worktrees (opencode-sim.js)
+function worktreesDir(world) {
+  return path.join(world.workDir, 'worktrees');
+}
+
+// A worktree of the clone in `branch`, created from the origin branch if it does not exist
+function addWorktree(world, branch, name = path.basename(branch)) {
+  const project = world.lifecycleProject();
+  const dir = path.join(worktreesDir(world), name);
+  fs.mkdirSync(worktreesDir(world), { recursive: true });
+  const exists = world.branches.revParse(project, `refs/heads/${branch}`);
+  gitAt(project.dir, 'worktree', 'add', '-q', ...(exists ? [dir, branch] : ['-b', branch, dir, 'main']));
+  return dir;
+}
+
+function gitAt(dir, ...args) {
+  const { spawnSync } = require('node:child_process');
+  const result = spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(`git ${args.join(' ')} (${dir}): ${result.stderr}`);
+  return result.stdout;
+}
+
+// The branch a directory is on, or null with HEAD detached
+function branchAt(dir) {
+  return dirBranch(dir);
+}
+
+function dirBranch(dir) {
+  const { spawnSync } = require('node:child_process');
+  const result = spawnSync('git', ['symbolic-ref', '--short', '-q', 'HEAD'], { cwd: dir, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+// The worktrees of the clone: [{ directory, branch }]
+function worktrees(world) {
+  const text = gitAt(world.project.dir, 'worktree', 'list', '--porcelain');
+  const list = [];
+  for (const line of text.split('\n')) {
+    if (line.startsWith('worktree ')) list.push({ directory: line.slice(9), branch: null });
+    else if (line.startsWith('branch ') && list.length > 0) list.at(-1).branch = line.slice(7).replace(/^refs\/heads\//, '');
+  }
+  return list;
+}
+
+// The clone's local git config, without the entries of a branch
+function localConfig(world, exceptBranch = null) {
+  return gitAt(world.project.dir, 'config', '--local', '--list')
+    .split('\n')
+    .filter(Boolean)
+    .filter((l) => !exceptBranch || !l.startsWith(`branch.${exceptBranch}.`))
+    .sort();
+}
+
+// The options of the last modal the TUI showed
+function lastModal(world) {
+  return [...world.opencode.dialogs].reverse().find((d) => !d.kind && !d.alert) ?? null;
 }
 
 async function refresh(world) {
@@ -160,4 +246,14 @@ module.exports = {
   snapshotNow,
   staged,
   gitIn,
+  gitAt,
+  projectAt,
+  ensureRemote,
+  remoteUnreachable,
+  worktreesDir,
+  addWorktree,
+  branchAt,
+  worktrees,
+  localConfig,
+  lastModal,
 };
