@@ -434,7 +434,7 @@ test('a failure writing the turn does not block the request nor throw', async (t
 
 // autopilot-plan-explore (D4, D5): the notice of what was modified with the plan agent
 const DESIGN_FILE = { 'openspec/changes/exportar-datos/design.md': '## Context\n\nEscrito en plan.\n' };
-const noticeDialogs = (w) => w.opencode.dialogs.filter((d) => /con el agente plan se han hecho modificaciones/.test(d.title ?? ''));
+const noticeDialogs = (w) => w.opencode.dialogs.filter((d) => /con el agente plan se han hecho modificaciones/i.test(d.title ?? ''));
 
 // An operational session doing `design`; its plan turn writes these files
 async function planWrites(w, files, { keepOpen = true } = {}) {
@@ -470,6 +470,8 @@ test('a pending notice is asked again of a TUI with another PID, not after a hot
   const w = world(t);
   const owner = await planWrites(w, DESIGN_FILE);
   assert.equal(noticeDialogs(w).length, 1);
+  // The modal, read by the user, says whose notice it is
+  assert.match(noticeDialogs(w)[0].title, /^openspec-autopilot: con el agente plan/);
   await w.opencodeCall('reload');
   await w.opencodeCall('goto', { sessionID: owner });
   await w.opencodeCall('focus');
@@ -503,7 +505,8 @@ test('a prompt with the notice pending chains, with the notice in the next sessi
   await w.opencodeCall('message', { sessionID: owner, text: 'Vale, sigue.' });
   const review = ap.onlyOwner(w);
   assert.notEqual(review.id, owner, ap.describeSessions(w));
-  assert.match(ap.instructionOf(w, review.id), /con el agente plan se han hecho modificaciones/);
+  assert.match(ap.instructionOf(w, review.id), /con el agente plan se han hecho modificaciones/i);
+  assert.doesNotMatch(ap.instructionOf(w, review.id), /\[openspec-autopilot\] openspec-autopilot:/);
   // The modal, still open, is closed now: its ack finds no session waiting
   await w.opencodeCall('answers', { answers: [{ key: 'enter' }], settle: true });
   assert.equal(ap.onlyOwner(w).id, review.id);

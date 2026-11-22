@@ -549,7 +549,7 @@ async function start(ctx) {
   // Pide a la TUI el modal del aviso; la TUI lo abre, responde enseguida y llama a ack al cerrarlo
   const showPlanNotice = async (sessionID) => {
     try {
-      await ui.request('notice', { sessionID, message: planNoticeText() });
+      await ui.request('notice', { sessionID, message: `openspec-autopilot: ${planNoticeText().replace(/^C/, 'c')}` });
       return true;
     } catch (error) {
       log('notice:', error?.message ?? error);

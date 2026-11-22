@@ -109,6 +109,8 @@ test('the texts name the step or the review, and none asks for a commit', async 
   assert.match(waiting, /esperando a que el usuario haga el commit/);
   const notice = planNoticeText();
   assert.match(notice, /agente plan/);
+  // The plugin's own mark goes before it where it reaches the model; the text itself has no prefix
+  assert.doesNotMatch(notice, /^openspec-autopilot:/);
   assert.match(notice, /agente build/);
   assert.doesNotMatch(notice, ASKS_COMMIT);
 });

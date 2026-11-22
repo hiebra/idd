@@ -143,10 +143,11 @@ export function returnPrompt({ step, change, phase }) {
   return `${MARK} Vuelves de explorar con el agente plan; sigue con lo que había antes. ${reminder.charAt(0).toUpperCase()}${reminder.slice(1)}`;
 }
 
-// El aviso de lo modificado con el agente plan (design D5)
+// El aviso de lo modificado con el agente plan (design D5), sin prefijo: lo
+// que llega al modelo ya lleva la marca, y el modal antepone el nombre del plugin
 export function planNoticeText() {
   return (
-    'openspec-autopilot: con el agente plan se han hecho modificaciones en el repositorio que, por el enfoque del workflow y la naturaleza del agente plan, deberían haberse reservado al agente build. ' +
+    'Con el agente plan se han hecho modificaciones en el repositorio que, por el enfoque del workflow y la naturaleza del agente plan, deberían haberse reservado al agente build. ' +
     'Normalmente es porque se le ha pedido expresamente. Revisa los cambios (`git status`) antes de seguir.'
   );
 }

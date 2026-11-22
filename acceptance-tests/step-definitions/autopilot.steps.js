@@ -1118,7 +1118,7 @@ Then('el plugin no añade ningún mensaje a la sesión', function () {
 
 // --- Aviso de lo modificado con el agente plan (autopilot-plan-explore) ---------------------
 
-const PLAN_NOTICE = /con el agente plan se han hecho modificaciones/;
+const PLAN_NOTICE = /con el agente plan se han hecho modificaciones/i;
 
 // The model, with the plan agent, answers the next message after writing these files
 async function planTurn(world, files, text = 'Hazlo.') {
