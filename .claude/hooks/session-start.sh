@@ -29,8 +29,9 @@ main() {
   out="$(bash "$project/.agents/hooks/session-bootstrap.sh" "$project" 2>"$errors")"
   while IFS= read -r line; do
     case "$line" in
-      bin=*) bin="${line#bin=}" ;;
-      wiki-engine=*) engine="${line#wiki-engine=}" ;;
+      # El núcleo da las rutas relativas al proyecto
+      bin=*) bin="$project/${line#bin=}" ;;
+      wiki-engine=*) engine="$project/${line#wiki-engine=}" ;;
     esac
   done <<<"$out"
   # Los avisos del núcleo, uno por línea

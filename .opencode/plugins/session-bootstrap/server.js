@@ -163,11 +163,15 @@ function runCore(directory) {
     let stderr = "";
     let child;
     const finish = (extra = []) => {
-      const value = (key) =>
-        stdout
+      // El núcleo da las rutas relativas al proyecto, y se completan con el
+      // directorio tal como lo nombra OpenCode (design D4 de windows-support)
+      const value = (key) => {
+        const rel = stdout
           .split("\n")
           .find((line) => line.startsWith(`${key}=`))
-          ?.slice(key.length + 1) || null;
+          ?.slice(key.length + 1);
+        return rel ? path.resolve(directory, rel) : null;
+      };
       const warnings = stderr.split("\n").filter((line) => line.trim() !== "");
       resolve({ bin: value("bin"), engine: value("wiki-engine"), warnings: [...warnings, ...extra] });
     };
