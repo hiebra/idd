@@ -218,3 +218,58 @@ test('check commit without a merge in progress still checks the zones', async (t
   assert.match(mixed.message, /mezclan la zona de specs/);
   assert.equal(checkCommit(dir, {}).ok, false, 'outside an ephemeral container');
 });
+
+// --- check merge (allow-user-requested-merges, D4) ---
+
+test('check merge: another temporary branch or a detached HEAD as target is refused', async (t) => {
+  const { checkMerge } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'branch', 'otra');
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  const other = checkMerge(dir, 'otra', undefined, {});
+  assert.equal(other.ok, false);
+  assert.match(other.message, /no admite el destino 'otra'/);
+  assert.equal(checkMerge(dir, undefined, undefined, {}).ok, false, 'without a target');
+  assert.equal(checkMerge(dir, 'feature/x', 'otra', {}).ok, false, 'bringing a temporary branch');
+  git(dir, 'checkout', '-q', '--detach');
+  const detached = checkMerge(dir, 'main', undefined, {});
+  assert.equal(detached.ok, false);
+  assert.match(detached.message, /HEAD separado/);
+  git(dir, 'checkout', '-q', 'main');
+  assert.equal(checkMerge(dir, 'main', undefined, {}).ok, false, 'from a permanent branch');
+});
+
+test('check merge: without origin/<target> it asks to fetch it', async (t) => {
+  const { checkMerge } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  for (const target of ['main', 'feature/x']) {
+    const gate = checkMerge(dir, target, undefined, {});
+    assert.equal(gate.ok, false, target);
+    assert.match(gate.message, /git fetch origin main/, target);
+  }
+});
+
+test('check merge: bringing a permanent branch the branch already contains, nothing to do', async (t) => {
+  const { checkMerge } = await import(MODULE);
+  const dir = repo(t, 'schema: intent-driven\nx-main: [main, develop]\n');
+  git(dir, 'add', '-A');
+  git(dir, 'branch', 'develop');
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
+  git(dir, 'update-ref', 'refs/remotes/origin/develop', 'develop');
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  write(dir, 'src/a.js', 'a\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'a');
+  for (const source of [undefined, 'main']) {
+    const gate = checkMerge(dir, 'feature/x', source, {});
+    assert.equal(gate.ok, true, gate.message);
+    assert.match(gate.message, /no hay nada que traer/);
+    assert.doesNotMatch(gate.message, /git merge/);
+  }
+  // In an ephemeral container, only in the session branch
+  assert.equal(checkMerge(dir, 'feature/x', undefined, EPHEMERAL).ok, false, 'without a session branch');
+  git(dir, 'config', 'idd.sessionBranch', 'feature/x');
+  assert.equal(checkMerge(dir, 'feature/x', undefined, EPHEMERAL).ok, true);
+});

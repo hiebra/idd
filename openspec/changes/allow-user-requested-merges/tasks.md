@@ -27,7 +27,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 - [x] 3.3 `Hacia una rama permanente que la rama no contiene, primero hay que traerla`: pasos `se ejecuta la puerta \`check merge\` hacia \`main\`` y `su mensaje pide traer antes \`origin/main\` a la rama temporal`. Rojo. Implementar la comprobación `merge-base --is-ancestor origin/<destino> HEAD` → verde → commit
 - [x] 3.4 `Fuera de un contenedor efímero, la fusión con la rama permanente se hace sin cambiar de rama`: pasos `un clon en una rama temporal que contiene \`origin/main\``, `su mensaje da la orden \`git commit-tree\` …` y `el commit que da esa orden tiene el árbol de la rama temporal y los padres …`, que ejecuta en el repo de prueba la orden del mensaje y comprueba árbol y padres. Rojo. Implementar la orden de D4 → verde → commit
 - [x] 3.5 `En un contenedor efímero, la fusión con la rama permanente se hace por PR`: pasos `el clon está en la rama temporal \`claude/exportar\`, que contiene \`origin/main\``, `su mensaje indica abrir un PR de … contra … y fusionarlo con un commit de fusión, no con squash` y `su mensaje no da ninguna orden de push a \`main\``. Rojo. Implementar el mensaje del PR → verde → commit
-- [ ] 3.6 Añadir a `core-tests/branch-change.test.js`: destino que es otra rama temporal o HEAD separado, `origin/<destino>` inexistente, rama que ya contiene la rama permanente al traer (nada que hacer) → commit
+- [x] 3.6 Añadir a `core-tests/branch-change.test.js`: destino que es otra rama temporal o HEAD separado, `origin/<destino>` inexistente, rama que ya contiene la rama permanente al traer (nada que hacer) → commit
 
 ## 4. `merge-targets` (D6): rojo → implementar → verde → commit
 
