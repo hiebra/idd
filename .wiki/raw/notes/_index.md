@@ -8,7 +8,8 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
-| [2026-11-22-ll-adr-0013-sustituye-confirmacion-revision.md](2026-11-22-ll-adr-0013-sustituye-confirmacion-revision.md) | La lección 10 (confirmar en la TUI el cierre de la revisión) queda sustituida por el cierre con git de ADR-0013 | lessons-learned, opencode, openspec-autopilot | 2026-11-22 |
+| [2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md](2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md) | La lección 10 (confirmar en la TUI el cierre de la revisión) queda sustituida por el cierre con git de ADR-0014 | lessons-learned, opencode, openspec-autopilot | 2026-11-22 |
+| [2026-11-22-ll-replace-gherkin-lint-with-gplint.md](2026-11-22-ll-replace-gherkin-lint-with-gplint.md) | 6 lecciones de replace-gherkin-lint-with-gplint: nivel desconocido de gplint, Rule: en gherkin-lint, escenario sin nombre, .extracted/ compartido, main local atrasado y __pycache__ | lessons-learned, gplint, spec-as-source, git | 2026-11-22 |
 | [2026-11-22-ll-add-quote-comment-rule.md](2026-11-22-ll-add-quote-comment-rule.md) | 3 lecciones de add-quote-comment-rule: printf y \uXXXX, pasos de ausencia y ADRs antes de proponer | lessons-learned, bash, acceptance-tests, adr | 2026-11-22 |
 | [2026-11-22-ll-suscripciones-tui-opencode.md](2026-11-22-ll-suscripciones-tui-opencode.md) | 5 lecciones de fix-tui-subscription-cleanup: trazas ECONNRESET, limpieza de setup, binario, TUI sin tmux y alcance de un change | lessons-learned, opencode, plugins | 2026-11-22 |
 | [2026-11-21-ll-archivado-fix-wiki-flow-operations.md](2026-11-21-ll-archivado-fix-wiki-flow-operations.md) | 2 lecciones del archivado de fix-wiki-flow-operations: enlaces relativos y rutas de un change | lessons-learned, openspec, archive | 2026-11-21 |
@@ -19,6 +20,8 @@ Last updated: 2026-11-22
 ## Categories
 
 ## Recent Changes
+
+- 2026-11-22: Lecciones de replace-gherkin-lint-with-gplint
 
 - 2026-11-22: Lecciones de fix-tui-subscription-cleanup
 

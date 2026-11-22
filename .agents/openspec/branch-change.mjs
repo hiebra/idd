@@ -29,7 +29,7 @@
 // `check`, `start` y `switch` imprimen { ok, message } en JSON y salen con 0
 // si se puede seguir y con 1 si no. `list` da las ramas temporales con su
 // change; `start` crea la rama del change desde la rama de origen y cambia a
-// ella; `switch` cambia a una rama temporal (ADR-0012, design D12 de
+// ella; `switch` cambia a una rama temporal (ADR-0013, design D12 de
 // autopilot-sesion-operativa). Ni `start` ni `switch` actúan con el árbol sucio.
 //
 // Sin dependencias: solo módulos node:.

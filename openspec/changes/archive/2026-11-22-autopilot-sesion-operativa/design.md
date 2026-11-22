@@ -216,7 +216,7 @@ El prompt del usuario pedía no preguntar; estas son las decisiones que en un fl
 7. **Modo auto**: se mantiene tal como lo pedía el prompt. Se para en las preguntas de un workflow (reposo sin producto), en los cambios de zona hasta el commit, y con un verify crítico. No se ve incoherente.
 8. **OpenCode Desktop**: no se escribe un `gui-experimental` (Non-Goals). Se documenta.
 9. **Wiki**: la consulta del wiki (`.wiki/`, en solo lectura) cubrió el ciclo y las APIs de sesión ya registradas. Lo nuevo de la UI web, el hook `prompt`, el foco y los 400 sale de la investigación descrita en Context, no del wiki.
-10. **ADR**: dos ADRs nuevos. ADR-0012 sustituye a ADR-0007 (ramas que crea el modelo y commits) y ADR-0013 sustituye a ADR-0008 (producto, cierre por git, sesión operativa y separación entre lógica e interfaz). Cada uno repite lo que sigue valiendo del anterior, que no se toca.
+10. **ADR**: dos ADRs nuevos. ADR-0013 sustituye a ADR-0007 (ramas que crea el modelo y commits) y ADR-0014 sustituye a ADR-0008 (producto, cierre por git, sesión operativa y separación entre lógica e interfaz). Cada uno repite lo que sigue valiendo del anterior, que no se toca.
 11. **Pruebas end-to-end**: las sesiones que crea el plugin llevan el título de su paso, no `e2e:`; se archivaron todas al terminar, junto con las de las sondas. Para que usaran `alibaba/qwen3.8-flash`, cada clon desechable tiene un `opencode.json` con `"model"`. Los arreglos encontrados durante las pruebas se copiaron en caliente a los clones (marcados con `git update-index --assume-unchanged` para no ensuciar su árbol).
 
 ## Risks / Trade-offs

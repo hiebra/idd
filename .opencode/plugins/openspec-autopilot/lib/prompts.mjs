@@ -2,7 +2,7 @@
 // autopilot-sesion-operativa): la instrucción con la que arranca cada paso,
 // el recordatorio de cada petición, el aviso de las sesiones ajenas y el
 // workflow y el agente de cada paso. Ningún texto pide commits: el plugin
-// pasa el producto al stage y el usuario hace el commit (ADR-0012).
+// pasa el producto al stage y el usuario hace el commit (ADR-0013).
 
 import { describe } from './next-step.mjs';
 

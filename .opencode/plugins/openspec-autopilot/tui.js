@@ -1,4 +1,4 @@
-// Parte de TUI del plugin openspec-autopilot para OpenCode 2 (ADR-0013;
+// Parte de TUI del plugin openspec-autopilot para OpenCode 2 (ADR-0014;
 // design D1, D3, D4 y D14 de autopilot-sesion-operativa): solo interfaz. La
 // lógica vive en server.js, que la TUI consulta por el RPC del plugin.
 //

@@ -55,7 +55,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 6. Documentación (zona de código)
 
-- [x] 6.1 `.claude/skills/openspec-git-discipline/SKILL.md` (copia reescrita a propósito, ADR-0012), a mano:
+- [x] 6.1 `.claude/skills/openspec-git-discipline/SKILL.md` (copia reescrita a propósito, ADR-0013), a mano:
   - el modelo crea la rama con `branch-change.mjs start` o cambia con `switch`/`list`;
   - en el autopilot no pide commits;
   - fuera de él, los pide como antes;
@@ -63,7 +63,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 - [x] 6.2 `README.md`: "El ciclo de un change" y "Automatizar el ciclo en OpenCode":
   - sesión operativa, producto, revisión por git y modo auto;
   - UI web, OpenCode Desktop y `opencode run`, con su degradación;
-  - ADR-0012 y ADR-0013.
+  - ADR-0013 y ADR-0014.
 - [x] 6.3 `acceptance-tests/README.md`: lo nuevo del simulador y de `core-tests`.
 
 ## 7. Suite completa

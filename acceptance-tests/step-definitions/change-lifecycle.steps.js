@@ -283,7 +283,7 @@ Then('se pide al usuario que haga el commit', function () {
   assert.match(commits, /pide al usuario (que haga )?el commit/i);
 });
 
-// --- Ramas temporales que crea el modelo (autopilot-sesion-operativa, ADR-0012) ---
+// --- Ramas temporales que crea el modelo (autopilot-sesion-operativa, ADR-0013) ---
 
 const BRANCH_CHANGE = path.join('.agents', 'openspec', 'branch-change.mjs');
 

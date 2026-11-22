@@ -18,7 +18,7 @@ Discovery covers `openspec/specs/` and each active `openspec/changes/<id>/specs/
 
 Every input line maps to **exactly one** output line, so the extracted file has the IDENTICAL line count and **line N of the `.feature` is line N of the `.md`**.
 
-gherkin-lint messages, runner failure locations and effective-spec line targeting (`spec.feature:27:33`) therefore all point at valid `spec.md` lines with zero translation. Read `.extracted/X/spec.feature:N` as `openspec/X/spec.md:N`, always.
+gplint messages, runner failure locations and effective-spec line targeting (`spec.feature:27:33`) therefore all point at valid `spec.md` lines with zero translation. Read `.extracted/X/spec.feature:N` as `openspec/X/spec.md:N`, always.
 
 **Never "improve" the extractor to collapse blank lines.** The whole toolchain leans on this.
 

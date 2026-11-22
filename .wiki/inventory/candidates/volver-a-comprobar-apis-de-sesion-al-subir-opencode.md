@@ -35,7 +35,7 @@ Además, el plugin y el OpenCode simulado de la suite (`acceptance-tests/support
 - El hook `context` puede esperar al menos 300 s a un diálogo de la TUI sin que falle la petición.
 - Tras una recarga en caliente solo siguen vivos los hooks, tools y manejadores RPC de la última generación del servidor.
 
-Desde `autopilot-sesion-operativa` (ADR-0013, `idd@6d6e79c:openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md`), el plugin depende también de: el hook `prompt` con el texto mutable, `ui.router.current()` consultado cada 300 ms, los eventos `focus` del renderer, las llamadas RPC de la TUI con `{ location }`, y que la UI web no cargue la interfaz de los plugins de un proyecto.
+Desde `autopilot-sesion-operativa` (ADR-0014, `idd@6d6e79c:openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md`), el plugin depende también de: el hook `prompt` con el texto mutable, `ui.router.current()` consultado cada 300 ms, los eventos `focus` del renderer, las llamadas RPC de la TUI con `{ location }`, y que la UI web no cargue la interfaz de los plugins de un proyecto.
 
 La suite simula OpenCode, así que no detectaría que cambien.
 

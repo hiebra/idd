@@ -2,8 +2,9 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
-  - raw/notes/2026-11-22-ll-adr-0013-sustituye-confirmacion-revision.md
+  - raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md
   - raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md
+  - raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md
   - raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md
   - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
   - raw/repos/2026-11-22-idd-002f043-adr-0011.md
@@ -16,7 +17,7 @@ verified: 2026-11-22
 tags: [openspec, git, opencode, plugins, openspec-autopilot, adr, spec]
 confidence: high
 volatility: warm
-summary: "Un change se hace en una rama temporal con una sola fusión, que el modelo puede crear con el módulo neutral branch-change.mjs, y el change de la rama se lee de git. En OpenCode 2, el plugin openspec-autopilot mantiene una sesión operativa por rama, decide lo producido en cada paso con el CLI de OpenSpec y cierra las revisiones con git, con la lógica en el servidor para cualquier cliente; en Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006, ADR-0012, ADR-0013, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
+summary: "Un change se hace en una rama temporal con una sola fusión, que el modelo puede crear con el módulo neutral branch-change.mjs, y el change de la rama se lee de git. En OpenCode 2, el plugin openspec-autopilot mantiene una sesión operativa por rama, decide lo producido en cada paso con el CLI de OpenSpec y cierra las revisiones con git, con la lógica en el servidor para cualquier cliente; en Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006, ADR-0013, ADR-0014, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
 ---
 
 # El ciclo de un change y su automatización en OpenCode
@@ -30,7 +31,7 @@ summary: "Un change se hace en una rama temporal con una sola fusión, que el mo
 - **Una rama temporal y una sola fusión**: propuesta, implementación, archive y resincronización del wiki van en la rama, y el archive se hace en ella, antes de fusionar. Nunca en una rama permanente.
 - **Ramas permanentes**: la lista `x-main` de `openspec/config.yaml`, o `main` si no está. La última es la rama de origen. Cualquier otra rama local es temporal, y con HEAD separado no hay ninguna. Una `x-main` con otra forma se trata como ausente y avisa. OpenSpec 1.17.0 acepta claves `x-*` sin avisos ([lecciones](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md), lección 8).
 - **El change de la rama se lee de git**: es el que ha cambiado en `openspec/changes/` desde el merge-base con la rama de origen, con commit o sin él. No se apunta en ningún sitio. Lo calcula `idd@772d0f0:.agents/openspec/branch-change.mjs` (`--json`), sin dependencias y el mismo para los dos agentes (D1 del design).
-- **Las puertas** (proponer, apply, archive) las decide `branch-change.mjs check <propose|apply|archive> [<change>]`, que imprime `{ ok, message }` y sale con 0 o 1. La skill `openspec-git-discipline` manda ejecutarlo y obedecerlo (ver [[origen-de-openspec-git-discipline|su origen]] ([su origen](../concepts/origen-de-openspec-git-discipline.md))).
+- **Las puertas** (proponer, apply, archive) las decide `branch-change.mjs check <propose|apply|archive> [<change>]`, que imprime `{ ok, message }` y sale con 0 o 1. La skill `openspec-git-discipline` manda ejecutarlo y obedecerlo (ver [[origen-de-openspec-git-discipline|su origen]] ([su origen](../concepts/origen-de-openspec-git-discipline.md))). El merge-base se calcula con la rama de origen local: si el `main` local va por detrás de `origin/main`, como en un clon de una sesión en la nube, la puerta da como changes de la rama otros ya fusionados. Se arregla adelantando `main` solo por avance rápido, con `git fetch origin main:main` ([lecciones de replace-gherkin-lint-with-gplint](../../raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md), lección 5).
 - **Los commits y las fusiones los hace el usuario** (`idd@6d6e79c:adr/0012-model-creates-change-branches-plugin-stages.md`, que sustituye a ADR-0007): fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y el modelo no pide commits.
 - **El modelo crea la rama del change o cambia de rama temporal**, solo con `branch-change.mjs list | start <change> | switch <rama>`: la rama nueva sale siempre de la rama de origen y se llama como el change, y nunca con el árbol sucio (`idd@6d6e79c:.agents/openspec/branch-change.mjs`, `idd@6d6e79c:.agents/skills/openspec-git-discipline/SKILL.md`).
 - **Antes de proponer, busca las decisiones previas**: el schema solo pide leer los ADRs en el paso `design`, pero una propuesta puede chocar con un ADR en vigor sobre el mismo mecanismo. En `add-quote-comment-rule`, la primera propuesta usaba `AGENTS.md`, que ADR-0005 ya había descartado, y hubo que rehacerla al escribir las specs ([lecciones de add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md), lección 3).
@@ -48,6 +49,8 @@ summary: "Un change se hace en una rama temporal con una sola fusión, que el mo
 Lo común al ciclo va en una pieza neutral, y por eso `branch-change.mjs` está fuera del plugin. En Claude Code no hay nada del plugin, y la suite lo comprueba (`.claude/` no nombra el plugin, sus tools ni su RPC).
 
 ## El plugin `openspec-autopilot`
+
+> ADR-0013 (ramas que crea el modelo) y ADR-0014 (el autopilot) se llamaban ADR-0012 y ADR-0013 en `idd@6d6e79c`, el commit del archivado: se renumeraron al fusionar con `main`, que ya tenía un ADR-0012 (el lint de las specs con gplint). Las citas fijadas en ese commit mantienen las rutas de entonces.
 
 `idd@6d6e79c:adr/0013-autopilot-verifies-product-and-closes-reviews-with-git.md` (sustituye a ADR-0008), `idd@6d6e79c:openspec/specs/openspec-autopilot/spec.md`, el design del change archivado (`idd@6d6e79c:openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md`) y el código de `idd@6d6e79c:.opencode/plugins/openspec-autopilot/`:
 
@@ -70,7 +73,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - **Cerrar con `--standalone` corta las suscripciones vivas**: cada `events.on` de la TUI es una suscripción a `/api/event`, y si el servidor propio de la TUI se apaga con ella viva, el cliente imprime una traza `ClientError: Transport … ECONNRESET`. Sin `--standalone` no ocurre, porque el servidor sigue vivo (`idd@99bdccd:openspec/changes/archive/2026-11-22-fix-tui-subscription-cleanup/design.md`, Context).
 - **Encadenar desde `experimental.idle`**: crear la sesión, `prompt`, navegar y archivar la anterior tarda menos de 200 ms. Tras una interrupción o una compactación no se ejecuta `idle` (lección 6).
 - **`ctx.session.list()` devuelve `{ data, cursor }` por páginas**, no un array. Se descubrió en la prueba final con OpenCode real, y se corrigió en el plugin y en el simulador (`idd@772d0f0:openspec/changes/archive/2026-11-21-add-openspec-autopilot/tasks.md`, task 12.2).
-- **El modelo no decide por el usuario**: un modelo real cerró con `ok` una revisión ante "Gracias, lo miro luego.". De ahí la confirmación en la TUI de ADR-0008 (lección 10), que ADR-0013 sustituye por el cierre con git: la decisión del usuario es su commit, no una frase del modelo ([lección del 2026-11-22](../../raw/notes/2026-11-22-ll-adr-0013-sustituye-confirmacion-revision.md)).
+- **El modelo no decide por el usuario**: un modelo real cerró con `ok` una revisión ante "Gracias, lo miro luego.". De ahí la confirmación en la TUI de ADR-0008 (lección 10), que ADR-0014 sustituye por el cierre con git: la decisión del usuario es su commit, no una frase del modelo ([lección del 2026-11-22](../../raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md)).
 
 - **La UI web no ejecuta la interfaz de un plugin local** [comprobado]: ni `tui.js` ni un bundle `./gui-experimental`, que solo carga OpenCode Desktop por su *bridge*; `experimental.browser/attach` es el navegador integrado de Desktop (design de `autopilot-sesion-operativa`, Context).
 - **El hook de servidor `prompt`** llega con cada mensaje, antes de la petición al modelo, con el texto mutable; también cuando el mensaje queda pendiente detrás del turno en curso. Es el que cierra las revisiones por git.
@@ -98,10 +101,9 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## Sources
 
-- [Lessons Learned: el cierre de la revisión pasa de la confirmación en la TUI a git (ADR-0013)](../../raw/notes/2026-11-22-ll-adr-0013-sustituye-confirmacion-revision.md): lección 1.
-
-- [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0012-model-creates-change-branches-plugin-stages.md`, `adr/0013-autopilot-verifies-product-and-closes-reviews-with-git.md`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.opencode/plugins/openspec-autopilot/`, `.agents/openspec/branch-change.mjs`, `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md` y `tasks.md`.
-
+- [Lessons Learned: el cierre de la revisión pasa de la confirmación en la TUI a git (ADR-0014)](../../raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md): lección 1.
+- [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0013-model-creates-change-branches-plugin-stages.md`, `adr/0014-autopilot-verifies-product-and-closes-reviews-with-git.md`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.opencode/plugins/openspec-autopilot/`, `.agents/openspec/branch-change.mjs`, `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md` y `tasks.md`.
+- [Lessons Learned: el lint de las specs con gplint](../../raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md): lección 5.
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `adr/0006-agent-asymmetry-policy.md`, `adr/0007-single-branch-change-lifecycle.md`, `adr/0008-openspec-autopilot-plugin.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `openspec/specs/openspec-autopilot/spec.md`, `.agents/openspec/branch-change.mjs`, `.opencode/plugins/openspec-autopilot/`, `README.md`, `acceptance-tests/README.md`, `openspec/changes/archive/2026-11-21-add-openspec-autopilot/tasks.md`.
 - [Lessons Learned: APIs de sesión de OpenCode 2.3.2 para orquestar un change](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md): lecciones 1 a 10.
 - [Lessons Learned: add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md): lección 3.

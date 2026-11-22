@@ -1,4 +1,4 @@
-# ADR-0012: Un change, una rama temporal que puede crear el modelo, y commits solo del usuario
+# ADR-0013: Un change, una rama temporal que puede crear el modelo, y commits solo del usuario
 
 - Status: accepted, supersedes ADR-0007
 - Date: 2026-11-22
@@ -10,7 +10,7 @@ ADR-0007 fijó el ciclo de un change: una rama temporal, una sola fusión y el a
 
 Las pruebas del autopilot con OpenCode 2.3.2 y un modelo que no obedece (change `autopilot-sesion-operativa`) cambian dos premisas:
 
-- **El modelo que pide el commit** no es fiable: pide commits en mitad de un paso o no los pide. Además, cuando el cierre de una revisión lo decide git (ADR-0013), el commit del usuario es la señal. Un modelo que lo pide, o que lo hace, la confunde.
+- **El modelo que pide el commit** no es fiable: pide commits en mitad de un paso o no los pide. Además, cuando el cierre de una revisión lo decide git (ADR-0014), el commit del usuario es la señal. Un modelo que lo pide, o que lo hace, la confunde.
 - **Que el modelo no cree ramas** obliga a salir del agente para empezar un change desde una rama permanente, y a leer git a mano para saltar entre changes. La sesión operativa del autopilot arranca sola, también en una rama permanente, y necesita que el modelo cree la rama del change.
 
 El resto de ADR-0007 sigue valiendo, y por eso se repite aquí entero.

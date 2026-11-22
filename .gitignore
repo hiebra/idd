@@ -1,6 +1,8 @@
 node_modules/
 acceptance-tests/.extracted/
 acceptance-tests/reports/
+# Bytecode de Python (por ejemplo, el de py_compile en las skills)
+__pycache__/
 # Motor del wiki instalado por el arranque de sesión (local, nunca versionado)
 .agents/wiki-engine/
 .agents/wiki-engine.*/

@@ -1,4 +1,4 @@
-# ADR-0013: El autopilot decide por el producto y por git, con la lógica en el servidor y una sesión operativa por rama
+# ADR-0014: El autopilot decide por el producto y por git, con la lógica en el servidor y una sesión operativa por rama
 
 - Status: accepted, supersedes ADR-0008
 - Date: 2026-11-22
@@ -22,7 +22,7 @@ Alternativas consideradas:
 
 - **Endurecer los prompts para que el modelo obedezca.** Es lo que ha fallado.
 - **Seguir con la confirmación en la TUI y añadir otra interfaz para la web.** La web no ejecuta código de plugins, y OpenCode Desktop solo con una API experimental.
-- **Que el plugin haga los commits.** Contradice ADR-0012: el historial es del usuario.
+- **Que el plugin haga los commits.** Contradice ADR-0013: el historial es del usuario.
 
 ## Decision
 

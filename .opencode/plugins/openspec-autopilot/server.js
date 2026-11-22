@@ -1,5 +1,5 @@
 // Parte de servidor del plugin openspec-autopilot para OpenCode 2
-// (ADR-0013; design de add-openspec-autopilot y de autopilot-sesion-operativa).
+// (ADR-0014; design de add-openspec-autopilot y de autopilot-sesion-operativa).
 // Toda la lógica del ciclo vive aquí y funciona con cualquier cliente (TUI,
 // UI web, OpenCode Desktop, `opencode run`); la TUI solo pone la interfaz
 // (tui.js), pedida por el RPC del plugin (D1).

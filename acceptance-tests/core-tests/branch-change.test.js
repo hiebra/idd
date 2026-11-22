@@ -87,7 +87,7 @@ test('a change deleted in the branch does not count, and an archived one stops b
   assert.equal(branchChange(dir).kind, 'none');
 });
 
-// --- list, start and switch (autopilot-sesion-operativa, design D12, ADR-0012) ---
+// --- list, start and switch (autopilot-sesion-operativa, design D12, ADR-0013) ---
 
 function addChange(dir, name) {
   fs.mkdirSync(path.join(dir, 'openspec', 'changes', name), { recursive: true });

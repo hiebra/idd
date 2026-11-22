@@ -56,7 +56,7 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
   - Asume el riesgo de que la propuesta ya no se revise ni se fusione por separado, y deja abierta la vuelta de la fusión intermedia.
 - **La copia de la skill está reescrita** con esas puertas, con el mismo nombre y la misma descripción de activación, divergiendo del origen a propósito (`idd@772d0f0:.agents/skills/openspec-git-discipline/SKILL.md`, blob `6cd1ad0`, ya distinto del `835e065` del origen). Las puertas ya no las decide el modelo leyendo git: la skill manda ejecutar `node .agents/openspec/branch-change.mjs check <propose|apply|archive>` y obedecer su salida, y enumera como señales de alarma exigir la propuesta en la rama de origen antes del apply y archivar en una rama permanente. Un comentario al principio avisa de que no se sobrescriba al actualizar desde `intent-driven-template` sin revisarla (ADR-0007). Ver [[ciclo-de-un-change-y-autopilot|El ciclo de un change y su automatización en OpenCode]] ([El ciclo de un change y su automatización en OpenCode](../topics/ciclo-de-un-change-y-autopilot.md)).
 
-- **ADR-0012 sustituye a ADR-0007** (`idd@6d6e79c:adr/0012-model-creates-change-branches-plugin-stages.md`): mantiene el ciclo de una rama y una fusión, pero el modelo ya puede crear la rama del change (siempre desde la rama de origen y con su nombre) y cambiar de rama temporal con `branch-change.mjs list | start | switch`, y en el autopilot no pide commits porque el plugin prepara el stage. La copia de la skill se reescribió otra vez con esas reglas (`idd@6d6e79c:.agents/skills/openspec-git-discipline/SKILL.md`).
+- **ADR-0013 sustituye a ADR-0007** (`idd@6d6e79c:adr/0012-model-creates-change-branches-plugin-stages.md`): mantiene el ciclo de una rama y una fusión, pero el modelo ya puede crear la rama del change (siempre desde la rama de origen y con su nombre) y cambiar de rama temporal con `branch-change.mjs list | start | switch`, y en el autopilot no pide commits porque el plugin prepara el stage. La copia de la skill se reescribió otra vez con esas reglas (`idd@6d6e79c:.agents/skills/openspec-git-discipline/SKILL.md`).
 
 ## Lo que no se sabe
 
@@ -70,7 +70,7 @@ summary: "La skill openspec-git-discipline exige cruzar main dos veces por chang
 
 ## Sources
 
-- [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0012-model-creates-change-branches-plugin-stages.md`, `.agents/skills/openspec-git-discipline/SKILL.md`, `.agents/openspec/branch-change.mjs`.
+- [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0013-model-creates-change-branches-plugin-stages.md`, `.agents/skills/openspec-git-discipline/SKILL.md`, `.agents/openspec/branch-change.mjs`.
 
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `.agents/skills/openspec-git-discipline/SKILL.md`, `.agents/openspec/branch-change.mjs`.
 - [Lecciones del archivado de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-archivado-fix-wiki-flow-operations.md): una rama con dos changes.
