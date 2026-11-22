@@ -2,6 +2,7 @@
 title: "La suite de aceptación y spec-as-source"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-archive-autopilot-rama-por-sesion.md
   - raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
@@ -66,6 +67,10 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - `openspec validate --strict` no pasa con las specs del proyecto: sus avisos de idioma ("DEBE" en lugar de SHALL/MUST) y de formato (Gherkin en bloques de código) cuentan como errores. El criterio de cierre es validar sin `--strict` y revisar los demás avisos ([lecciones de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md)).
 - Depende de que la simulación de cada agente siga el contrato real. Cuando un agente cambia su API, hay que actualizar el adaptador y su simulación (`idd@1cf0792:adr/0002-agent-neutral-session-bootstrap.md`). Ese contrato se comprueba aparte con los agentes reales (ver [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md)) y [[proveedor-falso-para-verificar-contexto|Proveedor falso para verificar el contexto]] ([Proveedor falso para verificar el contexto](../concepts/proveedor-falso-para-verificar-contexto.md))).
 
+## Entre el sync y el archive
+
+Con los deltas ya sincronizados y el change aún activo, el cargador de specs efectivas avisa de que un requisito REMOVED no existe en `openspec/specs/`: es lo esperado y confirma el sync. El sync puede hacerse por bloques, sustituyendo cada `### Requirement:` por nombre, porque los MODIFIED de los deltas llevan el requisito entero; después se comprueba que cada bloque del delta aparece literal en la spec principal ([lecciones del archive de autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-archive-autopilot-rama-por-sesion.md), lecciones 1 y 2).
+
 ## Pasos con `/` en cucumber-js
 
 En una Cucumber Expression, `/` separa alternativas de texto, así que un paso definido con cadena cuyo texto lleva `/` (como `` `/new` ``) no casa y sale sin definir; también `(`, `)`, `{` y `}` son especiales. Se define con una expresión regular o escapando la barra (`\\/`); si un paso sale sin definir con un texto que parece igual, se compara con el snippet que propone cucumber ([lecciones de autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md), lección 1).
@@ -79,6 +84,7 @@ En una Cucumber Expression, `/` separa alternativas de texto, así que un paso d
 
 ## Sources
 
+- [Lessons Learned: archive de autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-archive-autopilot-rama-por-sesion.md): lecciones 1 y 2.
 - [Lessons Learned: autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md): lección 1.
 - [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `acceptance-tests/README.md`, `acceptance-tests/support/agents/opencode-sim.mjs`.
 - [Lessons Learned: el lint de las specs con gplint](../../raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md): lecciones 1 a 4 y 6.

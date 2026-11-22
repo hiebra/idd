@@ -156,3 +156,5 @@
 ## [2026-11-22] refresh | archivado de autopilot-rama-por-sesion (idd@812f22d): 3 artículos actualizados (ciclo-de-un-change-y-autopilot, arranque-de-sesion, suite-de-aceptacion-y-spec-as-source)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "archive de autopilot-rama-por-sesion" → raw/notes/2026-11-22-ll-archive-autopilot-rama-por-sesion.md (2 lessons, 1 articles updated)
