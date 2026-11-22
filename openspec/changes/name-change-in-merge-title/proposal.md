@@ -12,7 +12,7 @@ Con la fusión `--no-ff`, `git log --first-parent` de una rama permanente muestr
   - si la rama lleva varios changes, los nombra todos;
   - si no lleva ninguno (por ejemplo, una rama que solo toca el wiki), nombra la rama, como hasta ahora.
 - **Fuera de un contenedor efímero**, la orden `git commit-tree … -m "…"` que da la puerta lleva ese título.
-- **En un contenedor efímero**, la puerta indica poner ese título al PR y recomendar al usuario ese mismo título para el commit de fusión, porque el que propone GitHub nombra la rama de la sesión.
+- **En un contenedor efímero**, si la rama lleva algún change, la puerta indica poner ese título al PR y recomendar al usuario ese mismo título para el commit de fusión, porque el que propone GitHub nombra la rama de la sesión. Si no lleva ninguno, no da título: el PR se titula como hasta ahora.
 - **La skill `openspec-git-discipline`** lo dice en «La fusión con una rama permanente».
 
 Fuera de alcance:

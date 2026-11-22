@@ -1,6 +1,6 @@
 `acceptance-tests/` ya existe, así que se omite la puesta en marcha de la suite. Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → commit. Un commit nunca mezcla `openspec/` con la zona de código, salvo este `tasks.md`. En un contenedor efímero, cada commit pasa antes por `check commit`.
 
-Los pasos pendientes salen de `npx cucumber-js --dry-run --name "título"` en `acceptance-tests/`: son seis, todos para `step-definitions/change-lifecycle.steps.js`. Antes de definir cada uno se contrasta su expresión con las que ya existen, se restringen las capturas a los valores de los escenarios y solo capturan los grupos que recibe la función. En la nube la suite completa tarda entre 6 y 20 minutos según el contenedor: se itera con `--name` y la pasada completa va en segundo plano, sin editar nada del proyecto mientras corre. Las referencias D1 a D7 son las del `design.md` del change.
+Los pasos pendientes salen de `npx cucumber-js --dry-run --name "título"` en `acceptance-tests/`: eran seis, y la decisión de no dar título al PR de una rama sin change añade dos; todos son para `step-definitions/change-lifecycle.steps.js`. Antes de definir cada uno se contrasta su expresión con las que ya existen, se restringen las capturas a los valores de los escenarios y solo capturan los grupos que recibe la función. En la nube la suite completa tarda entre 6 y 20 minutos según el contenedor: se itera con `--name` y la pasada completa va en segundo plano, sin editar nada del proyecto mientras corre. Las referencias D1 a D7 son las del `design.md` del change.
 
 ## 0. Antes del apply
 
@@ -21,12 +21,14 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --name "título"` en `a
 
 - [ ] 3.1 `openspec-change-lifecycle: En un contenedor efímero, el título del PR nombra el change de la rama`, paso ``su mensaje indica que el PR lleve el título `Merge exportar-datos into main`, también si ya estaba abierto``. Rojo: el mensaje no da ningún título. Añadir al mensaje de `checkMerge` en un contenedor efímero el título del PR, y que se le ponga al PR si ya está abierto, sin tocar lo que comprueban los pasos vigentes (``PR de `<rama>` contra `<destino>` ``, «commit de fusión, no con squash» y ninguna orden de push al destino) → verde → commit
 - [ ] 3.2 Mismo escenario, paso `su mensaje recomienda ese mismo título para el commit de fusión`. Rojo: el mensaje no lo recomienda. Añadir la recomendación y su motivo: el título que propone GitHub nombra la rama de la sesión → verde → commit
+- [ ] 3.3 `openspec-change-lifecycle: En un contenedor efímero, sin change la puerta no da título al PR`, paso `su mensaje no da ningún título para el PR`. Comprobar que está en rojo si la puerta da el título a todos los PR, y en verde con el título solo para las ramas con change; el escenario vigente del PR, cuya rama no lleva change, sigue en verde → commit
 
 ## 4. La skill y la documentación (D6): rojo → implementar → verde → commit
 
 - [x] 4.1 `openspec-change-lifecycle: La skill indica que el título de la fusión es el que da la puerta`, paso ``indica que el título de la fusión es el que da la puerta `check merge`, que nombra el change de la rama``, sobre la sección `<!-- lifecycle:merge -->`. Rojo con la skill actual. En «La fusión con una rama permanente» de `.agents/skills/openspec-git-discipline/SKILL.md`: el título de la fusión, `Merge <change> into <destino>`, es el que da la puerta y no se cambia, y la orden local lo lleva en el `-m` → verde → commit
-- [ ] 4.2 Mismo escenario, paso `indica poner ese título al PR y recomendarlo para su commit de fusión`. Rojo. En el punto del PR de la skill: el PR lleva ese título, también si ya estaba abierto; el resumen del change va en su descripción; y el agente recomienda ese mismo título para el commit de fusión y dice por qué. Añadir la señal de alarma de D6 → verde → commit
-- [ ] 4.3 Documentar el título de la fusión en la cabecera de `branch-change.mjs` (puerta `merge`) y en «Quién fusiona, y cómo» del `README.md` → commit
+- [ ] 4.2 Mismo escenario, paso `indica poner ese título al PR y recomendarlo para su commit de fusión`. Rojo. En el punto del PR de la skill: si la rama lleva algún change, el PR lleva ese título, también si ya estaba abierto; el resumen del change va en su descripción; y el agente recomienda ese mismo título para el commit de fusión y dice por qué. Añadir la señal de alarma de D6 → verde → commit
+- [ ] 4.3 Mismo escenario, paso `indica que un PR sin change lo titula el agente, como hasta ahora`. Rojo. Añadirlo al punto del PR de la skill → verde → commit
+- [ ] 4.4 Documentar el título de la fusión en la cabecera de `branch-change.mjs` (puerta `merge`) y en «Quién fusiona, y cómo» del `README.md` → commit
 
 ## 5. Cierre
 

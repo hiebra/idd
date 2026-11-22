@@ -45,7 +45,7 @@ Restricciones:
 
 ### D1. El título de la fusión es `Merge <changes> into <destino>`
 
-`<changes>` son los nombres de los changes de la rama, separados por una coma y un espacio. Con un solo change, que es lo habitual: `Merge exportar-datos into main`. Si la rama no lleva ningún change, se nombra la rama, como hasta ahora: `Merge <rama> into <destino>`.
+`<changes>` son los nombres de los changes de la rama, separados por una coma y un espacio. Con un solo change, que es lo habitual: `Merge exportar-datos into main`. Si la rama no lleva ningún change, se nombra la rama, como hasta ahora: `Merge <rama> into <destino>`. Ese título sin change solo llega a la orden local: al PR de una rama sin change, la puerta no le da título (D5).
 
 El formato es el que ya tienen las fusiones locales de `main` y la orden actual de la puerta. Solo cambia de dónde sale el nombre: del change, no de la rama.
 
@@ -62,7 +62,7 @@ El título usa `changes` del estado que la puerta ya calcula. No hay una segunda
 
 - **En curso o archivado, el nombre es el mismo.** El título no cambia entre antes y después del archive.
 - **Varios changes, todos.** Los nombres, sin repetir y en el orden de `changes`, que es alfabético. Pasa sin la excepción, con varias propuestas en una rama, y también cuando una rama retoca el directorio de un change ya archivado: la rama del PR #9 (`windows-support`) corrigió un enlace en el `adr.md` archivado de `replace-gherkin-lint-with-gplint`, y su título habría sido `Merge replace-gherkin-lint-with-gplint, windows-support into main`.
-- **Ninguno, la rama.** Las ramas que solo tocan el wiki (los PR #2, #3 y #4) y las que no tienen rama de origen con la que comparar (`kind: unknown`).
+- **Ninguno, la rama.** Las ramas que solo tocan el wiki (como las de los PR #2, #3 y #4) y las que no tienen rama de origen con la que comparar (`kind: unknown`). Vale para la orden local; el PR de una rama sin change no recibe título (D5).
 - **Se calcula contra la rama de origen**, también cuando el destino es otra rama permanente.
 
 Alternativas:
@@ -89,9 +89,9 @@ La orden que da la puerta solo cambia en el `-m`:
 
 El resto del mensaje, el árbol, los padres y el push no cambian.
 
-### D5. En un contenedor efímero, el PR lleva el título y se recomienda para su commit de fusión
+### D5. En un contenedor efímero, el PR de una rama con change lleva el título, y se recomienda para su commit de fusión
 
-El mensaje de la puerta añade dos cosas a lo que ya indica (el texto exacto se ajusta al implementar):
+Si la rama lleva algún change, el mensaje de la puerta añade dos cosas a lo que ya indica (el texto exacto se ajusta al implementar):
 
 > … abre un PR de `claude/exportar` contra `main` con las herramientas de GitHub de la sesión, con el título `Merge exportar-datos into main` (si el PR ya está abierto, ponle ese título), y recomienda al usuario fusionarlo con un commit de fusión, no con squash, y con ese mismo título en el commit de fusión: el que propone GitHub nombra la rama de la sesión. …
 
@@ -105,16 +105,20 @@ Por qué el mismo texto en los dos sitios:
 
 El resumen del change, que algunos PR llevaban en el título, va en la descripción del PR.
 
+**Sin change, la puerta no da título al PR.** El mensaje queda como hasta ahora: el PR lo titula el agente con lo que trae la rama, y GitHub titula la fusión con la rama de la sesión, que es lo mismo que nombraría `Merge <rama> into <destino>`. Lo decidió el usuario durante el apply. Con `Merge claude/<sesión> into main`, los PR que solo tocan el wiki (3 de los 11 de `main`) perderían su título descriptivo en la lista de PR y en el cuerpo del commit de fusión, y el índice de changes no ganaría nada.
+
 Alternativas:
 - **Que el título del PR empiece por el nombre del change y siga con un resumen**, y pedir `Merge <change> into <destino>` solo para el commit de fusión. Son dos textos: el del commit habría que dictarlo en la conversación, y sin el cambio del usuario el cuerpo llevaría un título libre.
 - **Que el agente fusione el PR y ponga él el título del commit.** La skill deja la fusión del PR al usuario, y este change no lo cambia.
 - **Decir el título recomendado solo en la conversación.** Se pierde si el usuario fusiona más tarde desde GitHub.
+- **Dar también `Merge <rama> into <destino>` al PR de una rama sin change.** Era la regla de la primera versión de este design, la misma para todos los PR. Se descarta por lo dicho arriba.
 
 ### D6. La skill y la documentación
 
 - **La skill `openspec-git-discipline`**, en «La fusión con una rama permanente»:
   - el título de la fusión es el que da la puerta, `Merge <change> into <destino>`, y no se cambia;
-  - en un contenedor efímero, el PR lleva ese título, también si ya estaba abierto, y el resumen del change va en su descripción;
+  - en un contenedor efímero, el PR de una rama con change lleva ese título, también si ya estaba abierto, y el resumen del change va en su descripción;
+  - el PR de una rama sin change lo titula el agente, como hasta ahora;
   - el agente recomienda ese mismo título para el commit de fusión, y dice por qué: el que propone GitHub nombra la rama de la sesión.
 
   Se añade una señal de alarma: dar a la fusión con una rama permanente, o a su PR, un título distinto del de la puerta.
@@ -128,8 +132,9 @@ Pasos nuevos en `acceptance-tests/step-definitions/change-lifecycle.steps.js`:
 
 - **`la rama temporal lleva <changes>`** parte de la rama que ya monta `temporaryBranchWithRemote`, que contiene `origin/main`. Añade los changes con `addChange` y `archiveChange` y hace commit, porque la puerta no deja seguir con el árbol sucio.
 - **`el commit de fusión que da su orden se titula …`** toma del mensaje la orden `git commit-tree`, la ejecuta sin el push y lee el título del commit creado. Comprueba la orden, no solo el texto del mensaje.
-- **Los dos pasos del PR** leen el mensaje de la puerta: el título del PR, que valga para un PR ya abierto y la recomendación para el commit de fusión.
-- **Los dos pasos de la skill** leen su sección `<!-- lifecycle:merge -->`.
+- **Los dos pasos del PR con change** leen el mensaje de la puerta: el título del PR, que valga para un PR ya abierto y la recomendación para el commit de fusión.
+- **El paso del PR sin change** comprueba que el mensaje no da ningún título.
+- **Los tres pasos de la skill** leen su sección `<!-- lifecycle:merge -->`.
 
 Los cinco escenarios vigentes del requisito no cambian: sus ramas no llevan ningún change, y el título sigue nombrando la rama.
 
