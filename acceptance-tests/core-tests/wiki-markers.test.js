@@ -11,10 +11,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
 const { Machine } = require('../support/machine');
 
-const CORE = path.resolve(__dirname, '..', '..', '.agents', 'hooks', 'session-bootstrap.sh');
+const { runCore } = require('../support/core');
 
 const OPERATIONS = {
   'claude-code': { query: '`/wiki:query --local`', ingest: '`/wiki:ingest <url> --local`' },
@@ -35,7 +34,7 @@ function projectWith({ guide, reminder }) {
 function wikiText(mode, agent, dir) {
   const env = { ...process.env };
   delete env.PROJECT_WIKI;
-  const result = spawnSync('bash', [CORE, mode, agent, dir], { encoding: 'utf8', env });
+  const result = runCore([mode, agent, dir], { encoding: 'utf8', env });
   assert.equal(result.status, 0, result.stderr);
   return result.stdout;
 }

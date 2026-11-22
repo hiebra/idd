@@ -22,7 +22,7 @@ const { git } = require('../support/engine');
 const { REPO_ROOT } = require('../support/project');
 const { sessionEnv } = require('../support/branches');
 
-const CORE = path.join(REPO_ROOT, '.agents', 'hooks', 'session-bootstrap.sh');
+const { runCore } = require('../support/core');
 const MODULE = path.join('.agents', 'openspec', 'branch-change.mjs');
 
 function root(t) {
@@ -70,7 +70,7 @@ function run(s, { ephemeral = false } = {}) {
   const env = sessionEnv({ ephemeral });
   for (const key of Object.keys(env)) if (/^GIT_/.test(key)) delete env[key];
   env.PATH = [s.bin, '/usr/bin', '/bin'].join(path.delimiter);
-  const result = spawnSync('bash', [CORE, s.project], { env, encoding: 'utf8', timeout: 120000 });
+  const result = runCore([s.project], { env, encoding: 'utf8', timeout: 120000 });
   return { status: result.status, warnings: (result.stderr ?? '').split('\n').filter((l) => l.startsWith('session-start:')).join('\n') };
 }
 

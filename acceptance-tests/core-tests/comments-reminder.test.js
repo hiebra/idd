@@ -17,16 +17,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const CORE = path.join(ROOT, '.agents', 'hooks', 'session-bootstrap.sh');
+const { runCore } = require('../support/core');
 const REMINDER = path.join(ROOT, '.agents', 'comments', 'reminder.md');
 
 function commentsReminder(message, { agent = 'claude-code', env = {} } = {}) {
   const base = { ...process.env };
   delete base.PROJECT_COMMENTS;
-  const result = spawnSync('bash', [CORE, 'comments-reminder', agent, ROOT], {
+  const result = runCore(['comments-reminder', agent, ROOT], {
     encoding: 'utf8',
     input: message,
     env: { ...base, ...env },
@@ -101,7 +100,7 @@ for (const agent of ['claude-code', 'opencode']) {
 
 test('PROJECT_COMMENTS=off: no reminder and no rule', () => {
   assert.equal(commentsReminder("''el segundo punto'' no lo entiendo", { env: { PROJECT_COMMENTS: 'off' } }), '');
-  const result = spawnSync('bash', [CORE, 'comments-rule', 'claude-code', ROOT], {
+  const result = runCore(['comments-rule', 'claude-code', ROOT], {
     encoding: 'utf8',
     env: { ...process.env, PROJECT_COMMENTS: 'off' },
   });
@@ -111,7 +110,7 @@ test('PROJECT_COMMENTS=off: no reminder and no rule', () => {
 
 test('an unknown agent or a missing project gives nothing and exits with 0', () => {
   for (const args of [['comments-reminder', 'otro', ROOT], ['comments-reminder', 'claude-code', '/no/existe']]) {
-    const result = spawnSync('bash', [CORE, ...args], { encoding: 'utf8', input: 'ya' });
+    const result = runCore(args, { encoding: 'utf8', input: 'ya' });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, '');
   }
