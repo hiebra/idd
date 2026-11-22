@@ -186,3 +186,9 @@
 ## [2026-11-22] ll | "allow-user-requested-merges (fusiones con main)" → raw/notes/2026-11-22-ll-allow-user-requested-merges-2.md (2 lessons, 1 article updated)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, 288741b): archivado de guiar-revision-con-tests, 9 new, 0 skipped, 9 total candidates
+
+## [2026-11-22] compile | wiki/topics/ciclo-de-un-change-y-autopilot.md: la revisión de una task y del verify se guía con los tests de aceptación (guiar-revision-con-tests, idd@288741b)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
