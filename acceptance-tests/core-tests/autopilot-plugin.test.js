@@ -16,6 +16,9 @@
 //   does not chain (Modo auto);
 // - no exception leaves setup, the hooks, the tools or the RPC handlers, and
 //   every wait is bounded.
+// - autopilot-rama-por-sesion D4: «Crear un worktree nuevo» tries the name
+//   dialog again when «Manage workspaces» mounts slowly, and says how to
+//   open it when it never opens.
 //
 // Run with: npm run test:core
 
@@ -394,4 +397,36 @@ test('the worktree strategy: one registration across reloads and worktree instan
   await w.opencodeCall('close');
   assert.deepEqual(w.opencode.strategies, []);
   assert.deepEqual(w.opencode.crashes, []);
+});
+
+// D4 of autopilot-rama-por-sesion: «Crear un worktree nuevo» opens «Name
+// worktree» after a pause; if «Manage workspaces» is still mounting, it tries
+// once more, and if it still does not open, it says how to open it
+async function chooseNewWorktree(t, workspacesMountMs) {
+  const w = world(t);
+  await ap.prepareChange(w, { artifacts: ['proposal', 'specs'] });
+  await w.startOpenCode({ alreadyOpen: true, workspacesMountMs });
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'artifact', id: 'design' } });
+  await w.opencodeCall('goto', { sessionID: owner });
+  await w.opencodeCall('dialogWait', { on: true });
+  await w.opencodeCall('home');
+  assert.ok(ap.lastModal(w)?.open, ap.describeSessions(w));
+  await w.opencodeCall('answers', { answers: [{ choose: 'Crear un worktree nuevo' }], settle: true });
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  await w.opencodeCall('settle');
+  return w;
+}
+
+test('the name dialog opens on the second try when «Manage workspaces» mounts slowly', async (t) => {
+  const w = await chooseNewWorktree(t, 400);
+  assert.deepEqual(w.opencode.keymap, ['session.move', 'dialog.move_session.new', 'dialog.move_session.new']);
+  assert.ok(w.opencode.dialogs.some((d) => d.kind === 'name-worktree' && d.open), JSON.stringify(w.opencode.dialogs));
+  assert.equal(w.opencode.toasts.some((x) => /diálogo de nombre/.test(x.message)), false);
+});
+
+test('when the name dialog never opens, the TUI says how to open it', async (t) => {
+  const w = await chooseNewWorktree(t, 5000);
+  assert.deepEqual(w.opencode.keymap, ['session.move', 'dialog.move_session.new', 'dialog.move_session.new']);
+  assert.equal(w.opencode.dialogs.some((d) => d.kind === 'name-worktree'), false);
+  assert.ok(w.opencode.toasts.some((x) => /no se ha podido abrir el diálogo de nombre/.test(x.message) && /ctrl\+a/.test(x.message)), JSON.stringify(w.opencode.toasts));
 });

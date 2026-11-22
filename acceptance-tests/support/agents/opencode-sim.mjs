@@ -75,7 +75,8 @@
 //     a strategy reaches the client wrapped ("Worktree strategy <id> failed
 //     to <operation>: <message>"), without `forceRequired`;
 //   - "dialog.move_session.new" does nothing until «Manage workspaces» is
-//     mounted, a moment after "session.move" (WORKSPACES_MOUNT_MS);
+//     mounted, a moment after "session.move" (WORKSPACES_MOUNT_MS, or the
+//     `workspacesMountMs` option);
 //   - from the home screen, confirming «Name worktree» leaves the worktree
 //     pending ("(new worktree)"): it is created with the user's first
 //     message, in a session of the worktree with that message, and the TUI
@@ -117,7 +118,7 @@ async function wrapped(id, operation, fn) {
 }
 
 export class Host {
-  constructor({ projectDir, plugin, dbFile, tui = true, pluginOptions = {}, failures = {}, tuiSilent = false, rpcLate = false, alreadyOpen = false, worktreesDir = null }) {
+  constructor({ projectDir, plugin, dbFile, tui = true, pluginOptions = {}, failures = {}, tuiSilent = false, rpcLate = false, alreadyOpen = false, worktreesDir = null, workspacesMountMs = WORKSPACES_MOUNT_MS }) {
     // OpenCode was already open: this process's TUI has presented itself
     // before, so loading the plugin is like a hot reload and not a start
     // (the registry the plugin keeps in globalThis, design D3 of
@@ -159,6 +160,7 @@ export class Host {
     // The keymap's dialogs: «Manage workspaces» and «Name worktree»
     this.workspaces = null;
     this.pendingWorktree = null;
+    this.workspacesMountMs = workspacesMountMs;
     this.out = { toasts: [], navigations: [], dialogs: [], archives: [], requests: [], crashes: [], toolErrors: [], logs: [], terminal: [], prompts: [], routes: [], rpcCalls: [], keymap: [], worktrees: [] };
     const original = console.error;
     console.error = (...args) => {
@@ -651,7 +653,7 @@ export class Host {
   dispatch(name) {
     this.out.keymap.push(name);
     if (name === 'session.move') {
-      this.workspaces = { name: false, mounted: Date.now() + WORKSPACES_MOUNT_MS };
+      this.workspaces = { name: false, mounted: Date.now() + this.workspacesMountMs };
       this.out.dialogs.push({ title: 'Manage workspaces', options: [], answer: null, open: true, kind: 'workspaces' });
       return true;
     }
