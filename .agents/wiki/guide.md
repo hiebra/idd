@@ -80,6 +80,12 @@ Cada tipo se registra con su operación del motor:
 Las specs, los ADRs y el código del proyecto entran en el wiki del proyecto como fuentes fijadas a un commit: por ruta e identificador de versión, sin copiar su contenido (`/wiki:ingest-collection . --adapter git --manifest-only --revision <commit> --local`).
 <!-- wiki-guide:citar-version -->
 Los artículos son el conocimiento extraído de esas fuentes y citan la versión exacta (ruta y commit) de la que sale cada afirmación.
+<!-- wiki-guide:cita-blob-manifiesto -->
+Si el commit de una cita no está en el clon o en la rama de origen (por ejemplo, tras un squash), toma el blob de esa ruta en el manifiesto citado.
+<!-- wiki-guide:cita-resolver-blob -->
+Resuélvelo con git por su blob: `git cat-file -p <blob>`, o `git log --all --find-object=<blob>` para ver en qué commits está.
+<!-- wiki-guide:cita-no-rota -->
+No trates esa cita como rota.
 <!-- wiki-guide:ingesta-inicial -->
 Al crear el wiki del proyecto, haz una ingesta inicial del repositorio de esa forma.
 <!-- wiki-guide:ingesta-inicial-exclusiones -->

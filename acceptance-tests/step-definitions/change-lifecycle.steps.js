@@ -272,9 +272,10 @@ Then('el artefacto queda sin commit', function () {
   const project = this.project;
   assert.equal(git(project.dir, 'rev-parse', 'HEAD').trim(), this.headBefore);
   assert.ok(project.gitStatus().some((line) => line.includes('openspec/changes/exportar-datos/design.md')), project.gitStatus().join('\n'));
-  // Nothing in the cycle makes commits, branches or merges on its own
+  // Outside an ephemeral container, nothing in the cycle makes commits,
+  // branches or merges on its own (manage-git-discipline)
   const commits = skillSection(this, 'commits');
-  assert.match(commits, /nunca (hagas|hace)s? (tú )?commits?, ramas ni fusiones/i);
+  assert.match(commits, /Fuera de un contenedor efímero\*{0,2}, nunca (hagas|hace)s? (tú )?commits?, ramas ni fusiones/i);
 });
 
 Then('se pide al usuario que haga el commit', function () {
@@ -499,4 +500,130 @@ Then(/^la puerta no deja seguir e indica renumerar `(\d{4})`$/, function (number
   assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
   assert.equal(this.gate.exitCode, 1);
   assert.match(this.gate.message, new RegExp(`renumera.*${number}`), JSON.stringify(this.gate));
+});
+
+// --- Textos de la skill y de config.yaml (manage-git-discipline, D6, D7, D9) -------
+
+const openspecSupport = require('../support/openspec');
+
+// A section of the skill the scenario reads, from its marker to the next one
+function section(world, id) {
+  const marker = `<!-- lifecycle:${id} -->`;
+  const at = world.skillText.indexOf(marker);
+  assert.ok(at !== -1, `the openspec-git-discipline skill has no section ${marker}`);
+  const next = world.skillText.indexOf('<!-- lifecycle:', at + marker.length);
+  return world.skillText.slice(at + marker.length, next === -1 ? undefined : next);
+}
+
+function assertIn(text, pattern, what) {
+  assert.match(text, pattern, `${what} does not match ${pattern}:\n${text}`);
+}
+
+Given('la skill de disciplina de git del proyecto', function () {
+  this.skillText = fs.readFileSync(this.ensureProject().path(SKILL), 'utf8');
+});
+
+Given('la skill de disciplina de git y el `openspec\\/config.yaml` del proyecto', function () {
+  this.skillText = fs.readFileSync(this.ensureProject().path(SKILL), 'utf8');
+  this.configText = fs.readFileSync(this.project.path('openspec', 'config.yaml'), 'utf8');
+});
+
+Then('indica hacer el commit del archive aparte', function () {
+  const commits = section(this, 'commits');
+  assertIn(commits, /archive/, 'the commits section');
+  assertIn(commits, /aparte/, 'the commits section');
+});
+
+Then('indica hacer el commit del wiki después del commit del archive', function () {
+  assertIn(section(this, 'commits'), /wiki[^\n]*(después|posterior)[^\n]*archive/i, 'the commits section');
+});
+
+Then('indica ejecutar la puerta `check commit` antes de cada commit', function () {
+  assertIn(section(this, 'agent-commits'), /branch-change\.mjs check commit`? antes de cada commit/, 'the agent commits section');
+});
+
+Then('indica hacer commit y push en los momentos de commit y cuando avisa el final de un turno', function () {
+  const agent = section(this, 'agent-commits');
+  assertIn(agent, /commit y (el )?push/, 'the agent commits section');
+  assertIn(agent, /momentos de commit/, 'the agent commits section');
+  assertIn(agent, /final de(l| un) turno/, 'the agent commits section');
+});
+
+Then('indica hacer el push solo a la rama de la sesión', function () {
+  assertIn(section(this, 'agent-commits'), /push solo a (`origin\/<rama de la sesión>`|la rama de la sesión)/, 'the agent commits section');
+});
+
+Then('indica no fusionar, no cambiar de rama y no hacer push a otras ramas', function () {
+  assertIn(section(this, 'agent-commits'), /No fusiones, no cambies de rama, no crees ramas y no hagas push a otras ramas/, 'the agent commits section');
+});
+
+Then('recomienda la forma de una rama con una fusión con `--no-ff`', function () {
+  const merge = section(this, 'merge');
+  assertIn(merge, /forma recomendada/, 'the merge section');
+  assertIn(merge, /git merge --no-ff/, 'the merge section');
+});
+
+Then('indica que la forma canónica y el squash también se admiten', function () {
+  assertIn(section(this, 'merge'), /forma canónica y el squash también se admiten/, 'the merge section');
+});
+
+Then('indica que el squash se admite', function () {
+  assertIn(section(this, 'merge'), /squash se admite/, 'the merge section');
+});
+
+Then('indica que las citas del wiki a commits de la rama se resuelven entonces por su blob', function () {
+  assertIn(section(this, 'merge'), /citas del wiki[^\n]*por su blob/, 'the merge section');
+});
+
+When('se revisa qué dicen sobre dónde se archiva', function () {
+  this.archiveTexts = { skill: section(this, 'forms'), config: this.configText };
+});
+
+Then('los dos explican la forma recomendada y la forma canónica, con cuándo conviene cada una', function () {
+  for (const [what, text] of Object.entries(this.archiveTexts)) {
+    assertIn(text, /forma recomendada[^\n]*conviene/, what);
+    assertIn(text, /forma canónica[^\n]*conviene/, what);
+  }
+});
+
+Then('ninguno trata la forma canónica como una infracción', function () {
+  for (const [what, text] of Object.entries(this.archiveTexts)) {
+    assertIn(text, /forma canónica[^\n]*admitida/, what);
+    assert.doesNotMatch(text, /infracci|prohibid|no se admite/i, what);
+  }
+  assert.doesNotMatch(section(this, 'red-flags'), /archivar en una rama permanente/i);
+});
+
+Given('el `openspec\\/config.yaml` del proyecto', function () {
+  this.ensureProject();
+});
+
+When('se consultan las instrucciones del artefacto `adr` de un change', function () {
+  const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
+  const result = this.branches.openspec(this.project, ['instructions', 'adr', '--change', name, '--json']);
+  assert.equal(result.exitCode, 0, `${result.stdout}\n${result.stderr}`);
+  this.adrRules = (JSON.parse(result.stdout).rules ?? []).join('\n');
+});
+
+Then('indican hacer `git fetch` antes de numerar', function () {
+  assertIn(this.adrRules, /`git fetch`[^\n]*antes de numerar/, 'the adr rules');
+});
+
+Then('indican tomar el número más alto de `adr\\/` en la rama de origen remota y en todas las ramas remotas', function () {
+  assertIn(this.adrRules, /número más alto de `adr\/` en `origin\/<rama de origen>` y en todas las ramas remotas/, 'the adr rules');
+});
+
+When('se consultan las indicaciones de archivado para un change archivado en la rama de origen', function () {
+  const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
+  const guidance = openspecSupport.archiveInstructions(this.project, name).operationGuidance ?? [];
+  this.originArchive = guidance.map(String).filter((entry) => /archiva en la rama de origen/.test(entry));
+  assert.ok(this.originArchive.length > 0, `no archive guidance for an archive in the origin branch:\n${JSON.stringify(guidance, null, 2)}`);
+});
+
+Then('indican calcular las rutas que tocó el change a partir de las fusiones de su propuesta y de su implementación y del commit del archive', function () {
+  assertIn(this.originArchive.join('\n'), /rutas que tocó el change[^\n]*fusiones de su propuesta y de su implementación[^\n]*commit del archivado/, 'the guidance');
+});
+
+Then('indican hacer el commit del wiki después del commit del archive', function () {
+  assertIn(this.originArchive.join('\n'), /commit del wiki[^\n]*después del commit del archivado/, 'the guidance');
 });
