@@ -6,7 +6,7 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 24 raw documents
+- Sources: 26 raw documents
 - Articles: 10 compiled wiki articles
 - Inventory records: 5 tracked items
 - Datasets: 0 manifests
@@ -29,6 +29,8 @@ Last updated: 2026-11-22
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: Worktrees de OpenCode 2.3.2 (fuente) y 3 lecciones sobre crearlos desde origin/main
 
 - 2026-11-22: 3 páginas de la documentación de OpenSpec (archive y sync) y 2 lecciones sobre la guidance de archivado; flujo-wiki-first actualizado
 

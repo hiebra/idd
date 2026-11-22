@@ -156,3 +156,7 @@
 ## [2026-11-22] ll | "update-comment-closing-and-quotes" → raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md (3 lessons, 2 articles updated)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest | OpenCode 2.3.2: worktrees (raw/articles/2026-11-22-opencode-2-worktrees.md)
+
+## [2026-11-22] ll | "worktrees de OpenCode desde origin/main" → raw/notes/2026-11-22-ll-worktrees-opencode-desde-main.md (3 lessons)
