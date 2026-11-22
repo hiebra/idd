@@ -2,6 +2,7 @@
 title: "La suite de aceptación y spec-as-source"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-reorder-wiki-resync.md
   - raw/notes/2026-11-22-ll-archive-windows-support.md
   - raw/repos/2026-11-22-idd-3d2d8fe-windows-support.md
   - raw/notes/2026-11-22-ll-windows-support.md
@@ -82,6 +83,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - La suite comprueba lo que garantiza la plantilla, no cómo razona el modelo.
 - `openspec validate --strict` no pasa con las specs del proyecto: sus avisos de idioma ("DEBE" en lugar de SHALL/MUST) y de formato (Gherkin en bloques de código) cuentan como errores. El criterio de cierre es validar sin `--strict` y revisar los demás avisos ([lecciones de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md); se volvió a ver en `update-comment-phrase-and-opencode-marker`, [lección 2](../../raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md))).
 - Depende de que la simulación de cada agente siga el contrato real. Cuando un agente cambia su API, hay que actualizar el adaptador y su simulación (`idd@1cf0792:adr/0002-agent-neutral-session-bootstrap.md`). Ese contrato se comprueba aparte con los agentes reales (ver [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md)) y [[proveedor-falso-para-verificar-contexto|Proveedor falso para verificar el contexto]] ([Proveedor falso para verificar el contexto](../concepts/proveedor-falso-para-verificar-contexto.md))).
+- **En una sesión en la nube, `windows-readiness` no se ejecuta**: el contenedor no trae `pwsh`, que ADR-0017 exige a la suite, y el modo automático deniega descargarlo; los 15 escenarios fallan por eso. Se cuenta el resto y se decide con el usuario si quedan cubiertos, o se ejecutan en una máquina con `pwsh` ([lecciones de reorder-wiki-resync](../../raw/notes/2026-11-22-ll-reorder-wiki-resync.md), lección 1).
 
 ## See Also
 
@@ -94,6 +96,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 
 ## Sources
 
+- [Lessons Learned: reorder-wiki-resync](../../raw/notes/2026-11-22-ll-reorder-wiki-resync.md): lección 1.
 - [Lessons Learned: git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md): lección 5.
 - [Lessons Learned: update-comment-phrase-and-opencode-marker](../../raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md): lecciones 2 y 3.
 - [Collection: archivado de update-comment-phrase-and-opencode-marker](../../raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md): `acceptance-tests/support/agents/opencode-host.mjs`, `acceptance-tests/support/agents/opencode.js`.

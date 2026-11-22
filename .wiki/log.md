@@ -235,3 +235,15 @@
 ## [2026-11-22] lint | See Also completados: hook-context-opencode → ciclo-de-un-change-y-autopilot y regla-de-comentarios; flujo-wiki-first y suite-de-aceptacion-y-spec-as-source → regla-de-comentarios (0 one-way links left)
 
 ## [2026-11-22] ll | "contadores del wiki al resolver una fusión" → raw/notes/2026-11-22-ll-fusion-wiki-contadores.md (1 lesson, 1 article updated)
+
+## [2026-11-22] ll | "lint --fix y librarian scan del motor 1.0.0" → raw/notes/2026-11-22-ll-lint-fix-y-librarian-1-0-0.md (2 lessons, 1 article updated)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, reorder-wiki-resync @fc31fe5): 1 manifest, 11 paths pinned, 0 skipped
+
+## [2026-11-22] refresh | flujo-wiki-first checked against raw/repos/2026-11-22-idd-fc31fe5-reorder-wiki-resync.md: 1 updated (the resync in three phases, without librarian); ciclo-de-un-change-y-autopilot and suite-de-aceptacion-y-spec-as-source unchanged
+
+## [2026-11-22] ll | "reorder-wiki-resync" → raw/notes/2026-11-22-ll-reorder-wiki-resync.md (1 lesson, 1 article updated)
+
+## [2026-11-22] compile | lección de reorder-wiki-resync en suite-de-aceptacion-y-spec-as-source; inventario sin cambios
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
