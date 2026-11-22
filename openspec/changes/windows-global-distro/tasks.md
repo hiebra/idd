@@ -28,9 +28,9 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 4. Modo global del arranque y de los plugins (D2, D3)
 
-- [ ] 4.1 En el OpenCode simulado de la suite (`opencode-host.mjs`, `opencode.js`), cargar también los plugins de un `<config>\opencode\plugins` simulado, y que el plugin sepa si se ha cargado desde el proyecto o desde `<config>` → suite en verde → commit
-- [ ] 4.2 Steps de `El arranque global solo actúa en proyectos intent-driven` y `El arranque global cede ante el del proyecto`. Rojo
-- [ ] 4.3 En el núcleo, el modo global:
+- [x] 4.1 En el OpenCode simulado de la suite (`opencode-host.mjs`, `opencode.js`), cargar también los plugins de un `<config>\opencode\plugins` simulado, y que el plugin sepa si se ha cargado desde el proyecto o desde `<config>` → suite en verde → commit
+- [x] 4.2 Steps de `El arranque global solo actúa en proyectos intent-driven` y `El arranque global cede ante el del proyecto`. Rojo
+- [x] 4.3 En el núcleo, el modo global:
   - detecta `schema: intent-driven` en `openspec/config.yaml`;
   - no descarga el motor ni crea symlinks;
   - toma el motor de `<data>\idd\wiki-engine` y los textos de su propia instalación.

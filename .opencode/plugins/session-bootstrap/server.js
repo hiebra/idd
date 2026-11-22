@@ -18,6 +18,11 @@
 //   warnings() devuelve los acumulados y el evento "warning" trae los nuevos.
 // - Nunca lanza una excepción hacia OpenCode: un fallo se convierte en aviso.
 //
+// - Instalado de forma global (<config>/opencode/plugins/session-bootstrap/,
+//   windows-global-distro), lleva consigo el núcleo y sus textos, lo lanza con
+//   --global, y solo actúa en proyectos intent-driven sin su propio plugin
+//   session-bootstrap (place.mjs). Si no actúa, no registra nada ni avisa.
+//
 // Sin dependencias: exporta un objeto literal { id, setup } en lugar de usar
 // Plugin.define de @opencode/plugin, que solo lo devuelve tal cual, y usa
 // solo módulos node:, porque el propio arranque es lo que instala las
@@ -25,9 +30,14 @@
 
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { globalActs, isProjectPlugin, pluginDirOf } from "./place.mjs";
 
 const ID = "session-bootstrap";
+const HERE = pluginDirOf(import.meta.url);
+const GLOBAL = !isProjectPlugin(HERE);
+// El núcleo: el del proyecto, o el que lleva consigo el plugin global
 const CORE = path.join(".agents", "hooks", "session-bootstrap.mjs");
+const core = (directory) => (GLOBAL ? [path.join(HERE, "session-bootstrap.mjs"), "--global"] : [path.join(directory, CORE)]);
 // El mismo texto que da el núcleo cuando falta npm
 const NO_NODE_WARNING =
   "session-start: hace falta Node.js con npm para instalar las dependencias del proyecto; no se instala nada";
@@ -42,7 +52,9 @@ const SLOW_CORE_MS = 3000;
 // Contrato del RPC del plugin, el mismo en tui.js. Rpc.define de
 // @opencode/plugin/rpc solo lo comprueba y lo devuelve tal cual.
 const RPC = {
-  id: ID,
+  // El global, con su propio id, para que sus eventos no lleguen a la TUI del
+  // plugin del proyecto
+  id: GLOBAL ? `${ID}-global` : ID,
   methods: {
     warnings: {
       input: { type: "object" },
@@ -75,7 +87,7 @@ function coreText(directory, mode) {
   return new Promise((resolve) => {
     let stdout = "";
     try {
-      const child = spawn("node", [path.join(directory, CORE), mode, "opencode", directory], {
+      const child = spawn("node", [...core(directory), mode, "opencode", directory], {
         cwd: directory,
         stdio: ["ignore", "pipe", "ignore"],
         windowsHide: true,
@@ -125,7 +137,7 @@ function runCore(directory) {
           : `session-start: no se ha podido ejecutar el arranque de sesión (${error.message})`,
       ]);
     try {
-      child = spawn("node", [path.join(directory, CORE), directory], {
+      child = spawn("node", [...core(directory), directory], {
         cwd: directory,
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
@@ -144,6 +156,7 @@ function runCore(directory) {
 export default {
   id: ID,
   setup(ctx) {
+    if (GLOBAL && !globalActs(ctx?.location?.directory, ID)) return () => {};
     // Avisos por lotes: cada lote es un toast
     const batches = [];
     let registration = null;

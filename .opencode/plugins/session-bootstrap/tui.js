@@ -6,13 +6,18 @@
 // seguiría mostrando los avisos nuevos y, con --standalone, dejaría una traza
 // ECONNRESET al cerrar.
 //
+// Instalado de forma global, se comporta como server.js (place.mjs).
+//
 // Sin dependencias, como server.js.
 
+import { globalActs, isProjectPlugin, pluginDirOf } from "./place.mjs";
+
 const ID = "session-bootstrap";
+const GLOBAL = !isProjectPlugin(pluginDirOf(import.meta.url));
 
 // Contrato del RPC del plugin, el mismo en server.js
 const RPC = {
-  id: ID,
+  id: GLOBAL ? `${ID}-global` : ID,
   methods: {
     warnings: {
       input: { type: "object" },
@@ -43,6 +48,11 @@ const RETRY_MS = [200, 400, 800, 1600, 3200, 4000];
 export default {
   id: ID,
   async setup(context) {
+    // Instalado de forma global, no hace nada donde no actúa la parte de
+    // servidor (place.mjs); sin directorio, escucha su propio RPC, que solo
+    // existe si la parte de servidor actúa
+    const directory = context?.location?.directory;
+    if (GLOBAL && directory && !globalActs(directory, ID)) return () => {};
     const shown = new Set();
     const show = (batch) => {
       try {

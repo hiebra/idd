@@ -3,8 +3,10 @@
 // OpenCode 2 agent adapter (design D6): opens a session the way OpenCode 2
 // loads the project's local session plugins: .opencode/plugins/session-bootstrap/
 // and, if the project has it, .opencode/plugins/response-comments/ (D5 of
-// update-comment-phrase-and-opencode-marker). The autopilot has its own
-// simulator (opencode-sim.mjs).
+// update-comment-phrase-and-opencode-marker). With the global install on the
+// machine (windows-global-distro), it also loads the ones of
+// <config>/opencode/plugins/, first, as OpenCode loads the global config
+// before the project's. The autopilot has its own simulator (opencode-sim.mjs).
 // The simulated host (opencode-host.mjs) runs as a child process with the
 // simulated machine's environment; see that file for what it simulates.
 //
@@ -25,6 +27,18 @@ const HOST = path.join(__dirname, 'opencode-host.mjs');
 const MAX_SETUP_MS = 2000;
 // The project's session plugins, in the order the host loads them
 const SESSION_PLUGINS = ['session-bootstrap', 'response-comments'];
+
+// The session plugins OpenCode loads, as directories: the global install's
+// first, then the project's. The first one is the one the host times and
+// reloads: the project's session-bootstrap if it has one
+function sessionPlugins(machine, project) {
+  const has = (dir) => fs.existsSync(path.join(dir, 'server.js'));
+  const global = machine.globalInstall ? SESSION_PLUGINS.map((name) => path.join(machine.globalInstall.pluginsDir, name)).filter(has) : [];
+  const local = SESSION_PLUGINS.map((name) => path.join(project.dir, '.opencode', 'plugins', name)).filter(has);
+  const all = [...global, ...local];
+  const first = local.find((dir) => path.basename(dir) === SESSION_PLUGINS[0]) ?? all[0] ?? path.join(project.dir, '.opencode', 'plugins', SESSION_PLUGINS[0]);
+  return [first, ...all.filter((dir) => dir !== first)];
+}
 
 class OpenCodeAgent {
   get name() {
@@ -63,8 +77,7 @@ class OpenCodeAgent {
 
   #open({ machine, project, workDir }, options) {
     if (!options.plugin && !options.plugins) {
-      const plugins = SESSION_PLUGINS.filter((name, index) => index === 0 || fs.existsSync(path.join(project.dir, '.opencode', 'plugins', name, 'server.js')));
-      options = { ...options, plugins };
+      options = { ...options, plugins: sessionPlugins(machine, project) };
     }
     const resultFile = path.join(workDir, `opencode-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
     const child = spawnSync(process.execPath, [HOST, project.dir, JSON.stringify(options), resultFile], {
@@ -95,6 +108,9 @@ class OpenCodeAgent {
       toasts: result.toasts,
       terminal: result.terminal ?? [],
       subscriptions: result.subscriptions ?? [],
+      // The environment the create.before hooks left, and how many there were
+      env,
+      shellHooks: result.shellHooks ?? 0,
       log: `host stderr:\n${child.stderr}\nhost logs:\n${result.logs.join('\n')}\ntoasts: ${JSON.stringify(result.toasts)}\nerror: ${result.error}\nrequest: ${JSON.stringify(result.request)}`,
       run(command) {
         return spawnSync(BASH, ['-c', command], { cwd: project.dir, env, encoding: 'utf8' });

@@ -30,7 +30,10 @@
 // Usage: node opencode-host.mjs <project dir> <options JSON> <result file>
 // Options: { plugin, plugins, shell, frozenEnv, message, frozenMessages, tuiReloads, emit, close }
 //   plugin: the directory name of the plugin under .opencode/plugins/
-//   (default: session-bootstrap); plugins: several of them, loaded in order on
+//   (default: session-bootstrap), or an absolute plugin directory, as one of
+//   the global install's <config>/opencode/plugins/<plugin> (each plugin
+//   knows where it was loaded from by its own location, as in OpenCode);
+//   plugins: several of them, loaded in order on
 //   the same session, as OpenCode loads every local plugin (D5 of
 //   update-comment-phrase-and-opencode-marker). The first one is the plugin
 //   that the reloads, the emitted event and the setup time are about; the
@@ -56,7 +59,7 @@ import { pathToFileURL } from 'node:url';
 const [projectDir, optionsJson, resultFile] = process.argv.slice(2);
 const options = JSON.parse(optionsJson);
 const PLUGINS = options.plugins ?? [options.plugin ?? 'session-bootstrap'];
-const pluginDir = (name) => path.join(projectDir, '.opencode', 'plugins', name);
+const pluginDir = (name) => (path.isAbsolute(name) ? name : path.join(projectDir, '.opencode', 'plugins', name));
 const PLUGIN_DIR = pluginDir(PLUGINS[0]);
 
 const result = { error: null, setupMs: null, env: null, toasts: [], logs: [], request: null, terminal: [], subscriptions: [] };
@@ -370,5 +373,6 @@ if (options.close) {
 }
 
 result.subscriptions = subscriptions();
+result.shellHooks = shellHooks.length;
 log(`shell hooks: ${shellHooks.length}`);
 done();

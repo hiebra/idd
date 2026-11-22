@@ -93,6 +93,10 @@ class Machine {
     // true: the user disabled the wiki in the environment the agent starts from
     this.wikiDisabled = false;
     this.commentsDisabled = false;
+    // The global install of the release on this machine (support/global.js), or
+    // null; with it, XDG_DATA_HOME and XDG_CONFIG_HOME point at its <data>
+    // and <config>, as OpenSpec and OpenCode find them
+    this.globalInstall = null;
     // true: the session runs in an ephemeral container (manage-git-discipline)
     this.ephemeral = false;
 
@@ -229,6 +233,7 @@ class Machine {
       delete env.XDG_CONFIG_HOME;
       delete env.XDG_DATA_HOME;
     }
+    if (this.globalInstall) Object.assign(env, { XDG_DATA_HOME: this.globalInstall.data, XDG_CONFIG_HOME: this.globalInstall.config });
     if (this.wikiDisabled) env.PROJECT_WIKI = 'off';
     if (this.commentsDisabled) env.PROJECT_COMMENTS = 'off';
     if (this.ephemeral) Object.assign(env, EPHEMERAL_ENV);

@@ -200,6 +200,17 @@ class Project {
     fs.appendFileSync(this.path('.gitignore'), '.wiki/\n');
   }
 
+  // The project as the slim template leaves it (slim-template): without what
+  // the global install brings nor anything of Claude Code
+  slim() {
+    for (const rel of [['openspec', 'schemas'], ['.agents'], ['.opencode'], ['.claude']]) {
+      fs.rmSync(this.path(...rel), { recursive: true, force: true });
+    }
+    git(this.dir, 'add', '-A');
+    git(this.dir, 'commit', '-q', '-m', 'variante adelgazada');
+    return this;
+  }
+
   // Per-user settings of Claude Code, not versioned
   writeClaudeLocalSettings(settings) {
     fs.writeFileSync(this.path('.claude', 'settings.local.json'), JSON.stringify(settings, null, 2) + '\n');

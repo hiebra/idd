@@ -46,6 +46,20 @@
 // se retiran sus symlinks y la guía y el recordatorio quedan vacíos.
 // La regla de comentarios se desactiva en local con PROJECT_COMMENTS=off.
 //
+// Modo global (design D2 de windows-global-distro): con --global delante del
+// modo, el núcleo es el que lleva el plugin session-bootstrap de la
+// instalación global (<config>/opencode/plugins/session-bootstrap/):
+// - solo actúa si el proyecto declara `schema: intent-driven` en
+//   openspec/config.yaml; si no, no hace nada, en ningún modo, ni avisa;
+// - no descarga el motor del wiki ni crea symlinks: usa el de
+//   <data>/idd/wiki-engine, donde <data> es XDG_DATA_HOME o, si no está
+//   definida, LOCALAPPDATA (en otros sistemas, ~/.local/share), y expone su
+//   ruta igual que en el proyecto;
+// - toma la guía, el recordatorio y la regla de comentarios de su propio
+//   directorio (wiki/ y comments/ junto a este script);
+// - prepara git, instala las dependencias del proyecto y pone su openspec en
+//   el PATH igual que en el proyecto.
+//
 // Cada agente tiene su adaptador, que lanza este script con node, ajusta el
 // entorno de su sesión, entrega la guía y el recordatorio y muestra los
 // avisos. Si node no existe, es el adaptador el que avisa, con el mismo texto
@@ -64,6 +78,9 @@ import { fileURLToPath } from 'node:url';
 const SELF = fileURLToPath(import.meta.url);
 const WINDOWS = process.platform === 'win32';
 
+// Lanzado desde la instalación global (--global)
+let GLOBAL = false;
+
 const WIKI_DIR = path.join('.agents', 'wiki');
 const ENGINE_JSON = path.join(WIKI_DIR, 'engine.json');
 const ENGINE_DIR = path.join('.agents', 'wiki-engine');
@@ -78,6 +95,28 @@ const ENGINE_LINKS = [
 const REMINDER_MAX = 600;
 const COMMENTS_DIR = path.join('.agents', 'comments');
 const BRANCH_CHANGE = path.join('.agents', 'skills', 'openspec-git-discipline', 'scripts', 'branch-change.mjs');
+// El de la skill instalada de forma global, junto a los plugins:
+// <config>/opencode/skills/… respecto a <config>/opencode/plugins/session-bootstrap/
+const GLOBAL_BRANCH_CHANGE = path.resolve(path.dirname(SELF), '..', '..', 'skills', 'openspec-git-discipline', 'scripts', 'branch-change.mjs');
+
+// Dónde están los textos: en el proyecto, o junto a este script en la instalación global
+const wikiDir = () => (GLOBAL ? path.join(path.dirname(SELF), 'wiki') : WIKI_DIR);
+const commentsDir = () => (GLOBAL ? path.join(path.dirname(SELF), 'comments') : COMMENTS_DIR);
+
+// <data> de la instalación global, como lo calculan OpenSpec y el instalador
+function dataDir() {
+  if (process.env.XDG_DATA_HOME) return process.env.XDG_DATA_HOME;
+  if (WINDOWS && process.env.LOCALAPPDATA) return process.env.LOCALAPPDATA;
+  return path.join(os.homedir(), '.local', 'share');
+}
+
+// El proyecto declara `schema: intent-driven` en openspec/config.yaml (en el
+// directorio actual). Se lee la línea `schema:` con una expresión regular, sin
+// un parser de YAML, como branch-change.mjs lee x-main
+function intentDriven() {
+  const text = readText(path.join('openspec', 'config.yaml'));
+  return text !== null && /^schema\s*:\s*["']?intent-driven["']?\s*(#.*)?$/m.test(text);
+}
 const GIT_TIMEOUT_MS = 300 * 1000;
 
 export const NO_NPM_WARNING = 'hace falta Node.js con npm para instalar las dependencias del proyecto; no se instala nada';
@@ -175,8 +214,9 @@ function prepareGit() {
   if (!git(['rev-parse', '--is-inside-work-tree']).ok) return;
   let ephemeral = false;
   let permanent = ['main'];
-  if (fs.existsSync(BRANCH_CHANGE)) {
-    const info = spawnSync(process.execPath, [BRANCH_CHANGE, 'env'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
+  const script = [BRANCH_CHANGE, GLOBAL_BRANCH_CHANGE].find((file) => fs.existsSync(file));
+  if (script) {
+    const info = spawnSync(process.execPath, [script, 'env'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
     for (const line of (info.stdout ?? '').split('\n')) {
       if (line.startsWith('ephemeral=')) ephemeral = line.slice('ephemeral='.length).trim() === 'true';
       else if (/^permanent=\S/.test(line)) permanent = line.slice('permanent='.length).trim().split(/\s+/);
@@ -293,8 +333,17 @@ function processAlive(pid) {
   }
 }
 
+// El motor de la instalación global, sin instalar nada (design D2 de
+// windows-global-distro)
+function globalWikiEngine() {
+  if (wikiDisabled()) return null;
+  const dir = path.join(dataDir(), 'idd', 'wiki-engine', 'claude-plugin');
+  return isDir(dir) ? dir : null;
+}
+
 // Instala el motor del wiki en la versión fijada, si falta o es otra (design D1)
 function installWikiEngine() {
+  if (GLOBAL) return globalWikiEngine();
   if (!fs.existsSync(ENGINE_JSON)) return null;
   if (wikiDisabled()) {
     removeEngineLinks();
@@ -520,20 +569,22 @@ function installDependencies() {
 let PROJECT = null;
 
 // Entra en el directorio del proyecto; false si no se puede
+// En modo global, además, el proyecto tiene que ser intent-driven
 function enter(dir) {
   if (!dir) return false;
   try {
     process.chdir(dir);
     PROJECT = path.resolve(dir);
-    return true;
   } catch {
     return false;
   }
+  return !GLOBAL || intentDriven();
 }
 
 function prepare(dir) {
   if (!enter(dir)) {
-    warn(`no se puede entrar en el directorio del proyecto ('${dir ?? ''}')`);
+    // En modo global, un proyecto que no es intent-driven no recibe avisos
+    if (!GLOBAL || !PROJECT) warn(`no se puede entrar en el directorio del proyecto ('${dir ?? ''}')`);
     return;
   }
   const out = [];
@@ -577,21 +628,22 @@ const charCount = (text) => [...text].length;
 function wikiText(mode, agent, dir) {
   if (!enter(dir)) return '';
   if (wikiDisabled()) return '';
-  if (!fs.existsSync(ENGINE_JSON)) return '';
+  // En la plantilla completa, el wiki del proyecto lo declara su engine.json
+  if (!GLOBAL && !fs.existsSync(ENGINE_JSON)) return '';
   if (!(agent in MARKERS)) return '';
   let text;
   if (mode === 'guide') {
-    const guide = readText(path.join(WIKI_DIR, 'guide.md'));
+    const guide = readText(path.join(wikiDir(), 'guide.md'));
     if (guide === null) return '';
     // Sin los identificadores de sección, que solo sirven para revisarla
     text = chomp(dropLines(guide, /^<!-- wiki-guide:[a-z0-9-]* -->$/));
     if (!text) return '';
     if (agent === 'opencode') {
-      const note = readText(path.join(WIKI_DIR, 'opencode-note.md'));
+      const note = readText(path.join(wikiDir(), 'opencode-note.md'));
       if (note !== null && chomp(note)) text = `${chomp(note)}\n\n${text}`;
     }
   } else {
-    const reminder = readText(path.join(WIKI_DIR, 'reminder.md'));
+    const reminder = readText(path.join(wikiDir(), 'reminder.md'));
     if (reminder === null) return '';
     text = chomp(reminder);
   }
@@ -659,13 +711,13 @@ function commentsText(mode, agent, dir) {
   if (!(agent in MARKERS)) return '';
   let text;
   if (mode === 'rule') {
-    const rule = readText(path.join(COMMENTS_DIR, 'rule.md'));
+    const rule = readText(path.join(commentsDir(), 'rule.md'));
     if (rule === null) return '';
     // Sin los identificadores de sección, que solo sirven para revisarla
     text = chomp(dropLines(rule, /^<!-- comments-rule:[a-z0-9-]* -->$/));
   } else {
     if (!activatesComments(chomp(readStdin()))) return '';
-    const reminder = readText(path.join(COMMENTS_DIR, 'reminder.md'));
+    const reminder = readText(path.join(commentsDir(), 'reminder.md'));
     if (reminder === null) return '';
     text = chomp(reminder);
     if (charCount(text) > REMINDER_MAX) return '';
@@ -676,6 +728,10 @@ function commentsText(mode, agent, dir) {
 // --- Entrada ----------------------------------------------------------------------------
 
 function main(argv) {
+  if (argv[0] === '--global') {
+    GLOBAL = true;
+    argv = argv.slice(1);
+  }
   const [mode, ...rest] = argv;
   switch (mode) {
     case 'guide':
