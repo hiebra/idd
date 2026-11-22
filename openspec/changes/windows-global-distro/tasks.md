@@ -125,6 +125,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - El rojo no se vio: los escenarios no se pueden ejecutar aquí sin `pwsh`, y el diagnóstico se escribió antes de ejecutarlos. En el workflow (run 45080641431) pasan los 286 escenarios, entre ellos los tres nuevos, y los 8 de Windows. Sin el componente `global-install`, los tres fallarían al buscarlo en el informe.
   - La recogida de hechos en una máquina Windows real se comprueba en la 7.4.
 - [ ] 7.4 Verificar en Windows 11 real, y anotar aquí el resultado:
+  - Guía paso a paso: `guia-verificacion-windows.md`, en este mismo directorio.
   - el diagnóstico con PowerShell 5.1 y con PowerShell 7;
   - el `.bat` de una release, en una instalación nueva y en una actualización;
   - una sesión real de OpenCode 2 en un proyecto adelgazado: arranque, guía del wiki, regla de comentarios y autopilot.
