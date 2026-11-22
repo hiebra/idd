@@ -2,6 +2,7 @@
 title: "La suite de aceptación y spec-as-source"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-apply-guidance-timeout.md
   - raw/notes/2026-11-22-ll-allow-user-requested-merges-2.md
   - raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md
   - raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md
@@ -84,6 +85,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 
 ## Sources
 
+- [Lessons Learned: límite de tiempo de syncGuidance (apply-one-task-per-session-in-normal-mode)](../../raw/notes/2026-11-22-ll-apply-guidance-timeout.md): lección 1.
 - [Lessons Learned: update-comment-phrase-and-opencode-marker](../../raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md): lecciones 2 y 3.
 - [Collection: archivado de update-comment-phrase-and-opencode-marker](../../raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md): `acceptance-tests/support/agents/opencode-host.mjs`, `acceptance-tests/support/agents/opencode.js`.
 - [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `acceptance-tests/README.md`, `acceptance-tests/support/agents/opencode-sim.mjs`.

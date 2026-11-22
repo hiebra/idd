@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-f9f014c-apply-one-task-per-session-in-normal-mode.md
   - raw/repos/2026-11-22-idd-cac0041-allow-user-requested-merges.md
   - raw/notes/2026-11-22-ll-fusion-no-ff-y-trazabilidad.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
@@ -18,10 +19,10 @@ sources:
 created: 2026-11-21
 updated: 2026-11-22
 verified: 2026-11-22
-tags: [openspec, git, opencode, plugins, openspec-autopilot, adr, spec]
+tags: [openspec, git, opencode, plugins, openspec-autopilot, adr, spec, apply]
 confidence: high
 volatility: warm
-summary: "Un change se hace, de forma recomendada, en una rama temporal con una sola fusión con --no-ff, o en la forma canónica de intent-driven; la rama temporal la puede crear el modelo con el módulo neutral branch-change.mjs, y el change de la rama se lee de git. En OpenCode 2, el plugin openspec-autopilot mantiene una sesión operativa por rama, decide lo producido en cada paso con el CLI de OpenSpec y cierra las revisiones con git, con la lógica en el servidor para cualquier cliente; en Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006, ADR-0013, ADR-0014, ADR-0015, ADR-0016, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
+summary: "Un change se hace, de forma recomendada, en una rama temporal con una sola fusión con --no-ff, o en la forma canónica de intent-driven; la rama temporal la puede crear el modelo con el módulo neutral branch-change.mjs, y el change de la rama se lee de git. En OpenCode 2, el plugin openspec-autopilot mantiene una sesión operativa por rama, decide lo producido en cada paso con el CLI de OpenSpec y cierra las revisiones con git, con la lógica en el servidor para cualquier cliente; su modo decide además, con un bloque versionado en openspec/config.yaml, si el apply hace una sola task por sesión. En Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006, ADR-0025, ADR-0013, ADR-0014, ADR-0015, ADR-0016, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
 ---
 
 # El ciclo de un change y su automatización en OpenCode
@@ -49,13 +50,15 @@ Desde `manage-git-discipline`, el ciclo lo fija ADR-0015 (`idd@5d7f5b0:adr/0013-
 
 ## La asimetría entre agentes
 
-`idd@772d0f0:adr/0006-agent-asymmetry-policy.md` fija cuándo una capacidad puede existir en un solo agente. Deben cumplirse estas condiciones:
+`idd@772d0f0:adr/0006-agent-asymmetry-policy.md` fijaba cuándo una capacidad puede existir en un solo agente. Desde `apply-one-task-per-session-in-normal-mode`, lo sustituye `idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md`, que mantiene sus condiciones:
 
 - el ciclo y lo versionado son iguales con ella y sin ella;
 - en el otro agente lo mismo se hace a mano;
 - no deja restos en el otro agente;
 - la suite verifica las dos cosas;
 - se declara en la proposal y en un ADR.
+
+ADR-0025 añade una excepción acotada a la primera condición: un plugin de un solo agente puede añadir o quitar en un archivo versionado un bloque que dependa de una preferencia del usuario si el bloque está declarado y es literal (su texto exacto, en una spec, sin marcas ni comentarios), si los dos agentes leen el archivo igual, si el resultado del ciclo no cambia (solo el ritmo y las pausas) y si el cambio queda en el árbol, sin stage, para que el usuario haga el commit. Consecuencia admitida: dos usuarios con modos distintos generan diffs de solo ese bloque. El primer caso es el bloque de apply del autopilot (abajo).
 
 Lo común al ciclo va en una pieza neutral, y por eso `branch-change.mjs` está fuera del plugin. En Claude Code no hay nada del plugin, y la suite lo comprueba (`.claude/` no nombra el plugin, sus tools ni su RPC).
 
@@ -71,7 +74,17 @@ Lo común al ciclo va en una pieza neutral, y por eso `branch-change.mjs` está 
 - **La revisión la cierra git**: cuando el usuario envía un prompt, el hook `prompt` compara git con el inicio de la revisión: HEAD avanzado y nada en el stage es ok (commit); HEAD igual, nada en el stage y cambios en el árbol es ko, y lo sacado del stage y el prompt (como conclusiones) van a `openspec-update-change` (`lib/git.mjs`). Desaparece el diálogo de confirmación. La revisión del verify, que empieza con el árbol limpio, acepta un commit vacío.
 - **Esperas de commit**: tras el archive y la resincronización del wiki, y en el modo auto en cada cambio de zona, siempre que el árbol esté sucio. `update-change` empieza con el árbol sucio a propósito.
 - **La lógica vive en el servidor y funciona con cualquier cliente**; la TUI solo pone modal, foco, navegación y archivado. Sin TUI (UI web, Desktop, `opencode run`): aviso en el contexto de las sesiones ajenas, archivado diferido (`archivePending`) hasta que llega una TUI, y arranque solo con el mensaje `autopilot`.
-- **Lo que se mantiene**: una sesión por paso con su workflow y su agente, el estado solo en la metadata, el índice de sesiones para `update-change`, las lecciones candidatas en la metadata, el aviso tras compactar, los dos modos y nada en Claude Code (ADR-0006).
+- **Lo que se mantiene**: una sesión por paso con su workflow y su agente, el estado solo en la metadata, el índice de sesiones para `update-change`, las lecciones candidatas en la metadata, el aviso tras compactar, los dos modos y nada del plugin en Claude Code (ADR-0006, hoy ADR-0025).
+
+## El modo decide cuántas tasks hace el apply por sesión
+
+Desde `apply-one-task-per-session-in-normal-mode` (`idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:openspec/specs/openspec-autopilot/spec.md`, requisitos «Indicaciones de apply según el modo» y «El ajuste de config.yaml no toca nada más»; `idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:openspec/changes/archive/2026-11-22-apply-one-task-per-session-in-normal-mode/design.md`; `idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:README.md`):
+
+- **Qué hace el bloque**: cuatro indicaciones literales en `operations.apply.guidance` de `idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:openspec/config.yaml`. El apply hace una sola task por sesión, en la sesión interactiva y sin delegarla en un subagente, y al marcarla se para como en la pausa «User interrupts» del workflow; no añade nada por el corte (ni archivos de traspaso ni commits). Como el workflow lee siempre ese archivo, vale también para el apply lanzado a mano, en OpenCode y en Claude Code.
+- **Lo sigue al modo**: en el modo normal el bloque está y en el auto no. Al cargarse el servidor, `start` llama una vez, con límite de tiempo, a `syncApplyGuidance` (`idd@f9f014c3271cbda2588c2ed3563b36b2dd8f5e2e:.opencode/plugins/openspec-autopilot/lib/apply-guidance.mjs`), que añade o quita solo esas líneas y no escribe si el archivo ya está como pide el modo. No vigila el archivo: cambiar de modo ya recarga el plugin. Sin `config.yaml` no lo crea; si falla, avisa y sigue.
+- **Edición de texto, sin librería de YAML**: `adjust(text, mode)` es puro y reconoce el bloque por su texto canónico (sangría incluida); localiza las claves por sangría, crea `operations`/`apply`/`guidance` si faltan y al quitar poda las que quedan vacías, así que añadir y quitar deja el archivo como estaba. Un bloque reformateado a mano deja de reconocerse y el plugin avisa del texto parecido.
+- **El proyecto versiona el bloque** (design D7), porque el modo por defecto es el normal: en un clon nuevo la carga no escribe y el autopilot arranca con el árbol limpio. Solo quien activa el modo auto ve `config.yaml` modificado, sin stage; hace su commit aparte (zona de specs) o lo descarta, y mientras tanto el autopilot espera con el árbol sucio. La alternativa de que lo añadiera la primera carga rompía seis escenarios existentes.
+- **No cierra una revisión abierta** (D6): si el ajuste escribe, el plugin actualiza la firma de git de la revisión abierta de la rama, para que el cambio no la dé por no satisfactoria.
 
 ## Las restricciones de OpenCode 2.3.2 que lo moldean
 
@@ -113,6 +126,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## Sources
 
+- [Collection: archivado de apply-one-task-per-session-in-normal-mode (idd@f9f014c)](../../raw/repos/2026-11-22-idd-f9f014c-apply-one-task-per-session-in-normal-mode.md): `adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/config.yaml`, `.opencode/plugins/openspec-autopilot/lib/apply-guidance.mjs`, `README.md`, `openspec/changes/archive/2026-11-22-apply-one-task-per-session-in-normal-mode/design.md`.
 - [Collection: archivado de allow-user-requested-merges (idd@cac0041)](../../raw/repos/2026-11-22-idd-cac0041-allow-user-requested-merges.md): `adr/0016-agent-merges-on-user-request.md`, `.agents/openspec/branch-change.mjs`, `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `openspec/config.yaml`.
 - [Lessons Learned: el cierre de la revisión pasa de la confirmación en la TUI a git (ADR-0014)](../../raw/notes/2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md): lección 1.
 - [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0013-model-creates-change-branches-plugin-stages.md`, `adr/0014-autopilot-verifies-product-and-closes-reviews-with-git.md`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.opencode/plugins/openspec-autopilot/`, `.agents/openspec/branch-change.mjs`, `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md` y `tasks.md`.

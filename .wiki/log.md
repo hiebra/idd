@@ -190,3 +190,7 @@
 ## [2026-11-22] ll | "límite de tiempo de syncGuidance (apply-one-task-per-session-in-normal-mode)" → raw/notes/2026-11-22-ll-apply-guidance-timeout.md (1 lesson, 1 article updated)
 
 ## [2026-11-22] ingest-collection | idd via git (manifest-only, apply-one-task-per-session-in-normal-mode @ f9f014c): 1 manifest, 15 paths pinned, 0 children, 15 total candidates
+
+## [2026-11-22] refresh | ciclo-de-un-change-y-autopilot (ADR-0025 y bloque de apply, idd@f9f014c), regla-de-comentarios (ADR-0006 → ADR-0025)
+
+## [2026-11-22] lint | local command: 1 suggestion fixed (lección de apply-guidance-timeout en las fuentes del artículo de la suite), 0 left
