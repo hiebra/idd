@@ -247,3 +247,27 @@
 ## [2026-11-22] compile | lección de reorder-wiki-resync en suite-de-aceptacion-y-spec-as-source; inventario sin cambios
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest | MCP 2026-07-28: Key Changes, Deprecated Features y Discovery (raw/articles/2026-11-22-mcp-2026-07-28-key-changes.md)
+
+## [2026-11-22] ingest | MCP 2026-07-28: Tools, ToolAnnotations y uso de JSON Schema (raw/articles/2026-11-22-mcp-2026-07-28-tools.md)
+
+## [2026-11-22] ingest | VS Code: interfaz de línea de comandos (code) y apertura por URL (raw/articles/2026-11-22-vscode-cli-y-urls.md)
+
+## [2026-11-22] ingest | VS Code: configuraciones de depuración (launch.json, compuestas, de workspace y globales) (raw/articles/2026-11-22-vscode-debug-configuration.md)
+
+## [2026-11-22] ingest | VS Code: depuración en el navegador (Edge, Chrome) y el tutorial de React (raw/articles/2026-11-22-vscode-browser-debugging.md)
+
+## [2026-11-22] ingest | VS Code: depurar Java adjuntándose a una JVM (Debugger for Java) (raw/articles/2026-11-22-vscode-java-attach.md)
+
+## [2026-11-22] ingest | API de extensiones de VS Code: iniciar la depuración, puntos de ruptura y manejador de URL (raw/articles/2026-11-22-vscode-api-debug-y-uri-handler.md)
+
+## [2026-11-22] ingest | Liberty: arrancar el servidor en modo debug (server debug, liberty:debug y liberty:dev) (raw/articles/2026-11-22-liberty-modo-debug.md)
+
+## [2026-11-22] ingest | Liberty Tools for Visual Studio Code: modo dev y depuración (raw/articles/2026-11-22-liberty-tools-vscode-debug.md)
+
+## [2026-11-22] ingest | Vite: el servidor de desarrollo (puerto, host, proxy y CLI) (raw/articles/2026-11-22-vite-dev-server.md)
+
+## [2026-11-22] ingest | OpenCode: servidores MCP (configuración, nombres de las tools, Code Mode y versión del protocolo) (raw/articles/2026-11-22-opencode-mcp-servers.md)
+
+## [2026-11-22] ingest | DebugMCP (Microsoft): un servidor MCP que da a un agente el control del depurador de VS Code (raw/articles/2026-11-22-microsoft-debugmcp.md)
