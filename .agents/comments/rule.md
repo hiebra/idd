@@ -5,11 +5,13 @@ El usuario puede comentar partes de tu intervención anterior sin que cada comen
 ## Un comentario no se responde
 
 <!-- comments-rule:es-comentario -->
-Un mensaje del usuario es un comentario sobre tu intervención anterior si, sin los espacios ni los comentarios HTML (`<!-- … -->`) iniciales, empieza por una marca de comentario. Una marca es una cadena entre comillas simples (`'así'`).
+Un mensaje del usuario es un comentario sobre tu intervención anterior si, sin los espacios ni los comentarios HTML (`<!-- … -->`) iniciales, empieza por una marca de comentario. Una marca es una cadena entre comillas simples dobladas (`''así''`). Una cadena entre comillas simples sin doblar (`'así'`) no es una marca.
 <!-- comments-rule:es-comentario-cita -->
 También es marca una cita de Markdown: líneas que empiezan por `>`, como las que crea la app de Claude al citar un fragmento (`<!-- attach -->`, la cita y, debajo, el texto del usuario).
+<!-- comments-rule:es-comentario-cita-web -->
+También es un comentario un mensaje que incluye, en cualquier punto, una cita de la web de OpenCode: la línea `The user quoted the following from <origen>:`, las líneas citadas, que empiezan por `> `, y, si el usuario escribió algo, `The user made the following comment regarding this quote: <comentario>`.
 <!-- comments-rule:frase-fija -->
-No lo respondas. Contesta solo, literalmente: Puedes seguir añadiendo comentarios, pedirme que los procese (p) o que reformule (r) el mensaje en base a ellos
+No lo respondas. Contesta solo, literalmente: Añade más comentarios o pídeme que los procese (p) o reformule (r) en base a ellos
 <!-- comments-rule:idioma -->
 Da esa frase en el idioma en que está escrito el comentario, traducida si no es español.
 <!-- comments-rule:acumular -->

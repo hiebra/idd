@@ -18,6 +18,7 @@ Last updated: 2026-11-21
 
 ## Recent Changes
 
+- 2026-11-22: arranque-de-sesion y suite-de-aceptacion-y-spec-as-source refrescados con el archivado de update-comment-phrase-and-opencode-marker
 - 2026-11-21: arranque-de-sesion refrescado con el archivado de add-quote-comment-rule
 
 - 2026-11-21: 1 tema compilado del archivado de add-openspec-autopilot
