@@ -56,6 +56,69 @@ Given(new RegExp(`^una sesión de ${AGENT} abierta en el proyecto$`), function (
   this.openSetupSession(agent);
 });
 
+// --- Estado del wiki del clon (design D7 de add-project-wiki-toggle) ------------
+
+const fs = require('node:fs');
+const STATE = '(habilitado|deshabilitado)';
+
+function cloneWithWiki(world, state) {
+  const project = world.ensureProject();
+  assert.ok(project.hasEngineConfig(), 'the project does not pin a wiki engine (.agents/wiki/engine.json)');
+  project.setWiki(state === 'habilitado');
+  return project;
+}
+
+Given(new RegExp(`^un (?:clon del )?proyecto con el wiki ${STATE}$`), function (state) {
+  cloneWithWiki(this, state);
+});
+
+Given('un clon del proyecto con el wiki deshabilitado y con `.wiki\\/`', function () {
+  cloneWithWiki(this, 'deshabilitado').addCommittedWiki();
+});
+
+Given('un clon del proyecto con el wiki deshabilitado y sin `.wiki\\/`', function () {
+  const project = cloneWithWiki(this, 'deshabilitado');
+  assert.equal(fs.existsSync(project.path('.wiki')), false);
+});
+
+Given('un clon del proyecto con el wiki habilitado y sin el motor del wiki instalado', function () {
+  const project = cloneWithWiki(this, 'habilitado');
+  assert.deepEqual(project.engineLocalPaths(), []);
+});
+
+Given(new RegExp(`^un clon del proyecto con el wiki ${STATE} en el que ya se ha abierto una sesión de ${AGENT}$`), function (state, agent) {
+  cloneWithWiki(this, state);
+  this.openSetupSession(agent);
+});
+
+Given('un clon del proyecto con el wiki habilitado en el que ya se han abierto sesiones de Claude Code y de OpenCode', function () {
+  cloneWithWiki(this, 'habilitado');
+  this.openSetupSession('Claude Code');
+  this.openSetupSession('OpenCode');
+});
+
+Given('un clon del proyecto con el wiki habilitado que usa una versión del motor', function () {
+  cloneWithWiki(this, 'habilitado');
+  this.openSetupSession('Claude Code');
+  this.openSetupSession('OpenCode');
+  this.previousEngineRef = this.project.pinnedEngineRef();
+});
+
+Given(new RegExp(`^una sesión de ${AGENT} abierta en un proyecto con el wiki habilitado$`), function (agent) {
+  cloneWithWiki(this, 'habilitado');
+  this.openSetupSession(agent);
+});
+
+Given('el `openspec\\/config.yaml` de un proyecto con el wiki habilitado', function () {
+  cloneWithWiki(this, 'habilitado');
+});
+
+// Someone else disabled the wiki and the clone pulled that commit: what a
+// previous session installed is still there
+Given('el wiki del proyecto se ha deshabilitado', function () {
+  this.project.disableWikiInVersionedFiles();
+});
+
 // --- Motor del wiki ------------------------------------------------------------
 
 Given('un clon del proyecto sin el motor del wiki instalado', function () {
@@ -195,14 +258,6 @@ Then('el wiki del proyecto está disponible', function () {
   const { operations } = this.loadWikiEngine(this.session.agent);
   assert.ok(operations.query, `${this.session.agent} has no wiki query`);
   assert.ok(deliveredContext(this).includes(this.guideAsDelivered()), `${this.session.agent} has not received the wiki guide`);
-});
-
-// Claude Code: in .claude/settings.local.json, the user's own and not
-// versioned; OpenCode: in the environment it is launched from (design D4)
-Given(new RegExp(`^el usuario ha desactivado el wiki para sí mismo en ${AGENT}$`), function (agent) {
-  assert.ok(this.ensureProject().hasEngineConfig(), 'the project does not pin a wiki engine (.agents/wiki/engine.json)');
-  if (agent === 'Claude Code') this.project.writeClaudeLocalSettings({ env: { PROJECT_WIKI: 'off' } });
-  else this.machine.wikiDisabled = true;
 });
 
 Then('no se instala el motor del wiki', function () {

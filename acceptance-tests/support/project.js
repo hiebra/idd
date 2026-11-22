@@ -9,6 +9,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { ENGINE_JSON, git } = require('./engine');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
@@ -23,6 +24,10 @@ const ENGINE_LINKS = {
 };
 const LOCAL_ENGINE_PATHS = [ENGINE_DIR, ...Object.values(ENGINE_LINKS)];
 const GUIDE = path.join('.agents', 'wiki', 'guide.md');
+const CORE = path.join('.agents', 'hooks', 'session-bootstrap.sh');
+const CONFIG = path.join('openspec', 'config.yaml');
+const BLOCK_BEGIN = '# wiki:archive-guidance:begin';
+const BLOCK_END = '# wiki:archive-guidance:end';
 const REMINDER = path.join('.agents', 'wiki', 'reminder.md');
 
 function isLocalEngineState(rel) {
@@ -143,11 +148,68 @@ class Project {
   }
 
   // Sets the switch alone and folds it into the clone's commit, as if the
-  // project had always had it. The scenarios that also need the archive
-  // steps use the core's `wiki on|off` instead, see setWiki
+  // project had always had it. The scenarios use setWiki, which also leaves
+  // the archive steps as /toggle-wiki does
   setWikiEnabled(enabled) {
     this.writeEngineConfig({ enabled, ...this.engineConfig(), ...{ enabled } });
     git(this.dir, 'commit', '-q', '-a', '--amend', '--no-edit');
+  }
+
+  // The wiki of the clone as a committed /toggle-wiki leaves it (design D7):
+  // the core's `wiki on|off` sets the switch and the archive steps of
+  // config.yaml, and the result is folded into the clone's commit. What the
+  // mode installs or links for the session is removed, so that the clone
+  // starts as a fresh one
+  setWiki(enabled) {
+    const env = { ...process.env };
+    delete env.PROJECT_WIKI;
+    const result = spawnSync('bash', [this.path(CORE), 'wiki', enabled ? 'on' : 'off', this.dir], { encoding: 'utf8', env });
+    if (result.status !== 0 || this.wikiEnabled() !== enabled) {
+      throw new Error(`could not ${enabled ? 'enable' : 'disable'} the wiki of the clone:\n${result.stdout}\n${result.stderr}`);
+    }
+    this.removeEngineInstall();
+    if (git(this.dir, 'status', '--porcelain', '--untracked-files=no').trim()) {
+      git(this.dir, 'commit', '-q', '-a', '--amend', '--no-edit');
+    }
+  }
+
+  // Disables the wiki in the versioned files only, as a pulled commit of
+  // /toggle-wiki does: what a previous session installed stays
+  disableWikiInVersionedFiles() {
+    this.writeEngineConfig({ ...this.engineConfig(), enabled: false });
+    fs.writeFileSync(this.path(CONFIG), this.configWithoutWikiBlock());
+    git(this.dir, 'commit', '-q', '-a', '-m', 'deshabilitar el wiki');
+  }
+
+  // openspec/config.yaml without the lines between the wiki markers, markers included
+  configWithoutWikiBlock(text = this.readConfig()) {
+    const lines = text.split('\n');
+    const begin = lines.findIndex((l) => l.trim() === BLOCK_BEGIN);
+    const end = lines.findIndex((l) => l.trim() === BLOCK_END);
+    if (begin < 0 || end < begin) return text;
+    return [...lines.slice(0, begin), ...lines.slice(end + 1)].join('\n');
+  }
+
+  readConfig() {
+    return fs.readFileSync(this.path(CONFIG), 'utf8');
+  }
+
+  removeEngineInstall() {
+    for (const rel of LOCAL_ENGINE_PATHS) fs.rmSync(this.path(rel), { recursive: true, force: true });
+  }
+
+  // Versioned files of the clone staged and not committed
+  stagedFiles() {
+    return git(this.dir, 'diff', '--cached', '--name-only').split('\n').filter(Boolean);
+  }
+
+  // A project wiki committed with the clone
+  addCommittedWiki() {
+    fs.mkdirSync(this.path('.wiki', 'wiki'), { recursive: true });
+    fs.writeFileSync(this.path('.wiki', 'index.md'), '# Wiki del proyecto\n');
+    fs.writeFileSync(this.path('.wiki', 'wiki', 'articulo.md'), '# Artículo\n');
+    git(this.dir, 'add', '.wiki');
+    git(this.dir, 'commit', '-q', '--amend', '--no-edit');
   }
 
   setPinnedEngineRef(ref) {
