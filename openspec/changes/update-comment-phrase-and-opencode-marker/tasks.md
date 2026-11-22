@@ -25,4 +25,4 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 ## 5. Documentación y cierre
 
 - [x] 5.1 README: la marca `''así''`, la frase nueva y el plugin `response-comments` → commit
-- [ ] 5.2 Ejecutar la suite entera (`npm test`), `npm run test:core`, `npm run lint:specs` y `openspec validate update-comment-phrase-and-opencode-marker` (sin `--strict`: los avisos de SHALL/MUST en español y de los escenarios en Gherkin los dan también las specs vigentes)
+- [x] 5.2 Ejecutar la suite entera (`npm test`), `npm run test:core`, `npm run lint:specs` y `openspec validate update-comment-phrase-and-opencode-marker` (sin `--strict`: los avisos de SHALL/MUST en español y de los escenarios en Gherkin los dan también las specs vigentes). Hecho: 211 escenarios y 1100 pasos en verde, 155 pruebas del núcleo en verde, el lint sin errores y el change válido
