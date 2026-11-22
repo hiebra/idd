@@ -19,7 +19,8 @@ Antes de numerar se hizo `git fetch`. El número más alto en `origin/main` era 
 - ADR-0010: instrucciones por el arranque. Sigue en vigor.
 - ADR-0011: los plugins liberan lo que registran. Lo cumplen también los plugins globales.
 - ADR-0012: lint de specs con gplint. Sigue en vigor.
-- ADR-0013: `branch-change.mjs` y la rama del change. Sigue en vigor; ADR-0024 mueve el script a la skill.
+- ADR-0013: `branch-change.mjs` y la rama del change. Lo sustituye ADR-0020, ya en `main`.
+- ADR-0020 (`main`): la disciplina de git estándar como regla, con una excepción. Sigue en vigor; ADR-0024 mueve su script a la skill.
 - ADR-0014: el autopilot. Sigue en vigor en `main`; ADR-0024 añade su instalación global. ADR-0022 de `claude/exciting-ramanujan-802ws8` (la sesión del autopilot es dueña de su rama y sus worktrees), aún no en `main`, lo sustituye. Cuando llegue, ADR-0024 lo tendrá en cuenta en lugar de ADR-0014.
 - ADR-0015: dos formas del ciclo y commits en contenedores efímeros. Sigue en vigor.
 - ADR-0018: en OpenCode, una instrucción opcional tiene su propio plugin. Sigue en vigor; `response-comments` se instala también de forma global.
@@ -35,5 +36,5 @@ Antes de numerar se hizo `git fetch`. El número más alto en `origin/main` era 
 ## Coordination Before Archive
 
 - ADR-0017 ya está fuera del `Supersedes` de ADR-0023 (2026-11-22), porque `windows-support` se redujo a lo que no depende del núcleo.
-- ADR-0020, ya en `main`, sustituye a ADR-0013, al que cita ADR-0024 por la ubicación de `branch-change.mjs`. Al integrar la rama de origen (task 7.1), ADR-0024 tiene que citar ADR-0020 en su lugar.
+- ADR-0024 ya cita ADR-0020 en lugar de ADR-0013, que ADR-0020 sustituye (2026-11-22).
 - **Si `check archive` avisa de que el 0023 o el 0024 ya existen** en la rama de origen, se renumeran estos dos ADRs y sus referencias.
