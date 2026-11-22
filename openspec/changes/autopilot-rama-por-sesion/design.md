@@ -62,7 +62,7 @@ La TUI recuerda la ruta anterior y la manda en `screen` (`{ route, previous, rea
   - Si la rama es temporal, con `branch-change.mjs switch <rama>`.
   - Si es la rama de origen, con el subcomando nuevo de D7.
   - Si es otra rama permanente, no hace nada y avisa.
-- **Con el árbol sucio**: devuelve `back`, que lleva a la ruta anterior o a `home` en ese directorio, con un aviso.
+- **Con el árbol sucio, o con otra sesión del directorio trabajando**: devuelve `back`, que lleva a la ruta anterior o a `home` en ese directorio, con un aviso.
 
 El plugin marca el checkout que hace él, para que D1 no lo tome como un cambio dentro de la sesión. La pantalla a la que acaba de navegar el propio plugin al encadenar se sigue saltando (`expected`).
 
@@ -126,7 +126,7 @@ Es un subcomando nuevo que cambia a la rama de origen con el árbol limpio. `swi
 
 - **APIs sin documentar.** `ctx.worktree.transform`, los nombres de los comandos de `keymap` y la ruta de la web pueden cambiar al subir de versión. → Se añaden a la vigilancia del inventario del wiki ([volver a comprobar APIs al subir OpenCode](../../../.wiki/inventory/candidates/volver-a-comprobar-apis-de-sesion-al-subir-opencode.md)), y la suite comprueba el contrato en el simulador.
 - **Detectar el checkout por sondeo.** Un checkout se detecta en el siguiente `screen`, `prompt` o reposo, no al instante. → Basta para decidir de quién es la sesión antes de que pase nada más en ella.
-- **Checkout con la sesión operativa trabajando en el mismo directorio.** → D3 no hace checkout si alguna sesión del directorio está trabajando, y avisa como con el árbol sucio.
+- **Checkout con otra sesión trabajando en el mismo directorio.** → D3 no hace checkout y avisa, como con el árbol sucio (spec «Pasar a una sesión es pasar a su rama»).
 - **Cada worktree reinstala dependencias.** → El README recomienda `worktree.symlinkDirectories: ["node_modules", "acceptance-tests/node_modules"]`.
 - **El enlace de la web** depende de la dirección con que el navegador se conectó. → Si el servidor no la conoce, título e id.
 

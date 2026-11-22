@@ -197,7 +197,7 @@ Then se crea una sesión operativa que retoma la task 3 de `exportar-datos`
 ```
 
 ### Requirement: Pasar a una sesión es pasar a su rama
-Cuando la TUI entra en una sesión, el plugin DEBE dejar el directorio de esa sesión en la rama de trabajo de la sesión. Si la sesión está en otro directorio (otro worktree u otro repositorio), ese directorio ya está en su rama: el plugin NO DEBE hacer checkout y DEBE avisar de la rama y del directorio. Si la sesión está en el mismo directorio que la ventana anterior y su rama no es la de HEAD, el plugin DEBE hacer checkout de la rama de la sesión y avisar de ello. Con cambios sin commit, NO DEBE hacer checkout: la TUI DEBE volver a la sesión anterior, o a la pantalla de inicio si no la hay, con un aviso que diga el motivo y que se puede hacer el commit o usar un worktree. Esto NO DEBE ocurrir justo después de que el plugin salte solo a una sesión al encadenar.
+Cuando la TUI entra en una sesión, el plugin DEBE dejar el directorio de esa sesión en la rama de trabajo de la sesión. Si la sesión está en otro directorio (otro worktree u otro repositorio), ese directorio ya está en su rama: el plugin NO DEBE hacer checkout y DEBE avisar de la rama y del directorio. Si la sesión está en el mismo directorio que la ventana anterior y su rama no es la de HEAD, el plugin DEBE hacer checkout de la rama de la sesión y avisar de ello. Con cambios sin commit, o con otra sesión de ese directorio trabajando, NO DEBE hacer checkout: la TUI DEBE volver a la sesión anterior, o a la pantalla de inicio si no la hay, con un aviso que diga el motivo y, con cambios sin commit, que se puede hacer el commit o usar un worktree. Esto NO DEBE ocurrir justo después de que el plugin salte solo a una sesión al encadenar.
 
 #### Scenario Outline: Entrar en una sesión pone su rama
 
@@ -225,9 +225,20 @@ And la TUI vuelve a <destino>
 And se avisa de que hay cambios sin commit y de que se puede hacer el commit o usar un worktree
 
 Examples:
-  | origen                         | destino                        |
+  | origen                          | destino                         |
   | una sesión de la rama de origen | esa sesión de la rama de origen |
-  | ninguna sesión                 | la pantalla de inicio          |
+  | ninguna sesión                  | la pantalla de inicio           |
+```
+
+#### Scenario: Con otra sesión trabajando no se cambia de rama
+
+```gherkin
+Given la TUI está en una sesión de la rama de origen, con el árbol limpio, en el mismo directorio que la sesión operativa de `exportar-datos`
+And otra sesión de ese directorio está trabajando
+When la TUI entra en la sesión operativa de `exportar-datos`
+Then el directorio sigue en la rama de origen
+And la TUI vuelve a esa sesión de la rama de origen
+And se avisa de que hay una sesión trabajando en ese directorio
 ```
 
 ### Requirement: Una sesión nueva en una rama temporal con sesión operativa
