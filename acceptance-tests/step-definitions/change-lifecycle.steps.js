@@ -1086,6 +1086,10 @@ Then('indica poner ese título al PR y recomendarlo para su commit de fusión', 
   assertIn(merges, /el que propone GitHub nombra la rama de la sesión/, 'the merge section');
 });
 
+Then('indica que un PR sin change lo titula el agente, como hasta ahora', function () {
+  assertIn(section(this, 'merge'), /Si la rama no lleva ningún change, la puerta no da título: titula tú el PR[^\n]*como hasta ahora/, 'the merge section');
+});
+
 When('se revisa qué dicen sobre lo que sigue al commit del wiki', function () {
   const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
   const guidance = (openspecSupport.archiveInstructions(this.project, name).operationGuidance ?? []).map(String);
