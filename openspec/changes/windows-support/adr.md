@@ -5,7 +5,11 @@
 
 ## Review Summary
 
-ADR review completed for this change. The change keeps the agent-neutral bash bootstrap core of ADR-0002 and adds one durable decision: how Windows is supported. No in-force ADR is superseded.
+ADR review completed for this change.
+
+El design contiene una decisión duradera: cómo se soporta Windows. Solo con OpenCode 2, con Git Bash como shell del núcleo del arranque, LF en todo el repositorio, un diagnóstico en PowerShell y `pwsh` como requisito de la suite (design D1, D2, D3, D4, D5 y D7). Afecta a cualquier change futuro que toque el arranque, los plugins de OpenCode o la suite. Mantiene el núcleo bash neutral de ADR-0002, así que no se sustituye ningún ADR en vigor.
+
+El resto del design no requiere ADR, porque son detalles de implementación: cómo ejecuta el autopilot el CLI de OpenSpec (D6) y cómo simula la suite Windows en Linux (D8).
 
 ## In-Force ADRs Reviewed
 
@@ -21,7 +25,7 @@ ADR review completed for this change. The change keeps the agent-neutral bash bo
 - ADR-0013: Un change, una rama temporal que puede crear el modelo, y commits solo del usuario
 - ADR-0014: El autopilot decide por el producto y por git, con la lógica en el servidor y una sesión operativa por rama (supersedes ADR-0008)
 - ADR-0015: Dos formas del ciclo de un change y commits del agente en contenedores efímeros (supersedes ADR-0007)
-- ADR-0016 (en `origin/claude/epic-hawking-sawijv`, no en la rama de origen): considerado solo para numerar
+- ADR-0016 (en `origin/claude/epic-hawking-sawijv`, no en la rama de origen): se ha tenido en cuenta solo para numerar
 
 ## New Durable ADRs Created
 
