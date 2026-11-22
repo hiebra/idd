@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const { Given, When, Then } = require('@cucumber/cucumber');
+const { git } = require('../support/engine');
 
 // Messages the opened session showed the user, as one text
 function shownWarnings(world) {
@@ -195,6 +196,77 @@ Then('se avisa de que el PATH no se ha podido ajustar', function () {
 
 Then('el aviso indica que el CLI del proyecto se ejecuta con `npx openspec`', function () {
   assert.match(shownWarnings(this), /npx openspec/);
+});
+
+// --- Git al abrir sesión (manage-git-discipline, D5) --------------------------------
+
+// What git shows of the clone before the session opens, to check that the
+// bootstrap leaves the working tree and the checked-out branch alone
+function rememberGit(world) {
+  world.gitBefore = { status: world.project.gitStatus(), main: world.branches.revParse(world.project, 'refs/heads/main') };
+}
+
+Given(/^un clon superficial del proyecto( sin acceso a su remoto)?$/, function (unreachable) {
+  this.branches.makeShallow(this.ensureProject(), { reachable: !unreachable });
+  rememberGit(this);
+});
+
+Then('el clon deja de ser superficial', function () {
+  assert.equal(this.branches.isShallow(this.project), false, `session:\n${this.session.log}`);
+});
+
+Then('se avisa de que no se pudo completar el clon', function () {
+  assert.match(shownWarnings(this), /no se pudo completar el clon/);
+});
+
+Then('la sesión arranca', function () {
+  assert.equal(this.session.error, null, `${this.session.agent} failed to open the session: ${this.session.error}`);
+  assert.equal(this.session.exitCode, 0, this.session.log);
+  assert.deepEqual(this.session.startProblems, []);
+});
+
+Given(/^un clon del proyecto en la rama (?:temporal |permanente )?`([^`]+)`$/, function (name) {
+  const project = this.ensureProject();
+  this.branches.addRemote(project);
+  if (name !== 'main') this.branches.branch(project, name);
+  rememberGit(this);
+});
+
+// A commit only on the local main, without checking it out
+function localCommitOnMain(world) {
+  const project = world.project;
+  const tree = git(project.dir, 'rev-parse', 'main^{tree}').trim();
+  const commit = git(project.dir, 'commit-tree', tree, '-p', 'main', '-m', 'commit solo en la rama local').trim();
+  git(project.dir, 'update-ref', 'refs/heads/main', commit);
+}
+
+Given(/^(?:la rama permanente local )?`main` (está atrasada respecto a|está al día con|ha divergido de) `origin\/main`$/, function (state) {
+  const project = this.project;
+  if (state !== 'está al día con') this.branches.remoteCommit(project, { 'remoto.txt': 'remoto\n' }, { message: 'commit en el remoto' });
+  if (state === 'ha divergido de') localCommitOnMain(this);
+  rememberGit(this);
+});
+
+Then('`main` apunta al mismo commit que `origin\\/main`', function () {
+  const project = this.project;
+  assert.equal(this.branches.revParse(project, 'refs/heads/main'), this.branches.revParse(project, 'refs/remotes/origin/main'), this.session.log);
+});
+
+Then(/^`main` no cambia( y se avisa de que ha divergido)?$/, function (diverged) {
+  assert.equal(this.branches.revParse(this.project, 'refs/heads/main'), this.gitBefore.main, this.session.log);
+  if (diverged) assert.match(shownWarnings(this), /'main'.*divergido/);
+});
+
+Then('el árbol de trabajo no cambia', function () {
+  assert.deepEqual(this.project.gitStatus(), this.gitBefore.status);
+});
+
+Then(/^la rama de la sesión guardada es `([^`]+)`$/, function (name) {
+  assert.equal(this.branches.sessionBranch(this.project), name, this.session.log);
+});
+
+Then('no hay rama de la sesión guardada', function () {
+  assert.equal(this.branches.sessionBranch(this.project), null, this.session.log);
 });
 
 // --- La parte de TUI de OpenCode libera su suscripción (fix-tui-subscription-cleanup) ---

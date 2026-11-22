@@ -4,6 +4,15 @@
 # Uso:
 #   session-bootstrap.sh <directorio del proyecto>
 #       Prepara el proyecto para la sesión:
+#       - Prepara git (manage-git-discipline, design D5): completa el clon si
+#         es superficial; en un contenedor efímero, trae las referencias de
+#         origin con git fetch; pone al día con update-ref cada rama
+#         permanente local (x-main) atrasada respecto a origin/<rama>, salvo
+#         la rama en la que está el clon, y avisa de las que han divergido; y
+#         en un contenedor efímero guarda la rama de la sesión en
+#         git config idd.sessionBranch, si no hay una guardada. No toca el
+#         árbol de trabajo. Fuera de un contenedor efímero solo usa la red para
+#         completar un clon superficial.
 #       - Instala el motor del wiki en la versión fijada en
 #         .agents/wiki/engine.json, en .agents/wiki-engine/ (ignorado por git),
 #         y lo expone a cada agente con symlinks.
@@ -54,6 +63,8 @@ ENGINE_LINKS=(
 )
 REMINDER_MAX=600
 COMMENTS_DIR=".agents/comments"
+BRANCH_CHANGE=".agents/openspec/branch-change.mjs"
+GIT_TIMEOUT=300
 
 warn() {
   echo "session-start: $*" >&2
@@ -244,11 +255,65 @@ install_dependencies() {
   fi
 }
 
+# prepare_git: deja el clon listo para el ciclo de git del proyecto (design D5
+# de manage-git-discipline). La detección del contenedor efímero y la lista
+# x-main vienen de branch-change.mjs; sin Node, no es un contenedor efímero y
+# la única rama permanente es main
+prepare_git() {
+  command -v git >/dev/null 2>&1 || return
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return
+  local ephemeral=false permanent="main" info line log fetched=false
+  if command -v node >/dev/null 2>&1 && [ -f "$BRANCH_CHANGE" ]; then
+    info="$(node "$BRANCH_CHANGE" env 2>/dev/null)"
+    while IFS= read -r line; do
+      case "$line" in
+        ephemeral=*) ephemeral="${line#ephemeral=}" ;;
+        permanent=?*) permanent="${line#permanent=}" ;;
+      esac
+    done <<<"$info"
+  fi
+  log="$(mktemp)"
+  if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
+    if GIT_TERMINAL_PROMPT=0 timeout "$GIT_TIMEOUT" git fetch --unshallow --quiet >"$log" 2>&1; then
+      fetched=true
+    else
+      warn "no se pudo completar el clon superficial (git fetch --unshallow); las puertas del ciclo usan las referencias que haya"
+      tail -n 2 "$log" | sed 's/^/session-start:   /' >&2
+    fi
+  fi
+  if [ "$ephemeral" = "true" ] && [ "$fetched" = "false" ]; then
+    if ! GIT_TERMINAL_PROMPT=0 timeout "$GIT_TIMEOUT" git fetch --quiet origin >"$log" 2>&1; then
+      warn "no se pudo actualizar las referencias de origin (git fetch origin); las puertas del ciclo usan las que haya"
+      tail -n 2 "$log" | sed 's/^/session-start:   /' >&2
+    fi
+  fi
+  rm -f "$log"
+  local current name old new
+  current="$(git symbolic-ref --short -q HEAD 2>/dev/null)"
+  for name in $permanent; do
+    [ "$name" = "$current" ] && continue
+    old="$(git rev-parse --verify -q "refs/heads/$name" 2>/dev/null)" || continue
+    new="$(git rev-parse --verify -q "refs/remotes/origin/$name" 2>/dev/null)" || continue
+    [ "$old" = "$new" ] && continue
+    if git merge-base --is-ancestor "$old" "$new" 2>/dev/null; then
+      git update-ref "refs/heads/$name" "$new" "$old" 2>/dev/null ||
+        warn "no se pudo poner al día la rama permanente local '$name' con origin/$name"
+    elif ! git merge-base --is-ancestor "$new" "$old" 2>/dev/null; then
+      warn "la rama permanente local '$name' y origin/$name han divergido; no se toca"
+    fi
+  done
+  if [ "$ephemeral" = "true" ] && [ -n "$current" ] && [ -z "$(git config --get idd.sessionBranch 2>/dev/null)" ]; then
+    git config idd.sessionBranch "$current" 2>/dev/null ||
+      warn "no se pudo guardar la rama de la sesión (git config idd.sessionBranch)"
+  fi
+}
+
 main() {
   if [ -z "${1:-}" ] || ! cd "$1"; then
     warn "no se puede entrar en el directorio del proyecto ('${1:-}')"
     return
   fi
+  prepare_git
   # El motor no depende de Node, así que va antes y se instala aunque falte npm
   install_wiki_engine
   wiki_disabled || keep_wiki_versioned

@@ -2,6 +2,8 @@
 title: "La suite de aceptación y spec-as-source"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
+  - raw/notes/2026-11-22-ll-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md
   - raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md
   - raw/articles/2026-11-22-gplint.md
@@ -51,6 +53,10 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - **Un `#### Scenario:` sin nombre** no llega al `.feature`: el extractor lo deja en blanco, y por eso ningún linter lo detecta (lección 3 de la misma nota).
 - **Python en las skills**: `py_compile` deja un `__pycache__` junto al archivo, y el `.gitignore` no lo ignora; para comprobar la sintaxis, `ast.parse` no escribe nada (lección 6 de la misma nota).
 - **Pasos de ausencia**: un paso que afirma que algo no llega al agente comprueba la ausencia de ese contenido concreto, no que no llegue nada. `el agente no recibe la guía del wiki` exigía un contexto vacío y se rompió cuando el arranque empezó a entregar también la regla de comentarios (`idd@16e4617:acceptance-tests/step-definitions/wiki.steps.js`; [lecciones de add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md), lección 2).
+- **Repos git de prueba** (desde `manage-git-discipline`): `support/branches.js` monta un remoto bare por proyecto, ramas remotas por delante o divergidas, fusiones con squash, clones superficiales desde `file://` y el entorno de un contenedor efímero, con pruebas propias en `core-tests/branches-support.test.js` (`idd@5d7f5b0:acceptance-tests/support/branches.js`).
+- **Variables del entorno real**: la suite hereda el entorno de la máquina que la ejecuta. En la nube eso incluye `CLAUDE_CODE_CONTAINER_ID` y `CLAUDE_CODE_REMOTE`, que hacen que el proyecto se crea en un contenedor efímero. `cleanEnv` y `sessionEnv` las quitan y solo las pone el escenario que las pide; cualquier variable real que cambie el comportamiento debe tratarse igual (`idd@5d7f5b0:acceptance-tests/support/machine.js`; [lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 4).
+- **Regex con grupos opcionales**: cucumber pasa un argumento por cada grupo capturante y decide por la aridad si la función es de callback. Un grupo opcional que no captura descuadra la cuenta y el paso se cuelga hasta el timeout. Solo deben capturar los grupos que la función recibe ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 2).
+- **Duración en la nube**: el entorno firma cada commit, también los de los repos de prueba, y la suite entera tarda 15-20 minutos. Conviene ejecutarla en segundo plano e iterar con `--name` ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 1).
 
 ## Su límite
 
@@ -77,5 +83,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `acceptance-tests/support/world.js`, `acceptance-tests/core-tests/wiki-markers.test.js`.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `acceptance-tests/README.md`, `acceptance-tests/support/branches.js`, `acceptance-tests/support/agents/opencode-sim.mjs`, `acceptance-tests/support/agents/opencode-sim.js`.
+- [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `acceptance-tests/support/branches.js`, `acceptance-tests/support/machine.js`, `acceptance-tests/core-tests/branches-support.test.js`.
+- [Lessons Learned: manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md): lecciones 1, 2 y 4.
 - [Collection: archivado de replace-gherkin-lint-with-gplint (idd@d355c01)](../../raw/repos/2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md): `acceptance-tests/README.md`, `acceptance-tests/support/spec-lint.js`, `adr/0012-spec-lint-with-gplint.md`, el `design.md` del change archivado.
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `acceptance-tests/README.md`, `acceptance-tests/support/agents/opencode-host.mjs`.

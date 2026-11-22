@@ -272,15 +272,360 @@ Then('el artefacto queda sin commit', function () {
   const project = this.project;
   assert.equal(git(project.dir, 'rev-parse', 'HEAD').trim(), this.headBefore);
   assert.ok(project.gitStatus().some((line) => line.includes('openspec/changes/exportar-datos/design.md')), project.gitStatus().join('\n'));
-  // Nothing in the cycle makes commits, branches or merges on its own
+  // Outside an ephemeral container, nothing in the cycle makes commits,
+  // branches or merges on its own (manage-git-discipline)
   const commits = skillSection(this, 'commits');
-  assert.match(commits, /nunca hagas commits ni fusiones/i);
+  assert.match(commits, /Fuera de un contenedor efímero\*{0,2}, nunca hagas commits ni fusiones/i);
 });
 
 Then('se pide al usuario que haga el commit', function () {
   const commits = skillSection(this, 'commits');
   for (const moment of [/artefacto/, /task/, /archive/, /wiki/]) assert.match(commits, moment);
   assert.match(commits, /pide al usuario (que haga )?el commit/i);
+});
+
+// --- La referencia de origen (manage-git-discipline, D1, D2) ------------------------
+
+Given('una rama de origen remota con el change archivado `importar-datos`', function () {
+  const project = this.lifecycleProject();
+  this.branches.remoteCommit(project, {
+    'openspec/changes/archive/2026-11-21-importar-datos/proposal.md': '## Why\n\nPrueba de importar-datos.\n',
+  }, { message: 'archiva importar-datos' });
+});
+
+Given('la rama de origen local está atrasada y no tiene ese change', function () {
+  const project = this.project;
+  assert.notEqual(this.branches.revParse(project, 'refs/heads/main'), this.branches.revParse(project, 'refs/remotes/origin/main'));
+  assert.equal(git(project.dir, 'ls-tree', '-d', '--name-only', 'main', 'openspec/changes/archive/2026-11-21-importar-datos').trim(), '');
+});
+
+Given('una rama temporal que sale de la rama de origen remota', function () {
+  this.branches.branch(this.project, TEMP_BRANCH, { from: 'origin/main' });
+});
+
+Given('la rama de origen local y la remota han divergido', function () {
+  const project = this.lifecycleProject();
+  this.branches.remoteCommit(project, { 'remoto.txt': 'remoto\n' }, { message: 'commit solo en el remoto' });
+  fs.writeFileSync(project.path('local.txt'), 'local\n');
+  this.branches.commitAll(project, 'commit solo en la rama local');
+});
+
+Given('una rama temporal que sale de la rama de origen local', function () {
+  this.branches.branch(this.project, TEMP_BRANCH, { from: 'main' });
+});
+
+Then('el merge-base se calcula contra la rama de origen local', function () {
+  assert.equal(this.branchState.originRef, 'refs/heads/main', describeState(this.branchState));
+});
+
+Then('se avisa de que la rama de origen local y la remota han divergido', function () {
+  assert.match(this.branchState.warnings.join('\n'), /divergido/, describeState(this.branchState));
+});
+
+Given('una rama temporal con el change archivado `exportar-datos`', function () {
+  const project = this.lifecycleProject();
+  this.branches.branch(project, TEMP_BRANCH);
+  this.branches.addChange(project, 'exportar-datos', { planned: true, tasks: [{ id: '1.1', done: true }] });
+  this.branches.commitAll(project, 'exportar-datos');
+  this.branches.archiveChange(project, 'exportar-datos');
+  this.branches.commitAll(project, 'archiva exportar-datos');
+});
+
+Given('la rama temporal se ha fusionado con squash con la rama de origen', function () {
+  this.branches.squashMerge(this.project, TEMP_BRANCH, 'main');
+});
+
+Given('en la rama temporal se crea después el change `importar-datos`', function () {
+  assert.equal(this.branches.currentBranch(this.project), TEMP_BRANCH);
+  this.branches.addChange(this.project, 'importar-datos');
+});
+
+// --- La puerta check commit (manage-git-discipline, D4) ---------------------------
+
+const SESSION_BRANCH = 'claude/exportar';
+
+function writePending(project, rel) {
+  const file = project.path(rel);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.appendFileSync(file, 'Cambio pendiente.\n');
+}
+
+// Whether the session runs in an ephemeral container: for the gates the suite
+// runs, and for the machine the session bootstrap opens on
+function setEphemeral(world, ephemeral, saved) {
+  world.ephemeral = ephemeral;
+  world.machine.ephemeral = ephemeral;
+  if (saved !== undefined) world.branches.setSessionBranch(world.ensureProject(), saved);
+}
+
+Given('un clon en la rama temporal `claude\\/exportar` con cambios pendientes en una sola zona', function () {
+  const project = this.lifecycleProject();
+  this.branches.branch(project, SESSION_BRANCH);
+  writePending(project, 'src/exportar.js');
+});
+
+Given(
+  /^la sesión está en un contenedor efímero (?:sin rama(?: de la sesión)? guardada|con `([^`]+)` guardada(?: como rama de la sesión)?)$/,
+  function (saved) {
+    setEphemeral(this, true, saved ?? null);
+  }
+);
+
+Given(/^(?:la sesión no está|una sesión que no está) en un contenedor efímero$/, function () {
+  setEphemeral(this, false);
+});
+
+Given(/^un contenedor efímero con `([^`]+)` guardada como rama de la sesión$/, function (saved) {
+  this.lifecycleProject();
+  setEphemeral(this, true, saved);
+});
+
+Given('el clon está en la rama `main` con cambios pendientes', function () {
+  assert.equal(this.branches.currentBranch(this.project), 'main');
+  writePending(this.project, 'src/exportar.js');
+});
+
+Given('el clon está en la rama temporal `claude\\/exportar`', function () {
+  this.branches.branch(this.project, SESSION_BRANCH);
+});
+
+Given(/^hay cambios pendientes en (.+)$/, function (list) {
+  const paths = [...list.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+  assert.ok(paths.length > 0, `no paths in: ${list}`);
+  for (const rel of paths) writePending(this.project, rel);
+});
+
+When(/^se ejecuta la puerta `check (commit|propose)`$/, function (gate) {
+  this.gate = this.branches.checkGate(this.lifecycleProject(), gate, null, { ephemeral: Boolean(this.ephemeral) });
+});
+
+Then('la puerta deja seguir', function () {
+  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 0, JSON.stringify(this.gate));
+});
+
+Then('la puerta no deja seguir', function () {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1, JSON.stringify(this.gate));
+});
+
+Then('se indica que los commits del agente van solo a una rama temporal', function () {
+  assert.match(this.gate.message, /commits del agente van solo a una rama temporal/, JSON.stringify(this.gate));
+});
+
+Then('se indica que los commits los hace el usuario', function () {
+  assert.match(this.gate.message, /los commits los hace el usuario/, JSON.stringify(this.gate));
+});
+
+// --- Las dos formas del ciclo en las puertas (manage-git-discipline, D3) ----------
+
+Given('la rama de origen no tiene ningún change en curso', function () {
+  const project = this.project;
+  const active = git(project.dir, 'ls-tree', '-d', '--name-only', 'main:openspec/changes/').split('\n').filter((d) => d && d !== 'archive');
+  assert.deepEqual(active, []);
+});
+
+Then('se avisa de que la forma recomendada es proponer en una rama temporal', function () {
+  assert.match(this.gate.message, /forma recomendada es proponer en una rama temporal/, JSON.stringify(this.gate));
+});
+
+Then('su mensaje dice cómo dejar un solo change en la rama', function () {
+  assert.match(this.gate.message, /tiene que quedar uno solo/, JSON.stringify(this.gate));
+  assert.match(this.gate.message, /lleva .* a su propia rama temporal/, JSON.stringify(this.gate));
+});
+
+Given('una rama de origen con el change en curso `exportar-datos` sin tasks hechas', function () {
+  const project = this.lifecycleProject();
+  this.branches.addChange(project, 'exportar-datos', { planned: true, tasks: [{ id: '1.1', done: false }, { id: '1.2', done: false }] });
+  this.branches.commitAll(project, 'propuesta de exportar-datos fusionada');
+});
+
+When('se lanza el apply de `exportar-datos` en la rama temporal', function () {
+  this.gate = this.branches.checkGate(this.project, 'apply', 'exportar-datos');
+});
+
+Then('el apply no se detiene', function () {
+  assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 0);
+});
+
+Given(/^la rama de origen tiene el change en curso `exportar-datos` con (todas las tasks hechas|tasks sin hacer)$/, function (tasks) {
+  const project = this.project;
+  const done = tasks === 'todas las tasks hechas';
+  this.branches.addChange(project, 'exportar-datos', { planned: true, tasks: [{ id: '1.1', done: true }, { id: '1.2', done }] });
+  this.branches.commitAll(project, 'implementación de exportar-datos fusionada');
+});
+
+Given('la rama de origen no tiene el change en curso `exportar-datos`', function () {
+  assert.equal(fs.existsSync(this.project.path('openspec', 'changes', 'exportar-datos')), false);
+});
+
+When('se lanza la puerta `check archive` de `exportar-datos`', function () {
+  this.gate = this.branches.checkGate(this.project, 'archive', 'exportar-datos');
+});
+
+Then('la puerta no deja seguir e indica que faltan tasks por hacer', function () {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1);
+  assert.match(this.gate.message, /faltan tasks por hacer/, JSON.stringify(this.gate));
+});
+
+// --- Números de ADR (manage-git-discipline, D6) ---------------------------------
+
+const ADR_FILE = /^(\d{4})-.*\.md$/;
+
+Given(/^la rama temporal añade el ADR `(adr\/\d{4}-[a-z0-9-]+\.md)`$/, function (rel) {
+  const project = this.project;
+  fs.writeFileSync(project.path(rel), `# ${path.basename(rel, '.md')}\n\n- Status: accepted\n`);
+  this.branches.commitAll(project, `añade ${rel}`);
+});
+
+// The origin branch's adr/ ends at the given ADR (any other with that number
+// or a higher one is removed), and the temporary branch brings it in
+Given(/^la rama de origen tiene (hasta )?`adr\/(\d{4})-([a-z0-9-]+)\.md`$/, function (_, number, slug) {
+  const project = this.project;
+  const back = this.branches.currentBranch(project);
+  this.branches.checkout(project, 'main');
+  for (const file of fs.readdirSync(project.path('adr'))) {
+    const m = ADR_FILE.exec(file);
+    if (m && m[1] >= number) fs.rmSync(project.path('adr', file));
+  }
+  fs.writeFileSync(project.path('adr', `${number}-${slug}.md`), `# ${number}-${slug}\n\n- Status: accepted\n`);
+  this.branches.commitAll(project, `adr/ de la rama de origen hasta ${number}`);
+  this.branches.checkout(project, back);
+  git(project.dir, 'merge', '-q', '--no-edit', 'main');
+});
+
+Then(/^la puerta no deja seguir e indica renumerar `(\d{4})`$/, function (number) {
+  assert.equal(this.gate.ok, false, JSON.stringify(this.gate));
+  assert.equal(this.gate.exitCode, 1);
+  assert.match(this.gate.message, new RegExp(`renumera.*${number}`), JSON.stringify(this.gate));
+});
+
+// --- Textos de la skill y de config.yaml (manage-git-discipline, D6, D7, D9) -------
+
+const openspecSupport = require('../support/openspec');
+
+// A section of the skill the scenario reads, from its marker to the next one
+function section(world, id) {
+  const marker = `<!-- lifecycle:${id} -->`;
+  const at = world.skillText.indexOf(marker);
+  assert.ok(at !== -1, `the openspec-git-discipline skill has no section ${marker}`);
+  const next = world.skillText.indexOf('<!-- lifecycle:', at + marker.length);
+  return world.skillText.slice(at + marker.length, next === -1 ? undefined : next);
+}
+
+function assertIn(text, pattern, what) {
+  assert.match(text, pattern, `${what} does not match ${pattern}:\n${text}`);
+}
+
+Given('la skill de disciplina de git del proyecto', function () {
+  this.skillText = fs.readFileSync(this.ensureProject().path(SKILL), 'utf8');
+});
+
+Given('la skill de disciplina de git y el `openspec\\/config.yaml` del proyecto', function () {
+  this.skillText = fs.readFileSync(this.ensureProject().path(SKILL), 'utf8');
+  this.configText = fs.readFileSync(this.project.path('openspec', 'config.yaml'), 'utf8');
+});
+
+Then('indica hacer el commit del archive aparte', function () {
+  const commits = section(this, 'commits');
+  assertIn(commits, /archive/, 'the commits section');
+  assertIn(commits, /aparte/, 'the commits section');
+});
+
+Then('indica hacer el commit del wiki después del commit del archive', function () {
+  assertIn(section(this, 'commits'), /wiki[^\n]*(después|posterior)[^\n]*archive/i, 'the commits section');
+});
+
+Then('indica ejecutar la puerta `check commit` antes de cada commit', function () {
+  assertIn(section(this, 'agent-commits'), /branch-change\.mjs check commit`? antes de cada commit/, 'the agent commits section');
+});
+
+Then('indica hacer commit y push en los momentos de commit y cuando avisa el final de un turno', function () {
+  const agent = section(this, 'agent-commits');
+  assertIn(agent, /commit y (el )?push/, 'the agent commits section');
+  assertIn(agent, /momentos de commit/, 'the agent commits section');
+  assertIn(agent, /final de(l| un) turno/, 'the agent commits section');
+});
+
+Then('indica hacer el push solo a la rama de la sesión', function () {
+  assertIn(section(this, 'agent-commits'), /push solo a (`origin\/<rama de la sesión>`|la rama de la sesión)/, 'the agent commits section');
+});
+
+Then('indica no fusionar, no cambiar de rama y no hacer push a otras ramas', function () {
+  assertIn(section(this, 'agent-commits'), /No fusiones, no cambies de rama, no crees ramas y no hagas push a otras ramas/, 'the agent commits section');
+});
+
+Then('recomienda la forma de una rama con una fusión con `--no-ff`', function () {
+  const merge = section(this, 'merge');
+  assertIn(merge, /forma recomendada/, 'the merge section');
+  assertIn(merge, /git merge --no-ff/, 'the merge section');
+});
+
+Then('indica que la forma canónica y el squash también se admiten', function () {
+  assertIn(section(this, 'merge'), /forma canónica y el squash también se admiten/, 'the merge section');
+});
+
+Then('indica que el squash se admite', function () {
+  assertIn(section(this, 'merge'), /squash se admite/, 'the merge section');
+});
+
+Then('indica que las citas del wiki a commits de la rama se resuelven entonces por su blob', function () {
+  assertIn(section(this, 'merge'), /citas del wiki[^\n]*por su blob/, 'the merge section');
+});
+
+When('se revisa qué dicen sobre dónde se archiva', function () {
+  this.archiveTexts = { skill: section(this, 'forms'), config: this.configText };
+});
+
+Then('los dos explican la forma recomendada y la forma canónica, con cuándo conviene cada una', function () {
+  for (const [what, text] of Object.entries(this.archiveTexts)) {
+    assertIn(text, /forma recomendada[^\n]*conviene/, what);
+    assertIn(text, /forma canónica[^\n]*conviene/, what);
+  }
+});
+
+Then('ninguno trata la forma canónica como una infracción', function () {
+  for (const [what, text] of Object.entries(this.archiveTexts)) {
+    assertIn(text, /forma canónica[^\n]*admitida/, what);
+    assert.doesNotMatch(text, /infracci|prohibid|no se admite/i, what);
+  }
+  assert.doesNotMatch(section(this, 'red-flags'), /archivar en una rama permanente/i);
+});
+
+Given('el `openspec\\/config.yaml` del proyecto', function () {
+  this.ensureProject();
+});
+
+When('se consultan las instrucciones del artefacto `adr` de un change', function () {
+  const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
+  const result = this.branches.openspec(this.project, ['instructions', 'adr', '--change', name, '--json']);
+  assert.equal(result.exitCode, 0, `${result.stdout}\n${result.stderr}`);
+  this.adrRules = (JSON.parse(result.stdout).rules ?? []).join('\n');
+});
+
+Then('indican hacer `git fetch` antes de numerar', function () {
+  assertIn(this.adrRules, /`git fetch`[^\n]*antes de numerar/, 'the adr rules');
+});
+
+Then('indican tomar el número más alto de `adr\\/` en la rama de origen remota y en todas las ramas remotas', function () {
+  assertIn(this.adrRules, /número más alto de `adr\/` en `origin\/<rama de origen>` y en todas las ramas remotas/, 'the adr rules');
+});
+
+When('se consultan las indicaciones de archivado para un change archivado en la rama de origen', function () {
+  const name = openspecSupport.addChangeReadyToArchive(this.project, 'cambio-de-prueba');
+  const guidance = openspecSupport.archiveInstructions(this.project, name).operationGuidance ?? [];
+  this.originArchive = guidance.map(String).filter((entry) => /archiva en la rama de origen/.test(entry));
+  assert.ok(this.originArchive.length > 0, `no archive guidance for an archive in the origin branch:\n${JSON.stringify(guidance, null, 2)}`);
+});
+
+Then('indican calcular las rutas que tocó el change a partir de las fusiones de su propuesta y de su implementación y del commit del archive', function () {
+  assertIn(this.originArchive.join('\n'), /rutas que tocó el change[^\n]*fusiones de su propuesta y de su implementación[^\n]*commit del archivado/, 'the guidance');
+});
+
+Then('indican hacer el commit del wiki después del commit del archive', function () {
+  assertIn(this.originArchive.join('\n'), /commit del wiki[^\n]*después del commit del archivado/, 'the guidance');
 });
 
 // --- Ramas temporales que crea el modelo (autopilot-sesion-operativa, ADR-0013) ---

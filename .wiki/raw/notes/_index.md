@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-manage-git-discipline.md](2026-11-22-ll-manage-git-discipline.md) | 4 lecciones de manage-git-discipline: firma de commits en la nube, grupos opcionales de cucumber, worktree para probar el módulo y variables del contenedor efímero | lessons-learned, acceptance-tests, cucumber, git | 2026-11-22 |
 | [2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md](2026-11-22-ll-adr-0014-sustituye-confirmacion-revision.md) | La lección 10 (confirmar en la TUI el cierre de la revisión) queda sustituida por el cierre con git de ADR-0014 | lessons-learned, opencode, openspec-autopilot | 2026-11-22 |
 | [2026-11-22-ll-replace-gherkin-lint-with-gplint.md](2026-11-22-ll-replace-gherkin-lint-with-gplint.md) | 6 lecciones de replace-gherkin-lint-with-gplint: nivel desconocido de gplint, Rule: en gherkin-lint, escenario sin nombre, .extracted/ compartido, main local atrasado y __pycache__ | lessons-learned, gplint, spec-as-source, git | 2026-11-22 |
 | [2026-11-22-ll-add-quote-comment-rule.md](2026-11-22-ll-add-quote-comment-rule.md) | 3 lecciones de add-quote-comment-rule: printf y \uXXXX, pasos de ausencia y ADRs antes de proponer | lessons-learned, bash, acceptance-tests, adr | 2026-11-22 |

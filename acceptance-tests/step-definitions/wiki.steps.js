@@ -337,6 +337,9 @@ const GUIDE_SECTIONS = {
   'indica proponer registrar las candidatas una sola vez, en un punto de cierre': 'registrar-en-cierre',
   'nombra como puntos de cierre el final de una tarea, antes de un commit, cuando el usuario da la sesión por terminada y el archive de un change':
     'puntos-de-cierre',
+  'indica tomar el blob de la ruta en el manifiesto citado': 'cita-blob-manifiesto',
+  'indica resolverlo con git por su blob': 'cita-resolver-blob',
+  'indica no tratar la cita como rota': 'cita-no-rota',
 };
 const GAP_OPTIONS = {
   'responder con conocimiento interno, indicando su origen': 'hueco-conocimiento-interno',

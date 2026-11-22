@@ -2,6 +2,7 @@
 title: "El arranque de sesión: núcleo neutral y un adaptador por agente"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
   - raw/repos/2026-11-21-idd-1cf0792.md
   - raw/repos/2026-11-21-idd-f2be907-readme.md
@@ -49,6 +50,7 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - **El CLI del proyecto**: el `openspec` de la versión de `package.json` tiene prioridad sobre uno global. Si el `PATH` no se puede ajustar, se avisa e indica cómo ejecutarlo. "Avisar" es mostrarlo en la interfaz del agente; dejarlo en un log no cuenta.
 - **Las dependencias**: todas, las de la raíz y las de `acceptance-tests/`. Solo se reinstalan si cambian `package.json`, `package-lock.json` o el núcleo, y una instalación vale para los dos agentes.
 - **Los requisitos**: sin npm o con un Node inferior al de `engines.node`, se avisa y no se instala nada. Un fallo de instalación avisa, no bloquea la sesión y se reintenta en la siguiente.
+- **Git listo para el ciclo** (desde `manage-git-discipline`): antes de instalar nada, `prepare_git` completa un clon superficial, en un contenedor efímero trae las referencias de `origin` y guarda la rama de la sesión en `git config idd.sessionBranch`, y pone al día con `update-ref` las ramas permanentes locales atrasadas, salvo la del clon; de una divergida solo avisa. No toca el árbol de trabajo y, fuera de la nube, solo usa la red para completar un clon superficial (`idd@5d7f5b0:.agents/hooks/session-bootstrap.sh`, `idd@5d7f5b0:openspec/specs/session-bootstrap/spec.md`). Saber si la sesión es un contenedor efímero lo dice `branch-change.mjs env`, para que la detección esté en un solo sitio.
 - **El motor del wiki**: se instala en la versión fijada, se sustituye si hay otra y no se versiona. Un fallo avisa con la instalación manual y se reintenta.
 - **Guía y recordatorio**: los entrega el adaptador del arranque, nunca un archivo de instrucciones que el agente cargue siempre. ADR-0010 extiende esa regla a toda instrucción que la plantilla dé al agente, cada una con su fuente en `.agents/` y su desactivación en local (`idd@16e4617:adr/0010-agent-instructions-through-session-bootstrap.md`); la primera tras el wiki es [[regla-de-comentarios|la regla de comentarios]] ([la regla de comentarios](../concepts/regla-de-comentarios.md)).
 - **En OpenCode, la parte de TUI libera su suscripción a los avisos** al recargarse y al cerrarse: tras una recarga, cada aviso nuevo se muestra una sola vez, y al cerrar con `--standalone` no queda ningún error en el terminal (`idd@99bdccd:openspec/specs/session-bootstrap/spec.md`). Sin esa limpieza, cada carga anterior viva repetía el toast (`idd@99bdccd:.opencode/plugins/session-bootstrap/tui.js`).
@@ -74,4 +76,5 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `.agents/hooks/session-bootstrap.sh`.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
 - [Collection: archivado de add-quote-comment-rule](../../raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md): `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/session-start.sh`, `.claude/hooks/user-prompt-submit.sh`, `.claude/hooks/json.sh`, `adr/0010-agent-instructions-through-session-bootstrap.md`, `README.md`.
+- [Collection: archivado de manage-git-discipline (idd@5d7f5b0)](../../raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md): `.agents/hooks/session-bootstrap.sh`, `openspec/specs/session-bootstrap/spec.md`.
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `openspec/specs/session-bootstrap/spec.md`, `.opencode/plugins/session-bootstrap/tui.js`.
