@@ -395,6 +395,13 @@ export function check(dir, gate, name, { env = process.env } = {}) {
       );
     }
   }
+  // El archive en una rama temporal solo lo permite la excepción
+  if (gate === 'archive' && !state.protected) {
+    return deny(
+      `No se archiva '${name}' en la rama temporal '${state.branch}': la regla es archivar en la rama de origen '${state.origin}' tras fusionar la implementación. ` +
+        `Fusiona la rama con '${state.origin}' y archiva allí. Si el acceso directo a las ramas permanentes está vetado, declara \`x-main-protected: true\` en openspec/config.yaml.`
+    );
+  }
   if (state.kind === 'several') {
     return deny(
       `La rama '${state.branch}' tiene varios changes (${named}); tiene que quedar uno solo: lleva cada uno de los demás a su propia rama temporal ` +
