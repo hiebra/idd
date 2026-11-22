@@ -109,7 +109,8 @@ Then('la rama temporal es la suya', function () {
 // OpenSpec with and without the key: same exit codes, and nothing about it
 When('se ejecutan `openspec list`, `openspec status`, `openspec instructions` y `openspec validate`', function () {
   const project = this.project;
-  this.branches.branch(project, 'feature/exportar', { from: 'develop' });
+  const key = this.configKey ?? 'x-main';
+  this.branches.branch(project, 'feature/exportar', { from: key === 'x-main' ? 'develop' : 'main' });
   this.branches.addChange(project, 'exportar-datos', { planned: true });
   const commands = [
     ['list', '--json'],
@@ -121,16 +122,16 @@ When('se ejecutan `openspec list`, `openspec status`, `openspec instructions` y 
   this.withKey = run();
   const config = project.path('openspec', 'config.yaml');
   const saved = fs.readFileSync(config, 'utf8');
-  fs.writeFileSync(config, saved.replace(/^x-main:.*\n/m, ''));
+  fs.writeFileSync(config, saved.replace(new RegExp(`^${key}:.*\\n`, 'm'), ''));
   this.withoutKey = run();
   fs.writeFileSync(config, saved);
 });
 
-Then('ninguno falla ni avisa por la clave `x-main`', function () {
+Then(/^ninguno falla ni avisa por la clave `(x-main|x-main-protected)`$/, function (key) {
   this.withKey.forEach((result, i) => {
     const detail = `openspec ${result.args.join(' ')} (exit ${result.exitCode}):\n${result.stdout}\n${result.stderr}`;
-    assert.equal(result.exitCode, this.withoutKey[i].exitCode, `exit code differs with x-main:\n${detail}`);
-    assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, /x-main/, detail);
+    assert.equal(result.exitCode, this.withoutKey[i].exitCode, `exit code differs with ${key}:\n${detail}`);
+    assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, new RegExp(key), detail);
   });
   const [list, status, instructions] = this.withKey;
   for (const result of [list, status, instructions]) {
