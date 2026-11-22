@@ -59,7 +59,7 @@ Las reglas de un artefacto llegan al modelo con `openspec instructions tasks --j
 
 El usuario eligió minutos de verificación como unidad. Los minutos no se pueden medir al planificar, así que la regla da una referencia que hace comparables las estimaciones:
 
-- **8 líneas de diff por minuto.** Solo cuentan las líneas que hay que leer: no los archivos generados ni una copia literal que se comprueba con una orden. Son unas 500 líneas por hora, el ritmo que SmartBear recomienda no superar al revisar código (`https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/`, consultada el 2026-11-22; es material del fabricante y aún no está registrada en el wiki).
+- **8 líneas de diff por minuto.** Solo cuentan las líneas que hay que leer: no los archivos generados ni una copia literal que se comprueba con una orden. Son unas 500 líneas por hora, el ritmo que SmartBear recomienda no superar al revisar código (`https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/`, consultada el 2026-11-22; es material del fabricante, registrado en el wiki en `.wiki/raw/articles/2026-11-22-smartbear-buenas-practicas-revision-de-codigo.md`).
 - **2 minutos por escenario** que haya que recorrer. Es un supuesto de partida, sin fuente.
 
 Con esa referencia, 15 minutos son unas 100 líneas y uno o dos escenarios. En este repositorio, el 74 % de los commits de código no pasa de 100 líneas: el límite obliga a dividir más o menos la cuarta parte de lo que hasta ahora ha ido junto.
@@ -258,7 +258,6 @@ Tres apartados nuevos: el límite de verificación y cómo se cambia; el contrat
 
 - **ADR.** La decisión D6 es duradera: la depuración en la verificación se apoya en un MCP externo que solo informa, con un contrato que fija la plantilla. El paso adr debe registrarla en un ADR nuevo, ADR-0027: el número más alto en `main` es ADR-0025, y la rama `origin/claude/exciting-shannon-bgr8tv` (`add-wiki-lite-mode`) ya usa ADR-0026. No sustituye a ninguno.
 - **Cuando exista un servidor.** Hay que probar el contrato con OpenCode real (que el agente de la revisión llega a las tools, con Code Mode y sin él), ejecutar los dos ejemplos en una máquina con VS Code, Liberty y Vite, y entonces escribir el comprobador de conformidad. Antes solo se probaría contra un servidor falso escrito por nosotros.
-- **La fuente de SmartBear** de D2 no está en el wiki. Se propone al usuario registrarla.
 - **Si el límite debe ser legible por máquina.** Depende de si se quiere que el plugin valide las estimaciones (D1 y D4).
 
 ## Anexo A: `contract.json`
