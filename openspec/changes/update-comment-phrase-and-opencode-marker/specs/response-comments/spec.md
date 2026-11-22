@@ -37,7 +37,7 @@ Examples:
 ```
 
 ### Requirement: Un comentario no se responde
-Un comentario es un mensaje del usuario que, sin los espacios ni las marcas de comentario HTML (`<!-- ... -->`) iniciales, empieza por una marca de comentario: una cadena no vacía entre comillas simples dobladas (`''así''`), pensada para donde no se puede citar, como la TUI de OpenCode, o una cita de Markdown (líneas que empiezan por `>`, como las que generan la app de Claude y la web de OpenCode al citar un fragmento). Una cadena entre comillas simples sin doblar (`'así'`) NO es una marca de comentario. La regla DEBE indicar al agente que un comentario no se responde: el agente contesta solo con la frase fija "Añade más comentarios o pídeme que los procese (p) o reformule (r) en base a ellos", en el idioma en que está escrito el comentario, y acumula el comentario sin investigar ni modificar nada a raíz de él.
+Un comentario es un mensaje del usuario que, sin los espacios ni las marcas de comentario HTML (`<!-- ... -->`) iniciales, empieza por una marca de comentario: una cadena no vacía entre comillas simples dobladas (`''así''`), pensada para donde no se puede citar, como la TUI de OpenCode, o una cita de Markdown (líneas que empiezan por `>`, como las que genera la app de Claude al citar un fragmento). También es un comentario un mensaje que incluye una cita de la web de OpenCode, que llega al modelo como texto dentro del mensaje: una línea `The user quoted the following from <origen>:`, seguida de una o más líneas que empiezan por `> ` y, si el usuario escribió algo, de `The user made the following comment regarding this quote: <comentario>`. Una cadena entre comillas simples sin doblar (`'así'`) NO es una marca de comentario. La regla DEBE indicar al agente que un comentario no se responde: el agente contesta solo con la frase fija "Añade más comentarios o pídeme que los procese (p) o reformule (r) en base a ellos", en el idioma en que está escrito el comentario, y acumula el comentario sin investigar ni modificar nada a raíz de él.
 
 #### Scenario: La regla dice cómo contestar a un comentario
 
@@ -46,6 +46,7 @@ Given la regla de comentarios del proyecto
 When se revisa qué indica sobre un mensaje que empieza por una marca de comentario
 Then indica que es un comentario sobre la intervención anterior del agente
 And indica que una cita de Markdown al principio del mensaje también es una marca de comentario
+And indica que una cita de la web de OpenCode en el mensaje también lo convierte en un comentario
 And indica contestar solo con la frase fija
 And indica contestar en el idioma del comentario
 And indica acumular el comentario sin investigar ni modificar nada a raíz de él
@@ -71,6 +72,14 @@ Examples:
   | OpenCode    | > el segundo punto                           |
   | OpenCode    | p                                            |
   | OpenCode    | Reformula, por favor                         |
+```
+
+#### Scenario: En OpenCode, una cita desde la web activa el recordatorio
+
+```gherkin
+Given una sesión de OpenCode abierta en el proyecto
+When el usuario cita "el segundo punto" desde la web de OpenCode con el comentario "no lo entiendo"
+Then el agente recibe el mensaje junto con el recordatorio de la regla de comentarios
 ```
 
 #### Scenario Outline: El agente no recibe el recordatorio con otros mensajes

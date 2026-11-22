@@ -5,6 +5,7 @@ La regla de comentarios vive en `.agents/comments/rule.md` y su recordatorio en 
 El usuario ha precisado en esta sesión:
 
 - la TUI de OpenCode no permite citar, y su web sí;
+- en el hook `context`, `input.messages` llega en formato LLM, y una cita de la web de OpenCode aparece solo como texto dentro del mensaje `user`: `\nThe user quoted the following from <origen>:\n> línea…\n` y, si hay comentario, `\nThe user made the following comment regarding this quote: <comentario>`. El usuario dio la expresión regular `/\nThe user quoted the following from (.+?):\n((?:> .*\n?)+)(?:\nThe user made the following comment regarding this quote: ([\s\S]*))?/`. **[heredado]** No se ha comprobado aquí con OpenCode real.
 - doblar las comillas solo sirve para que la regla no se active por error.
 
 ADRs en vigor que acotan el diseño:
@@ -38,6 +39,16 @@ Este change matiza ADR-0010 en lo que toca a OpenCode (ver D2 y el ADR del chang
 - Una cadena entre comillas simples sin doblar deja de ser una marca. `'foo' no aparece en el log` ya no activa la regla.
 - El interior no puede tener comillas simples, como hasta ahora. Así, `''` seguido de texto sin cierre no es un comentario.
 - *Alternativa: marcas distintas por agente* (`''…''` solo en OpenCode). Se descartó a petición del usuario: la regla y la detección siguen siendo una sola, y no hace falta un marcador por agente en `rule.md`.
+
+### D1b. Una cita de la web de OpenCode también es un comentario, y la detecta el núcleo
+
+La detección va en `activates_comments`, como el resto (ADR-0010), y no en el plugin. El mensaje es un comentario si, en cualquier punto, tiene una línea `The user quoted the following from <origen>:` seguida inmediatamente de una línea que empieza por `> `. Es la parte obligatoria de la expresión que dio el usuario. El comentario posterior (`The user made the following comment regarding this quote:`) es opcional y no cambia la decisión.
+
+- Se busca en cualquier línea y no solo al principio, porque el bloque empieza por `\n` y puede ir detrás de lo que el usuario escribió.
+- La detección es neutral: en Claude Code un mensaje así es muy improbable, y si llegara también sería una cita.
+- Las palabras de cierre del texto fijo de OpenCode ("the", "following"…) no importan: el mensaje ya activa el recordatorio por ser un comentario.
+- La regla (`es-comentario-cita`) describe al modelo este bloque, porque el modelo lo ve como texto y no como `>` al principio.
+- *Alternativa: detectarla en el plugin con la expresión de JavaScript.* La decisión quedaría fuera del núcleo y repetida por agente.
 
 ### D2. Un plugin propio de OpenCode es el adaptador de la regla
 
@@ -77,12 +88,15 @@ El host simulado (`opencode-host.mjs`) carga hoy un solo plugin (`options.plugin
 - `reminder.md`: la marca y la frase nuevas, por debajo de `REMINDER_MAX` (600 caracteres).
 - `FIXED_REPLY` de `comments.steps.js` pasa a la frase nueva.
 - El test del núcleo (`comments-reminder.test.js`) cubre `''…''` con y sin marcas HTML, `'…'` sin doblar, que no activa, y `''` sin cierre.
+- El test del núcleo cubre también la cita de la web de OpenCode, con y sin comentario y con texto antes, y una línea `The user quoted the following from …:` sin líneas `> ` debajo, que no activa.
+- El step `el usuario cita "<fragmento>" desde la web de OpenCode con el comentario "<comentario>"` construye el texto del mensaje con el formato de D1b y lo envía como cualquier otro.
 
 ## Risks / Trade-offs
 
 - [**BREAKING**: `'así'` deja de ser un comentario] → La regla y el recordatorio enseñan la marca nueva. Un comentario con la marca antigua llega como un mensaje normal, y el agente lo responde.
 - [Dos plugins con hook `context` sobre la misma petición: el orden de lo añadido a `system` depende del orden de carga de OpenCode] → La regla de comentarios no depende de ir antes o después de la guía del wiki.
 - [Copia de `lastUserText` y de la llamada al núcleo en dos plugins] → Son unas pocas líneas estables, y compartirlas obligaría a cargar un módulo común entre plugins locales, sin comprobar en OpenCode 2.3.2.
+- [El formato de la cita de la web de OpenCode no está comprobado aquí y puede cambiar entre versiones] → Va al registro de vigilancia al subir de versión de OpenCode. Si cambia, la cita llega como un mensaje normal y el agente la responde.
 - [La suite simula la carga de varios plugins, no la de OpenCode real] → Queda en el registro de vigilancia `volver-a-comprobar-hook-context-al-subir-opencode`.
 
 ## Migration Plan
