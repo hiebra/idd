@@ -18,6 +18,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { BASH } = require('../machine');
 
 const HOST = path.join(__dirname, 'opencode-host.mjs');
 // OpenCode must not wait for the install to finish before it starts (design D3)
@@ -96,7 +97,7 @@ class OpenCodeAgent {
       subscriptions: result.subscriptions ?? [],
       log: `host stderr:\n${child.stderr}\nhost logs:\n${result.logs.join('\n')}\ntoasts: ${JSON.stringify(result.toasts)}\nerror: ${result.error}\nrequest: ${JSON.stringify(result.request)}`,
       run(command) {
-        return spawnSync('bash', ['-c', command], { cwd: project.dir, env, encoding: 'utf8' });
+        return spawnSync(BASH, ['-c', command], { cwd: project.dir, env, encoding: 'utf8' });
       },
       // Opens the same session again with more host options: reloads of the
       // TUI part, an event of the plugin's RPC and closing the TUI

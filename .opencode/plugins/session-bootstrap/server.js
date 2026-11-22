@@ -1,8 +1,9 @@
 // Parte de servidor del plugin de arranque de sesión para OpenCode 2:
-// adaptador del núcleo .agents/hooks/session-bootstrap.sh (ADR-0002).
+// adaptador del núcleo .agents/hooks/session-bootstrap.mjs (ADR-0023).
 //
-// - Al cargar, lanza el núcleo en segundo plano sobre el proyecto; setup no
-//   espera a la instalación.
+// - Al cargar, lanza el núcleo con node en segundo plano sobre el proyecto;
+//   setup no espera a la instalación. Si no hay node, avisa con el mismo
+//   texto que da el núcleo cuando falta npm.
 // - Antes de cada comando de shell, espera al núcleo, pone el openspec del
 //   proyecto por delante en el PATH del comando y exporta CLAUDE_PLUGIN_ROOT
 //   con el motor del wiki, para que sus skills encuentren su helper.
@@ -26,7 +27,10 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 
 const ID = "session-bootstrap";
-const CORE = path.join(".agents", "hooks", "session-bootstrap.sh");
+const CORE = path.join(".agents", "hooks", "session-bootstrap.mjs");
+// El mismo texto que da el núcleo cuando falta npm
+const NO_NODE_WARNING =
+  "session-start: hace falta Node.js con npm para instalar las dependencias del proyecto; no se instala nada";
 const PATH_WARNING =
   "session-start: no se ha podido ajustar el PATH de la sesión; ejecuta el CLI del proyecto con 'npx openspec'";
 const ENGINE_WARNING =
@@ -71,9 +75,10 @@ function coreText(directory, mode) {
   return new Promise((resolve) => {
     let stdout = "";
     try {
-      const child = spawn("bash", [path.join(directory, CORE), mode, "opencode", directory], {
+      const child = spawn("node", [path.join(directory, CORE), mode, "opencode", directory], {
         cwd: directory,
         stdio: ["ignore", "pipe", "ignore"],
+        windowsHide: true,
       });
       child.stdout.on("data", (chunk) => (stdout += chunk));
       child.on("error", () => resolve(""));
@@ -113,20 +118,25 @@ function runCore(directory) {
       const warnings = stderr.split("\n").filter((line) => line.trim() !== "");
       resolve({ bin: value("bin"), engine: value("wiki-engine"), warnings: [...warnings, ...extra] });
     };
+    const failed = (error) =>
+      finish([
+        error?.code === "ENOENT"
+          ? NO_NODE_WARNING
+          : `session-start: no se ha podido ejecutar el arranque de sesión (${error.message})`,
+      ]);
     try {
-      child = spawn("bash", [path.join(directory, CORE), directory], {
+      child = spawn("node", [path.join(directory, CORE), directory], {
         cwd: directory,
         stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
       });
     } catch (error) {
-      finish([`session-start: no se ha podido ejecutar el arranque de sesión (${error.message})`]);
+      failed(error);
       return;
     }
     child.stdout.on("data", (chunk) => (stdout += chunk));
     child.stderr.on("data", (chunk) => (stderr += chunk));
-    child.on("error", (error) =>
-      finish([`session-start: no se ha podido ejecutar el arranque de sesión (${error.message})`])
-    );
+    child.on("error", failed);
     child.on("close", () => finish());
   });
 }

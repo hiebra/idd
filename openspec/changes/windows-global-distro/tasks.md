@@ -8,9 +8,9 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 ## 2. Núcleo del arranque en Node (D1, ADR-0023)
 
 - [x] 2.1 Hacer que `core-tests/` lance el núcleo por una sola ruta configurable, para poder cambiar de `session-bootstrap.sh` a `session-bootstrap.mjs` sin tocar cada prueba → verde con el núcleo de bash → commit
-- [ ] 2.2 Step `una máquina Windows con Node.js 22.12 o superior y npm y sin bash`, que simula el entorno sin `bash` en el `PATH`. Rojo
-- [ ] 2.3 Escribir `.agents/hooks/session-bootstrap.mjs`, solo con módulos `node:`. Lleva los mismos modos, salidas, avisos, sello y desactivaciones que el de bash, y comprueba `engines.node` con `process.versions.node`. Hacer que `core-tests/` lo use → `test:core` en verde
-- [ ] 2.4 Cambiar los adaptadores para que lancen el núcleo con `node`:
+- [x] 2.2 Step `una máquina Windows con Node.js 22.12 o superior y npm y sin bash`, que simula el entorno sin `bash` en el `PATH`. Rojo
+- [x] 2.3 Escribir `.agents/hooks/session-bootstrap.mjs`, solo con módulos `node:`. Lleva los mismos modos, salidas, avisos, sello y desactivaciones que el de bash, y comprueba `engines.node` con `process.versions.node`. Hacer que `core-tests/` lo use → `test:core` en verde
+- [x] 2.4 Cambiar los adaptadores para que lancen el núcleo con `node`:
   - los hooks de `.claude/hooks/`;
   - `session-bootstrap/server.js`;
   - `response-comments/server.js`.

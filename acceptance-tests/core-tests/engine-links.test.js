@@ -19,8 +19,9 @@ const { ClaudeCodeAgent } = require('../support/agents/claude-code');
 function setUp() {
   const workDir = Machine.tmpDir();
   const machine = new Machine(workDir);
-  // No npm: only the engine step of the bootstrap matters here, and it does not need Node
+  // No npm: only the engine step of the bootstrap matters here, and it does not need npm
   machine.hasNpm = false;
+  machine.nodeWithoutNpm = true;
   const engine = new FakeEngine(workDir);
   const project = new Project(path.join(workDir, 'project'), { engineUrl: engine.url });
   return { workDir, machine, project };

@@ -1,27 +1,29 @@
 #!/bin/bash
 # UserPromptSubmit hook de Claude Code: añade a cada mensaje del usuario el
 # recordatorio del flujo del wiki que prepara el núcleo del arranque de sesión
-# (.agents/hooks/session-bootstrap.sh reminder) y, si el mensaje la activa, el
+# (.agents/hooks/session-bootstrap.mjs reminder) y, si el mensaje la activa, el
 # recordatorio de la regla de comentarios (comments-reminder), en un solo
 # "additionalContext" (Claude Code no admite más de uno por salida).
 #
 # Nunca bloquea el mensaje: sale siempre con 0, y si el recordatorio no se
-# puede generar no imprime nada.
+# puede generar, o no hay node para lanzar el núcleo, no imprime nada.
 
 set -u
 
 main() {
   # Claude Code pasa por stdin un JSON con el mensaje en el campo "prompt"
-  local input hooks project reminder comments prompt
+  local input hooks project core reminder comments prompt
   input="$(cat 2>/dev/null)"
+  command -v node >/dev/null 2>&1 || return
   hooks="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || return
   project="${CLAUDE_PROJECT_DIR:-$(cd "$hooks/../.." && pwd)}"
+  core="$project/.agents/hooks/session-bootstrap.mjs"
   # shellcheck source=json.sh
   source "$hooks/json.sh" 2>/dev/null || return
-  reminder="$(bash "$project/.agents/hooks/session-bootstrap.sh" reminder claude-code "$project" 2>/dev/null)"
+  reminder="$(node "$core" reminder claude-code "$project" 2>/dev/null)"
   prompt="$(json_field prompt "$input")"
   if [ -n "$prompt" ]; then
-    comments="$(printf '%s' "$prompt" | bash "$project/.agents/hooks/session-bootstrap.sh" comments-reminder claude-code "$project" 2>/dev/null)"
+    comments="$(printf '%s' "$prompt" | node "$core" comments-reminder claude-code "$project" 2>/dev/null)"
     [ -n "$comments" ] && reminder="${reminder:+$reminder$'\n\n'}$comments"
   fi
   [ -n "$reminder" ] || return

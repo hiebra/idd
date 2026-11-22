@@ -6,7 +6,8 @@
 // condition is a PATH layout plus a few environment variables:
 //   - npm spy: an npm wrapper first in PATH that logs every call (cwd + args)
 //   - no npm: a directory holding only the system tools the hook uses
-//   - Node 20: a fake `node` that reports v20.11.0 and delegates the rest
+//   - Node 20: a fake `node` that reports v20.11.0, also inside the process,
+//     and delegates the rest
 //   - global OpenSpec: a fake `openspec` that reports another version
 //   - offline: npm pointed at a closed port, with an empty cache; when npm
 //     fails, the spy adds a last line with quotes, backslashes, a tab and a
@@ -14,6 +15,9 @@
 //     how each agent adapter escapes it
 //   - git spy: a git wrapper first in PATH that logs every call, so scenarios
 //     can tell whether the wiki engine was cloned
+//   - no bash: a PATH with node, npm and git only, as a Windows machine with
+//     Node.js and Git for Windows but without Git Bash in its PATH; the spies
+//     still run, since they are launched by their absolute shebang
 //   - no user hub: HOME points at an empty directory (npm keeps its cache)
 //   - ephemeral container: the variables of the cloud environment
 //     (CLAUDE_CODE_CONTAINER_ID, CLAUDE_CODE_REMOTE), set only when the
@@ -75,6 +79,10 @@ class Machine {
   constructor(workDir) {
     this.workDir = workDir;
     this.hasNpm = true;
+    // true, with hasNpm false: node is there, npm is not
+    this.nodeWithoutNpm = false;
+    // false: no bash (nor any other shell or system tool) in the PATH
+    this.hasBash = true;
     this.nodeVersion = null; // null: the real node
     this.globalOpenspec = false;
     this.offline = false;
@@ -130,12 +138,20 @@ class Machine {
       '#!/bin/bash\n' + `printf '%s\\n' "$*" >> "${this.gitLog}"\n` + `exec "${realGit}" "$@"\n`
     );
 
+    // It also reports that version inside the process (process.versions.node
+    // and process.version), which is what the bootstrap core checks
     this.oldNodeDir = bin('node-old');
+    const preload = path.join(this.oldNodeDir, 'old-version.cjs');
+    fs.writeFileSync(
+      preload,
+      `Object.defineProperty(process.versions, 'node', { value: '${OLD_NODE_VERSION}' });\n` +
+        `Object.defineProperty(process, 'version', { value: 'v${OLD_NODE_VERSION}' });\n`
+    );
     writeExecutable(
       path.join(this.oldNodeDir, 'node'),
       '#!/bin/bash\n' +
         `if [ "\${1:-}" = "--version" ] || [ "\${1:-}" = "-v" ]; then echo v${OLD_NODE_VERSION}; exit 0; fi\n` +
-        `exec "${REAL_NODE}" "$@"\n`
+        `exec "${REAL_NODE}" --require "${preload}" "$@"\n`
     );
 
     this.globalOpenspecDir = bin('global-openspec');
@@ -174,12 +190,25 @@ class Machine {
   }
 
   path() {
-    if (!this.hasNpm) return [this.spyGitOnlyDir(), this.noNpmDir].join(path.delimiter);
+    if (!this.hasBash) return [this.spyDir, this.nodeDir].join(path.delimiter);
+    if (!this.hasNpm) {
+      return [this.spyGitOnlyDir(), ...(this.nodeWithoutNpm ? [this.nodeOnlyDir()] : []), this.noNpmDir].join(path.delimiter);
+    }
     const dirs = [];
     if (this.globalOpenspec) dirs.push(this.globalOpenspecDir);
     if (this.nodeVersion) dirs.push(this.oldNodeDir);
     dirs.push(this.spyDir, ...this.basePath);
     return dirs.join(path.delimiter);
+  }
+
+  // node alone, for machines with Node.js but without npm
+  nodeOnlyDir() {
+    const dir = path.join(this.workDir, 'bin', 'node-only');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.symlinkSync(REAL_NODE, path.join(dir, 'node'));
+    }
+    return dir;
   }
 
   // The git spy alone, for machines without npm
@@ -248,4 +277,8 @@ class Machine {
   }
 }
 
-module.exports = { Machine, which };
+// The bash of the machine that runs the suite, for the commands the suite runs
+// itself "in the session", whatever the simulated machine's PATH is
+const BASH = which('bash', ['/usr/bin', '/bin', process.env.PATH || ''].join(path.delimiter)) ?? 'bash';
+
+module.exports = { Machine, which, BASH };

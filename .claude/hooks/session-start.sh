@@ -1,8 +1,9 @@
 #!/bin/bash
 # SessionStart hook de Claude Code: adaptador del núcleo del arranque de sesión
-# (.agents/hooks/session-bootstrap.sh, ADR-0002).
+# (.agents/hooks/session-bootstrap.mjs, ADR-0023).
 #
-# - Ejecuta el núcleo sobre el proyecto.
+# - Ejecuta el núcleo con node sobre el proyecto. Si no hay node, avisa con el
+#   mismo texto que da el núcleo cuando falta npm, y no hace nada más.
 # - Pone el openspec del proyecto por delante en el PATH de la sesión y
 #   exporta CLAUDE_PLUGIN_ROOT con el motor del wiki, para que sus comandos
 #   encuentren su helper, a través de CLAUDE_ENV_FILE.
@@ -18,15 +19,22 @@
 set -u
 
 warnings=()
+# El mismo texto que da el núcleo cuando falta npm
+NO_NODE_WARNING="session-start: hace falta Node.js con npm para instalar las dependencias del proyecto; no se instala nada"
 
 # shellcheck source=json.sh
 source "$(dirname "${BASH_SOURCE[0]}")/json.sh"
 
 main() {
   local project="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+  local core="$project/.agents/hooks/session-bootstrap.mjs"
   local out bin="" engine="" errors line
+  if ! command -v node >/dev/null 2>&1; then
+    printf '{"systemMessage":%s}\n' "$(json_string "$NO_NODE_WARNING")"
+    return
+  fi
   errors="$(mktemp)"
-  out="$(bash "$project/.agents/hooks/session-bootstrap.sh" "$project" 2>"$errors")"
+  out="$(node "$core" "$project" 2>"$errors")"
   while IFS= read -r line; do
     case "$line" in
       bin=*) bin="${line#bin=}" ;;
@@ -55,8 +63,8 @@ main() {
   fi
 
   local guide rule fields=()
-  guide="$(bash "$project/.agents/hooks/session-bootstrap.sh" guide claude-code "$project" 2>/dev/null)"
-  rule="$(bash "$project/.agents/hooks/session-bootstrap.sh" comments-rule claude-code "$project" 2>/dev/null)"
+  guide="$(node "$core" guide claude-code "$project" 2>/dev/null)"
+  rule="$(node "$core" comments-rule claude-code "$project" 2>/dev/null)"
   if [ -n "$rule" ]; then
     guide="${guide:+$guide$'\n\n'}$rule"
   fi

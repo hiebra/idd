@@ -1,8 +1,9 @@
 // Plugin de la regla de comentarios para OpenCode 2: adaptador de la regla
 // (ADR-0018, design D2 de update-comment-phrase-and-opencode-marker).
 //
-// - Al cargar, pide al núcleo .agents/hooks/session-bootstrap.sh la regla de
-//   comentarios (modo comments-rule).
+// - Al cargar, pide al núcleo .agents/hooks/session-bootstrap.mjs, con node,
+//   la regla de comentarios (modo comments-rule). Sin node no hay regla: el
+//   aviso de que falta lo da session-bootstrap.
 // - Con el hook "context" de la sesión, que se ejecuta antes de cada petición
 //   al modelo y no guarda lo que añade, pone la regla en el system y, si el
 //   último mensaje del usuario la activa, su recordatorio (modo
@@ -21,7 +22,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 
 const ID = "response-comments";
-const CORE = path.join(".agents", "hooks", "session-bootstrap.sh");
+const CORE = path.join(".agents", "hooks", "session-bootstrap.mjs");
 
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
@@ -32,9 +33,10 @@ function coreText(directory, mode, input = null) {
   return new Promise((resolve) => {
     let stdout = "";
     try {
-      const child = spawn("bash", [path.join(directory, CORE), mode, "opencode", directory], {
+      const child = spawn("node", [path.join(directory, CORE), mode, "opencode", directory], {
         cwd: directory,
         stdio: [input === null ? "ignore" : "pipe", "pipe", "ignore"],
+        windowsHide: true,
       });
       if (input !== null) {
         child.stdin.on("error", () => {});

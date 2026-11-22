@@ -95,6 +95,12 @@ Given('una máquina sin npm', function () {
   this.machine.hasNpm = false;
 });
 
+Given('una máquina Windows con Node.js 22.12 o superior y npm y sin bash', function () {
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  assert.ok(major > 22 || (major === 22 && minor >= 12), `the suite runs on Node.js ${process.versions.node}`);
+  this.machine.hasBash = false;
+});
+
 Given('una máquina con Node.js 20', function () {
   this.machine.nodeVersion = this.machine.oldNodeVersion;
 });

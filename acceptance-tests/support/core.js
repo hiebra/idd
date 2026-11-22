@@ -9,7 +9,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const CORE = path.join(REPO_ROOT, '.agents', 'hooks', 'session-bootstrap.sh');
+const CORE = path.join(REPO_ROOT, '.agents', 'hooks', 'session-bootstrap.mjs');
 
 // The command line that runs the core with the given arguments
 function coreCommand(args, core = CORE) {

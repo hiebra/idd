@@ -20,6 +20,7 @@ test('.wiki/ ignored by another rule: .gitignore is kept and the user is warned'
   t.after(() => fs.rmSync(workDir, { recursive: true, force: true }));
   const machine = new Machine(workDir);
   machine.hasNpm = false;
+  machine.nodeWithoutNpm = true;
   const engine = new FakeEngine(workDir);
   const project = new Project(path.join(workDir, 'project'), { engineUrl: engine.url });
   fs.mkdirSync(project.path('.wiki'), { recursive: true });
