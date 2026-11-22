@@ -2,7 +2,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 1. Núcleo: detección (D1, D2)
 
-- [ ] 1.1 Comprobar que la suite está en verde antes de tocar nada (`npm test`, `npm run test:core`), salvo los escenarios de este change
+- [x] 1.1 Comprobar que la suite está en verde antes de tocar nada (`npm test`, `npm run test:core`), salvo los escenarios de este change
 - [x] 1.2 Actualizar `core-tests/comments-reminder.test.js`. Debe activar: citas (`> …`, `>sin espacio`, `<!-- attach -->\n> …\n\ntexto`, varias marcas HTML), `p`, `R`, `procesa`, `Procesar`, `reformular`. No debe activar: `ya`, `ya lo veo`, `a > b`, un comentario HTML sin nada más. Rojo
 - [x] 1.3 Cambiar `activates_comments` del núcleo según D1 y D2 → verde → commit
 
@@ -15,4 +15,4 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 ## 3. Documentación y cierre
 
 - [x] 3.1 README: actualizar la regla de comentarios (citas, frase, `p`/`r`) → commit
-- [ ] 3.2 Ejecutar la suite entera (`npm test`), `npm run test:core` y `npm run lint:specs`
+- [x] 3.2 Ejecutar la suite entera (`npm test`), `npm run test:core` y `npm run lint:specs`. Hecho: 207 escenarios y 1080 pasos en verde, 133 pruebas del núcleo en verde y el lint sin errores
