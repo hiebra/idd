@@ -104,6 +104,21 @@ Estado (2026-11-22): en la sesión que implementó las secciones 1 a 6 no había
     - **Fallo 4 (`remove`).** Quitar cualquier worktree desde la TUI falla con «not a git repository». OpenCode llama a `remove` solo con `{ directory, force }`, y la estrategia ejecuta git en `path.dirname(directory)` (`lib/worktree.mjs:102`). Con `cwd = sourceDirectory ?? directory`, git da «contains modified or untracked files», que la estrategia convierte en `forceRequired`.
     - **Fallo 5 (`forceRequired`).** Aun así, la TUI no pide confirmación: muestra «Failed to delete worktree… Uncommitted changes». OpenCode solo conserva `forceRequired` si el error es de sus propias clases (`instanceof`, leído en el binario), y la estrategia lanza una imitación. El plugin no puede importar `@opencode/schema` («Cannot find package»), y una copia de npm no pasaría `instanceof`. Hay que cambiar el escenario «Quitar un worktree conserva su rama» o el mensaje: con cambios, decir que se haga el commit o se quite con `git worktree remove --force`.
 
-## 8. Cierre
+## 8. Correcciones de las pruebas en OpenCode real (zona de código)
 
-- [ ] 8.1 Revisar que todas las tasks están marcadas y que la suite y `core-tests` siguen en verde.
+Cada una sigue el ciclo de las secciones 3 a 5: rojo por la razón esperada, implementar, verde y commit.
+
+- [ ] 8.1 Simulador (D9): el contexto con `location.project` y sin `project`; `remove` con solo `{ directory, force }` y los errores de la estrategia envueltos sin `forceRequired`; `dialog.move_session.new` sin efecto hasta que «Manage workspaces» esté montado; el worktree de la pantalla de inicio creado con el primer mensaje en una sesión que lo contiene. Anotar qué escenarios y `core-tests` pasan a rojo.
+- [ ] 8.2 `session-bootstrap`, «Una rama sacada en otro directorio del clon no se toca»: paso rojo; en `prepare_git`, saltar las ramas sacadas según `git worktree list --porcelain` (D11); verde. Ampliar `core-tests/prepare-git.test.js` con un worktree.
+- [ ] 8.3 «Quitar un worktree conserva su rama» y «Con cambios sin commit no se quita»: pasos rojos; en `lib/worktree.mjs`, `remove` en `sourceDirectory ?? directory` y el mensaje con el commit o `git worktree remove --force` (D5); verde. Ampliar `core-tests/autopilot-worktree.test.js` con `remove` sin `sourceDirectory`.
+- [ ] 8.4 «Sin TUI, el modelo crea un worktree con su sesión operativa» en rojo con el contexto real; `projectID` de `ctx.location.project.id` o de la sesión que llama (D6); verde.
+- [ ] 8.5 «Crear un worktree nuevo desde el modal» en rojo con el diálogo que tarda en montarse; pausa y reintento entre los dos `dispatch` en `tui.js` (D4); verde.
+- [ ] 8.6 «El primer mensaje de un worktree nuevo es la descripción del change»: paso rojo; ruta en `hello` y descripción de la sesión de OpenCode (D10); verde.
+- [ ] 8.7 La carrera de D1: un `core-test` en el que `screen` y `prompt` (`autopilot`) llegan a la vez sobre una sesión nueva, que falla de forma reproducible; `trackBranch` decide con la sesión que acaba de leer y no escribe `role` si ya lo tiene; verde.
+- [ ] 8.8 `README.md`: quitar un worktree con cambios, el primer mensaje del worktree desde la pantalla de inicio, `/new` desde un worktree y la opción `serverUrl`. `acceptance-tests/README.md`: lo nuevo del simulador.
+- [ ] 8.9 Suite completa con los deltas, `npm run test:core`, `npm run lint:specs` y `openspec validate autopilot-rama-por-sesion --type change --strict`.
+- [ ] 8.10 Repetir en OpenCode 2.3.2 real lo que falló en 7.1, 7.4 y 7.5, con el mismo banco, y anotar el resultado aquí; marcar 7.1, 7.4 y 7.5 si pasan.
+
+## 9. Cierre
+
+- [ ] 9.1 Revisar que todas las tasks están marcadas y que la suite y `core-tests` siguen en verde.

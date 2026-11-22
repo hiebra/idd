@@ -44,7 +44,7 @@ Then no hay ningún hook, skill ni comando del plugin
 ```
 
 ### Requirement: Arranque de la sesión operativa
-Al presentarse por primera vez un cliente con interfaz (una TUI que arranca, no una recarga en caliente), si la rama es temporal y no tiene sesión operativa, el plugin DEBE crearla y arrancarla sola, sin esperar al primer mensaje del usuario: con el paso que indique `openspec status` si la rama tiene change, o con `openspec-new-change` si no lo tiene. En una rama permanente, con HEAD separado o con varios changes en la rama NO DEBE crearla. Si el paso tiene que esperar el commit del usuario (árbol sucio), la sesión DEBE crearse esperándolo. Tras una recarga en caliente del plugin NO DEBE crear ni arrancar nada.
+Al presentarse por primera vez un cliente con interfaz (una TUI que arranca, no una recarga en caliente), si la rama es temporal y no tiene sesión operativa, el plugin DEBE crearla y arrancarla sola, sin esperar al primer mensaje del usuario: con el paso que indique `openspec status` si la rama tiene change, o con `openspec-new-change` si no lo tiene. En una rama permanente, con HEAD separado o con varios changes en la rama NO DEBE crearla. Si el paso tiene que esperar el commit del usuario (árbol sucio), la sesión DEBE crearse esperándolo. Si el cliente se presenta en un worktree que OpenCode acaba de crear con el primer mensaje del usuario, en una sesión propia, la sesión operativa DEBE recibir ese mensaje como descripción del change. Tras una recarga en caliente del plugin NO DEBE crear ni arrancar nada.
 
 #### Scenario Outline: Al arrancar sin sesión operativa
 
@@ -58,6 +58,16 @@ Examples:
   | rama                                                      | paso                                    |
   | una rama temporal sin change                              | `openspec-new-change`                   |
   | una rama temporal con el change en curso `exportar-datos` | el paso que indique `openspec status`   |
+```
+
+#### Scenario: El primer mensaje de un worktree nuevo es la descripción del change
+
+```gherkin
+Given la TUI en la pantalla de inicio, con el worktree `exportar-pdf` pendiente de crear
+When el usuario envía "quiero exportar los informes a PDF"
+And OpenCode crea el worktree `exportar-pdf` con ese mensaje en una sesión
+Then se crea en el worktree una sesión operativa que arranca `openspec-new-change` con la descripción "quiero exportar los informes a PDF"
+And la TUI pasa a esa sesión
 ```
 
 #### Scenario: En la rama de origen no se arranca nada
@@ -283,7 +293,7 @@ Then la TUI vuelve a la sesión operativa de `exportar-datos`
 ```
 
 ### Requirement: Los worktrees de OpenCode nacen en una rama
-El plugin DEBE registrar en OpenCode una estrategia de worktree que sirva a la TUI, a la web y al modelo. Un worktree nuevo DEBE estar en una rama con su mismo nombre, tanto si lo escribe el usuario como si lo genera OpenCode. Si esa rama ya existe, el worktree DEBE abrirse en ella; si está sacada en otro directorio, NO DEBE crearse y DEBE decirse en cuál. Si no existe, la rama DEBE crearse desde la rama de origen del remoto, después de un `git fetch`, sin seguir a la rama de origen y con su push configurado hacia `origin/<rama>`, sin cambiar la configuración git del clon. Si el `git fetch` falla, NO DEBE crearse el worktree y DEBE decirse el motivo. La referencia de partida que mande el cliente DEBE ignorarse. Al quitar un worktree, su rama DEBE conservarse.
+El plugin DEBE registrar en OpenCode una estrategia de worktree que sirva a la TUI, a la web y al modelo. Un worktree nuevo DEBE estar en una rama con su mismo nombre, tanto si lo escribe el usuario como si lo genera OpenCode. Si esa rama ya existe, el worktree DEBE abrirse en ella; si está sacada en otro directorio, NO DEBE crearse y DEBE decirse en cuál. Si no existe, la rama DEBE crearse desde la rama de origen del remoto, después de un `git fetch`, sin seguir a la rama de origen y con su push configurado hacia `origin/<rama>`, sin cambiar la configuración git del clon. Si el `git fetch` falla, NO DEBE crearse el worktree y DEBE decirse el motivo. La referencia de partida que mande el cliente DEBE ignorarse. Al quitar un worktree, su rama DEBE conservarse. Con cambios sin commit, el worktree NO DEBE quitarse, y DEBE decirse que hay que hacer antes el commit o quitarlo con `git worktree remove --force`.
 
 #### Scenario Outline: Crear un worktree
 
@@ -330,9 +340,19 @@ And se dice que no se ha podido actualizar la rama de origen del remoto
 #### Scenario: Quitar un worktree conserva su rama
 
 ```gherkin
-Given un worktree en la rama `importar-datos`
+Given un worktree en la rama `importar-datos`, con el árbol limpio
 When se quita ese worktree
-Then la rama `importar-datos` sigue existiendo
+Then el worktree ya no existe
+And la rama `importar-datos` sigue existiendo
+```
+
+#### Scenario: Con cambios sin commit no se quita
+
+```gherkin
+Given un worktree en la rama `importar-datos`, con cambios sin commit
+When se quita ese worktree
+Then el worktree sigue existiendo
+And se dice que hay que hacer antes el commit o quitarlo con `git worktree remove --force`
 ```
 
 ### Requirement: En el ciclo del autopilot, el modelo no cambia de rama

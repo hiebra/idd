@@ -32,6 +32,9 @@ Con eso, cada sesión puede tener su rama, y cada change su worktree.
 - **En el ciclo del autopilot, el modelo no cambia de rama**: sus instrucciones dejan de usar `start` y `switch`. Fuera del ciclo puede hacerlo; por ejemplo, para un merge asistido.
 - **Web**: el modelo puede crear un worktree cuando el usuario se lo pide. También crea en él una sesión, que pasa a ser la operativa y arranca sola. Como el plugin no puede mover la web, el modelo da el enlace a esa sesión si conoce la dirección del servidor, o su título y su id.
 - **Corrección**: la parte de TUI manda cada llamada con la ubicación del momento, no con la del arranque.
+- **El primer mensaje de un worktree nuevo llega a la sesión operativa.** Desde la pantalla de inicio, OpenCode crea el worktree con el primer mensaje del usuario, en una sesión propia. La sesión operativa del worktree lo recibe como descripción del change, en lugar de volver a preguntar qué construir.
+- **Con cambios sin commit, un worktree no se quita**: se dice que hay que hacer antes el commit o quitarlo con `git worktree remove --force`. Un plugin de OpenCode 2.3.2 no puede hacer que la TUI pida confirmación para forzar.
+- **Corrección en el arranque de sesión**: no se pone al día ninguna rama permanente sacada en un directorio del clon (el principal o un worktree), no solo la del directorio en que arranca la sesión. Las pruebas con OpenCode real mostraron que, al arrancar en un worktree, se adelantaba el `main` sacado en el directorio principal y su índice quedaba desfasado.
 
 ## Fuera de alcance
 
@@ -48,11 +51,13 @@ Con eso, cada sesión puede tener su rama, y cada change su worktree.
   - cambian «Dónde actúa el plugin», «Arranque de la sesión operativa», «Validación al volver a la sesión operativa», «Funcionamiento sin TUI» y «Las ventanas ajenas llevan a la sesión operativa», que se sustituye;
   - se añaden la rama de trabajo de cada sesión, el paso a su rama, el modal de `/new` y la estrategia de worktree.
 - `openspec-change-lifecycle`: `branch-change.mjs` permite volver a la rama de origen con el árbol limpio. La regla de que el modelo no cambia de rama en el ciclo del autopilot va en `openspec-autopilot`.
+- `session-bootstrap`: cambia «Clon completo y ramas permanentes al día al abrir sesión», que no toca ninguna rama sacada en un directorio del clon.
 
 ## Impact
 
 - `.opencode/plugins/openspec-autopilot/`: `server.js`, `tui.js` y `lib/*`: la estrategia de worktree, la tool para crear un worktree con su sesión, la rama de cada sesión, el checkout al pasar de sesión, el modal de `/new` y la ubicación por llamada.
 - `.agents/openspec/branch-change.mjs`: volver a la rama de origen con el árbol limpio, porque `switch` no admite ramas permanentes.
+- `.agents/hooks/session-bootstrap.sh`: `prepare_git` salta las ramas sacadas en cualquier directorio del clon.
 - `.claude/skills/openspec-git-discipline/SKILL.md` y los prompts del autopilot: el modelo no cambia de rama en el ciclo del autopilot.
 - `adr/`: un ADR nuevo que sustituye la parte de ADR-0014 sobre las ventanas ajenas y la de ADR-0013 sobre las ramas que crea el modelo en el autopilot.
 - `README.md` y `acceptance-tests/`: el simulador de OpenCode con directorios por sesión, la estrategia de worktree, el diálogo de nombre y los checkouts.
