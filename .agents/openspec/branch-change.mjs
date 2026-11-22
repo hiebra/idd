@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // El change de la rama (openspec-change-lifecycle, design D1 de
 // add-openspec-autopilot, D1 a D6 de manage-git-discipline, D3 a D7 de
-// allow-user-requested-merges y D1 y D2 de git-discipline-standard-with-exception):
+// allow-user-requested-merges, D1 y D2 de git-discipline-standard-with-exception
+// y D1 a D5 de name-change-in-merge-title):
 // un módulo
 // neutral, común a los dos agentes, que lee de git qué change tiene la rama
 // actual y decide las puertas del ciclo. Lo importa el plugin de OpenCode y lo
@@ -70,6 +71,12 @@
 //   `git push origin <commit>:refs/heads/<destino>`), y dentro, abrir un PR
 //   contra el destino, sin ninguna orden de push a él. No fusiona: da la
 //   orden. Cualquier otro destino, no.
+//   El título de la fusión con una rama permanente nombra los changes de la
+//   rama, `Merge <changes> into <destino>`: todos, en curso o archivados, y
+//   solo los de nombre kebab-case; sin ninguno, la rama. Es el `-m` de la
+//   orden y, si la rama lleva algún change, el título del PR, que se
+//   recomienda también para su commit de fusión; al PR de una rama sin
+//   change la puerta no le da título.
 // Todo rechazo dice cómo seguir.
 //
 // CLI:
@@ -112,6 +119,8 @@ import { fileURLToPath } from 'node:url';
 const CONFIG = path.join('openspec', 'config.yaml');
 const CHANGES = 'openspec/changes/';
 const DEFAULT_PERMANENT = ['main'];
+// La gramática con la que OpenSpec nombra los changes y `start` las ramas
+const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function git(dir, ...args) {
   const result = spawnSync('git', args, { cwd: dir, encoding: 'utf8', timeout: 10000 });
@@ -424,6 +433,20 @@ export function checkCommit(dir, env = process.env) {
   return { ok: true, message: `Se puede hacer commit en la rama de la sesión '${branch}'; después, el push: git push -u origin ${branch}`, state };
 }
 
+// El título de la fusión con una rama permanente (design D1 a D3 de
+// name-change-in-merge-title): nombra los changes de la rama, en curso o
+// archivados, sin repetir y en el orden de `changes`; sin ninguno, la rama.
+// Solo nombra los changes con nombre kebab-case, porque el título va dentro
+// de una orden de shell y el nombre de un directorio puede traer cualquier cosa.
+function titleChanges(state) {
+  return [...new Set(state.changes.map((c) => c.name))].filter((name) => KEBAB.test(name));
+}
+
+export function mergeTitle(state, target) {
+  const names = titleChanges(state);
+  return `Merge ${names.length > 0 ? names.join(', ') : state.branch} into ${target}`;
+}
+
 // La puerta merge (design D4 de allow-user-requested-merges): las fusiones
 // del ciclo. `target` es la rama de destino; `source`, la rama permanente que
 // se trae a la rama actual (por defecto, la rama de origen). No fusiona: da
@@ -470,15 +493,23 @@ export function checkMerge(dir, target, source, env = process.env) {
       );
     }
     if (isEphemeral(env)) {
+      // El PR de una rama con change lleva el título de la fusión, y se
+      // recomienda para su commit de fusión. Sin change, la puerta no da
+      // título: el PR lo titula el agente, como antes (design D5 de
+      // name-change-in-merge-title)
+      const title = titleChanges(state).length > 0 ? mergeTitle(state, target) : null;
       return allow(
         `Se puede llevar la rama de la sesión '${branch}' a '${target}' por PR: sube la rama (\`git push -u origin ${branch}\`), ` +
-          `abre un PR de \`${branch}\` contra \`${target}\` con las herramientas de GitHub de la sesión y recomienda al usuario fusionarlo con un commit de fusión, no con squash. ` +
-          `En un contenedor efímero no hagas push a '${target}': el PR lo fusiona el usuario.`
+          `abre un PR de \`${branch}\` contra \`${target}\` con las herramientas de GitHub de la sesión` +
+          (title ? `, con el título \`${title}\` (si el PR ya está abierto, ponle ese título),` : '') +
+          ' y recomienda al usuario fusionarlo con un commit de fusión, no con squash' +
+          (title ? ', y con ese mismo título en el commit de fusión: el que propone GitHub nombra la rama de la sesión, no el change' : '') +
+          `. En un contenedor efímero no hagas push a '${target}': el PR lo fusiona el usuario.`
       );
     }
     return allow(
       `Se puede llevar la rama temporal '${branch}' a '${target}' sin cambiar de rama, con el commit que daría \`git merge --no-ff\` desde '${target}': ` +
-        `\`commit=$(git commit-tree HEAD^{tree} -p origin/${target} -p HEAD -m "Merge ${branch} into ${target}")\` y \`git push origin "$commit":refs/heads/${target}\`; ` +
+        `\`commit=$(git commit-tree HEAD^{tree} -p origin/${target} -p HEAD -m "${mergeTitle(state, target)}")\` y \`git push origin "$commit":refs/heads/${target}\`; ` +
         `después, \`git fetch origin ${target}\`. Si el push se deniega, da al usuario la orden exacta, con el commit ya creado, y detente; ` +
         `si el remoto lo rechaza por no ser un avance rápido, trae otra vez \`origin/${target}\` y repite la puerta.`
     );
@@ -663,7 +694,7 @@ export function startBranch(dir, name, env = process.env) {
   if (isEphemeral(env)) return { ok: false, message: `No se crea la rama '${name ?? ''}'. ${SESSION_ONLY}` };
   const { permanent } = readPermanent(dir);
   const origin = permanent.at(-1);
-  if (!name || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return { ok: false, message: `El nombre del change tiene que ser kebab-case ('${name ?? ''}').` };
+  if (!name || !KEBAB.test(name)) return { ok: false, message: `El nombre del change tiene que ser kebab-case ('${name ?? ''}').` };
   if (permanent.includes(name)) return { ok: false, message: `'${name}' es una rama permanente.` };
   if (dirty(dir)) return { ok: false, message: `No se crea la rama '${name}': ${COMMIT_FIRST}.` };
   if (git(dir, 'rev-parse', '--verify', '-q', `refs/heads/${name}`).ok) return { ok: false, message: `La rama '${name}' ya existe: cambia a ella con 'switch ${name}'.` };
