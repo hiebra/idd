@@ -1,8 +1,10 @@
 {
-  // Pinned gherkin-lint config for the EXTRACTED .feature files under
-  // .extracted/ (gherkin-lint has no defaults; a config file is mandatory).
-  // Copy to acceptance-tests/.gherkin-lintrc (that name is auto-discovered).
+  // Pinned gplint config for the EXTRACTED .feature files under
+  // .extracted/ (gplint enables no rule that is not listed here).
+  // Copy to acceptance-tests/.gplintrc (that name is auto-discovered).
   // Line numbers it reports are valid in the source spec.md files.
+  // Use only "error" and "off": on any other level (such as the old "on")
+  // gplint throws, yet exits 0 without linting anything.
   //
   // Deliberately OFF because enabling these makes "fix all lint issues"
   // unsatisfiable with this toolchain:
@@ -12,20 +14,20 @@
   //     a delta spec and its source-of-truth spec share the Feature name.
   //   no-dupe-scenario-names:
   //     a MODIFIED delta copies the whole Rule, scenario names included.
-  "no-empty-file": "on",
-  "no-files-without-scenarios": "on",
-  "no-unnamed-features": "on",
-  "no-unnamed-scenarios": "on",
+  "no-empty-file": "error",
+  "no-files-without-scenarios": "error",
+  "no-unnamed-features": "error",
+  "no-unnamed-scenarios": "error",
   "no-dupe-feature-names": "off",
   "no-dupe-scenario-names": "off",
-  "no-duplicate-tags": "on",
-  "no-partially-commented-tag-lines": "on",
-  "one-space-between-tags": "on",
-  "no-empty-background": "on",
-  "no-background-only-scenario": "on",
-  "no-scenario-outlines-without-examples": "on",
-  "no-examples-in-scenarios": "on",
-  "no-trailing-spaces": "on",
+  "no-duplicate-tags": "error",
+  "no-partially-commented-tag-lines": "error",
+  "one-space-between-tags": "error",
+  "no-empty-background": "error",
+  "no-background-only-scenario": "error",
+  "no-scenario-outlines-without-examples": "error",
+  "no-examples-in-scenarios": "error",
+  "no-trailing-spaces": "error",
   "no-multiple-empty-lines": "off",
   "new-line-at-eof": "off",
   "indentation": "off"

@@ -24,13 +24,13 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 4. Skills y documentación (zona de código)
 
-- [ ] 4.1 En `.agents/skills/acceptance-test-authoring/`, según D2 y D3:
+- [x] 4.1 En `.agents/skills/acceptance-test-authoring/`, según D2 y D3:
   - `references/gherkin-lintrc.json` → `references/gplintrc.json`, igual que `.gplintrc`;
   - `SKILL.md`: la tabla de referencias, "Linting Specs" y el comando previo a la suite, con `npx gplint@2`;
   - `references/javascript/SETUP.md`: la tabla de archivos, las devDependencies, el script y "Linting", sin la limitación de los hijos de `Rule:`;
   - `references/python/SETUP.md` y `references/python/run_acceptance.py`: `.gplintrc` y `npx gplint@2`;
   - `references/EXTRACTION.md`: nombrar `gplint`.
-- [ ] 4.2 En `.agents/skills/spec-as-source/references/tasks.md`, la task 1.6 nombra `gplint`.
+- [x] 4.2 En `.agents/skills/spec-as-source/references/tasks.md`, la task 1.6 nombra `gplint`.
 - [ ] 4.3 En `acceptance-tests/README.md`: `.gplintrc` en la estructura y una sección de los escenarios de `spec-lint` que explique D4.
 - [ ] 4.4 Ninguna referencia a `gherkin-lint` fuera de `openspec/changes/`, `adr/` y `.wiki/` (que se actualiza en la resincronización del archive).
 

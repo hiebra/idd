@@ -28,7 +28,7 @@ def main(argv):
     sys.stderr.write("[extract-gherkin] %d spec.md file(s) extracted to %s\n" % (len(written), out_dir))
 
     if lint:
-        return subprocess.call(["npx", "gherkin-lint", ".extracted"])
+        return subprocess.call(["npx", "gplint@2", ".extracted"])
 
     try:
         locations = source_of_truth_locations() if specs_only else effective_locations()
