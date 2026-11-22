@@ -152,3 +152,5 @@
 ## [2026-11-22] inventory | added task dos-sesiones-que-toman-el-control-a-la-vez (inventory/candidates/dos-sesiones-que-toman-el-control-a-la-vez.md)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, autopilot-plan-explore@9eae630): 1 manifest, 22 paths pinned, 0 skipped, 22 total candidates
