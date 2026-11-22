@@ -50,7 +50,7 @@ export function stepPrompt({ step, change, description = '', conclusions = '', i
       return (
         `${header}\n\nUsa la skill \`openspec-new-change\` para crear el change de esta rama. ` +
         (description ? `Descripción del usuario:\n\n${description}\n\n` : 'Pregunta al usuario qué quiere construir o arreglar, y espera su respuesta. ') +
-        'Si la rama es permanente o ya tiene otro change, no crees la rama con git: ejecuta `node .agents/openspec/branch-change.mjs start <nombre-del-change>`, que la crea desde la rama de origen y cambia a ella (y `node .agents/openspec/branch-change.mjs list` para ver las ramas temporales con su change). ' +
+        'Si la rama es permanente o ya tiene otro change, no crees la rama con git: ejecuta `node .agents/skills/openspec-git-discipline/scripts/branch-change.mjs start <nombre-del-change>`, que la crea desde la rama de origen y cambia a ella (y `node .agents/skills/openspec-git-discipline/scripts/branch-change.mjs list` para ver las ramas temporales con su change). ' +
         `Crea solo el change, sin artefactos. ${CLOSE('el change exista en `openspec/changes/`')}`
       );
     case 'artifact':

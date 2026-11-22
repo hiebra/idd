@@ -173,19 +173,19 @@ El squash también se admite: ningún paso del ciclo depende de que los commits 
   ```
 
   Solo se entiende una lista de nombres de rama, en flujo (`[main, develop]`) o en bloque (`- main`); con otra forma se usa `main` y se avisa.
-- **El change de la rama** se lee de git, sin apuntarlo en ningún sitio: es el que ha cambiado en `openspec/changes/` desde el merge-base de la rama con la rama de origen, con commit o sin él. El merge-base se calcula contra la más avanzada de la rama de origen local y `origin/<rama de origen>`, y un change que ya está igual en la rama de origen (por ejemplo, tras un squash) no cuenta. Lo calcula `.agents/openspec/branch-change.mjs`, el mismo para los dos agentes:
+- **El change de la rama** se lee de git, sin apuntarlo en ningún sitio: es el que ha cambiado en `openspec/changes/` desde el merge-base de la rama con la rama de origen, con commit o sin él. El merge-base se calcula contra la más avanzada de la rama de origen local y `origin/<rama de origen>`, y un change que ya está igual en la rama de origen (por ejemplo, tras un squash) no cuenta. Lo calcula `branch-change.mjs`, el mismo para los dos agentes, que viaja con la skill `openspec-git-discipline`, en su directorio `scripts/` (en la instalación global para Windows, junto a la skill instalada):
 
   ```bash
-  node .agents/openspec/branch-change.mjs --json
+  node .agents/skills/openspec-git-discipline/scripts/branch-change.mjs --json
   ```
 
-- **Las puertas** (proponer, apply, archive y commit) las decide `node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit> [<change>]`, que admite las dos formas del ciclo, dice cómo seguir cuando no deja y la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es una copia del origen reescrita a propósito: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
+- **Las puertas** (proponer, apply, archive y commit) las decide `node .agents/skills/openspec-git-discipline/scripts/branch-change.mjs check <propose|apply|archive|commit> [<change>]`, que admite las dos formas del ciclo, dice cómo seguir cuando no deja y la skill `openspec-git-discipline` manda ejecutar y obedecer. Esa skill es una copia del origen reescrita a propósito: no la sobrescribas al actualizar desde la plantilla de origen sin revisarlo.
 - **Las ramas temporales** las maneja el modelo con el mismo módulo, nunca con git a mano, y nunca con el árbol sucio (en un contenedor efímero, el agente no las crea ni cambia de rama):
 
   ```bash
-  node .agents/openspec/branch-change.mjs list            # las ramas temporales con su change
-  node .agents/openspec/branch-change.mjs start <change>  # crea la rama del change desde la rama de origen
-  node .agents/openspec/branch-change.mjs switch <rama>   # cambia a una rama temporal
+  node .agents/skills/openspec-git-discipline/scripts/branch-change.mjs list            # las ramas temporales con su change
+  node .agents/skills/openspec-git-discipline/scripts/branch-change.mjs start <change>  # crea la rama del change desde la rama de origen
+  node .agents/skills/openspec-git-discipline/scripts/branch-change.mjs switch <rama>   # cambia a una rama temporal
   ```
 
 ## Automatizar el ciclo en OpenCode

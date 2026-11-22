@@ -6,7 +6,8 @@
 // origin branch with `x-main` or without it, temporary branches with changes
 // in progress or archived, with or without a commit, a detached HEAD, a
 // tasks.md with tasks checked or not, and the real `openspec status` of the
-// copy. What the branch's change is comes from .agents/openspec/branch-change.mjs
+// copy. What the branch's change is comes from the branch-change.mjs of the
+// copy's openspec-git-discipline skill
 // of the copy, run as the workflows run it.
 //
 // For manage-git-discipline it also builds a bare remote for the copy (push
@@ -22,7 +23,7 @@ const { git } = require('./engine');
 const { REPO_ROOT } = require('./project');
 
 const CLI = path.join(REPO_ROOT, 'node_modules', '.bin', 'openspec');
-const BRANCH_CHANGE = path.join('.agents', 'openspec', 'branch-change.mjs');
+const BRANCH_CHANGE = path.join('.agents', 'skills', 'openspec-git-discipline', 'scripts', 'branch-change.mjs');
 const CONFIG = path.join('openspec', 'config.yaml');
 
 // The copy carries this repository's changes in progress; the scenarios start
@@ -127,7 +128,7 @@ function archiveChange(project, name, date = '2026-11-21') {
   fs.renameSync(from, project.path('openspec', 'changes', 'archive', `${date}-${name}`));
 }
 
-// What .agents/openspec/branch-change.mjs of the copy says, as JSON
+// What branch-change.mjs of the copy says, as JSON
 function branchChange(project) {
   const result = spawnSync(process.execPath, [BRANCH_CHANGE, '--json'], { cwd: project.dir, encoding: 'utf8', env: sessionEnv() });
   if (result.status !== 0) throw new Error(`branch-change failed (${result.status}):\n${result.stderr}`);

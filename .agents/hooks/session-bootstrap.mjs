@@ -77,7 +77,7 @@ const ENGINE_LINKS = [
 ];
 const REMINDER_MAX = 600;
 const COMMENTS_DIR = path.join('.agents', 'comments');
-const BRANCH_CHANGE = path.join('.agents', 'openspec', 'branch-change.mjs');
+const BRANCH_CHANGE = path.join('.agents', 'skills', 'openspec-git-discipline', 'scripts', 'branch-change.mjs');
 const GIT_TIMEOUT_MS = 300 * 1000;
 
 export const NO_NPM_WARNING = 'hace falta Node.js con npm para instalar las dependencias del proyecto; no se instala nada';

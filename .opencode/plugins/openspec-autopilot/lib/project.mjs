@@ -1,5 +1,5 @@
 // Lo que el plugin lee del proyecto: el change de la rama (el módulo neutral
-// .agents/openspec/branch-change.mjs), `openspec status`, las tasks según el
+// branch-change.mjs de la skill openspec-git-discipline), `openspec status`, las tasks según el
 // CLI (`openspec instructions apply`, design D11 de autopilot-sesion-operativa),
 // los errores de `openspec validate` y si el árbol de trabajo está limpio.
 // Todas las esperas tienen límite.
@@ -13,7 +13,7 @@ import { run } from './run.mjs';
 export { run } from './run.mjs';
 export { treeClean } from './git.mjs';
 
-const BRANCH_CHANGE = path.join('.agents', 'openspec', 'branch-change.mjs');
+const BRANCH_CHANGE = path.join('.agents', 'skills', 'openspec-git-discipline', 'scripts', 'branch-change.mjs');
 
 export async function branchChange(directory) {
   const module = await import(`${pathToFileURL(path.join(directory, BRANCH_CHANGE)).href}`);

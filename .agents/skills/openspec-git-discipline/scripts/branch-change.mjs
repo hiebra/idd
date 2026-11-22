@@ -3,7 +3,10 @@
 // add-openspec-autopilot y D1 a D6 de manage-git-discipline): un módulo
 // neutral, común a los dos agentes, que lee de git qué change tiene la rama
 // actual y decide las puertas del ciclo. Lo importa el plugin de OpenCode y lo
-// ejecutan los workflows de OpenSpec desde la skill openspec-git-discipline.
+// ejecutan los workflows de OpenSpec desde la skill openspec-git-discipline,
+// con la que viaja (design D4 de windows-global-distro): en el proyecto, en
+// .agents/skills/openspec-git-discipline/scripts/, o en la instalación
+// global. Actúa siempre sobre el directorio desde el que se ejecuta.
 //
 // - Ramas permanentes: la lista `x-main` de openspec/config.yaml, o ["main"].
 //   Su último elemento es la rama de origen. Solo se entiende una lista de
@@ -49,12 +52,13 @@
 // Todo rechazo dice cómo seguir.
 //
 // CLI:
-//   node .agents/openspec/branch-change.mjs --json
-//   node .agents/openspec/branch-change.mjs check <propose|apply|archive|commit> [<change>]
-//   node .agents/openspec/branch-change.mjs list [--json]
-//   node .agents/openspec/branch-change.mjs start <change>
-//   node .agents/openspec/branch-change.mjs switch <rama>
-//   node .agents/openspec/branch-change.mjs env
+//   node <script> --json
+//   node <script> check <propose|apply|archive|commit> [<change>]
+//   node <script> list [--json]
+//   node <script> start <change>
+//   node <script> switch <rama>
+//   node <script> env
+// donde <script> es la ruta de este archivo.
 // `check`, `start` y `switch` imprimen { ok, message } en JSON y salen con 0
 // si se puede seguir y con 1 si no. `list` da las ramas temporales con su
 // change; `start` crea la rama del change desde la referencia de origen

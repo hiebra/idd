@@ -20,9 +20,9 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 ## 3. `branch-change.mjs` dentro de la skill (D4)
 
-- [ ] 3.1 Steps de `branch-change.mjs viaja con la skill openspec-git-discipline`: dónde está el script en la plantilla completa y el script global que actúa sobre el proyecto desde el que se ejecuta. Rojo
-- [ ] 3.2 Mover el script a `.agents/skills/openspec-git-discipline/scripts/branch-change.mjs` y reescribir su `SKILL.md` con la ruta en una sola línea, «El script es: `<ruta>`» → verde
-- [ ] 3.3 Actualizar las demás referencias a `.agents/openspec/branch-change.mjs`: el README, los step definitions y el soporte de la suite, `core-tests/`, el núcleo y `openspec/config.yaml` si lo nombra → verde → commit
+- [x] 3.1 Steps de `branch-change.mjs viaja con la skill openspec-git-discipline`: dónde está el script en la plantilla completa y el script global que actúa sobre el proyecto desde el que se ejecuta. Rojo
+- [x] 3.2 Mover el script a `.agents/skills/openspec-git-discipline/scripts/branch-change.mjs` y reescribir su `SKILL.md` con la ruta en una sola línea, «El script es: `<ruta>`» → verde
+- [x] 3.3 Actualizar las demás referencias a `.agents/openspec/branch-change.mjs`: el README, los step definitions y el soporte de la suite, `core-tests/`, el núcleo y `openspec/config.yaml` si lo nombra → verde → commit
 - [ ] 3.4 Steps de `El plugin encuentra branch-change.mjs con la skill`, con un `<config>` simulado para el caso global. Rojo
 - [ ] 3.5 Buscar el script en un solo módulo del plugin autopilot: primero el proyecto y, si no está, junto a su instalación global. `lib/project.mjs` usa esa ruta, y `lib/prompts.mjs` la recibe → verde → commit
 

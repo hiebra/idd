@@ -1,7 +1,7 @@
 'use strict';
 
 // Steps of openspec-change-lifecycle (add-openspec-autopilot, design D1, D2).
-// What a branch's change is comes from .agents/openspec/branch-change.mjs of
+// What a branch's change is comes from the skill's branch-change.mjs of
 // the project copy; the gates of the cycle are its `check` subcommand, which
 // the openspec-git-discipline skill runs and obeys. The suite cannot run the
 // workflows' model, so it checks the gate and that the skill uses it.
@@ -196,7 +196,7 @@ Then('el apply no se detiene porque la propuesta no esté en la rama de origen',
   assert.equal(this.gate.exitCode, 0);
   // The skill the workflows load runs the gate and no longer asks for the origin branch
   const apply = skillSection(this, 'apply');
-  assert.match(apply, /branch-change\.mjs check apply/);
+  assert.match(apply, /node <script> check apply/);
   assert.doesNotMatch(readSkill(this), /(merge|merged|fusiona\w*|commit\w*) .*(to|a|en|con) `?main`? before apply|reached `main`|antes del apply.*rama de origen/i);
 });
 
@@ -235,7 +235,7 @@ Then('la resincronización del wiki se hace en la rama temporal, después del co
   assert.doesNotMatch(config, /tras fusionarla/);
   assert.match(config, /después del commit del archivado/);
   const archive = skillSection(this, 'archive');
-  assert.match(archive, /branch-change\.mjs check archive/);
+  assert.match(archive, /node <script> check archive/);
   assert.match(archive, /rama temporal/);
   assert.match(skillSection(this, 'commits'), /wiki/);
 });
@@ -539,7 +539,7 @@ Then('indica hacer el commit del wiki después del commit del archive', function
 });
 
 Then('indica ejecutar la puerta `check commit` antes de cada commit', function () {
-  assertIn(section(this, 'agent-commits'), /branch-change\.mjs check commit`? antes de cada commit/, 'the agent commits section');
+  assertIn(section(this, 'agent-commits'), /node <script> check commit`? antes de cada commit/, 'the agent commits section');
 });
 
 Then('indica hacer commit y push en los momentos de commit y cuando avisa el final de un turno', function () {
@@ -630,7 +630,7 @@ Then('indican hacer el commit del wiki después del commit del archive', functio
 
 // --- Ramas temporales que crea el modelo (autopilot-sesion-operativa, ADR-0013) ---
 
-const BRANCH_CHANGE = path.join('.agents', 'openspec', 'branch-change.mjs');
+const BRANCH_CHANGE = path.join('.agents', 'skills', 'openspec-git-discipline', 'scripts', 'branch-change.mjs');
 
 function runBranchChange(world, ...args) {
   const result = require('node:child_process').spawnSync(process.execPath, [BRANCH_CHANGE, ...args], { cwd: world.project.dir, encoding: 'utf8' });
@@ -749,4 +749,72 @@ Then('la instrucción no pide al usuario ningún commit', function () {
 Then('la instrucción dice que el modelo no haga commits ni pase nada al stage', function () {
   assert.match(this.instruction, /No hagas commits/);
   assert.match(this.instruction, /no pases nada al stage/);
+});
+
+// --- branch-change.mjs viaja con la skill (windows-global-distro, design D4) ---
+
+const { GlobalInstall, scriptPathIn, GIT_DISCIPLINE } = require('../support/global');
+
+const SKILL_SCRIPT = ['.agents', 'skills', GIT_DISCIPLINE, 'scripts', 'branch-change.mjs'].join('/');
+
+// Every file named `name` in a directory, as paths relative to it with /, without node_modules or .git
+function filesNamed(dir, name, rel = '') {
+  const found = [];
+  for (const entry of fs.readdirSync(path.join(dir, rel), { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === '.git') continue;
+    const child = rel ? `${rel}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) found.push(...filesNamed(dir, name, child));
+    else if (entry.name === name) found.push(child);
+  }
+  return found;
+}
+
+Given('un clon de la plantilla completa', function () {
+  this.ensureProject();
+});
+
+When('se busca `branch-change.mjs` en el proyecto', function () {
+  this.found = filesNamed(this.project.dir, 'branch-change.mjs');
+});
+
+Then(/^solo está en `\.agents\/skills\/openspec-git-discipline\/scripts\/`$/, function () {
+  assert.deepEqual(this.found, [SKILL_SCRIPT]);
+});
+
+Then('el `SKILL.md` de la skill lo ejecuta por esa ruta', function () {
+  const skill = fs.readFileSync(this.project.path('.agents', 'skills', GIT_DISCIPLINE, 'SKILL.md'), 'utf8');
+  assert.equal(scriptPathIn(skill), SKILL_SCRIPT);
+  // The path appears once: the rest of the skill speaks of "the script"
+  const mentions = skill.split('\n').filter((line) => /branch-change\.mjs/.test(line));
+  assert.equal(mentions.length, 1, mentions.join('\n'));
+});
+
+Given('la skill `openspec-git-discipline` instalada de forma global', function () {
+  this.global = this.global ?? new GlobalInstall(this.workDir);
+  this.globalSkill = this.global.installGitDiscipline();
+});
+
+Given(/^un proyecto con `x-main` igual a `develop` en su `openspec\/config\.yaml`$/, function () {
+  const project = this.lifecycleProject();
+  // A project without the skill of its own: the script comes from the global install
+  fs.rmSync(project.path('.agents', 'skills', GIT_DISCIPLINE), { recursive: true, force: true });
+  this.branches.commitAll(project, 'sin la skill openspec-git-discipline');
+  this.branches.branch(project, 'develop');
+  this.branches.setPermanent(project, ['main', 'develop']);
+});
+
+When('se consulta el change de la rama con la ruta que da el `SKILL.md` de la skill, desde el proyecto', function () {
+  const script = scriptPathIn(fs.readFileSync(path.join(this.globalSkill, 'SKILL.md'), 'utf8'));
+  assert.ok(script && path.isAbsolute(script), `the SKILL.md gives no absolute script path: ${script}`);
+  const result = require('node:child_process').spawnSync(process.execPath, [script, '--json'], {
+    cwd: this.project.dir,
+    encoding: 'utf8',
+    env: this.branches.sessionEnv(),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  this.query = JSON.parse(result.stdout);
+});
+
+Then('la consulta usa `develop` como rama de origen', function () {
+  assert.equal(this.query.origin, 'develop', JSON.stringify(this.query));
 });

@@ -23,7 +23,7 @@ const { REPO_ROOT } = require('../support/project');
 const { sessionEnv } = require('../support/branches');
 
 const { runCore } = require('../support/core');
-const MODULE = path.join('.agents', 'openspec', 'branch-change.mjs');
+const MODULE = path.join('.agents', 'skills', 'openspec-git-discipline', 'scripts', 'branch-change.mjs');
 
 function root(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prepare-git-'));
@@ -38,7 +38,7 @@ function root(t) {
 function setup(t, { depth = null } = {}) {
   const r = root(t);
   const seed = path.join(r.dir, 'seed');
-  fs.mkdirSync(path.join(seed, '.agents', 'openspec'), { recursive: true });
+  fs.mkdirSync(path.dirname(path.join(seed, MODULE)), { recursive: true });
   fs.copyFileSync(path.join(REPO_ROOT, MODULE), path.join(seed, MODULE));
   fs.mkdirSync(path.join(seed, 'openspec'));
   fs.writeFileSync(path.join(seed, 'openspec', 'config.yaml'), 'schema: intent-driven\n');

@@ -1,6 +1,6 @@
 'use strict';
 
-// Core tests of .agents/openspec/branch-change.mjs outside the specs (tasks
+// Core tests of branch-change.mjs (of the openspec-git-discipline skill) outside the specs (tasks
 // 3.1 and 3.3 of add-openspec-autopilot): an `x-main` of another shape is
 // treated as absent and warned about, the origin branch may exist only as
 // origin/<branch>, and without it the branch's change is unknown.
@@ -16,7 +16,7 @@ const { pathToFileURL } = require('node:url');
 const { git } = require('../support/engine');
 const { REPO_ROOT } = require('../support/project');
 
-const MODULE = pathToFileURL(path.join(REPO_ROOT, '.agents', 'openspec', 'branch-change.mjs')).href;
+const MODULE = pathToFileURL(path.join(REPO_ROOT, '.agents', 'skills', 'openspec-git-discipline', 'scripts', 'branch-change.mjs')).href;
 
 function repo(t, config = 'schema: intent-driven\n') {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'branch-change-'));
