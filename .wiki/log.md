@@ -199,3 +199,6 @@
 
 ## [2026-11-22] ll | "git-discipline-standard-with-exception" → raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md (5 lessons, 4 articles updated)
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "lecciones equivalentes al resolver una fusión en el wiki" → raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md (1 lesson, 1 article updated)
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
