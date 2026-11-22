@@ -70,6 +70,20 @@
 
 ## [2026-11-21] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed (the uncited lessons note is now compiled)
 
+## [2026-11-21] ingest-collection | idd via git (manifest-only, idd@16e4617, archivado de add-quote-comment-rule): 21 new, 0 skipped, 21 total candidates
+
+## [2026-11-21] refresh | arranque-de-sesion y hook-context-opencode con idd@16e4617 (modos comments-*, entrega combinada en Claude Code, recordatorio por último mensaje en OpenCode, ADR-0010)
+
+## [2026-11-21] compile | concepts/regla-de-comentarios desde el manifiesto idd@16e4617
+
+## [2026-11-22] librarian | scanned 10 articles, 0 stale, 0 low-quality, 1 suggestion (carga-en-la-misma-sesion-por-agente could link ADR-0010 and regla-de-comentarios)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | 3 lecciones de add-quote-comment-rule confirmadas por el usuario (raw/notes/2026-11-22-ll-add-quote-comment-rule.md)
+
+## [2026-11-22] compile | lecciones de add-quote-comment-rule en regla-de-comentarios, suite-de-aceptacion-y-spec-as-source y ciclo-de-un-change-y-autopilot
+
 ## [2026-11-22] ingest-collection | idd via git (manifest-only, 99bdccd, fix-tui-subscription-cleanup): 20 new, 0 skipped, 20 total candidates
 
 ## [2026-11-22] refresh | 4 articles checked against raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md: 4 updated (ciclo-de-un-change-y-autopilot, carga-en-la-misma-sesion-por-agente, suite-de-aceptacion-y-spec-as-source, arranque-de-sesion), 0 flagged, 0 retracted; hook-context-opencode unaffected

@@ -18,6 +18,8 @@ Last updated: 2026-11-21
 
 ## Recent Changes
 
+- 2026-11-21: arranque-de-sesion refrescado con el archivado de add-quote-comment-rule
+
 - 2026-11-21: 1 tema compilado del archivado de add-openspec-autopilot
 
 - 2026-11-21: 3 temas compilados de los productos del repositorio

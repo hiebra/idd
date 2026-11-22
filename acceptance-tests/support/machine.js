@@ -58,7 +58,7 @@ function cleanEnv() {
   const env = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (/^npm_/i.test(key) && !keep.test(key)) continue;
-    if (['CLAUDE_ENV_FILE', 'CLAUDE_PROJECT_DIR', 'CLAUDE_PLUGIN_ROOT', 'PROJECT_WIKI'].includes(key)) continue;
+    if (['CLAUDE_ENV_FILE', 'CLAUDE_PROJECT_DIR', 'CLAUDE_PLUGIN_ROOT', 'PROJECT_WIKI', 'PROJECT_COMMENTS'].includes(key)) continue;
     // Git settings of the machine that runs the suite would steer the hook's git calls
     if (/^GIT_/.test(key)) continue;
     env[key] = value;
@@ -79,6 +79,7 @@ class Machine {
     this.hasUserHub = true;
     // true: the user disabled the wiki in the environment the agent starts from
     this.wikiDisabled = false;
+    this.commentsDisabled = false;
 
     const realNpm = which('npm');
     if (!realNpm) throw new Error('the acceptance suite needs npm on the machine that runs it');
@@ -193,6 +194,7 @@ class Machine {
       delete env.XDG_DATA_HOME;
     }
     if (this.wikiDisabled) env.PROJECT_WIKI = 'off';
+    if (this.commentsDisabled) env.PROJECT_COMMENTS = 'off';
     if (this.offline) {
       fs.rmSync(this.emptyCache, { recursive: true, force: true });
       Object.assign(env, {

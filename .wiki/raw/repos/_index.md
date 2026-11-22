@@ -9,6 +9,7 @@ Last updated: 2026-11-22
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
 | [2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md](2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md) | Manifiesto de lo que tocó fix-tui-subscription-cleanup en el commit del archivado (idd@99bdccd) | collection, collection-manifest, git | 2026-11-22 |
+| [2026-11-21-idd-16e4617-add-quote-comment-rule.md](2026-11-21-idd-16e4617-add-quote-comment-rule.md) | Manifiesto de lo que tocó add-quote-comment-rule en el commit del archivado (idd@16e4617) | collection, collection-manifest, git | 2026-11-21 |
 | [2026-11-21-idd-772d0f0-add-openspec-autopilot.md](2026-11-21-idd-772d0f0-add-openspec-autopilot.md) | Manifiesto de lo que tocó add-openspec-autopilot en el commit del archivado (idd@772d0f0) | collection, collection-manifest, git | 2026-11-21 |
 | [2026-11-21-idd-b48392d-fix-wiki-flow-operations.md](2026-11-21-idd-b48392d-fix-wiki-flow-operations.md) | Manifiesto de lo que tocó fix-wiki-flow-operations en el commit del archivado (idd@b48392d) | collection, collection-manifest, git | 2026-11-21 |
 | [2026-11-21-idd-c59392a-adr-0007.md](2026-11-21-idd-c59392a-adr-0007.md) | Manifiesto de ADR-0007, que sustituye las puertas de openspec-git-discipline (idd@c59392a) | collection, collection-manifest, git | 2026-11-21 |
