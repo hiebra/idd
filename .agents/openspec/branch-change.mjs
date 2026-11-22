@@ -417,7 +417,21 @@ export function checkMerge(dir, target, source, env = process.env) {
         'En un contenedor efímero, el commit pasa por `check commit`; fuera de él, el commit (`git commit --no-edit`) lo hace el usuario.'
     );
   }
-  return deny(`check merge no admite el destino '${target}' desde ${branch ? `la rama '${branch}'` : 'un HEAD separado'}.`);
+  // Llevar la rama temporal actual a una rama permanente
+  if (state.permanent.includes(target) && branch && !state.permanent.includes(branch)) {
+    if (!remote(target)) return deny(`No existe 'origin/${target}': trae la rama con \`git fetch origin ${target}\` y vuelve a ejecutar la puerta.`);
+    if (!contains(`refs/remotes/origin/${target}`)) {
+      return deny(
+        `La rama '${branch}' no contiene \`origin/${target}\`: trae antes \`origin/${target}\` a la rama temporal con la puerta ` +
+          `\`node .agents/openspec/branch-change.mjs check merge ${branch} ${target}\`, para que no haya conflictos que resolver en '${target}', y vuelve a ejecutar esta.`
+      );
+    }
+    return allow(`Se puede llevar la rama temporal '${branch}' a '${target}'.`);
+  }
+  return deny(
+    `check merge no admite el destino '${target}' desde ${branch ? `la rama '${branch}'` : 'un HEAD separado'}: ` +
+      'trae una rama permanente a la rama temporal actual (`check merge <rama actual> [<rama permanente>]`) o lleva la rama temporal actual a una rama permanente (`check merge <rama permanente>`).'
+  );
 }
 
 // Las puertas del ciclo (design D2 de add-openspec-autopilot, D3 de
