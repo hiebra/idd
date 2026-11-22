@@ -36,4 +36,5 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 5. Cierre
 
-- [ ] 5.1 Ejecutar la suite completa con el delta del change, `npm run test:core` y `npm run lint:specs`: todo pasa, cero pasos pendientes o sin definir, informe HTML generado.
+- [x] 5.1 Ejecutar la suite completa con el delta del change, `npm run test:core` y `npm run lint:specs`: todo pasa, cero pasos pendientes o sin definir, informe HTML generado.
+  - Resultado: 141 escenarios y 733 pasos, todos pasan; `test:core`, 85 de 85; `lint:specs`, sin errores sobre 8 specs; informe en `reports/cucumber-report.html`.
