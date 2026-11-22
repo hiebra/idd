@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md
   - raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md
   - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
   - raw/repos/2026-11-22-idd-002f043-adr-0011.md
@@ -14,7 +15,7 @@ verified: 2026-11-22
 tags: [openspec, git, opencode, plugins, openspec-autopilot, adr, spec]
 confidence: high
 volatility: warm
-summary: "Un change se hace en una rama temporal con una sola fusión, y el change de la rama se lee de git con un módulo neutral. En OpenCode 2, el plugin openspec-autopilot encadena una sesión por paso con el estado en la metadata de las sesiones, revisiones confirmadas en la TUI y un modo auto opcional; en Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006 a ADR-0008, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
+summary: "Un change se hace en una rama temporal con una sola fusión, que el modelo puede crear con el módulo neutral branch-change.mjs, y el change de la rama se lee de git. En OpenCode 2, el plugin openspec-autopilot mantiene una sesión operativa por rama, decide lo producido en cada paso con el CLI de OpenSpec y cierra las revisiones con git, con la lógica en el servidor para cualquier cliente; en Claude Code los mismos workflows se lanzan a mano. Sintetizado de ADR-0006, ADR-0012, ADR-0013, las specs openspec-change-lifecycle y openspec-autopilot, el README y las pruebas con OpenCode 2.3.2."
 ---
 
 # El ciclo de un change y su automatización en OpenCode
@@ -29,7 +30,8 @@ summary: "Un change se hace en una rama temporal con una sola fusión, y el chan
 - **Ramas permanentes**: la lista `x-main` de `openspec/config.yaml`, o `main` si no está. La última es la rama de origen. Cualquier otra rama local es temporal, y con HEAD separado no hay ninguna. Una `x-main` con otra forma se trata como ausente y avisa. OpenSpec 1.17.0 acepta claves `x-*` sin avisos ([lecciones](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md), lección 8).
 - **El change de la rama se lee de git**: es el que ha cambiado en `openspec/changes/` desde el merge-base con la rama de origen, con commit o sin él. No se apunta en ningún sitio. Lo calcula `idd@772d0f0:.agents/openspec/branch-change.mjs` (`--json`), sin dependencias y el mismo para los dos agentes (D1 del design).
 - **Las puertas** (proponer, apply, archive) las decide `branch-change.mjs check <propose|apply|archive> [<change>]`, que imprime `{ ok, message }` y sale con 0 o 1. La skill `openspec-git-discipline` manda ejecutarlo y obedecerlo (ver [[origen-de-openspec-git-discipline|su origen]] ([su origen](../concepts/origen-de-openspec-git-discipline.md))).
-- **Los commits y las fusiones los hace el usuario**: los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki.
+- **Los commits y las fusiones los hace el usuario** (`idd@6d6e79c:adr/0012-model-creates-change-branches-plugin-stages.md`, que sustituye a ADR-0007): fuera del autopilot, los workflows los piden tras cada artefacto, cada task, el archive y la resincronización del wiki; en el autopilot, el plugin deja lo producido en el stage y el modelo no pide commits.
+- **El modelo crea la rama del change o cambia de rama temporal**, solo con `branch-change.mjs list | start <change> | switch <rama>`: la rama nueva sale siempre de la rama de origen y se llama como el change, y nunca con el árbol sucio (`idd@6d6e79c:.agents/openspec/branch-change.mjs`, `idd@6d6e79c:.agents/skills/openspec-git-discipline/SKILL.md`).
 - **Antes de proponer, busca las decisiones previas**: el schema solo pide leer los ADRs en el paso `design`, pero una propuesta puede chocar con un ADR en vigor sobre el mismo mecanismo. En `add-quote-comment-rule`, la primera propuesta usaba `AGENTS.md`, que ADR-0005 ya había descartado, y hubo que rehacerla al escribir las specs ([lecciones de add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md), lección 3).
 
 ## La asimetría entre agentes
@@ -46,18 +48,15 @@ Lo común al ciclo va en una pieza neutral, y por eso `branch-change.mjs` está 
 
 ## El plugin `openspec-autopilot`
 
-`idd@772d0f0:adr/0008-openspec-autopilot-plugin.md`, `idd@772d0f0:openspec/specs/openspec-autopilot/spec.md` y el código de `idd@772d0f0:.opencode/plugins/openspec-autopilot/`:
+`idd@6d6e79c:adr/0013-autopilot-verifies-product-and-closes-reviews-with-git.md` (sustituye a ADR-0008), `idd@6d6e79c:openspec/specs/openspec-autopilot/spec.md`, el design del change archivado (`idd@6d6e79c:openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md`) y el código de `idd@6d6e79c:.opencode/plugins/openspec-autopilot/`:
 
-- **Dónde actúa**: solo con la TUI y en una rama temporal con un change o sin ninguno. Sin TUI (`opencode run`, Desktop), en una rama permanente, con HEAD separado o con varios changes en la rama, no orquesta nada. Con varios changes, avisa.
-- **Una sesión por paso**: cada artefacto, cada task, el verify, el archive, la resincronización del wiki y, en el modo normal, las revisiones. Cada paso termina cuando el modelo llama a la tool `openspec_handoff`. El plugin comprueba en el repositorio que el paso hizo algo, crea la sesión siguiente con su agente, su metadata y su skill, navega a ella y archiva la anterior. Es idempotente por `phase` y `seq`.
-- **El paso siguiente** lo decide una función pura (`lib/next-step.mjs`) a partir de `openspec status` y `tasks.md`, en los dos modos.
-- **El estado vive solo en la metadata de las sesiones**, en la clave `openspec`: la sesión dueña del change por `worktree` y `branch`, el paso de cada sesión, los resultados de las revisiones y las lecciones candidatas. El repositorio no cambia. Si dos sesiones toman el control a la vez, gana la de `time.created` más antiguo y la otra queda libre con un aviso (D4).
-- **Al abrir una sesión a mano**: sin change, toma el control y arranca `openspec-new-change`. Con change y sin dueña, toma el control y sigue por el paso de `openspec status`. Si la dueña trabaja, la nueva queda libre. Si la dueña está parada, un diálogo pregunta si ir a ella o archivarla y seguir.
-- **Revisión humana guiada** (modo normal): tras cada artefacto, cada task y el verify. El cierre lo propone el modelo, pero lo confirma el usuario en un diálogo de la TUI. Una revisión no satisfactoria lleva a `openspec-update-change`, que recibe un índice de las sesiones del change (tool `openspec_session`), y después a una revisión del plan.
-- **Árbol limpio**: antes de empezar un paso, el árbol de trabajo tiene que estar limpio. Si no, la sesión espera el commit (`waiting-commit`). En el modo auto, solo se comprueba en el primer paso tras un cambio de zona (D11).
-- **Modo auto**: sin revisiones. Se para cuando un workflow pregunta y en cada cambio entre la zona de specs y la de código. El verify termina llamando a la tool con su veredicto: sin problemas críticos pasa al archive sin pedir confirmación; con ellos, la sesión queda esperando al usuario, que la cierra como una revisión. Sin veredicto (`clean` o `critical`), la tool no traspasa y le pide al modelo que vuelva a llamarla con uno (`idd@772d0f0:.opencode/plugins/openspec-autopilot/server.js`). Es una opción de cada usuario (`options.auto` en su configuración global de OpenCode), no del proyecto.
-- **Libera sus suscripciones al descargarse**: la parte de TUI ata sus dos `events.on` a un `AbortSignal` y `setup` devuelve la función que lo aborta, que OpenCode ejecuta antes de cada recarga en caliente y al cerrar. Así, tras una recarga solo atiende los eventos la carga nueva, y al cerrar con `--standalone` no deja trazas `ECONNRESET` en el terminal. ADR-0011 lo exige a todos los plugins de OpenCode del proyecto (`idd@002f043:adr/0011-opencode-plugins-release-what-they-register.md`, `idd@99bdccd:.opencode/plugins/openspec-autopilot/tui.js`).
-- **Nunca bloquea OpenCode**: ante un fallo, avisa y deja la sesión libre, sin lanzar excepciones hacia OpenCode (D12).
+- **El ciclo no depende de que el modelo obedezca.** El motivo, de las pruebas con `alibaba/qwen3.8-flash`: el modelo no llamaba a `openspec_handoff` o seguía escribiendo artefactos tras llamarla, y la instrucción del paso, inyectada solo en la primera petición, se perdía en los mensajes siguientes.
+- **Sesión operativa**: una sola sesión viva por rama (la dueña en la metadata). Al arrancar una TUI sin ella, el plugin la crea y la arranca sola, también en una rama permanente (con `openspec-new-change`, y el modelo crea la rama). Cualquier otra ventana de la TUI (inicio, `/new`, otra sesión, o al recuperar el foco) muestra un modal de un botón que lleva a ella. Al volver a ella, se valida contra la rama, el change y el árbol; una discrepancia con `openspec status` se explica en un modal, sin arreglarla.
+- **Producto evaluable**: al empezar cada paso se guarda una foto del change según el CLI (artefactos en `done`, tasks marcadas, con el id del CLI); al quedar la sesión en reposo, lo que ha cambiado es el producto, haya llamado el modelo a la tool o no. Sin producto no se avanza; con producto, el plugin lo pasa al stage (por artefacto, o `git add -A`) y abre una revisión por producto, en el orden del schema (`lib/product.mjs`).
+- **La revisión la cierra git**: cuando el usuario envía un prompt, el hook `prompt` compara git con el inicio de la revisión: HEAD avanzado y nada en el stage es ok (commit); HEAD igual, nada en el stage y cambios en el árbol es ko, y lo sacado del stage y el prompt (como conclusiones) van a `openspec-update-change` (`lib/git.mjs`). Desaparece el diálogo de confirmación. La revisión del verify, que empieza con el árbol limpio, acepta un commit vacío.
+- **Esperas de commit**: tras el archive y la resincronización del wiki, y en el modo auto en cada cambio de zona, siempre que el árbol esté sucio. `update-change` empieza con el árbol sucio a propósito.
+- **La lógica vive en el servidor y funciona con cualquier cliente**; la TUI solo pone modal, foco, navegación y archivado. Sin TUI (UI web, Desktop, `opencode run`): aviso en el contexto de las sesiones ajenas, archivado diferido (`archivePending`) hasta que llega una TUI, y arranque solo con el mensaje `autopilot`.
+- **Lo que se mantiene**: una sesión por paso con su workflow y su agente, el estado solo en la metadata, el índice de sesiones para `update-change`, las lecciones candidatas en la metadata, el aviso tras compactar, los dos modos y nada en Claude Code (ADR-0006).
 
 ## Las restricciones de OpenCode 2.3.2 que lo moldean
 
@@ -70,7 +69,14 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - **Cerrar con `--standalone` corta las suscripciones vivas**: cada `events.on` de la TUI es una suscripción a `/api/event`, y si el servidor propio de la TUI se apaga con ella viva, el cliente imprime una traza `ClientError: Transport … ECONNRESET`. Sin `--standalone` no ocurre, porque el servidor sigue vivo (`idd@99bdccd:openspec/changes/archive/2026-11-22-fix-tui-subscription-cleanup/design.md`, Context).
 - **Encadenar desde `experimental.idle`**: crear la sesión, `prompt`, navegar y archivar la anterior tarda menos de 200 ms. Tras una interrupción o una compactación no se ejecuta `idle` (lección 6).
 - **`ctx.session.list()` devuelve `{ data, cursor }` por páginas**, no un array. Se descubrió en la prueba final con OpenCode real, y se corrigió en el plugin y en el simulador (`idd@772d0f0:openspec/changes/archive/2026-11-21-add-openspec-autopilot/tasks.md`, task 12.2).
-- **El modelo no decide por el usuario**: un modelo real cerró con `ok` una revisión ante "Gracias, lo miro luego.". De ahí la confirmación en la TUI (lección 10).
+- **El modelo no decide por el usuario**: un modelo real cerró con `ok` una revisión ante "Gracias, lo miro luego.". De ahí la confirmación en la TUI de ADR-0008 (lección 10), que ADR-0013 sustituye por el cierre con git: la decisión del usuario es su commit, no una frase del modelo.
+
+- **La UI web no ejecuta la interfaz de un plugin local** [comprobado]: ni `tui.js` ni un bundle `./gui-experimental`, que solo carga OpenCode Desktop por su *bridge*; `experimental.browser/attach` es el navegador integrado de Desktop (design de `autopilot-sesion-operativa`, Context).
+- **El hook de servidor `prompt`** llega con cada mensaje, antes de la petición al modelo, con el texto mutable; también cuando el mensaje queda pendiente detrás del turno en curso. Es el que cierra las revisiones por git.
+- **La TUI**: `ui.router.current()` sin evento de cambio (se consulta cada 300 ms), `renderer.on('focus' | 'blur')` con las secuencias de foco del terminal, y `ui.dialog` con `alert`, `confirm`, `prompt` y `select`.
+- **Las llamadas RPC de la TUI necesitan la ubicación**: en la pantalla de inicio, sin ella, el servidor responde 400 `rpc.unavailable` (los 400 del log al arrancar); con `{ location: { directory } }` funcionan.
+- **El servicio carga el plugin una vez por proyecto en el mismo proceso**: lo que se guarde en `globalThis` (generación, PID presentados) tiene que ir por directorio.
+- **Las sesiones que crea un plugin usan el modelo por defecto de la configuración**, no el elegido en la TUI.
 
 ## Cómo se verifica
 
@@ -79,8 +85,8 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 
 ## Lo que no se sabe
 
-- **Su uso prolongado**: si el coste de un commit antes de cada paso del modo normal compensa. ADR-0008 lo asume como consecuencia, pero no hay experiencia de uso registrada.
-- **Que un modelo real llame a `openspec_handoff` en el momento justo** fuera de las revisiones. Solo se comprobó con el proveedor falso y, para las revisiones, con `qwen3.8-flash` (lección 10).
+- **Su uso prolongado**: si el coste de revisar y hacer un commit por producto en el modo normal compensa. No hay experiencia de uso registrada más allá de las pruebas end-to-end de `autopilot-sesion-operativa`.
+- **El ok de una revisión desde la UI web**: el ko se comprobó en la web; el ok usa la misma lógica, pero quedó como verificación manual pendiente (`idd@6d6e79c:openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/tasks.md`, task 8.4).
 
 ## See Also
 
@@ -90,6 +96,8 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](flujo-wiki-first.md))
 
 ## Sources
+
+- [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0012-model-creates-change-branches-plugin-stages.md`, `adr/0013-autopilot-verifies-product-and-closes-reviews-with-git.md`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.opencode/plugins/openspec-autopilot/`, `.agents/openspec/branch-change.mjs`, `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md` y `tasks.md`.
 
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `adr/0006-agent-asymmetry-policy.md`, `adr/0007-single-branch-change-lifecycle.md`, `adr/0008-openspec-autopilot-plugin.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `openspec/specs/openspec-autopilot/spec.md`, `.agents/openspec/branch-change.mjs`, `.opencode/plugins/openspec-autopilot/`, `README.md`, `acceptance-tests/README.md`, `openspec/changes/archive/2026-11-21-add-openspec-autopilot/tasks.md`.
 - [Lessons Learned: APIs de sesión de OpenCode 2.3.2 para orquestar un change](../../raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md): lecciones 1 a 10.

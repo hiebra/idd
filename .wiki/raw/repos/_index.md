@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md](2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md) | Manifiesto de lo que tocó autopilot-sesion-operativa en el commit del archivado (idd@6d6e79c) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-002f043-adr-0011.md](2026-11-22-idd-002f043-adr-0011.md) | Manifiesto de ADR-0011, el ADR de limpieza de los plugins tras renumerarse desde ADR-0010 (idd@002f043) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md](2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md) | Manifiesto de lo que tocó fix-tui-subscription-cleanup en el commit del archivado (idd@99bdccd) | collection, collection-manifest, git | 2026-11-22 |
 | [2026-11-21-idd-16e4617-add-quote-comment-rule.md](2026-11-21-idd-16e4617-add-quote-comment-rule.md) | Manifiesto de lo que tocó add-quote-comment-rule en el commit del archivado (idd@16e4617) | collection, collection-manifest, git | 2026-11-21 |
