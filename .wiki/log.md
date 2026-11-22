@@ -107,3 +107,9 @@
 ## [2026-11-22] librarian | scanned the articles and inventory for replace-gherkin-lint-with-gplint: 0 stale, 0 contradicted, 0 suggestions (only suite-de-aceptacion-y-spec-as-source named the lint config, refreshed)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ingest | gplint 2.6.2 (https://github.com/gplint/gplint; README, CLI y CHANGELOG del paquete npm) → raw/articles/2026-11-22-gplint.md
+
+## [2026-11-22] ll | "el lint de las specs con gplint (replace-gherkin-lint-with-gplint)" → raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md (6 lessons, 2 articles updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
