@@ -38,6 +38,7 @@ const RPC = {
 };
 
 const log = (...args) => console.error(`[${ID}]`, ...args);
+const RETRY_MS = [200, 400, 800, 1600, 3200, 4000];
 
 export default {
   id: ID,
@@ -54,13 +55,34 @@ export default {
     };
     // OpenCode ejecuta lo que devuelve setup antes de cada recarga y al cerrar
     const subscriptions = new AbortController();
-    const cleanup = () => subscriptions.abort();
+    let retry = null;
+    const cleanup = () => {
+      subscriptions.abort();
+      if (retry) clearTimeout(retry);
+    };
+    // Al arrancar, la TUI puede llamar antes de que la parte de servidor
+    // registre su RPC (rpc.unavailable): se reintenta sin escribir nada
+    // (design D14 de autopilot-sesion-operativa)
+    const unavailable = (error) => /rpc\.unavailable|RPC is unavailable/i.test(`${error?.type ?? ""} ${error?.message ?? ""}`);
     try {
       const client = context.client.rpc(RPC);
       // Primero escuchar y después pedir los pendientes, para no perder ninguno
       client.events.on("warning", (event) => show(event.data), { signal: subscriptions.signal });
-      const pending = await client.warnings({});
-      for (const batch of pending ?? []) show(batch);
+      const fetchPending = async (attempt = 0) => {
+        if (subscriptions.signal.aborted) return;
+        try {
+          const pending = await client.warnings({});
+          for (const batch of pending ?? []) show(batch);
+        } catch (error) {
+          if (unavailable(error) && attempt < RETRY_MS.length) {
+            retry = setTimeout(() => fetchPending(attempt + 1), RETRY_MS[attempt]);
+            retry.unref?.();
+            return;
+          }
+          log("rpc:", error);
+        }
+      };
+      await fetchPending();
     } catch (error) {
       log("rpc:", error);
     }

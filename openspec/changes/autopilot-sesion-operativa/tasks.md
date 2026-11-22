@@ -36,21 +36,22 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 4. Servidor: producto, revisión por git y encadenado (zona de código): `openspec-autopilot`
 
-- [ ] 4.1 "Verificación por producto" (sus cinco escenarios): pasos rojos; implementar en `server.js` la foto al empezar el paso, la evaluación en `experimental.idle`, el rechazo de `openspec_handoff` sin producto, el stage y la cola; verde.
-- [ ] 4.2 "Una sesión por paso" (sus tres escenarios): arrancar los pasos con `session.prompt` y el recordatorio del hook `context` (D6); verde.
-- [ ] 4.3 "Revisión humana cerrada por git en el modo normal" e "Índice de sesiones para openspec-update-change": pasos rojos; implementar el cierre en el hook `prompt` (D8), las conclusiones y la revisión del verify (D10); quitar el diálogo de confirmación; verde.
-- [ ] 4.4 "Árbol limpio al empezar un paso" y "Modo auto": pasos rojos; implementar las esperas de commit (D9) y el modo auto por producto; verde.
-- [ ] 4.5 Los escenarios que no cambian de comportamiento ("Lecciones candidatas…", "Aviso tras compactar…", "El plugin nunca bloquea OpenCode") siguen en verde con el servidor nuevo.
+- [x] 4.1 "Verificación por producto" (sus cinco escenarios): pasos rojos; implementar en `server.js` la foto al empezar el paso, la evaluación en `experimental.idle`, el rechazo de `openspec_handoff` sin producto, el stage y la cola; verde.
+- [x] 4.2 "Una sesión por paso" (sus tres escenarios): arrancar los pasos con `session.prompt` y el recordatorio del hook `context` (D6); verde.
+- [x] 4.3 "Revisión humana cerrada por git en el modo normal" e "Índice de sesiones para openspec-update-change": pasos rojos; implementar el cierre en el hook `prompt` (D8), las conclusiones y la revisión del verify (D10); quitar el diálogo de confirmación; verde.
+- [x] 4.4 "Árbol limpio al empezar un paso" y "Modo auto": pasos rojos; implementar las esperas de commit (D9) y el modo auto por producto; verde.
+- [x] 4.5 Los escenarios que no cambian de comportamiento ("Lecciones candidatas…", "Aviso tras compactar…", "El plugin nunca bloquea OpenCode") siguen en verde con el servidor nuevo.
 
 ## 5. Sesión operativa (zona de código): `openspec-autopilot`
 
-- [ ] 5.1 "Una sola sesión con el control del change" y "Dónde actúa el plugin": pasos rojos; implementar D2 (sesión operativa válida; sin tomar el control en sesiones nuevas); verde.
-- [ ] 5.2 "Arranque de la sesión operativa": pasos rojos; implementar D3 en `hello` (PID en `globalThis`, arranque y recarga); verde.
-- [ ] 5.3 "Las ventanas ajenas llevan a la sesión operativa": pasos rojos; implementar `screen` en el servidor y, en `tui.js`, la consulta de la ruta cada 300 ms, el foco, el modal de un botón con navegación al cerrar y la protección contra el bucle (D4), con limpieza en `setup` (ADR-0011); verde.
-- [ ] 5.4 "Validación al volver a la sesión operativa": pasos rojos; implementar D5; verde.
-- [ ] 5.5 "Funcionamiento sin TUI": pasos rojos; implementar D13 (sin `tui.ready()` en la lógica, aviso en el contexto de las sesiones ajenas, `archivePending` y arranque con `autopilot`); verde.
-- [ ] 5.6 "La TUI se presenta sin errores": paso rojo; implementar el reintento de D14 en `openspec-autopilot/tui.js` y en `session-bootstrap/tui.js`; verde.
-- [ ] 5.7 "La TUI libera sus suscripciones" sigue en verde, con el temporizador y el foco liberados. Ampliar `core-tests/autopilot-plugin.test.js` con la limpieza del temporizador y del foco.
+- [x] 5.1 "Una sola sesión con el control del change" y "Dónde actúa el plugin": pasos rojos; implementar D2 (sesión operativa válida; sin tomar el control en sesiones nuevas); verde.
+- [x] 5.2 "Arranque de la sesión operativa": pasos rojos; implementar D3 en `hello` (PID en `globalThis`, arranque y recarga); verde.
+- [x] 5.3 "Las ventanas ajenas llevan a la sesión operativa": pasos rojos; implementar `screen` en el servidor y, en `tui.js`, la consulta de la ruta cada 300 ms, el foco, el modal de un botón con navegación al cerrar y la protección contra el bucle (D4), con limpieza en `setup` (ADR-0011); verde.
+- [x] 5.4 "Validación al volver a la sesión operativa": pasos rojos; implementar D5; verde.
+- [x] 5.5 "Funcionamiento sin TUI": pasos rojos; implementar D13 (sin `tui.ready()` en la lógica, aviso en el contexto de las sesiones ajenas, `archivePending` y arranque con `autopilot`); verde.
+- [x] 5.6 "La TUI se presenta sin errores": paso rojo; implementar el reintento de D14 en `openspec-autopilot/tui.js` y en `session-bootstrap/tui.js`; verde.
+- [x] 5.7 "La TUI libera sus suscripciones" sigue en verde, con el temporizador y el foco liberados. Ampliar `core-tests/autopilot-plugin.test.js` con la limpieza del temporizador y del foco.
+  - Resultado: las secciones 4 y 5 se implementaron juntas en `server.js` y `tui.js` y van en un solo commit, porque la sesión operativa y el producto comparten el mismo flujo. Con todo, los 55 escenarios del change y los 162 de la suite completa pasan.
 
 ## 6. Documentación (zona de código)
 
