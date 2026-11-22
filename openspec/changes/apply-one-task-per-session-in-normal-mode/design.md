@@ -58,6 +58,13 @@ El plugin no pasa `config.yaml` al stage ni hace commit. Avisa: «openspec-autop
 - Alternativa: pasarlo al stage. Rechazada: si hay una revisión abierta de una task (zona de código), su commit mezclaría zonas.
 - El árbol sucio hace esperar al paso siguiente, como ya hace el autopilot con cualquier cambio pendiente: no hace falta nada nuevo.
 
+### D7. El proyecto versiona `config.yaml` como lo deja el modo por defecto
+
+El `openspec/config.yaml` del proyecto lleva el bloque. El modo por defecto es el normal, así que, en un clon recién hecho, la carga del plugin en modo normal no escribe nada y el autopilot arranca con el árbol limpio. Solo quien activa el modo auto ve el archivo modificado en su primera carga, y hace el commit o descarta el cambio (con el árbol sucio, el autopilot espera).
+
+- Alternativa: no versionar el bloque y que lo añada la primera carga. Rechazada al implementarlo: en un clon nuevo, el primer paso del autopilot en modo normal se queda esperando un commit, y se rompían seis escenarios que ya existían (el arranque, el reinicio, el arranque sin TUI y la revisión del verify).
+- Alternativa: que el autopilot no cuente su propio ajuste como árbol sucio. Rechazada: añade código y otra excepción al cierre de las revisiones para un caso que D7 evita en el modo por defecto.
+
 ### D6. Una revisión abierta no se cierra por el ajuste
 
 `verdict` da `ko` si git cambió, no hay nada en el stage y HEAD no avanzó. En la revisión del verify, que empieza con el árbol limpio, el ajuste solo bastaría para cerrarla como no satisfactoria. Por eso, si `syncApplyGuidance` escribe, el plugin actualiza la firma de inicio (`review.git.signature`) de la revisión abierta de la rama con el estado de git después de escribir. HEAD no cambia, así que un commit posterior sigue dando `ok`.
@@ -71,7 +78,7 @@ El plugin no pasa `config.yaml` al stage ni hace commit. Avisa: «openspec-autop
 
 ## Migration Plan
 
-No hay migración: la primera carga del plugin en modo normal añade el bloque y el usuario hace su commit. Para dar marcha atrás, se activa el modo auto (el plugin quita el bloque) o se desactiva el plugin y se borra el bloque a mano.
+El change versiona el bloque en `openspec/config.yaml` (D7), así que no hay migración en modo normal; en modo auto, la primera carga lo quita y el usuario hace el commit o lo descarta. Para dar marcha atrás, se activa el modo auto (el plugin quita el bloque) o se desactiva el plugin y se borra el bloque a mano.
 
 ## Open Questions
 

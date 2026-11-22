@@ -42,6 +42,37 @@ rules:
 #         - Summarize the archive outcome before finishing
 
 operations:
+  apply:
+    guidance:
+      - >-
+        Standing instruction from the project owner: apply runs one tracked
+        task per session. Take it as given that the user interrupts after every
+        completed task; this is the built-in "User interrupts" pause, declared
+        in advance. So in this session the task to work on is the first one the
+        CLI returns with `done: false`.
+      - >-
+        Implement that task in this top-level interactive session. Do not
+        delegate it to a subagent or any other non-interactive agent, so that
+        every built-in pause (unclear task, design issue, added scope, error or
+        blocker) is asked to the user and answered in this session.
+      - >-
+        When the task is marked `- [x]` and the rerun of the apply instructions
+        confirms it, that pause applies: go to the built-in "On completion or
+        pause, show status" step instead of continuing to the next task. Show
+        it as completion if the CLI now reports `all_done`; otherwise as a
+        pause whose reason is the session boundary and whose way forward is a
+        new session (fresh context) running this same apply workflow for this
+        change. The built-in loop resumes there from the first pending task, as
+        any resumed apply does.
+      - >-
+        Change nothing else. Steps, CLI commands, checkbox updates, pause
+        conditions, status and completion output, and completion criteria stay
+        exactly as the built-in workflow defines them, so the change ends up as
+        a single uninterrupted apply would leave it. Add nothing on account of
+        the session split: no handoff or progress files, no notes or markers in
+        the tracking file, no extra commits. This guidance applies only while
+        implementing tasks, not to verification or any other workflow that
+        reads this output.
   archive:
     guidance:
       - "Dónde se archiva: hay dos formas del ciclo, y las dos se admiten. En la forma recomendada, el change se archiva en su rama temporal y la rama llega a la rama de origen (la última de x-main, o main) en una sola fusión con --no-ff; la forma recomendada conviene casi siempre, porque el plan, el código, el archive y el wiki llegan juntos y la rama permanente no recibe commits directos. En la forma canónica de intent-driven, el change se archiva en la rama de origen después de fusionar la implementación, con todas sus tasks hechas; la forma canónica conviene cuando el plan se revisa y se fusiona aparte o hay que reservar pronto los números de ADR, a cambio de tres fusiones y de commits del archive y del wiki en la rama permanente. La forma canónica es una forma admitida: archiva donde siga el usuario."

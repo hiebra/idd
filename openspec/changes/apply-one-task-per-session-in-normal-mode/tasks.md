@@ -15,6 +15,8 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que la secci
 
 ## 2. Pasos de aceptación (zona de código): «Indicaciones de apply según el modo»
 
+- [ ] 2.0 Versionar el bloque en el `openspec/config.yaml` del proyecto (D7, zona de specs, en un commit aparte), con el texto que da `adjust(text, 'normal')`. Así el modo por defecto no ensucia el árbol de un clon, y los escenarios que ya existían vuelven a pasar.
+
 - [ ] 2.1 «El archivo sigue al modo» (Scenario Outline, sus cuatro filas): escribir los pasos y verlos en rojo. Llamar a `syncApplyGuidance` en `start(ctx)` de `server.js`, dentro de `guard` y antes de registrar el RPC; avisar con un toast cuando escribe. Verde.
 
 ## 3. Pasos de aceptación (zona de código): «El ajuste de config.yaml no toca nada más»
