@@ -32,7 +32,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que la secci
 
 ## 5. Documentación (zona de código)
 
-- [ ] 5.1 README, en «Modo auto»: en modo normal, el plugin añade a `openspec/config.yaml` las indicaciones de una task por sesión, y en modo auto las quita. El cambio queda sin commit, para que lo hagas tú aparte, y Claude Code lo lee como lo dejó la última carga. Enlazar ADR-0025.
+- [x] 5.1 README, en «Modo auto»: en modo normal, el plugin añade a `openspec/config.yaml` las indicaciones de una task por sesión, y en modo auto las quita. El cambio queda sin commit, para que lo hagas tú aparte, y Claude Code lo lee como lo dejó la última carga. Enlazar ADR-0025.
 
 ## 6. Cierre
 
