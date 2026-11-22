@@ -28,8 +28,10 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 3. Autopilot (zona de código)
 
-- [ ] 3.1 "El enlace de binarios del CLI no es ejecutable": en la copia, sustituir `node_modules/.bin/openspec` por un archivo no ejecutable. Ver el rojo y hacer que `openspecBin` ejecute con `process.execPath` el `bin.openspec` de `node_modules/@fission-ai/openspec/package.json`, y que use el `openspec` del `PATH` si no está (D6).
-- [ ] 3.2 En `core-tests/`, el caso sin el CLI del proyecto: usa el `openspec` del `PATH`.
+- [x] 3.1 "El enlace de binarios del CLI no es ejecutable": en la copia, sustituir `node_modules/.bin/openspec` por un archivo no ejecutable. Ver el rojo y hacer que el plugin ejecute con `node` el `bin.openspec` de `node_modules/@fission-ai/openspec/package.json`, y que use el `openspec` del `PATH` si no está (D6).
+  - Resultado: con `node_modules/.bin/openspec` no ejecutable, el plugin no podía ejecutar `openspec status` y no se creaba ninguna sesión operativa. Con `openspecCommand()`, que ejecuta con `node` el `bin.openspec` del paquete, la sesión arranca con el paso de `openspec status`. No se usa `process.execPath`, como decía D6: en OpenCode es el binario de OpenCode (compilado con Bun), no Node. Corregido en el design. Los escenarios de arranque del autopilot siguen pasando.
+- [x] 3.2 En `core-tests/`, el caso sin el CLI del proyecto: usa el `openspec` del `PATH`.
+  - Resultado: `core-tests/autopilot-openspec-cli.test.js`: sin el paquete, el `openspec` del PATH; con él, su script con `node`, sin `node_modules/.bin/`. `test:core` da 116 de 116.
 
 ## 4. Diagnóstico (zona de código): por escenario, rojo → implementar → verde → commit
 
