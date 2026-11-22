@@ -1,12 +1,12 @@
 ---
 title: "Compilar las lecciones de las pruebas de add-openspec-autopilot al archivarlo"
 kind: task
-status: ingested
+status: archived
 priority: p2
 created: 2026-11-21
-updated: 2026-11-21
-last_checked: 2026-11-21
-next_action: "Ninguna: compilada en wiki/topics/ciclo-de-un-change-y-autopilot.md al archivar add-openspec-autopilot."
+updated: 2026-11-22
+last_checked: 2026-11-22
+next_action: "Ninguna: compilada en wiki/topics/ciclo-de-un-change-y-autopilot.md al archivar add-openspec-autopilot; cerrada el 2026-11-22."
 sources:
   - raw/notes/2026-11-21-ll-sesiones-opencode-autopilot.md
 tags: [opencode, task, compile, add-openspec-autopilot]

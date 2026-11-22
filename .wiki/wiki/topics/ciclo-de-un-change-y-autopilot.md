@@ -2,6 +2,7 @@
 title: "El ciclo de un change y su automatización en OpenCode"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-adr-0013-sustituye-confirmacion-revision.md
   - raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md
   - raw/notes/2026-11-22-ll-suscripciones-tui-opencode.md
   - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
@@ -69,7 +70,7 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - **Cerrar con `--standalone` corta las suscripciones vivas**: cada `events.on` de la TUI es una suscripción a `/api/event`, y si el servidor propio de la TUI se apaga con ella viva, el cliente imprime una traza `ClientError: Transport … ECONNRESET`. Sin `--standalone` no ocurre, porque el servidor sigue vivo (`idd@99bdccd:openspec/changes/archive/2026-11-22-fix-tui-subscription-cleanup/design.md`, Context).
 - **Encadenar desde `experimental.idle`**: crear la sesión, `prompt`, navegar y archivar la anterior tarda menos de 200 ms. Tras una interrupción o una compactación no se ejecuta `idle` (lección 6).
 - **`ctx.session.list()` devuelve `{ data, cursor }` por páginas**, no un array. Se descubrió en la prueba final con OpenCode real, y se corrigió en el plugin y en el simulador (`idd@772d0f0:openspec/changes/archive/2026-11-21-add-openspec-autopilot/tasks.md`, task 12.2).
-- **El modelo no decide por el usuario**: un modelo real cerró con `ok` una revisión ante "Gracias, lo miro luego.". De ahí la confirmación en la TUI de ADR-0008 (lección 10), que ADR-0013 sustituye por el cierre con git: la decisión del usuario es su commit, no una frase del modelo.
+- **El modelo no decide por el usuario**: un modelo real cerró con `ok` una revisión ante "Gracias, lo miro luego.". De ahí la confirmación en la TUI de ADR-0008 (lección 10), que ADR-0013 sustituye por el cierre con git: la decisión del usuario es su commit, no una frase del modelo ([lección del 2026-11-22](../../raw/notes/2026-11-22-ll-adr-0013-sustituye-confirmacion-revision.md)).
 
 - **La UI web no ejecuta la interfaz de un plugin local** [comprobado]: ni `tui.js` ni un bundle `./gui-experimental`, que solo carga OpenCode Desktop por su *bridge*; `experimental.browser/attach` es el navegador integrado de Desktop (design de `autopilot-sesion-operativa`, Context).
 - **El hook de servidor `prompt`** llega con cada mensaje, antes de la petición al modelo, con el texto mutable; también cuando el mensaje queda pendiente detrás del turno en curso. Es el que cierra las revisiones por git.
@@ -96,6 +97,8 @@ De las pruebas con la TUI real y un proveedor falso ([lecciones](../../raw/notes
 - [[flujo-wiki-first|El flujo wiki-first]] ([El flujo wiki-first](flujo-wiki-first.md))
 
 ## Sources
+
+- [Lessons Learned: el cierre de la revisión pasa de la confirmación en la TUI a git (ADR-0013)](../../raw/notes/2026-11-22-ll-adr-0013-sustituye-confirmacion-revision.md): lección 1.
 
 - [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `adr/0012-model-creates-change-branches-plugin-stages.md`, `adr/0013-autopilot-verifies-product-and-closes-reviews-with-git.md`, `openspec/specs/openspec-autopilot/spec.md`, `openspec/specs/openspec-change-lifecycle/spec.md`, `.opencode/plugins/openspec-autopilot/`, `.agents/openspec/branch-change.mjs`, `.agents/skills/openspec-git-discipline/SKILL.md`, `openspec/changes/archive/2026-11-22-autopilot-sesion-operativa/design.md` y `tasks.md`.
 

@@ -105,3 +105,9 @@
 ## [2026-11-22] refresh | ciclo-de-un-change-y-autopilot, origen-de-openspec-git-discipline, suite-de-aceptacion-y-spec-as-source e inventario volver-a-comprobar-apis-de-sesion-al-subir-opencode: sesión operativa, producto evaluable, revisión cerrada por git, ramas que crea el modelo (ADR-0012, ADR-0013) y lo comprobado en OpenCode 2.3.2, en idd@6d6e79c
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | nota 2026-11-22-ll-adr-0013-sustituye-confirmacion-revision: la confirmación en la TUI de la lección 10 queda sustituida por el cierre con git (ADR-0013)
+
+## [2026-11-22] inventory | compilar-lecciones-de-add-openspec-autopilot-al-archivarlo: ingested → archived
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
