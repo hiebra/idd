@@ -8,7 +8,7 @@ La regla de comentarios (`response-comments`) funciona, pero tiene dos pegas en 
 ## What Changes
 
 - **Una cita también es un comentario.** Hasta ahora solo lo era un mensaje que empieza por una cadena entre comillas simples. Ahora también lo es un mensaje que empieza por una cita de Markdown, es decir, una o más líneas que empiezan por `>`. Así llegan las citas de la app de Claude, comprobado en esta sesión: `<!-- attach -->\n> fragmento citado\n\ntexto del usuario`. Las marcas de comentario HTML (`<!-- ... -->`) que haya al principio del mensaje no cuentan para decidirlo.
-- **Frase fija nueva**: "Puedes seguir añadiendo comentarios, pedirme que los procese (p) o que reformule (r) el mensaje en base a ellos".
+- **Frase fija nueva**: "Puedes seguir añadiendo comentarios, pedirme que los procese (p) o que reformule (r) el mensaje en base a ellos". El agente la contesta en el idioma en que está escrito el comentario.
 - **Palabras de cierre nuevas.** **BREAKING**: "ya" deja de ser palabra de cierre.
   - Procesar, que responde a todos los comentarios acumulados: "p", "procesa" o "procesar".
   - Reformular: "r", "reformula" o "reformular".
@@ -24,7 +24,7 @@ Fuera de alcance: las citas que no van al principio del mensaje, que no lo convi
 ### Modified Capabilities
 - `response-comments`: los cambios son tres:
   - la marca de comentario incluye la cita de Markdown al principio del mensaje, tras las marcas HTML iniciales;
-  - la frase fija es otra;
+  - la frase fija es otra, y se contesta en el idioma del comentario;
   - las palabras de cierre son "p", "procesa" y "procesar" para procesar, y "r", "reformula" y "reformular" para reformular, en lugar de "ya" y "reformula".
 
 ## Impact
