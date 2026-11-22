@@ -27,7 +27,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { RPC, TIMEOUT_MS } from './lib/rpc.mjs';
+import { GLOBAL, RPC, TIMEOUT_MS } from './lib/rpc.mjs';
+import { globalActs } from './lib/place.mjs';
 import { describe, discrepancy, next, stepFromState, waitsForCommit, zoneOf } from './lib/next-step.mjs';
 import { HANDOFF_TOOL, MARK, SESSION_TOOL, START_WORD, WORKFLOW, closedPrompt, foreignPrompt, reminderPrompt, resumeCommand, stepPrompt } from './lib/prompts.mjs';
 import { allSessions, branchSessions, changeSessions, isArchived, isWorking, meta, nextSeq, owners, winner, writeMeta } from './lib/state.mjs';
@@ -37,7 +38,7 @@ import { gitState, stage, treeClean, verdict } from './lib/git.mjs';
 import { describeProducts, productOf, reviewQueue, snapshotOf, stagePaths } from './lib/product.mjs';
 import { MODAL_BUTTON, directive, modalText } from './lib/screen.mjs';
 
-const ID = RPC.id;
+const ID = 'openspec-autopilot';
 const REGISTRY = Symbol.for('openspec-autopilot.registry');
 const log = (...args) => console.error(`[${ID}]`, ...args);
 
@@ -745,6 +746,9 @@ async function start(ctx) {
 export default {
   id: ID,
   async setup(ctx) {
+    // Instalado de forma global, solo actúa en proyectos intent-driven sin su
+    // propio openspec-autopilot (lib/place.mjs); si no, no registra nada
+    if (GLOBAL && !globalActs(ctx?.location?.directory, 'openspec-autopilot')) return;
     try {
       await start(ctx);
     } catch (error) {

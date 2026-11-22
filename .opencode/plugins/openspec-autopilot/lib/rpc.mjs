@@ -17,8 +17,17 @@
 // demás instancias lo ignoran. El servidor acepta una sola respuesta por
 // petición, la de la instancia destinataria.
 
+import path from 'node:path';
+import { isProjectPlugin, pluginDirOf } from './place.mjs';
+
+// El directorio del plugin (el padre de lib/) y si es el de la instalación global
+export const PLUGIN_DIR = path.dirname(pluginDirOf(import.meta.url));
+export const GLOBAL = !isProjectPlugin(PLUGIN_DIR);
+
 export const RPC = {
-  id: 'openspec-autopilot',
+  // El global, con su propio id, para que sus eventos no lleguen a la TUI del
+  // plugin del proyecto (design D3 de windows-global-distro)
+  id: GLOBAL ? 'openspec-autopilot-global' : 'openspec-autopilot',
   methods: {
     hello: { input: { type: 'object' }, output: { type: 'object' } },
     screen: { input: { type: 'object' }, output: { type: 'object' } },

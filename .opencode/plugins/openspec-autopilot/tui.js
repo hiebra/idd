@@ -23,7 +23,8 @@
 // setup da de baja los eventos, para el temporizador y deja de escuchar el
 // foco (ADR-0011). Sin dependencias y sin lanzar nunca una excepción hacia OpenCode.
 
-import { HELLO_RETRY_MS, RPC, rpcUnavailable } from './lib/rpc.mjs';
+import { GLOBAL, HELLO_RETRY_MS, RPC, rpcUnavailable } from './lib/rpc.mjs';
+import { globalActs } from './lib/place.mjs';
 
 const log = (...args) => console.error(`[${RPC.id}]`, ...args);
 const POLL_MS = 300;
@@ -31,8 +32,12 @@ const POLL_MS = 300;
 const routeKey = (route) => (route?.type === 'session' ? `session:${route.sessionID}` : route?.type ?? 'home');
 
 export default {
-  id: RPC.id,
+  id: 'openspec-autopilot',
   async setup(context) {
+    // Instalado de forma global, no hace nada donde no actúa la parte de
+    // servidor (lib/place.mjs)
+    const directory = context?.location?.directory;
+    if (GLOBAL && directory && !globalActs(directory, 'openspec-autopilot')) return () => {};
     const instance = `tui-${process.pid}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const subscriptions = new AbortController();
     const { signal } = subscriptions;

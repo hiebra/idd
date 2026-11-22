@@ -128,7 +128,7 @@ Given(/^un clon del proyecto en (la rama de origen|un commit con HEAD separado)$
 });
 
 When('se abre una sesión de OpenCode en la TUI', async function () {
-  if (!this.sim) await this.startOpenCode();
+  if (!this.sim) await this.startOpenCode({ pluginDir: this.globalPlugin ?? null });
   const { sessionID } = await this.opencodeCall('open', { text: 'Hola, quiero exportar los datos' });
   this.opened = sessionID;
 });
@@ -1131,4 +1131,37 @@ Then('el prompt del paso de crear el change da la ruta de ese script', function 
   const commands = [...instruction.matchAll(/`node "?([^`"]+?)"? (?:start|list)\b[^`]*`/g)].map((m) => m[1]);
   assert.ok(commands.length > 0, instruction);
   for (const command of commands) assert.equal(command, this.expectedScript.command, instruction);
+});
+
+// --- El plugin instalado de forma global (windows-global-distro, design D3) ---
+
+Given('el plugin instalado de forma global', function () {
+  this.global = this.global ?? new GlobalInstall(this.workDir);
+  this.global.installGitDiscipline();
+  this.globalPlugin = this.global.installPlugin('openspec-autopilot');
+});
+
+Then('no se muestra ningún aviso del plugin', function () {
+  assert.deepEqual(this.opencode.toasts, [], detail(this));
+  assert.deepEqual(this.opencode.dialogs, [], detail(this));
+});
+
+Given('un clon de la plantilla completa, con su propio plugin `openspec-autopilot`', function () {
+  const project = this.lifecycleProject();
+  assert.ok(fs.existsSync(project.path('.opencode', 'plugins', 'openspec-autopilot', 'server.js')));
+  // A branch where the project's plugin acts as soon as a session opens
+  this.branches.branch(project, ap.BRANCH);
+});
+
+Then('solo actúa el plugin del proyecto', async function () {
+  // The global plugin, alone on the project, does nothing
+  const all = ap.sessions(this);
+  assert.equal(all.length, 1, detail(this));
+  assert.equal(ap.metaOf(all[0]), null, detail(this));
+  assert.deepEqual(this.opencode.toasts, [], detail(this));
+  assert.deepEqual(this.opencode.crashes, [], detail(this));
+  // The project's plugin, on the same project, does act
+  await this.startOpenCode({ alreadyOpen: false });
+  await this.opencodeCall('waitScreen');
+  assert.ok(ap.sessions(this).some((session) => ap.metaOf(session)), detail(this));
 });

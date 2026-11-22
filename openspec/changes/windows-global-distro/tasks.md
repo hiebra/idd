@@ -38,7 +38,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   En `session-bootstrap`, ceder si el proyecto tiene su propio plugin → verde → commit
 - [x] 4.4 Steps de `El arranque global no instala el motor del wiki`. Rojo → implementar → verde → commit
 - [x] 4.5 Steps de `La regla de comentarios global solo actúa donde actúa el arranque global`. Rojo. En `response-comments`, encontrar el núcleo en `../session-bootstrap/` cuando es global, actuar solo en proyectos intent-driven y ceder ante el del proyecto → verde → commit
-- [ ] 4.6 Steps de `El plugin global solo actúa en proyectos intent-driven` y `El plugin global cede ante el del proyecto` del autopilot. Rojo → implementar → verde → commit
+- [x] 4.6 Steps de `El plugin global solo actúa en proyectos intent-driven` y `El plugin global cede ante el del proyecto` del autopilot. Rojo → implementar → verde → commit
 
 ## 5. Montaje de la release (D5)
 
