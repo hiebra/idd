@@ -2,6 +2,7 @@
 title: "La suite de aceptación y spec-as-source"
 category: topic
 sources:
+  - raw/repos/2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md
   - raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md
   - raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md
   - raw/repos/2026-11-21-idd-1cf0792.md
@@ -12,7 +13,7 @@ sources:
 created: 2026-11-21
 updated: 2026-11-22
 verified: 2026-11-22
-tags: [acceptance-tests, spec-as-source, openspec, cucumber]
+tags: [acceptance-tests, spec-as-source, openspec, cucumber, gplint]
 confidence: high
 volatility: warm
 summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite cucumber-js que no arranca los agentes reales sino que simula cómo invoca cada uno el arranque. Sintetizado de openspec/config.yaml, los README y el soporte de la suite."
@@ -32,7 +33,8 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 `idd@1cf0792:acceptance-tests/README.md`:
 
 - **Qué ejecuta**: cucumber-js (`stack: javascript`) ejecuta el Gherkin de cada `spec.md` de `openspec/specs/` y de los changes activos. Los changes archivados no se ejecutan nunca.
-- **Archivos copiados**: `cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gherkin-lintrc` son copias literales de la skill `acceptance-test-authoring`.
+- **Archivos copiados**: `cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gplintrc` son copias literales de la skill `acceptance-test-authoring` (`idd@d355c01:acceptance-tests/README.md`). Hasta `replace-gherkin-lint-with-gplint`, la configuración del lint era `.gherkin-lintrc`.
+- **El lint de las specs** (`npm run lint:specs`, capability `spec-lint`): extrae los `spec.md` y pasa `gplint` con `.gplintrc`, la configuración fijada de la skill (`idd@d355c01:adr/0012-spec-lint-with-gplint.md`). Sustituye a `gherkin-lint`, que arrastraba 6 vulnerabilidades sin arreglo y cuyas reglas de AST no entraban en los hijos de `Rule:`. Como la extracción convierte cada requisito en un `Rule:`, esas reglas no revisaban ningún escenario. `.gplintrc` solo usa los niveles `"error"` y `"off"`, porque con cualquier otro `gplint` lanza una excepción y sale con 0 sin revisar nada (`idd@d355c01:openspec/changes/archive/2026-11-22-replace-gherkin-lint-with-gplint/design.md`). Los escenarios de `spec-lint` no ejecutan el script tal cual, porque reconstruiría `.extracted/` mientras cucumber-js lo usa: `support/spec-lint.js` ejecuta sus dos comandos sobre otros directorios, y `core-tests/spec-lint-script.test.js` impide que el script y esos comandos se separen (`idd@d355c01:acceptance-tests/support/spec-lint.js`).
 - **Pasos**: los pasos solo llaman a métodos de intención del World y hacen aserciones.
 - **Sin agentes reales**: cada escenario trabaja sobre una copia temporal del proyecto, en una máquina simulada (`PATH` y entorno). Los adaptadores de `support/agents/` imitan cómo invoca cada agente el arranque: Claude Code ejecuta los hooks de `.claude/settings.json`, y OpenCode es un host Node que carga el plugin con contextos falsos (`idd@1cf0792:acceptance-tests/support/agents/opencode-host.mjs`). Ese host puede además recargar la parte de TUI, emitir un aviso sintético por el RPC y cerrar la TUI con su propio servidor; a diferencia de OpenCode, solo recarga la TUI, porque volver a ejecutar la parte de servidor relanzaría el núcleo del arranque (`idd@99bdccd:acceptance-tests/support/agents/opencode-host.mjs`).
 - **El ciclo de un change** (`openspec-change-lifecycle`): cada escenario monta el estado de git que necesita sobre la copia, que ya es un repositorio con `main` (`idd@772d0f0:acceptance-tests/support/branches.js`). El change y las puertas salen de `branch-change.mjs` de la copia; como la suite no ejecuta el modelo de los workflows, comprueba la puerta y que la skill `openspec-git-discipline` la usa, por sus identificadores de sección `<!-- lifecycle:<id> -->` (`idd@772d0f0:acceptance-tests/README.md`).
@@ -66,4 +68,5 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - [Collection: archivado de fix-wiki-flow-operations](../../raw/repos/2026-11-21-idd-b48392d-fix-wiki-flow-operations.md): `acceptance-tests/support/world.js`, `acceptance-tests/core-tests/wiki-markers.test.js`.
 - [Collection: README de la plantilla tras el archivado](../../raw/repos/2026-11-21-idd-f2be907-readme.md): `README.md`.
 - [Collection: archivado de add-openspec-autopilot (idd@772d0f0)](../../raw/repos/2026-11-21-idd-772d0f0-add-openspec-autopilot.md): `acceptance-tests/README.md`, `acceptance-tests/support/branches.js`, `acceptance-tests/support/agents/opencode-sim.mjs`, `acceptance-tests/support/agents/opencode-sim.js`.
+- [Collection: archivado de replace-gherkin-lint-with-gplint (idd@d355c01)](../../raw/repos/2026-11-22-idd-d355c01-replace-gherkin-lint-with-gplint.md): `acceptance-tests/README.md`, `acceptance-tests/support/spec-lint.js`, `adr/0012-spec-lint-with-gplint.md`, el `design.md` del change archivado.
 - [Collection: archivado de fix-tui-subscription-cleanup (idd@99bdccd)](../../raw/repos/2026-11-22-idd-99bdccd-fix-tui-subscription-cleanup.md): `acceptance-tests/README.md`, `acceptance-tests/support/agents/opencode-host.mjs`.
