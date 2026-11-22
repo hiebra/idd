@@ -118,7 +118,8 @@ Cada una sigue el ciclo de las secciones 3 a 5: rojo por la razón esperada, imp
 - [x] 8.7 La carrera de D1: un `core-test` en el que `screen` y `prompt` (`autopilot`) llegan a la vez sobre una sesión nueva, que falla de forma reproducible; `trackBranch` decide con la sesión que acaba de leer y no escribe `role` si ya lo tiene; verde.
   - La primera metadata pasa a `firstMeta` de `lib/state.mjs`, con un `core-test` en `autopilot-product.test.js` que reproduce el orden de la carrera con una API falsa (rojo con la lógica anterior). La ventana no desaparece del todo: queda entre la lectura y la escritura de `firstMeta`, dos llamadas seguidas a la API, en lugar de abarcar también la lectura de git de `trackBranch`.
 - [x] 8.8 `README.md`: quitar un worktree con cambios, el primer mensaje del worktree desde la pantalla de inicio, `/new` desde un worktree y la opción `serverUrl`. `acceptance-tests/README.md`: lo nuevo del simulador.
-- [ ] 8.9 Suite completa con los deltas, `npm run test:core`, `npm run lint:specs` y `openspec validate autopilot-rama-por-sesion --type change --strict`.
+- [x] 8.9 Suite completa con los deltas, `npm run test:core`, `npm run lint:specs` y `openspec validate autopilot-rama-por-sesion --type change --strict`.
+  - Resultado (2026-11-22): 224 escenarios y 1176 pasos, todos en verde, sin pendientes ni sin definir; `test:core`, 122 de 122; `lint:specs`, sin errores. `openspec validate` con `--strict`: ningún `[ERROR]` y 50 avisos de los mismos tipos que en la 6.1 (34 escenarios en bloques `gherkin` sin WHEN/GIVEN ni THEN, 12 requisitos con «DEBE», 4 de más de 500 caracteres); los 7 nuevos son de la delta de `session-bootstrap` y de los escenarios nuevos.
 - [ ] 8.10 Repetir en OpenCode 2.3.2 real lo que falló en 7.1, 7.4 y 7.5, con el mismo banco, y anotar el resultado aquí; marcar 7.1, 7.4 y 7.5 si pasan.
 
 ## 9. Cierre
