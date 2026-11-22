@@ -100,7 +100,12 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
 
 `windows-support` (rama `claude/vigilant-cori-oo4t14`) se reduce a lo que no depende del núcleo del arranque: `.gitattributes` con LF y su requisito en `session-bootstrap`, `openspecCommand()` del autopilot (el CLI del proyecto como `node <bin.openspec del paquete>`), la capability `windows-readiness` con el diagnóstico `scripts/windows/Test-OfflineInstall.ps1`, y ADR-0017 reescrito sin decidir nada del núcleo. Se fusiona y archiva antes que este change.
 
-- [ ] 7.1 Cuando `windows-support` esté archivado en la rama de origen, hacer `git merge` de la rama de origen, sin rebase. En `lib/project.mjs` del autopilot, conservar a la vez `openspecCommand()` y la búsqueda de `branch-change.mjs` de `lib/branch-script.mjs` → suite en verde → commit
+- [x] 7.1 Cuando `windows-support` esté archivado en la rama de origen, hacer `git merge` de la rama de origen, sin rebase. En `lib/project.mjs` del autopilot, conservar a la vez `openspecCommand()` y la búsqueda de `branch-change.mjs` de `lib/branch-script.mjs` → suite en verde → commit
+  - 2026-11-22, `d525d72`, con el ok del usuario a la resolución. Trajo también ADR-0020 y la skill estándar con su excepción (change `git-discipline-standard-with-exception`).
+    - El `SKILL.md` de `main` lleva reaplicados la línea «El script es: …» y `<script>`.
+    - El mensaje de `check merge` da la ruta del propio script.
+    - Se pusieron al día las rutas a `branch-change.mjs` que llegaron de `main`: `openspec/config.yaml`, el README, `branches-support.test.js`, y el núcleo en Node en el step de finales de línea.
+  - Con la fusión en curso, `test:core` pasa (170). En la suite pasan 266 de 281 escenarios. Los 15 restantes son los de `windows-readiness`: necesitan `pwsh`, que este contenedor no tiene; los pasa el job de Linux del workflow.
 - [ ] 7.2 Rehacer los deltas de `session-bootstrap` y `openspec-autopilot` sobre las specs ya archivadas, sin pisar el requisito de LF ni el del CLI con `node`. Si con el núcleo en Node el requisito de LF deja de servir, retirarlo con REMOVED y su motivo → `openspec validate` → commit
 - [ ] 7.3 Adaptar el diagnóstico `Test-OfflineInstall.ps1` a la instalación global: el schema en `<data>\openspec\schemas`, el motor en `<data>\idd\wiki-engine`, y las skills y los plugins copiados a `<config>\opencode` (`%XDG_CONFIG_HOME%` o `%USERPROFILE%\.config`). Con sus escenarios de `windows-readiness`, rojo → verde → commit
 - [ ] 7.4 Verificar en Windows 11 real, y anotar aquí el resultado:
