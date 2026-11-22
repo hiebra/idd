@@ -28,7 +28,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que la secci
 
 ## 4. Revisión abierta (zona de código), D6
 
-- [ ] 4.1 Si `syncApplyGuidance` escribe, actualizar la firma de inicio (`review.git.signature`) de la revisión abierta de la rama. Test en `core-tests/autopilot-plugin.test.js`: una revisión del verify con el árbol limpio no se cierra como `ko` porque se recargue el plugin con otro modo, y un commit posterior la cierra como `ok`.
+- [x] 4.1 Si `syncApplyGuidance` escribe, actualizar la firma de inicio (`review.git.signature`) de la revisión abierta de la rama. Test en `core-tests/autopilot-plugin.test.js`: una revisión del verify con el árbol limpio no se cierra como `ko` porque se recargue el plugin con otro modo, y un commit posterior la cierra como `ok`.
 
 ## 5. Documentación (zona de código)
 
