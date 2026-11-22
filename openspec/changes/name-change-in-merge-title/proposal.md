@@ -2,7 +2,7 @@
 
 Con la fusión `--no-ff`, `git log --first-parent` de una rama permanente muestra un change por entrada, pero solo sirve de índice de changes si el título de cada fusión nombra el change. Lo recoge la lección 3 de `.wiki/raw/notes/2026-11-22-ll-fusion-no-ff-y-trazabilidad.md`, y está en seguimiento en el inventario del wiki (`nombrar-el-change-en-el-titulo-de-la-fusion`). Hoy el título no lo nombra:
 
-- **La orden local nombra la rama.** `check merge` hacia una rama permanente da `git commit-tree … -m "Merge <rama> into <destino>"`. Solo coincide con el change si la rama se creó con `start`, como en `32639ba` (*Merge autopilot-sesion-operativa into main*).
+- **La orden local nombra la rama.** `check merge` hacia una rama permanente da `git commit-tree … -m "Merge <rama> into <destino>"`. Solo coincide con el change si la rama se llama como él, como las que crea `start`: es el caso de `32639ba` (*Merge autopilot-sesion-operativa into main*).
 - **En un contenedor efímero, la puerta recomienda un PR y no dice nada de su título.** GitHub titula la fusión con la rama de la sesión: las 11 fusiones de PR de `main` se titulan *Merge pull request #N from hiebra/claude/…* (por ejemplo, `24b15ce`, que trajo `reorder-wiki-resync`).
 - **El título del PR tampoco lo garantiza.** GitHub lo deja en el cuerpo del commit de fusión, y de los 8 PR que trajeron un change, 3 no lo nombraban (#5, #6 y #8). El PR #7 sí se tituló *Merge allow-user-requested-merges into main*, y su fusión (`af2153e`) lleva igualmente el título por defecto.
 
