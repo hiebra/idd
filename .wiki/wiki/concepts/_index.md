@@ -20,6 +20,8 @@ Last updated: 2026-11-22
 
 ## Recent Changes
 
+- 2026-11-22: una-sola-copia-de-las-skills: los symlinks en Windows tras windows-support
+
 - 2026-11-22: conflictos-entre-deltas-concurrentes creado; origen-de-openspec-git-discipline con la hipótesis del usuario sobre el motivo
 
 - 2026-11-22: regla-de-comentarios y hook-context-opencode refrescados con el archivado de update-comment-phrase-and-opencode-marker

@@ -1,0 +1,4 @@
+# Finales de línea LF en todos los archivos de texto, en cualquier sistema
+# (windows-support, design D2): Git for Windows extrae por defecto con
+# core.autocrlf=true, y bash no ejecuta scripts con CRLF.
+* text=auto eol=lf

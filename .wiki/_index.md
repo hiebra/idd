@@ -6,9 +6,9 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 45 raw documents
-- Articles: 12 compiled wiki articles
-- Inventory records: 5 tracked items
+- Sources: 50 raw documents
+- Articles: 13 compiled wiki articles
+- Inventory records: 6 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
 - Last compiled: 2026-11-22
@@ -29,6 +29,8 @@ Last updated: 2026-11-22
 |------|---------|------|---------|
 
 ## Recent Changes
+
+- 2026-11-22: 7 lecciones de windows-support en raw/notes; 3 artículos actualizados y una tarea en el inventario (la prueba intermitente del autopilot)
 
 - 2026-11-22: Resincronizado con git-discipline-standard-with-exception (ADR-0020): manifiesto idd@e9fced1, 4 artículos actualizados y 5 lecciones
 
