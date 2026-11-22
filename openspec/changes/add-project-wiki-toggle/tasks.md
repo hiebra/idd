@@ -26,8 +26,8 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
   - sale siempre con 0.
 
   Rojo sin el modo
-- [ ] 3.2 Crear `.agents/wiki/archive-guidance.yaml` con los pasos de resincronización que hoy están en `config.yaml`, incluida la parte de la primera entrada que habla del wiki (D2)
-- [ ] 3.3 Implementar en el núcleo:
+- [x] 3.2 Crear `.agents/wiki/archive-guidance.yaml` con los pasos de resincronización que hoy están en `config.yaml`, incluida la parte de la primera entrada que habla del wiki (D2)
+- [x] 3.3 Implementar en el núcleo:
   - la lectura de `enabled`, que solo acepta el literal `true`, sin Node;
   - `wiki_disabled` según el ajuste, sin leer `PROJECT_WIKI` (D6);
   - el modo `wiki <status|on|off>`;

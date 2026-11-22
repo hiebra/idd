@@ -137,6 +137,19 @@ class Project {
     return this.hasEngineConfig() ? this.engineConfig().ref : null;
   }
 
+  // The project switch of the wiki (design D1 of add-project-wiki-toggle)
+  wikiEnabled() {
+    return this.hasEngineConfig() && this.engineConfig().enabled === true;
+  }
+
+  // Sets the switch alone and folds it into the clone's commit, as if the
+  // project had always had it. The scenarios that also need the archive
+  // steps use the core's `wiki on|off` instead, see setWiki
+  setWikiEnabled(enabled) {
+    this.writeEngineConfig({ enabled, ...this.engineConfig(), ...{ enabled } });
+    git(this.dir, 'commit', '-q', '-a', '--amend', '--no-edit');
+  }
+
   setPinnedEngineRef(ref) {
     this.writeEngineConfig({ ...this.engineConfig(), ref });
   }

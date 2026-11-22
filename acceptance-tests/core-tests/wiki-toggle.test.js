@@ -240,3 +240,21 @@ test('the wiki mode always exits with 0', (t) => {
     assert.equal(result.status, 0, `${args.join(' ')}: ${result.stderr}`);
   }
 });
+
+test('the texts that travel with the distribution are read next to the core, not from the project', (t) => {
+  const workDir = Machine.tmpDir();
+  t.after(() => fs.rmSync(workDir, { recursive: true, force: true }));
+  const dist = path.join(workDir, 'dist', '.agents');
+  fs.mkdirSync(path.join(dist, 'hooks'), { recursive: true });
+  fs.mkdirSync(path.join(dist, 'wiki'), { recursive: true });
+  fs.copyFileSync(CORE, path.join(dist, 'hooks', 'session-bootstrap.sh'));
+  fs.writeFileSync(path.join(dist, 'wiki', 'guide.md'), 'GUIA-DE-LA-DISTRIBUCION\n');
+  const project = path.join(workDir, 'project', '.agents', 'wiki');
+  fs.mkdirSync(project, { recursive: true });
+  fs.writeFileSync(path.join(project, 'engine.json'), '{ "enabled": true }\n');
+  fs.writeFileSync(path.join(project, 'guide.md'), 'GUIA-DEL-PROYECTO\n');
+  const env = { ...process.env };
+  delete env.PROJECT_WIKI;
+  const result = spawnSync('bash', [path.join(dist, 'hooks', 'session-bootstrap.sh'), 'guide', 'claude-code', path.join(workDir, 'project')], { encoding: 'utf8', env });
+  assert.equal(result.stdout, 'GUIA-DE-LA-DISTRIBUCION\n', result.stderr);
+});
