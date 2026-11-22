@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // El change de la rama (openspec-change-lifecycle, design D1 de
-// add-openspec-autopilot y D1 a D6 de manage-git-discipline): un módulo
+// add-openspec-autopilot, D1 a D6 de manage-git-discipline y D1 y D2 de
+// git-discipline-standard-with-exception): un módulo
 // neutral, común a los dos agentes, que lee de git qué change tiene la rama
 // actual y decide las puertas del ciclo. Lo importa el plugin de OpenCode y lo
 // ejecutan los workflows de OpenSpec desde la skill openspec-git-discipline.
@@ -9,6 +10,10 @@
 //   Su último elemento es la rama de origen. Solo se entiende una lista de
 //   escalares simples, en flujo ([main, develop]) o en bloque (- main); con
 //   cualquier otra forma la clave se trata como ausente y se avisa.
+// - Veto (`protected`): `x-main-protected: true` en openspec/config.yaml
+//   declara que el acceso directo a las ramas permanentes está vetado, y abre
+//   la única excepción a la regla estándar del ciclo (ADR-0020). Sin la clave,
+//   o con otro valor, no hay veto.
 // - Rama temporal: cualquier rama local fuera de la lista; con HEAD separado
 //   no hay ninguna.
 // - Referencia de origen (`originRef`): la más avanzada de refs/heads/<origen>
@@ -21,24 +26,26 @@
 //   change cuyo directorio está igual en `originRef` y en HEAD, sin cambios
 //   sin commit: ya llegó a la rama de origen (por ejemplo, tras un squash).
 //
-// Resultado: { kind, branch, origin, originRef, permanent, changes, change, warnings }
+// Resultado: { kind, branch, origin, originRef, permanent, protected, changes, change, warnings }
 //   kind: "permanent" (rama permanente o HEAD separado), "unknown" (no se
 //   encuentra la rama de origen), "none", "active", "archived" o "several".
 //   originRef es null en una rama permanente o si no hay rama de origen.
 //
-// Puertas (check):
-// - propose: en una rama temporal sin change. En una rama permanente también
-//   deja seguir (forma canónica), avisando de que lo recomendado es una rama
-//   temporal; con HEAD separado, no.
-// - apply <change>: en la rama temporal del change. Forma canónica: también
-//   en una rama temporal sin change propio si <change> está en curso en
-//   `originRef`, y en una rama permanente si está en curso en el árbol de
-//   trabajo, con aviso.
-// - archive <change>: en la rama temporal del change. Forma canónica: también
-//   en una rama permanente si <change> está en curso en el árbol de trabajo y
-//   su tasks.md no tiene ninguna `- [ ]`. En los dos casos no deja seguir si
-//   un ADR nuevo de la rama repite el número de otro de `originRef`, o si dos
-//   ADRs del árbol de trabajo tienen el mismo número.
+// Puertas (check). La regla es la de la skill estándar de intent-driven, y
+// nada de lo que permite se detiene ni lleva avisos; la excepción solo vale
+// con el veto:
+// - propose: en la rama permanente, sin avisos (con HEAD separado, no). En
+//   una rama temporal, sin veto, deja seguir con un aviso (la regla prefiere
+//   la rama de origen); con veto, solo si la rama no tiene otro change.
+// - apply <change>: la regla, donde <change> esté en curso en el árbol de
+//   trabajo (rama permanente, rama temporal o worktree) con su proposal.md ya
+//   en `originRef`, o en la rama permanente. La excepción: el change de la
+//   rama temporal, aunque su propuesta no esté en la rama de origen.
+// - archive <change>: la regla, en la rama permanente si <change> está en
+//   curso en el árbol de trabajo, tenga o no tasks sin hacer. La excepción:
+//   en la rama temporal del change. En los dos casos no deja seguir si un ADR
+//   nuevo de la rama repite el número de otro de `originRef`, o si dos ADRs
+//   del árbol de trabajo tienen el mismo número.
 // - commit: los commits y el push del agente. Solo deja seguir en un
 //   contenedor efímero (CLAUDE_CODE_CONTAINER_ID no vacía y
 //   CLAUDE_CODE_REMOTE=true), en la rama de la sesión guardada en
@@ -55,13 +62,15 @@
 //   node .agents/openspec/branch-change.mjs start <change>
 //   node .agents/openspec/branch-change.mjs switch <rama>
 //   node .agents/openspec/branch-change.mjs env
-// `check`, `start` y `switch` imprimen { ok, message } en JSON y salen con 0
-// si se puede seguir y con 1 si no. `list` da las ramas temporales con su
+// `check`, `start` y `switch` imprimen { ok, message } en JSON, más `warning`
+// cuando `check` deja seguir con un aviso, y salen con 0 si se puede seguir y
+// con 1 si no. `list` da las ramas temporales con su
 // change; `start` crea la rama del change desde la referencia de origen
 // (`originRef`) y cambia a ella; `switch` cambia a una rama temporal (ADR-0013,
 // design D12 de autopilot-sesion-operativa). Ni `start` ni `switch` actúan con
-// el árbol sucio. En un contenedor efímero el agente no los usa: trabaja solo
-// en la rama de la sesión (ADR-0015). `env` imprime, para el arranque de
+// el árbol sucio. El modelo solo los usa con la excepción, o si el usuario lo
+// pide (ADR-0020); en un contenedor efímero no los usa: trabaja solo en la
+// rama de la sesión. `env` imprime, para el arranque de
 // sesión, `ephemeral=true` o `ephemeral=false` y
 // `permanent=<ramas separadas por espacios>`.
 //

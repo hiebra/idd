@@ -26,7 +26,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
   Rojo. Implementar `check propose` de la tabla de D2 y que, sin veto, el estado `several` no impida el propose ni el apply → verde → commit
 - [x] 3.7 Comprobar que los escenarios vigentes del autopilot siguen en verde. Donde den por hecha la forma de una rama, declarar `x-main-protected: true` en su `Given`, sin debilitarlos (D5) → commit
-- [ ] 3.8 Documentar en la cabecera de `branch-change.mjs` la clave `x-main-protected`, la tabla de las puertas y el campo `protected` → commit
+- [x] 3.8 Documentar en la cabecera de `branch-change.mjs` la clave `x-main-protected`, la tabla de las puertas y el campo `protected` → commit
 
 ## 4. La skill, las indicaciones de archivado y la documentación (D3, D4): rojo → implementar → verde → commit
 
