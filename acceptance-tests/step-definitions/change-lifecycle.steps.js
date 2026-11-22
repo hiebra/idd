@@ -423,6 +423,17 @@ When(/^se ejecuta la puerta `check (commit|propose)`$/, function (gate) {
   this.gate = this.branches.checkGate(this.lifecycleProject(), gate, null, { ephemeral: Boolean(this.ephemeral) });
 });
 
+When('se lanza la puerta `check apply` de `exportar-datos`', function () {
+  this.gate = this.branches.checkGate(this.lifecycleProject(), 'apply', 'exportar-datos');
+});
+
+// A gate warns in its own `warning` field, apart from its `message`, and its
+// `message` carries no warning either (before this change, warnings went there)
+Then('la puerta no avisa de nada', function () {
+  assert.equal(this.gate.warning ?? null, null, JSON.stringify(this.gate));
+  assert.doesNotMatch(this.gate.message, /(recomendad|prefiere|pero )/i, JSON.stringify(this.gate));
+});
+
 Then('la puerta deja seguir', function () {
   assert.equal(this.gate.ok, true, JSON.stringify(this.gate));
   assert.equal(this.gate.exitCode, 0, JSON.stringify(this.gate));

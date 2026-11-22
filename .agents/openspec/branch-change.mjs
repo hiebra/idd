@@ -359,7 +359,7 @@ export function check(dir, gate, name, { env = process.env } = {}) {
   const newBranch = `crea una rama temporal desde la rama de origen ('git switch -c <rama> ${state.origin}') y sigue en ella`;
   const named = state.changes.map((c) => c.name).join(', ');
   const deny = (message) => ({ ok: false, message, state });
-  const allow = (message) => ({ ok: true, message, state });
+  const allow = (message, warning = null) => ({ ok: true, message, ...(warning ? { warning } : {}), state });
   if (!['propose', 'apply', 'archive'].includes(gate)) return deny(`puerta desconocida '${gate}': usa propose, apply, archive o commit.`);
   if (gate !== 'propose' && !name) return deny(`Falta el nombre del change para la puerta '${gate}': check ${gate} <change>.`);
 
@@ -376,7 +376,7 @@ export function check(dir, gate, name, { env = process.env } = {}) {
       return deny(`'${name}' no está en curso en ${where}: el apply se hace en la rama temporal del change; cambia a ella, o ${newBranch} si su propuesta ya está en '${state.origin}'.`);
     }
     if (gate === 'apply') {
-      return allow(`Se puede aplicar '${name}' en ${where} (forma canónica), pero la forma recomendada es aplicarlo en una rama temporal: ${newBranch}.`);
+      return allow(`Se puede aplicar '${name}' en ${where}.`);
     }
     const pending = pendingTasks(dir, name);
     if (pending === null) return deny(`'${name}' no tiene tasks.md: en ${where} solo se archiva un change con todas sus tasks hechas.`);
@@ -511,7 +511,8 @@ function main(argv) {
   }
   if (argv[0] === 'check') {
     const result = check(dir, argv[1], argv[2]);
-    process.stdout.write(`${JSON.stringify({ ok: result.ok, message: result.message })}\n`);
+    const out = { ok: result.ok, message: result.message, ...(result.warning ? { warning: result.warning } : {}) };
+    process.stdout.write(`${JSON.stringify(out)}\n`);
     return result.ok ? 0 : 1;
   }
   const state = branchChange(dir);
