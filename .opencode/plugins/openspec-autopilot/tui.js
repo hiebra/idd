@@ -26,7 +26,9 @@
 //   vez en la misma pantalla hasta que cambie la pantalla o vuelva el foco,
 //   ni en la pantalla a la que el propio plugin acaba de navegar.
 // - Atiende las peticiones del servidor: avisos, navegar y archivar con el
-//   cliente de la TUI (el del servidor no archiva).
+//   cliente de la TUI (el del servidor no archiva), y el modal del aviso de lo
+//   modificado con el agente plan, que al cerrarse llama a ack (design D5 de
+//   autopilot-plan-explore).
 //
 // Al descargarse (antes de cada recarga y al cerrar), la función que devuelve
 // setup da de baja los eventos, para el temporizador y los reintentos y deja
@@ -238,8 +240,29 @@ export default {
         } else if (d?.action === 'navigate' && d.sessionID) go(d.sessionID);
       };
 
-      const perform = async (op, args) => {
+      // El aviso de lo modificado con el agente plan (D5 de autopilot-plan-explore):
+      // el modal queda abierto sin hacer esperar al servidor, y al cerrarse, de
+      // cualquier forma, el acuse va por la sesión
+      const planNotice = (args, dir = here()) => {
+        modalOpen = true;
+        Promise.resolve()
+          .then(() => context.ui.dialog.select({ title: String(args?.message ?? ''), options: [{ title: 'Entendido', value: 'ok' }] }))
+          .catch((error) => log('notice:', error))
+          .then(async () => {
+            modalOpen = false;
+            try {
+              await client.ack({ instance, sessionID: args?.sessionID }, at(dir));
+            } catch (error) {
+              log('ack:', error);
+            }
+          });
+      };
+
+      const perform = async (op, args, dir = here()) => {
         switch (op) {
+          case 'notice':
+            planNotice(args, dir);
+            return true;
           case 'toast':
             toast(args?.message, args?.variant === 'info' ? 'info' : 'warning');
             return true;
@@ -268,7 +291,7 @@ export default {
         let value = null;
         let error = null;
         try {
-          value = await perform(request.op, request.args);
+          value = await perform(request.op, request.args, request.directory ?? here());
         } catch (e) {
           error = String(e?.message ?? e);
           log(`${request.op}:`, e);

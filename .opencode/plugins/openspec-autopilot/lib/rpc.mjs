@@ -21,13 +21,20 @@
 // - origin({ instance }): la opción «Cambiar a la rama de origen» del modal de
 //   `/new`; responde { ok, message }.
 // - reply({ id, instance, value, error }): respuesta a una petición.
+// - ack({ instance, sessionID }): el usuario ha cerrado el aviso de lo
+//   modificado con el agente plan de esa sesión (design D5 de
+//   autopilot-plan-explore). Se identifica por la sesión, no por una petición
+//   pendiente: tras una recarga en caliente, el modal de la carga anterior
+//   sigue abierto y su acuse llega al servidor nuevo.
 //
 // Servidor -> cliente (evento "request" { id, instance, directory, op, args },
-// dirigido a la última instancia presentada): op es "toast", "navigate" o
-// "archive", y la respuesta va a la instancia del servidor de `directory`.
-// Las demás instancias de la TUI lo ignoran. El servidor acepta una sola
-// respuesta por petición, la de la instancia destinataria. "hello-request"
-// lleva el `directory` de la instancia que lo pide.
+// dirigido a la última instancia presentada): op es "toast", "navigate",
+// "archive" o "notice" (abre el modal del aviso y responde enseguida, sin
+// esperar a que se cierre; al cerrarse, la TUI llama a ack), y la respuesta
+// va a la instancia del servidor de `directory`. Las demás instancias de la
+// TUI lo ignoran. El servidor acepta una sola respuesta por petición, la de
+// la instancia destinataria. "hello-request" lleva el `directory` de la
+// instancia que lo pide.
 
 export const RPC = {
   id: 'openspec-autopilot',
@@ -36,6 +43,7 @@ export const RPC = {
     screen: { input: { type: 'object' }, output: { type: 'object' } },
     origin: { input: { type: 'object' }, output: { type: 'object' } },
     reply: { input: { type: 'object' }, output: { type: 'object' } },
+    ack: { input: { type: 'object' }, output: { type: 'object' } },
   },
   events: {
     request: { schema: { type: 'object' } },
@@ -44,7 +52,7 @@ export const RPC = {
 };
 
 // Límites de espera de cada petición a la TUI
-export const TIMEOUT_MS = { toast: 5000, navigate: 5000, archive: 8000 };
+export const TIMEOUT_MS = { toast: 5000, navigate: 5000, archive: 8000, notice: 5000 };
 
 // Reintentos de hello mientras el servidor no ha registrado su RPC (design D14)
 export const HELLO_RETRY_MS = [200, 400, 800, 1600, 3200, 4000];

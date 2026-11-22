@@ -231,6 +231,8 @@ En OpenCode 2, el plugin local `.opencode/plugins/openspec-autopilot/` recorre e
   - mientras quede algo en el stage sin commit, la revisión sigue y tus mensajes llegan al modelo.
 
   La revisión del verify empieza con el árbol limpio: para darla por buena sin cambiar nada, haz un commit vacío (`git commit --allow-empty -m "verify revisado"`).
+- **El agente plan (Shift+Tab).** Todas las sesiones del autopilot nacen con el agente build, también las de revisión. En la sesión operativa, pasar a plan es explorar ([ADR-0019](adr/0019-autopilot-plan-agent-explores-and-warns.md)): la primera petición en plan recibe el flujo de `openspec-explore` sobre el paso o la revisión en curso, las siguientes en plan solo un recordatorio, y al volver a build el modelo recibe el recordatorio del paso que había antes. Nada de eso queda en el historial de la sesión.
+- **Lo que se modifica en plan, avisado.** Si al terminar un turno en plan ha cambiado algo en git (HEAD, el stage o el árbol), normalmente porque se lo has pedido al modelo (en OpenCode 2.3.2, el agente plan no puede escribir en el proyecto con `write`, pero sí con la tool `shell`), el plugin te avisa con un modal de un botón: son cambios que deberían haberse hecho en build. Si el turno ha dejado producto, la sesión siguiente no se crea hasta que cierras el modal. Si cierras la TUI con el aviso pendiente, vuelve a salir la próxima vez que la abras; escribir en la sesión también cuenta como haberlo visto.
 - **Los commits.** Ningún modelo te pide commits. Además de las revisiones, el plugin espera tu commit tras el archive y tras la resincronización del wiki, que van en commits separados.
 - **Al volver a la sesión operativa** (al entrar o al recuperar el foco), si no está trabajando y su directorio está en su rama, el plugin la comprueba. Si su change ya no está en la rama, la archiva y empieza uno nuevo. Si esperaba tu commit y ya está hecho, arranca el paso. Si su paso no encaja con `openspec status`, te lo explica en un modal y no lo arregla.
 - Las lecciones candidatas de cada sesión quedan en su metadata, nunca en el repositorio, y llegan a la resincronización del wiki tras el archive, que solo registra las que confirmes.
@@ -245,11 +247,11 @@ La lógica vive en la parte de servidor del plugin y funciona con cualquier clie
 - la sesión del paso siguiente se crea y se pone a trabajar, pero tienes que abrirla tú desde la lista; su título dice el paso;
 - las sesiones terminadas no se archivan: quedan marcadas y se archivan la próxima vez que abras la TUI;
 - el autopilot no arranca solo: escribe `autopilot` como primer mensaje de una sesión nueva en una rama sin sesión operativa;
-- los avisos solo quedan en el log de OpenCode.
+- los avisos solo quedan en el log de OpenCode, salvo el de lo modificado en plan: la cadena no espera, y el aviso va al principio del mensaje con el que arranca la sesión siguiente (o, si no hubo producto, el modelo te lo dice en su respuesta siguiente).
 
 `opencode run "…"` en una rama temporal no arranca nada por accidente; con `opencode run autopilot` sí.
 
-En Claude Code no hay plugin: los mismos workflows se lanzan a mano (`/openspec-new-change`, `/openspec-continue-change`, `/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`), con el mismo ciclo y el mismo resultado versionado ([ADR-0006](adr/0006-agent-asymmetry-policy.md)). Ahí los workflows sí te piden el commit.
+En Claude Code no hay plugin: los mismos workflows se lanzan a mano (`/openspec-new-change`, `/openspec-continue-change`, `/openspec-apply-change`, `/openspec-verify-change`, `/openspec-archive-change`), con el mismo ciclo y el mismo resultado versionado ([ADR-0025](adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md), que sustituye a ADR-0006). Ahí los workflows sí te piden el commit.
 
 ### Modo auto
 
@@ -262,6 +264,8 @@ El modo auto quita las sesiones de revisión: el producto de cada paso pasa al s
 ```
 
 OpenCode recarga el plugin al cambiar la opción, y el modo nuevo vale desde el paso siguiente.
+
+**El modo también decide cuántas tasks hace el apply por sesión** ([ADR-0025](adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md)). En el modo normal, `openspec/config.yaml` lleva en `operations.apply.guidance` cuatro indicaciones: el apply hace una sola task por sesión, sin delegarla en un subagente, y al terminarla se para. Así lo hace también un apply que lances a mano, en OpenCode o en Claude Code. En el modo auto, esas indicaciones no están. Al cargarse, el plugin ajusta el archivo al modo: añade el bloque si falta o lo quita si sobra, sin tocar nada más. El proyecto lo versiona como lo deja el modo normal, que es el modo por defecto. Así, al activar el modo auto verás `openspec/config.yaml` modificado: haz su commit aparte o descarta el cambio. Mientras siga sin commit, el autopilot espera con el árbol sucio. Claude Code lee el archivo tal como lo dejó la última carga del plugin.
 
 ### Desactivar el plugin en local
 

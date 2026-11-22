@@ -12,6 +12,10 @@ Last updated: 2026-11-22
 | [2026-11-22-ll-pruebas-opencode-real-autopilot.md](2026-11-22-ll-pruebas-opencode-real-autopilot.md) | 7 lecciones de las pruebas de autopilot-rama-por-sesion en OpenCode 2.3.2 real: `@opencode/cli`, update-ref con worktrees, ctx.location.project, remove y forceRequired de una estrategia, keymap.dispatch y el worktree del primer mensaje, simulador primero y el banco | lessons-learned, opencode, worktrees, git, testing | 2026-11-22 |
 | [2026-11-22-ll-archive-autopilot-rama-por-sesion.md](2026-11-22-ll-archive-autopilot-rama-por-sesion.md) | 2 lecciones del archive de autopilot-rama-por-sesion: el aviso del cargador tras sincronizar un REMOVED y el sync por bloques | lessons-learned, openspec, archive | 2026-11-22 |
 | [2026-11-22-ll-autopilot-rama-por-sesion.md](2026-11-22-ll-autopilot-rama-por-sesion.md) | 2 lecciones de autopilot-rama-por-sesion: la `/` en las expresiones de Cucumber y `git switch` desde origin/ sin remoto configurado | lessons-learned, cucumber, git | 2026-11-22 |
+| [2026-11-22-ll-fusion-supuestos-invalidados.md](2026-11-22-ll-fusion-supuestos-invalidados.md) | 1 lección: al fusionar main, lo que llega sin conflicto puede apoyarse en lo que el change cambió (las revisiones con plan) | lessons-learned, git, merge, openspec-autopilot, llm-wiki | 2026-11-22 |
+| [2026-11-22-ll-archivado-autopilot-plan-explore.md](2026-11-22-ll-archivado-autopilot-plan-explore.md) | 4 lecciones del archivado de autopilot-plan-explore: la task del archive, el banco con OpenCode real (ESC [ Z y opencode serve propio), las referencias del motor y las búsquedas sin los informes generados | lessons-learned, openspec, archive, opencode, testing, llm-wiki | 2026-11-22 |
+| [2026-11-22-ll-cucumber-rerun.md](2026-11-22-ll-cucumber-rerun.md) | 1 lección: --format rerun lista los fallos, pero @rerun.txt se suma a las rutas del perfil y no acota; se repiten con --name | lessons-learned, acceptance-tests, cucumber-js | 2026-11-22 |
+| [2026-11-22-ll-apply-guidance-timeout.md](2026-11-22-ll-apply-guidance-timeout.md) | 1 lección: un temporizador con unref() no mantiene vivo node --test, y un test cancelado no cuenta como fail | lessons-learned, core-tests, node-test, openspec-autopilot | 2026-11-22 |
 | [2026-11-22-ll-reorder-wiki-resync.md](2026-11-22-ll-reorder-wiki-resync.md) | 1 lección de reorder-wiki-resync: en la nube, windows-readiness falla por falta de pwsh y el modo automático deniega descargarlo | lessons-learned, acceptance-tests, windows-readiness, cloud-session | 2026-11-22 |
 | [2026-11-22-ll-lint-fix-y-librarian-1-0-0.md](2026-11-22-ll-lint-fix-y-librarian-1-0-0.md) | 2 lecciones del motor 1.0.0: lint --fix aparca la fuente sin artículo y pasa; librarian scan solo puntúa antigüedad y forma | lessons-learned, llm-wiki, lint, librarian | 2026-11-22 |
 | [2026-11-22-ll-guiar-revision-con-tests.md](2026-11-22-ll-guiar-revision-con-tests.md) | 2 lecciones de guiar-revision-con-tests: el agente plan ejecuta la shell sin pedir permiso y las pruebas del autopilot valen solo en su sesión operativa | lessons-learned, opencode, openspec-autopilot | 2026-11-22 |
@@ -48,6 +52,8 @@ Last updated: 2026-11-22
 - 2026-11-22: Lecciones de la fusión de main con autopilot-rama-por-sesion
 - 2026-11-22: Lecciones de autopilot-rama-por-sesion
 
+- 2026-11-22: Lección sobre los supuestos que invalida un change al fusionar main
+- 2026-11-22: Lecciones del archivado de autopilot-plan-explore
 - 2026-11-22: Lección sobre los contadores del wiki en una fusión
 - 2026-11-22: Lección de check commit
 - 2026-11-22: Lecciones del archivado de windows-support
