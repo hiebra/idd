@@ -102,15 +102,15 @@ test('start: the change branch always comes out of the origin branch, with the c
   const origin = git(dir, 'rev-parse', 'main').trim();
   git(dir, 'checkout', '-q', '-b', 'otra');
   addChange(dir, 'otra');
-  assert.equal(startBranch(dir, 'Exportar Datos').ok, false, 'not kebab-case');
-  assert.equal(startBranch(dir, 'main').ok, false, 'a permanent branch');
-  const created = startBranch(dir, 'exportar-datos');
+  assert.equal(startBranch(dir, 'Exportar Datos', {}).ok, false, 'not kebab-case');
+  assert.equal(startBranch(dir, 'main', {}).ok, false, 'a permanent branch');
+  const created = startBranch(dir, 'exportar-datos', {});
   assert.equal(created.ok, true, created.message);
   assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'exportar-datos');
   assert.equal(git(dir, 'rev-parse', 'HEAD').trim(), origin);
-  assert.match(startBranch(dir, 'exportar-datos').message, /ya existe/);
+  assert.match(startBranch(dir, 'exportar-datos', {}).message, /ya existe/);
   fs.writeFileSync(path.join(dir, 'sucio.txt'), 'x');
-  const dirty = startBranch(dir, 'otro-cambio');
+  const dirty = startBranch(dir, 'otro-cambio', {});
   assert.equal(dirty.ok, false);
   assert.match(dirty.message, /stash/);
 });
@@ -121,7 +121,7 @@ test('start: from origin/<branch> when the origin branch is only remote', async 
   git(dir, 'update-ref', 'refs/remotes/origin/main', 'main');
   git(dir, 'checkout', '-q', '-b', 'temporal');
   git(dir, 'branch', '-q', '-D', 'main');
-  const created = startBranch(dir, 'exportar-datos');
+  const created = startBranch(dir, 'exportar-datos', {});
   assert.equal(created.ok, true, created.message);
   assert.equal(git(dir, 'rev-parse', 'HEAD').trim(), git(dir, 'rev-parse', 'origin/main').trim());
 });
@@ -142,9 +142,9 @@ test('list: the temporary branches with their change; switch: only to an existin
   assert.deepEqual([by['exportar-datos'].kind, by['exportar-datos'].change], ['active', 'exportar-datos']);
   assert.equal(by.dos.kind, 'several');
   assert.deepEqual([by.vacia.kind, by.vacia.change], ['none', null]);
-  assert.equal(switchBranch(dir, 'main').ok, false);
-  assert.equal(switchBranch(dir, 'no-existe').ok, false);
-  const switched = switchBranch(dir, 'exportar-datos');
+  assert.equal(switchBranch(dir, 'main', {}).ok, false);
+  assert.equal(switchBranch(dir, 'no-existe', {}).ok, false);
+  const switched = switchBranch(dir, 'exportar-datos', {});
   assert.equal(switched.ok, true, switched.message);
   assert.equal(listBranches(dir).find((b) => b.current).branch, 'exportar-datos');
 });
@@ -301,4 +301,17 @@ test('merge-targets: bringFirst, a branch of x-main without origin, and none fro
   assert.deepEqual(mergeTargets(dir).targets, []);
   git(dir, 'checkout', '-q', '--detach', 'feature/x');
   assert.deepEqual(mergeTargets(dir).targets, []);
+});
+
+test('start and switch refuse in an ephemeral container before anything else', async (t) => {
+  const { startBranch, switchBranch } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'branch', 'otra');
+  fs.writeFileSync(path.join(dir, 'sucio.txt'), 'x');
+  for (const result of [startBranch(dir, 'exportar-datos', EPHEMERAL), startBranch(dir, 'main', EPHEMERAL), switchBranch(dir, 'otra', EPHEMERAL)]) {
+    assert.equal(result.ok, false);
+    assert.match(result.message, /sigue en la rama de la sesión/);
+    assert.doesNotMatch(result.message, /stash|permanente/);
+  }
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'main');
 });

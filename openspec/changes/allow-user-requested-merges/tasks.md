@@ -36,7 +36,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run --format snippets` sobr
 
 ## 5. `start` y `switch` en un contenedor efímero (D7): rojo → implementar → verde → commit
 
-- [ ] 5.1 El Scenario Outline `En un contenedor efímero no se crea ni se cambia de rama`, con `se indica que se siga en la rama de la sesión` y los pasos de crear y cambiar de rama con el entorno del escenario. Rojo: `start` crea la rama. Implementar D7 (`env` en `startBranch` y `switchBranch`, comprobado antes que nada) → verde → commit
+- [x] 5.1 El Scenario Outline `En un contenedor efímero no se crea ni se cambia de rama`, con `se indica que se siga en la rama de la sesión` y los pasos de crear y cambiar de rama con el entorno del escenario. Rojo: `start` crea la rama. Implementar D7 (`env` en `startBranch` y `switchBranch`, comprobado antes que nada) → verde → commit
 - [ ] 5.2 Comprobar que los escenarios vigentes de `start`, `switch` y `list`, y los del autopilot, siguen en verde fuera de un contenedor efímero
 
 ## 6. La skill, las indicaciones de archivado y la documentación (D1, D2, D5, D6, D8): rojo → implementar → verde → commit

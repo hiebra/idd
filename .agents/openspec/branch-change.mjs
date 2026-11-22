@@ -585,8 +585,13 @@ export function mergeTargets(dir = process.cwd()) {
 const dirty = (dir) => git(dir, 'status', '--porcelain').out !== '';
 const COMMIT_FIRST = 'el árbol de trabajo tiene cambios sin commit: haz antes el commit o guárdalos (git stash)';
 
+// En un contenedor efímero, start y switch no actúan (design D7 de
+// allow-user-requested-merges, ADR-0016): se comprueba antes que nada
+const SESSION_ONLY = 'En un contenedor efímero el agente trabaja solo en la rama de la sesión: sigue en la rama de la sesión y, si hace falta otra rama, pídesela al usuario.';
+
 // Crea la rama temporal de un change desde la rama de origen y cambia a ella
-export function startBranch(dir, name) {
+export function startBranch(dir, name, env = process.env) {
+  if (isEphemeral(env)) return { ok: false, message: `No se crea la rama '${name ?? ''}'. ${SESSION_ONLY}` };
   const { permanent } = readPermanent(dir);
   const origin = permanent.at(-1);
   if (!name || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return { ok: false, message: `El nombre del change tiene que ser kebab-case ('${name ?? ''}').` };
@@ -602,7 +607,8 @@ export function startBranch(dir, name) {
 }
 
 // Cambia a una rama temporal que ya existe
-export function switchBranch(dir, name) {
+export function switchBranch(dir, name, env = process.env) {
+  if (isEphemeral(env)) return { ok: false, message: `No se cambia a la rama '${name ?? ''}'. ${SESSION_ONLY}` };
   const { permanent } = readPermanent(dir);
   if (!name) return { ok: false, message: 'Falta el nombre de la rama.' };
   if (permanent.includes(name)) return { ok: false, message: `'${name}' es una rama permanente: el change se trabaja en una rama temporal.` };
