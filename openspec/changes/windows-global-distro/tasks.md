@@ -106,7 +106,12 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
     - El mensaje de `check merge` da la ruta del propio script.
     - Se pusieron al día las rutas a `branch-change.mjs` que llegaron de `main`: `openspec/config.yaml`, el README, `branches-support.test.js`, y el núcleo en Node en el step de finales de línea.
   - Con la fusión en curso, `test:core` pasa (170). En la suite pasan 266 de 281 escenarios. Los 15 restantes son los de `windows-readiness`: necesitan `pwsh`, que este contenedor no tiene; los pasa el job de Linux del workflow.
-- [ ] 7.2 Rehacer los deltas de `session-bootstrap` y `openspec-autopilot` sobre las specs ya archivadas, sin pisar el requisito de LF ni el del CLI con `node`. Si con el núcleo en Node el requisito de LF deja de servir, retirarlo con REMOVED y su motivo → `openspec validate` → commit
+- [x] 7.2 Rehacer los deltas de `session-bootstrap` y `openspec-autopilot` sobre las specs ya archivadas, sin pisar el requisito de LF ni el del CLI con `node`. Si con el núcleo en Node el requisito de LF deja de servir, retirarlo con REMOVED y su motivo → `openspec validate` → commit
+  - 2026-11-22, `a2046a9`:
+    - `openspec-change-lifecycle`: los requisitos MODIFIED salen ahora del texto de `main` («La puerta check commit…», que ya admite el commit de una fusión, y «El modelo crea la rama temporal…», con el escenario del contenedor efímero). Se añaden los dos de `main` que citaban la ruta antigua: «La puerta check merge…» y «Tras el archive se propone la fusión…». En los cuatro solo cambia cómo se nombra el script: con la ruta que da la skill `openspec-git-discipline`.
+    - `session-bootstrap` y `openspec-autopilot` no cambian: este change solo añade requisitos, y ninguno coincide con los de `main` (el de LF y el del CLI con `node`).
+    - El requisito de LF sigue sirviendo con el núcleo en Node: los hooks de Claude Code siguen siendo de bash, y el núcleo procesa la guía, el recordatorio y la regla de comentarios. No se retira.
+  - `openspec validate` y `lint:specs` sin errores. La suite pasa 268 de 283 escenarios; los 15 restantes son los de `windows-readiness`, que necesitan `pwsh`.
 - [ ] 7.3 Adaptar el diagnóstico `Test-OfflineInstall.ps1` a la instalación global: el schema en `<data>\openspec\schemas`, el motor en `<data>\idd\wiki-engine`, y las skills y los plugins copiados a `<config>\opencode` (`%XDG_CONFIG_HOME%` o `%USERPROFILE%\.config`). Con sus escenarios de `windows-readiness`, rojo → verde → commit
 - [ ] 7.4 Verificar en Windows 11 real, y anotar aquí el resultado:
   - el diagnóstico con PowerShell 5.1 y con PowerShell 7;
