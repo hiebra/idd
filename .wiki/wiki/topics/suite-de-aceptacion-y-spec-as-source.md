@@ -2,6 +2,7 @@
 title: "La suite de aceptación y spec-as-source"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md
   - raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md
   - raw/repos/2026-11-22-idd-5d7f5b0-manage-git-discipline.md
   - raw/notes/2026-11-22-ll-manage-git-discipline.md
@@ -53,6 +54,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - **Pasos nuevos**: antes de definirlos, contrasta su expresión con las genéricas que ya existen y con los pasos que empiezan igual, y restringe las capturas a los valores de los `Examples` ([lecciones de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md)).
 - **`.extracted/` es compartido**: `cucumber.cjs` y `lint:specs` lo borran y lo reconstruyen, así que dos ejecuciones a la vez se pisan; para probar algo en paralelo, extrae en otro directorio ([lecciones de replace-gherkin-lint-with-gplint](../../raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md), lección 4).
 - **Un `#### Scenario:` sin nombre** no llega al `.feature`: el extractor lo deja en blanco, y por eso ningún linter lo detecta (lección 3 de la misma nota).
+- **Una prueba del núcleo intermitente**: "two sessions taking control at once" (`acceptance-tests/core-tests/autopilot-plugin.test.js:168`) falló 1 de 4 veces con las dos sesiones como dueñas, sin relación con el change en curso. Antes de atribuirle un fallo al cambio, repítela sola ([lecciones de update-comment-phrase-and-opencode-marker](../../raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md), lección 3).
 - **Python en las skills**: `py_compile` deja un `__pycache__` junto al archivo, y el `.gitignore` no lo ignora; para comprobar la sintaxis, `ast.parse` no escribe nada (lección 6 de la misma nota).
 - **Pasos de ausencia**: un paso que afirma que algo no llega al agente comprueba la ausencia de ese contenido concreto, no que no llegue nada. `el agente no recibe la guía del wiki` exigía un contexto vacío y se rompió cuando el arranque empezó a entregar también la regla de comentarios (`idd@16e4617:acceptance-tests/step-definitions/wiki.steps.js`; [lecciones de add-quote-comment-rule](../../raw/notes/2026-11-22-ll-add-quote-comment-rule.md), lección 2).
 - **Repos git de prueba** (desde `manage-git-discipline`): `support/branches.js` monta un remoto bare por proyecto, ramas remotas por delante o divergidas, fusiones con squash, clones superficiales desde `file://` y el entorno de un contenedor efímero, con pruebas propias en `core-tests/branches-support.test.js` (`idd@5d7f5b0:acceptance-tests/support/branches.js`).
@@ -65,7 +67,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 ## Su límite
 
 - La suite comprueba lo que garantiza la plantilla, no cómo razona el modelo.
-- `openspec validate --strict` no pasa con las specs del proyecto: sus avisos de idioma ("DEBE" en lugar de SHALL/MUST) y de formato (Gherkin en bloques de código) cuentan como errores. El criterio de cierre es validar sin `--strict` y revisar los demás avisos ([lecciones de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md)).
+- `openspec validate --strict` no pasa con las specs del proyecto: sus avisos de idioma ("DEBE" en lugar de SHALL/MUST) y de formato (Gherkin en bloques de código) cuentan como errores. El criterio de cierre es validar sin `--strict` y revisar los demás avisos ([lecciones de fix-wiki-flow-operations](../../raw/notes/2026-11-21-ll-marcadores-guia-recordatorio.md); se volvió a ver en `update-comment-phrase-and-opencode-marker`, [lección 2](../../raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md))).
 - Depende de que la simulación de cada agente siga el contrato real. Cuando un agente cambia su API, hay que actualizar el adaptador y su simulación (`idd@1cf0792:adr/0002-agent-neutral-session-bootstrap.md`). Ese contrato se comprueba aparte con los agentes reales (ver [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md)) y [[proveedor-falso-para-verificar-contexto|Proveedor falso para verificar el contexto]] ([Proveedor falso para verificar el contexto](../concepts/proveedor-falso-para-verificar-contexto.md))).
 
 ## See Also
@@ -77,6 +79,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 
 ## Sources
 
+- [Lessons Learned: update-comment-phrase-and-opencode-marker](../../raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md): lecciones 2 y 3.
 - [Collection: archivado de update-comment-phrase-and-opencode-marker](../../raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md): `acceptance-tests/support/agents/opencode-host.mjs`, `acceptance-tests/support/agents/opencode.js`.
 - [Collection: archivado de autopilot-sesion-operativa (idd@6d6e79c)](../../raw/repos/2026-11-22-idd-6d6e79c-autopilot-sesion-operativa.md): `acceptance-tests/README.md`, `acceptance-tests/support/agents/opencode-sim.mjs`.
 - [Lessons Learned: el lint de las specs con gplint](../../raw/notes/2026-11-22-ll-replace-gherkin-lint-with-gplint.md): lecciones 1 a 4 y 6.

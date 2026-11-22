@@ -60,7 +60,7 @@ ADR-0002 recoge también que Claude Code no muestra lo que un hook `SessionStart
 
 - La primera sesión de cada clon tarda más. El arranque impone `npm install` en local, y el proyecto queda ligado a Node.js con npm y a bash (ADR-0001 y ADR-0002).
 - En OpenCode, el primer comando de la primera sesión espera a la instalación. En OpenCode Desktop y en `opencode run`, sin TUI, los avisos solo quedan en el log (ADR-0002).
-- Para desactivarlo todo en local: `disableAllHooks` en `.claude/settings.local.json`, o `"plugins": ["-session-bootstrap"]` en la configuración global de OpenCode. Solo el wiki: `PROJECT_WIKI=off` (`idd@f2be907:README.md`). Solo la regla de comentarios: `PROJECT_COMMENTS=off` (`idd@16e4617:README.md`).
+- Para desactivarlo todo en local: `disableAllHooks` en `.claude/settings.local.json`, o `"plugins": ["-session-bootstrap", "-response-comments"]` en la configuración global de OpenCode: desde `update-comment-phrase-and-opencode-marker`, la regla de comentarios tiene su propio plugin, y quitar solo `session-bootstrap` la deja activa (`idd@1657745:adr/0018-opencode-optional-instructions-own-plugin.md`). Solo el wiki: `PROJECT_WIKI=off` (`idd@f2be907:README.md`). Solo la regla de comentarios: `PROJECT_COMMENTS=off` (`idd@16e4617:README.md`).
 
 ## See Also
 

@@ -7,6 +7,7 @@ sources:
   - raw/repos/2026-11-22-idd-c4d6b27-update-comment-closing-and-quotes.md
   - raw/notes/2026-11-22-ll-update-comment-closing-and-quotes.md
   - raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md
+  - raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md
 created: 2026-11-21
 updated: 2026-11-22
 verified: 2026-11-22
@@ -39,7 +40,7 @@ Donde no se puede citar, como la TUI de OpenCode, la marca entre comillas es la 
 
 ### Cómo llega una cita de la web de OpenCode
 
-**[heredado]** Según el usuario, en el hook `context` de OpenCode `input.messages` llega en formato LLM y la cita de la web aparece solo como texto dentro del mensaje `user`: `\nThe user quoted the following from <origen>:\n> línea…\n` y, si hay comentario, `\nThe user made the following comment regarding this quote: <comentario>`. No se ha comprobado con OpenCode real. El núcleo la detecta con `awk`: una línea `The user quoted the following from …:` seguida de una línea que empieza por `> `, en cualquier punto del mensaje (`idd@1657745:.agents/hooks/session-bootstrap.sh`, `activates_comments`; design D1b).
+**[heredado]** Según el usuario, en el hook `context` de OpenCode `input.messages` llega en formato LLM y la cita de la web aparece solo como texto dentro del mensaje `user`: `\nThe user quoted the following from <origen>:\n> línea…\n` y, si hay comentario, `\nThe user made the following comment regarding this quote: <comentario>`. No se ha comprobado con OpenCode real. El núcleo la detecta con `awk`: una línea `The user quoted the following from …:` seguida de una línea que empieza por `> `, en cualquier punto del mensaje (`idd@1657745:.agents/hooks/session-bootstrap.sh`, `activates_comments`; design D1b; [lecciones de update-comment-phrase-and-opencode-marker](../../raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md), lección 1).
 
 ### Historia
 
@@ -78,6 +79,7 @@ La primera versión (`idd@16e4617`) solo reconocía `'…'` y cerraba con "ya" y
 
 ## Sources
 
+- [Lessons Learned: update-comment-phrase-and-opencode-marker](../../raw/notes/2026-11-22-ll-update-comment-phrase-and-opencode-marker.md): lección 1.
 - [Collection: archivado de update-comment-phrase-and-opencode-marker](../../raw/repos/2026-11-22-idd-1657745-update-comment-phrase-and-opencode-marker.md): `openspec/specs/response-comments/spec.md`, `.agents/comments/rule.md`, `.agents/hooks/session-bootstrap.sh`, `.opencode/plugins/response-comments/server.js`, `adr/0018-opencode-optional-instructions-own-plugin.md`, y `proposal.md` y `design.md` del change archivado.
 
 - [Collection: archivado de add-quote-comment-rule](../../raw/repos/2026-11-21-idd-16e4617-add-quote-comment-rule.md): `openspec/specs/response-comments/spec.md`, `.agents/comments/rule.md`, `.agents/comments/reminder.md`, `.agents/hooks/session-bootstrap.sh`, `.claude/hooks/json.sh`, `adr/0010-agent-instructions-through-session-bootstrap.md`, `README.md`, y `proposal.md`, `design.md` y `tasks.md` del change archivado.
