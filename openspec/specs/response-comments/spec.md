@@ -29,7 +29,8 @@ En OpenCode, la regla de comentarios y su recordatorio DEBEN llegar por un plugi
 #### Scenario: Sin el plugin de comentarios, OpenCode arranca sin la regla
 
 ```gherkin
-Given un clon del proyecto sin el plugin de comentarios de OpenCode
+Given un clon del proyecto con el wiki habilitado
+And un clon del proyecto sin el plugin de comentarios de OpenCode
 When se abre una sesión de OpenCode en el proyecto
 And el usuario envía el mensaje ''el segundo punto'' no lo entiendo
 Then el agente no recibe la regla de comentarios
