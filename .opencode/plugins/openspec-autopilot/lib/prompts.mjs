@@ -54,7 +54,11 @@ export function stepPrompt({ step, change, description = '', conclusions = '', i
         `Crea solo el change, sin artefactos. ${CLOSE('el change exista en `openspec/changes/`')}`
       );
     case 'artifact':
-      return `${header}\n\nUsa la skill \`openspec-continue-change\` para crear el artefacto \`${step.id}\` de \`${change}\`, y solo ese. ${CLOSE(`el artefacto \`${step.id}\` esté escrito`)}`;
+      return (
+        `${header}\n\nUsa la skill \`openspec-continue-change\` para crear el artefacto \`${step.id}\` de \`${change}\`, y solo ese. ` +
+        (description ? `Lo que el usuario pidió al crear el change:\n\n${description}\n\n` : '') +
+        CLOSE(`el artefacto \`${step.id}\` esté escrito`)
+      );
     case 'task':
       return `${header}\n\nUsa la skill \`openspec-apply-change\` para implementar solo la task ${step.label ?? step.id} de \`${change}\`, y márcala en su \`tasks.md\` al terminarla. No empieces la task siguiente. ${CLOSE(`la task ${step.label ?? step.id} esté implementada y marcada`)}`;
     case 'verify':

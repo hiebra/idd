@@ -358,3 +358,16 @@ test('one process with two projects: loading the second does not retire the firs
   await a.hooks.context(again);
   assert.equal(again.messages.length, 1);
 });
+
+test("the user's description in the new step reaches the next steps", async (t) => {
+  const w = world(t);
+  w.branches.branch(w.project, ap.BRANCH);
+  await w.startOpenCode({ pluginOptions: { auto: true } });
+  const owner = await ap.seed(w, { title: OWNER, step: { kind: 'new' }, meta: { change: null, snapshot: { change: null, artifacts: [], tasks: [], git: null } } });
+  const files = { 'openspec/changes/exportar-datos/.openspec.yaml': 'schema: intent-driven\ncreated: 2026-11-21\n' };
+  await w.opencodeCall('script', { rules: [{ match: { sessionID: owner }, responses: [{ files, text: 'Creado.' }] }] });
+  await w.opencodeCall('message', { sessionID: owner, text: 'Quiero exportar los datos a CSV con una cabecera.' });
+  const next = ap.onlyOwner(w);
+  assert.deepEqual(ap.metaOf(next).step, { kind: 'artifact', id: 'proposal' }, ap.describeSessions(w));
+  assert.match(ap.instructionOf(w, next.id), /exportar los datos a CSV con una cabecera/);
+});

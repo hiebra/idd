@@ -435,7 +435,7 @@ async function start(ctx) {
     if (wait) wait = !(await treeClean(directory));
     let created;
     try {
-      created = await createStep({ branch: m.branch, change: m.change, step, seq: (m.seq ?? 0) + 1, zone: lastZone, wait, extra });
+      created = await createStep({ branch: m.branch, change: m.change, step, seq: (m.seq ?? 0) + 1, zone: lastZone, wait, extra: { ...(m.description ? { description: m.description } : {}), ...extra } });
     } catch (error) {
       await failed(`no se ha podido crear la sesión del paso siguiente (${describe(step, m.change)})`, error, from.id);
       return;
@@ -455,13 +455,30 @@ async function start(ctx) {
     await chainTo({ from, m, step: first.step, wait: false, lastZone, extra: { queue: rest, review } });
   };
 
+  // Lo que el usuario escribió en una sesión: la descripción del change en el paso new
+  const userText = async (sessionID) => {
+    try {
+      const messages = await api.context({ sessionID });
+      return (Array.isArray(messages) ? messages : [])
+        .filter((msg) => msg?.type === 'user' && typeof msg.text === 'string' && !msg.text.startsWith(MARK))
+        .map((msg) => msg.text.trim())
+        .filter(Boolean)
+        .join('\n\n');
+    } catch (error) {
+      log('context:', error?.message ?? error);
+      return '';
+    }
+  };
+
   const finishStep = async (session, m, { products, bc }) => {
-    let { change, branch } = m;
+    let { change, branch, description } = m;
     if (m.step.kind === 'new') {
       change = bc.change;
       branch = bc.branch;
+      // La descripción que dio el usuario viaja a los pasos siguientes
+      description = [description, await userText(session.id)].filter(Boolean).join('\n\n');
     }
-    const mm = { ...m, change, branch };
+    const mm = { ...m, change, branch, description: description ?? '' };
     await writeMeta(api, session.id, { phase: 'chaining', change, branch });
     const lastZone = zoneOf(m.step) ?? m.zone ?? null;
     if (mode === 'normal') {
