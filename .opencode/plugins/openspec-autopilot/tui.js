@@ -17,7 +17,9 @@
 //   la pantalla o vuelva el foco, ni en la pantalla a la que el servidor
 //   acaba de navegar.
 // - Atiende las peticiones del servidor: avisos, navegar y archivar con el
-//   cliente de la TUI (el del servidor no archiva).
+//   cliente de la TUI (el del servidor no archiva), y el modal del aviso de lo
+//   modificado con el agente plan, que al cerrarse llama a ack (design D5 de
+//   autopilot-plan-explore).
 //
 // Al descargarse (antes de cada recarga y al cerrar), la función que devuelve
 // setup da de baja los eventos, para el temporizador y deja de escuchar el
@@ -128,8 +130,29 @@ export default {
         } else if (d?.action === 'navigate' && d.sessionID) go(d.sessionID);
       };
 
+      // El aviso de lo modificado con el agente plan (D5 de autopilot-plan-explore):
+      // el modal queda abierto sin hacer esperar al servidor, y al cerrarse, de
+      // cualquier forma, el acuse va por la sesión
+      const planNotice = (args) => {
+        modalOpen = true;
+        Promise.resolve()
+          .then(() => context.ui.dialog.select({ title: String(args?.message ?? ''), options: [{ title: 'Entendido', value: 'ok' }] }))
+          .catch((error) => log('notice:', error))
+          .then(async () => {
+            modalOpen = false;
+            try {
+              await client.ack({ instance, sessionID: args?.sessionID }, at);
+            } catch (error) {
+              log('ack:', error);
+            }
+          });
+      };
+
       const perform = async (op, args) => {
         switch (op) {
+          case 'notice':
+            planNotice(args);
+            return true;
           case 'toast':
             context.ui.toast.show({ message: String(args?.message ?? ''), variant: args?.variant === 'info' ? 'info' : 'warning' });
             return true;

@@ -6,13 +6,13 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Total records: 6
+- Total records: 8
 - Items: 0
 - Ideas: 0
-- Candidates: 6
+- Candidates: 8
 - Entities: 0
 - Corpora: 0
-- Active: 5
+- Active: 7
 - Blocked: 0
 
 ## Quick Navigation
@@ -23,6 +23,8 @@ Last updated: 2026-11-22
 
 | File | Kind | Status | Priority | Next Action | Updated |
 |------|------|--------|----------|-------------|---------|
+| [la-task-del-archive-no-es-un-checkbox.md](candidates/la-task-del-archive-no-es-un-checkbox.md) | task | active | p3 | Decidir si rules.tasks prohíbe una task final para el archive o pide marcarla en el commit del archivado. | 2026-11-22 |
+| [puente-del-autopilot-sigue-con-una-tui-cerrada.md](candidates/puente-del-autopilot-sigue-con-una-tui-cerrada.md) | task | active | p3 | Abrir un change para que el puente deje de tener destino al primer vencimiento de una petición a la TUI. | 2026-11-22 |
 | [corregir-prueba-intermitente-dos-sesiones-autopilot.md](candidates/corregir-prueba-intermitente-dos-sesiones-autopilot.md) | task | active | p3 | En un change propio, encontrar por qué a veces las dos sesiones quedan como dueñas y corregir el plugin o la prueba; comprobar con 20 ejecuciones seguidas de la prueba sola. | 2026-11-22 |
 | [nombrar-el-change-en-el-titulo-de-la-fusion.md](candidates/nombrar-el-change-en-el-titulo-de-la-fusion.md) | task | active | p3 | Proponer un change para que la skill openspec-git-discipline recomiende nombrar el change en el título de la fusión. | 2026-11-22 |
 | [declarar-skip-specs-al-proponer-un-change-sin-specs.md](candidates/declarar-skip-specs-al-proponer-un-change-sin-specs.md) | question | active | p3 | Decidir si el flujo de propuesta pide skip_specs: true en un change sin cambios de comportamiento; si sí, hacerlo como change. | 2026-11-22 |
