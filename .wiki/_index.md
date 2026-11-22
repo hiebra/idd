@@ -6,8 +6,8 @@ Last updated: 2026-11-22
 
 ## Statistics
 
-- Sources: 44 raw documents
-- Articles: 12 compiled wiki articles
+- Sources: 49 raw documents
+- Articles: 13 compiled wiki articles
 - Inventory records: 6 tracked items
 - Datasets: 0 manifests
 - Outputs: 0 generated artifacts
@@ -31,6 +31,10 @@ Last updated: 2026-11-22
 ## Recent Changes
 
 - 2026-11-22: 7 lecciones de windows-support en raw/notes; 3 artículos actualizados y una tarea en el inventario (la prueba intermitente del autopilot)
+
+- 2026-11-22: Resincronizado con git-discipline-standard-with-exception (ADR-0020): manifiesto idd@e9fced1, 4 artículos actualizados y 5 lecciones
+
+- 2026-11-22: Conflictos entre deltas concurrentes (lecciones y concepto nuevo) y la hipótesis del usuario sobre el motivo de la forma canónica
 
 - 2026-11-22: Compilado el concepto worktrees-de-opencode (2 fuentes)
 
