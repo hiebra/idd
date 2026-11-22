@@ -18,6 +18,8 @@ Last updated: 2026-11-21
 
 ## Recent Changes
 
+- 2026-11-22: una-sola-copia-de-las-skills: los symlinks en Windows tras windows-support
+
 - 2026-11-21: 1 concepto compilado del archivado de add-quote-comment-rule; hook-context-opencode refrescado
 
 - 2026-11-21: origen-de-openspec-git-discipline actualizado con ADR-0007

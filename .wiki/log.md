@@ -142,3 +142,7 @@
 ## [2026-11-22] refresh | arranque-de-sesion, ciclo-de-un-change-y-autopilot y suite-de-aceptacion-y-spec-as-source con el archivado de windows-support (idd@3d2d8fe)
 
 ## [2026-11-22] librarian | scanned 11 articles against windows-support (idd@3d2d8fe): 0 stale, 0 low-quality, 0 contradicted, 2 suggestions (gaps in soporte-de-windows and una-sola-copia-de-las-skills)
+
+## [2026-11-22] ll | "archivado de windows-support" → raw/notes/2026-11-22-ll-archive-windows-support.md (3 lessons, 2 articles updated)
+
+## [2026-11-22] compile | correcciones del librarian: lo que deja fuera windows-support en soporte-de-windows y los symlinks en Windows en una-sola-copia-de-las-skills (idd@3d2d8fe)

@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-22-ll-archive-windows-support.md](2026-11-22-ll-archive-windows-support.md) | 3 lecciones del archivado de windows-support: enlaces relativos al archivar, lint:specs solo en acceptance-tests/ y un commit de .wiki/ por paso en la nube | lessons-learned, openspec, archive, spec-lint, git | 2026-11-22 |
 | [2026-11-22-ll-windows-support.md](2026-11-22-ll-windows-support.md) | 7 lecciones de windows-support: motor desde un git bundle, node_modules por plataforma, el CLI desde un plugin de OpenCode en Windows, --renormalize, BOM duplicado, --name en cucumber y cd en segundo plano | lessons-learned, windows, opencode, npm, git, powershell | 2026-11-22 |
 | [2026-11-22-ll-modo-auto-instalar-opencode.md](2026-11-22-ll-modo-auto-instalar-opencode.md) | 1 lección: el modo auto de Claude Code en la nube bloqueó instalar @opencode/cli para el banco; reglas allow sin comprobar | lessons-learned, opencode, claude-code, auto-mode | 2026-11-22 |
 | [2026-11-22-ll-manage-git-discipline.md](2026-11-22-ll-manage-git-discipline.md) | 4 lecciones de manage-git-discipline: firma de commits en la nube, grupos opcionales de cucumber, worktree para probar el módulo y variables del contenedor efímero | lessons-learned, acceptance-tests, cucumber, git | 2026-11-22 |
@@ -24,6 +25,7 @@ Last updated: 2026-11-22
 
 ## Recent Changes
 
+- 2026-11-22: Lecciones del archivado de windows-support
 - 2026-11-22: Lecciones de windows-support
 
 - 2026-11-22: Lecciones de replace-gherkin-lint-with-gplint

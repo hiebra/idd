@@ -19,6 +19,8 @@ Last updated: 2026-11-22
 
 ## Recent Changes
 
+- 2026-11-22: lecciones del archivado de windows-support en ciclo-de-un-change-y-autopilot y suite-de-aceptacion-y-spec-as-source; correcciones del librarian en soporte-de-windows
+
 - 2026-11-22: soporte-de-windows compilado del archivado de windows-support; arranque-de-sesion, ciclo-de-un-change-y-autopilot y suite-de-aceptacion-y-spec-as-source refrescados (idd@3d2d8fe)
 
 - 2026-11-21: arranque-de-sesion refrescado con el archivado de add-quote-comment-rule
