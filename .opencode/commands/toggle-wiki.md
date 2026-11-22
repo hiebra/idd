@@ -46,7 +46,7 @@ Presenta al usuario la lista de `status`: qué entra como fuente (las líneas `s
      bash .agents/hooks/session-bootstrap.sh wiki on .
      ```
 
-  2. Con la skill `wiki-manager` del motor. Puede que aún no la veas en este mensaje: lee sus instrucciones de `.agents/wiki-engine/claude-plugin/skills/wiki-manager/SKILL.md` y síguelas. Si `$CLAUDE_PLUGIN_ROOT` está vacía, usa `CLAUDE_PLUGIN_ROOT="$PWD/.agents/wiki-engine/claude-plugin"` para el helper del motor.
+  2. Con la skill `wiki-manager` del motor. En esta sesión aún no la verás: lee sus instrucciones de `.agents/wiki-engine/claude-plugin/skills/wiki-manager/SKILL.md` y síguelas. Si `$CLAUDE_PLUGIN_ROOT` está vacía, usa `CLAUDE_PLUGIN_ROOT="$PWD/.agents/wiki-engine/claude-plugin"` para el helper del motor.
      - Inicializa el wiki del proyecto en modo local, en `.wiki/`.
      - Haz la ingesta inicial solo de manifiesto, fijada al commit actual (`git rev-parse HEAD`), sin copiar contenido: la ingesta de colecciones de `wiki-manager`, con el adaptador `git`, `--manifest-only`, `--revision <commit actual>` y `--local`, con un `--exclude <ruta>` por cada línea `excluded=` de `status`.
   3. Vuelve a ejecutar `wiki on`, que quita `.wiki/` de `.gitignore` si el motor lo añadió, y pasa el wiki al stage:
@@ -68,5 +68,5 @@ Presenta al usuario la lista de `status`: qué entra como fuente (las líneas `s
 
 Díselo al usuario con estas palabras, completando lo que falte:
 
-- **Habilitado**: «El wiki del proyecto queda habilitado para todo el proyecto. `.agents/wiki/engine.json` y `openspec/config.yaml` están en el stage: haz el commit para que valga para todos. Las skills `wiki-query` y `wiki-manager` están disponibles desde tu mensaje siguiente. La guía y el recordatorio del wiki llegan desde la sesión siguiente, cuando vuelvas a abrir OpenCode.»
+- **Habilitado**: «El wiki del proyecto queda habilitado para todo el proyecto. `.agents/wiki/engine.json` y `openspec/config.yaml` están en el stage: haz el commit para que valga para todos. Las skills `wiki-query` y `wiki-manager`, la guía y el recordatorio del wiki llegan desde la sesión siguiente, cuando vuelvas a abrir OpenCode.»
 - **Deshabilitado**: «El wiki del proyecto queda deshabilitado para todo el proyecto, y `.wiki/` se conserva. Los cambios están en el stage: haz el commit para que valga para todos. La guía y el recordatorio del wiki siguen en esta sesión hasta que vuelvas a abrir OpenCode, y las skills del wiki desaparecen, a más tardar, en la sesión siguiente.»
