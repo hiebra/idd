@@ -21,17 +21,17 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 ## Requisitos
 
 - Node.js 22.12 o superior (`engines.node` en `package.json`), con npm.
-- bash, para el arranque de sesión.
+- bash, solo para los hooks de Claude Code. En OpenCode, el arranque de sesión solo necesita Node.js.
 - git y acceso a GitHub en la primera sesión de cada clon (y al subir la versión del motor del wiki), para descargar el motor.
 - Python 3, para el helper determinista del motor del wiki (`bin/llm-wiki`: lint, checkpoints, archivos…). Los workflows del wiki no lo necesitan.
 - Claude Code, u OpenCode 2 o superior. OpenCode 1 no está soportado: su API de plugins es otra.
 
 ## Qué ocurre al abrir una sesión
 
-Cada vez que se abre una sesión de Claude Code o de OpenCode en el proyecto, local o en la nube, el adaptador de ese agente ejecuta el núcleo del arranque de sesión, `.agents/hooks/session-bootstrap.sh`, que no depende de ningún agente:
+Cada vez que se abre una sesión de Claude Code o de OpenCode en el proyecto, local o en la nube, el adaptador de ese agente ejecuta el núcleo del arranque de sesión, `.agents/hooks/session-bootstrap.mjs`, un script de Node sin dependencias que no depende de ningún agente. Si no hay Node.js, el adaptador avisa y no hace nada más:
 
 1. Prepara git: si el clon es superficial, lo completa; en un contenedor efímero (una sesión en la nube), trae las referencias de `origin` con `git fetch`; pone al día cada rama permanente local atrasada respecto a `origin/<rama>`, salvo la rama en la que está el clon, y avisa de las que han divergido; y en un contenedor efímero guarda la rama de la sesión en `git config idd.sessionBranch`. No toca el árbol de trabajo. Fuera de la nube solo usa la red para completar un clon superficial.
-1. Instala el motor del wiki en la versión fijada en `.agents/wiki/engine.json`, si falta o hay otra (ver [El wiki del proyecto](#el-wiki-del-proyecto)). No depende de Node.js.
+1. Instala el motor del wiki en la versión fijada en `.agents/wiki/engine.json`, si falta o hay otra (ver [El wiki del proyecto](#el-wiki-del-proyecto)). No depende de npm. En Windows lo expone con junctions, que no piden permisos, en lugar de symlinks.
 2. Si `.wiki/` está ignorado por git, quita del `.gitignore` la línea `.wiki` o `.wiki/` y avisa.
 3. Si no hay npm, o la versión de Node.js es inferior a `engines.node`, avisa y no instala dependencias.
 4. Para la raíz y para `acceptance-tests/`, por separado: si su `package.json`, su `package-lock.json` o el propio núcleo han cambiado desde la última instalación correcta (o nunca se instaló), ejecuta `npm install` con **todas** sus dependencias.
@@ -54,7 +54,7 @@ La primera sesión de cada clon tarda más, porque instala las dependencias; las
 
 En la UI web (`opencode pair`, `opencode serve`), en OpenCode Desktop y en `opencode run` (sin interfaz de terminal) el arranque funciona igual, pero los avisos solo quedan en el log de OpenCode: esos clientes no cargan la parte de TUI de los plugins del proyecto. El plugin se ha probado con OpenCode 2.3.2.
 
-El comportamiento exacto está en las specs [`openspec/specs/session-bootstrap/spec.md`](openspec/specs/session-bootstrap/spec.md) y [`openspec/specs/agent-skills/spec.md`](openspec/specs/agent-skills/spec.md), y la decisión en [`adr/0002-agent-neutral-session-bootstrap.md`](adr/0002-agent-neutral-session-bootstrap.md).
+El comportamiento exacto está en las specs [`openspec/specs/session-bootstrap/spec.md`](openspec/specs/session-bootstrap/spec.md) y [`openspec/specs/agent-skills/spec.md`](openspec/specs/agent-skills/spec.md), y las decisiones en [`adr/0002-agent-neutral-session-bootstrap.md`](adr/0002-agent-neutral-session-bootstrap.md) y [`adr/0023-session-bootstrap-core-in-node.md`](adr/0023-session-bootstrap-core-in-node.md), que sustituye a la primera en lo de que el núcleo sea un script de bash.
 
 ## El wiki del proyecto
 
@@ -277,7 +277,7 @@ Así no se carga la parte de servidor del plugin, que es la que instala y ajusta
 
 ## Instalación manual
 
-Donde el arranque de sesión no se ejecuta (por ejemplo, en Windows sin bash, o con OpenCode 1), instala las dependencias de la raíz y de la suite, y usa el CLI del proyecto con npx:
+Donde el arranque de sesión no se ejecuta (por ejemplo, con OpenCode 1), instala las dependencias de la raíz y de la suite, y usa el CLI del proyecto con npx:
 
 ```bash
 npm install

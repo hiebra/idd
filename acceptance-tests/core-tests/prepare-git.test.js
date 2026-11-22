@@ -1,6 +1,6 @@
 'use strict';
 
-// Core tests of prepare_git in .agents/hooks/session-bootstrap.sh (task 4.1
+// Core tests of prepareGit in .agents/hooks/session-bootstrap.mjs (task 4.1
 // of manage-git-discipline, design D5), on test repositories: a shallow clone
 // is completed, a permanent branch that is behind and not checked out is
 // moved forward with update-ref, the checked-out one is left alone, a

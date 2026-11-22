@@ -16,7 +16,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - `response-comments/server.js`.
 
   Si `node` no existe, el adaptador avisa con el mismo texto que el núcleo → la suite y el escenario de 2.2 en verde → commit
-- [ ] 2.5 Borrar `session-bootstrap.sh` y actualizar sus referencias (README, cabeceras de los adaptadores, `acceptance-tests/README.md`) → verde → commit
+- [x] 2.5 Borrar `session-bootstrap.sh` y actualizar sus referencias (README, cabeceras de los adaptadores, `acceptance-tests/README.md`) → verde → commit
 
 ## 3. `branch-change.mjs` dentro de la skill (D4)
 

@@ -50,11 +50,11 @@ Cada ejecución reconstruye `.extracted/` (los `.feature` extraídos de los `spe
 
 ## Escenarios de `session-bootstrap`
 
-Los escenarios de arranque de sesión, heredados de la plantilla, no levantan ninguna aplicación ni arrancan los agentes reales: prueban el núcleo `.agents/hooks/session-bootstrap.sh` a través del adaptador de cada agente, simulando cómo lo invoca ese agente. Por cada escenario, el World:
+Los escenarios de arranque de sesión, heredados de la plantilla, no levantan ninguna aplicación ni arrancan los agentes reales: prueban el núcleo `.agents/hooks/session-bootstrap.mjs` a través del adaptador de cada agente, simulando cómo lo invoca ese agente. Por cada escenario, el World:
 
 - crea en un directorio temporal una copia del proyecto sin `node_modules`, `.git` ni `acceptance-tests/`;
 - abre la sesión con el adaptador de agente que nombra el paso (`se abre una sesión de Claude Code en el proyecto`, `... de OpenCode ...`); `se abre una sesión en el proyecto`, en los escenarios del núcleo, usa Claude Code;
-- simula la máquina con el `PATH` y el entorno: un envoltorio de npm que registra cada llamada, un directorio de herramientas sin npm, un `node` falso de la versión 20 y un `openspec` global falso; un registro inaccesible se simula con `npm_config_registry` apuntando a un puerto cerrado y una caché vacía, y entonces el envoltorio añade al log de npm una línea con comillas, barras, un tabulador y un carácter de control, para comprobar cómo escapa cada adaptador el aviso que la cita. Del directorio de `node` y `npm` solo se exponen esos dos binarios (y `npx`), porque puede tener también paquetes globales, como un `openspec` real.
+- simula la máquina con el `PATH` y el entorno: un envoltorio de npm que registra cada llamada, un directorio de herramientas sin npm (y, si se pide, con `node`), un `node` falso de la versión 20, que también la da dentro del proceso (`process.versions.node`, que es lo que comprueba el núcleo), una máquina sin bash, con solo `node`, `npm` y `git` en el `PATH`, como un Windows sin Git Bash, y un `openspec` global falso; un registro inaccesible se simula con `npm_config_registry` apuntando a un puerto cerrado y una caché vacía, y entonces el envoltorio añade al log de npm una línea con comillas, barras, un tabulador y un carácter de control, para comprobar cómo escapa cada adaptador el aviso que la cita. Del directorio de `node` y `npm` solo se exponen esos dos binarios (y `npx`), porque puede tener también paquetes globales, como un `openspec` real.
 
 Los adaptadores están en `support/agents/` y dan a los pasos el mismo resultado: cómo terminó el agente, las llamadas a npm, los avisos mostrados al usuario y cómo ejecutar un comando en la sesión.
 
