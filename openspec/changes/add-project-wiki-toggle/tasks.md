@@ -52,7 +52,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 6. `/toggle-wiki` (D4): uno por paso pendiente; en cada uno, rojo → implementar → verde → commit
 
-- [ ] 6.1 Escribir el comando en `.claude/commands/toggle-wiki.md` y en la ruta de OpenCode que fijó la tarea 1.3, con el mismo texto salvo cómo se invocan las operaciones del motor, que guía al modelo por los pasos de D4
+- [x] 6.1 Escribir el comando en `.claude/commands/toggle-wiki.md` y en la ruta de OpenCode que fijó la tarea 1.3, con el mismo texto salvo cómo se invocan las operaciones del motor, que guía al modelo por los pasos de D4
 - [ ] 6.2 `llm-wiki: El comando está disponible con el wiki deshabilitado`: paso `el agente dispone del comando \`/toggle-wiki\``, en los dos agentes
 - [ ] 6.3 `llm-wiki: Habilitar el wiki` y `Deshabilitar el wiki`: pasos `el usuario ejecuta \`/toggle-wiki\` en <agente>` (el modelo con guion de la suite sigue los pasos del comando y ejecuta el modo `wiki`), `el wiki del proyecto queda habilitado|deshabilitado`, `las indicaciones de archivado de OpenSpec incluyen la resincronización del wiki`, `el resto de \`openspec/config.yaml\` no ha cambiado`, `\`.wiki/\` se conserva sin cambios`, `los cambios quedan en el stage de git, sin commit` y `se informa de que el wiki queda …`
 - [ ] 6.4 `llm-wiki: La sesión siguiente a habilitar el wiki`: paso `un clon del proyecto en el que se acaba de habilitar el wiki con \`/toggle-wiki\``
