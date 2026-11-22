@@ -334,6 +334,35 @@ Then(/^se crea una sesión operativa que arranca (`openspec-new-change`|el paso 
   this.created = owner.id;
 });
 
+// --- El CLI de OpenSpec del proyecto en cualquier sistema (windows-support) ----------------
+
+// The project's dependencies: its own node_modules/ with the real OpenSpec
+// package of the repository, and a .bin/openspec that is not an executable,
+// as on Windows, where it is a shell script
+Given('un proyecto con un change en la rama y sus dependencias instaladas', async function () {
+  await ap.prepareChange(this, { artifacts: ['proposal'] });
+  const modules = this.project.path('node_modules');
+  fs.mkdirSync(path.join(modules, '.bin'), { recursive: true });
+  fs.symlinkSync(path.join(require('../support/project').REPO_ROOT, 'node_modules', '@fission-ai'), path.join(modules, '@fission-ai'));
+  fs.symlinkSync(path.join('..', '@fission-ai', 'openspec', 'bin', 'openspec.js'), path.join(modules, '.bin', 'openspec'));
+});
+
+Given('`node_modules\\/.bin\\/openspec` del proyecto no es un ejecutable', function () {
+  const bin = this.project.path('node_modules', '.bin', 'openspec');
+  fs.rmSync(bin, { force: true });
+  fs.writeFileSync(bin, '#!/bin/sh\n# como en Windows: un script de shell que no se puede ejecutar directamente\nexit 1\n', { mode: 0o644 });
+});
+
+When('se abre OpenCode en el proyecto con la TUI', async function () {
+  await this.startOpenCode({ alreadyOpen: false });
+  await this.opencodeCall('waitScreen');
+});
+
+Then('la sesión operativa arranca con el paso que dice `openspec status`', function () {
+  const owner = ap.onlyOwner(this);
+  assert.deepEqual(ap.metaOf(owner).step, stepFromStatus(this), detail(this));
+});
+
 Then('la TUI pasa a esa sesión', function () {
   assert.deepEqual(this.opencode.route, { type: 'session', sessionID: this.created }, detail(this));
 });

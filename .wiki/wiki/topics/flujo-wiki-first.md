@@ -2,6 +2,7 @@
 title: "El flujo wiki-first"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-fusion-wiki-contadores.md
   - raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md
   - raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md
   - raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md
@@ -84,6 +85,7 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 - **La guidance de archivado solo añade pasos**: el workflow de archive no le deja saltarse su pregunta sobre el sync de specs ni cambiar sus flags, así que no puede forzar el sync (`idd@a62cf14:.claude/skills/openspec-archive-change/SKILL.md`). Con deltas aplicables se sincroniza siempre; archivar sin sincronizar es para changes sin cambios de comportamiento, mejor declarados con `skip_specs: true` en su `.openspec.yaml`, o para syncs bloqueados ([lecciones sobre la guidance de archivado](../../raw/notes/2026-11-22-ll-guidance-de-archive-no-salta-preguntas.md); [docs/cli.md de OpenSpec](../../raw/articles/2026-11-22-openspec-docs-cli-archive.md); si las specs ya se sincronizaron con `/opsx:sync`, el archive ofrece archivar sin más: [docs/opsx.md](../../raw/articles/2026-11-22-openspec-docs-opsx-sync.md), [docs/commands.md](../../raw/articles/2026-11-22-openspec-docs-commands-sync-archive.md)).
 - **`openspec archive --yes` no avisa de tasks pendientes**: la advertencia la da el workflow, que cuenta las tasks con `openspec list --json`. Compruébalas antes de usar la CLI con `--yes` ([lecciones de git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md), lección 3).
 - **Al resolver una fusión con conflictos en el wiki**, busca antes en el lado que llega lecciones equivalentes a las propias: dos changes concurrentes pueden registrar lo mismo. Conserva una sola viñeta, cita las dos notas y quédate con la versión mejor comprobada ([lecciones de la fusión en el wiki](../../raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md), lección 1).
+- **Los contadores del wiki en una fusión**: si chocan las estadísticas de `.wiki/_index.md` o `inventory/_index.md`, no elijas un lado: cuéntalas sobre el disco tras la fusión, y los activos del inventario por su `status:`. En las dos fusiones de `windows-support` con `main`, ningún lado acertaba, y el lint del motor no compara esos contadores con el disco ([lección de los contadores en una fusión](../../raw/notes/2026-11-22-ll-fusion-wiki-contadores.md), lección 1).
 
 ## El motor
 
@@ -100,10 +102,12 @@ Desde `add-openspec-autopilot` (`idd@772d0f0:openspec/config.yaml`):
 - [[carga-en-la-misma-sesion-por-agente|Qué carga cada agente y cuándo]] ([Qué carga cada agente y cuándo](carga-en-la-misma-sesion-por-agente.md))
 - [[una-sola-copia-de-las-skills|Una sola copia de las skills]] ([Una sola copia de las skills](../concepts/una-sola-copia-de-las-skills.md))
 - [[ciclo-de-un-change-y-autopilot|El ciclo de un change y su automatización en OpenCode]] ([El ciclo de un change y su automatización en OpenCode](ciclo-de-un-change-y-autopilot.md))
+- [[regla-de-comentarios|La regla de comentarios]] ([La regla de comentarios](../concepts/regla-de-comentarios.md))
 
 ## Sources
 
 - [Lessons Learned: lecciones equivalentes al resolver una fusión en el wiki](../../raw/notes/2026-11-22-ll-fusion-wiki-lecciones-equivalentes.md): lección 1.
+- [Lessons Learned: los contadores del wiki al resolver una fusión](../../raw/notes/2026-11-22-ll-fusion-wiki-contadores.md): lección 1.
 - [Lessons Learned: git-discipline-standard-with-exception](../../raw/notes/2026-11-22-ll-git-discipline-standard-with-exception.md): lección 3.
 - [Collection: archivado de git-discipline-standard-with-exception (idd@e9fced1)](../../raw/repos/2026-11-22-idd-e9fced1-git-discipline-standard-with-exception.md): `openspec/config.yaml`.
 - [Collection: archivado de allow-user-requested-merges (idd@cac0041)](../../raw/repos/2026-11-22-idd-cac0041-allow-user-requested-merges.md): `openspec/config.yaml`.

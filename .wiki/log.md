@@ -211,3 +211,27 @@
 ## [2026-11-22] ll | "guiar-revision-con-tests (agente plan y sesión operativa)" → raw/notes/2026-11-22-ll-guiar-revision-con-tests.md (2 lessons, 1 article updated)
 
 ## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] ll | "soporte de Windows (windows-support)" → raw/notes/2026-11-22-ll-windows-support.md (7 lessons, 3 articles updated, 1 inventory record)
+
+## [2026-11-22] ingest-collection | idd via git (manifest-only, windows-support @3d2d8fe): 1 manifest, 22 paths pinned, 0 skipped
+
+## [2026-11-22] compile | soporte-de-windows desde el archivado de windows-support (idd@3d2d8fe)
+
+## [2026-11-22] refresh | arranque-de-sesion, ciclo-de-un-change-y-autopilot y suite-de-aceptacion-y-spec-as-source con el archivado de windows-support (idd@3d2d8fe)
+
+## [2026-11-22] librarian | scanned 11 articles against windows-support (idd@3d2d8fe): 0 stale, 0 low-quality, 0 contradicted, 2 suggestions (gaps in soporte-de-windows and una-sola-copia-de-las-skills)
+
+## [2026-11-22] ll | "archivado de windows-support" → raw/notes/2026-11-22-ll-archive-windows-support.md (3 lessons, 2 articles updated)
+
+## [2026-11-22] compile | correcciones del librarian: lo que deja fuera windows-support en soporte-de-windows y los symlinks en Windows en una-sola-copia-de-las-skills (idd@3d2d8fe)
+
+## [2026-11-22] ll | "check commit mira todo el árbol de trabajo" → raw/notes/2026-11-22-ll-check-commit-arbol-entero.md (1 lesson, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed; manual: 0 broken links, 0 uncited sources, 4 pre-existing one-way See Also links (hook-context-opencode, flujo-wiki-first, suite-de-aceptacion-y-spec-as-source do not link back)
+
+## [2026-11-22] lint | See Also completados: hook-context-opencode → ciclo-de-un-change-y-autopilot y regla-de-comentarios; flujo-wiki-first y suite-de-aceptacion-y-spec-as-source → regla-de-comentarios (0 one-way links left)
+
+## [2026-11-22] ll | "contadores del wiki al resolver una fusión" → raw/notes/2026-11-22-ll-fusion-wiki-contadores.md (1 lesson, 1 article updated)
