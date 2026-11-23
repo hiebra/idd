@@ -26,7 +26,7 @@ Los ADRs en vigor, tras recorrer los `Supersedes` de `adr/`:
 
 Sustituidos y leídos solo como contexto histórico: ADR-0001, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0010, ADR-0013, ADR-0014, ADR-0015 y ADR-0016. ADR-0016 conserva su efecto a través de ADR-0020: el agente solo fusiona cuando el usuario se lo pide, y el change solo le hace proponer traer `main`.
 
-Tras `git fetch`, hay ADRs en ramas remotas que aún no han llegado a la rama de origen (0023 0024 0025 0027 0028 ). No están en vigor aquí y este change no crea ninguno, así que no hay número que reservar.
+Tras `git fetch`, hay ADRs en ramas remotas que aún no han llegado a la rama de origen: 0023 y 0024, 0027 y 0028 (este último en dos ramas distintas). No están en vigor aquí y este change no crea ninguno, así que no hay número que reservar.
 
 ## New Durable ADRs Created
 
