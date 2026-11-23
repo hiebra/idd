@@ -10,7 +10,8 @@ Con la suite en marcha no se edita nada de lo que copia a cada escenario (todo s
 
 ## 1. Preparación
 
-- [ ] 1.1 Sin pasada completa de base: comprobar con `npx cucumber-js --dry-run --name "^(<los seis títulos>)$"` que salen 6 escenarios, todos sin definir, y apuntar el número de pasos sin definir (20 distintos, 22 con los que repiten texto)
+- [x] 1.1 Sin pasada completa de base: comprobar con `npx cucumber-js --dry-run --name "^(<los seis títulos>)$"` que salen 6 escenarios, todos sin definir, y apuntar el número de pasos sin definir (20 distintos, 22 con los que repiten texto)
+  - Resultado: 6 escenarios, todos sin definir; 33 pasos (11 omitidos, 22 sin definir), 20 distintos. Sin pasada de base.
 
 ## 2. suite-run-policy: las reglas de las tasks y su plantilla, rojo → implementar → verde → commit
 
