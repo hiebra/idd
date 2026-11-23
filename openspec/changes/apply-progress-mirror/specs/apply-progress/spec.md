@@ -1,5 +1,6 @@
 # apply-progress
 
+## Purpose
 Mientras implementa tasks, el workflow de apply puede mostrar el plan en la lista de tareas del agente, si la tiene: la indicación de `operations.apply.guidance` de `openspec/config.yaml` lo pide en los dos agentes, igual en los dos modos del autopilot. `tasks.md` sigue siendo la única fuente de verdad.
 
 ## ADDED Requirements
