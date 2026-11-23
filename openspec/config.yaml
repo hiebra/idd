@@ -29,6 +29,7 @@ rules:
     - Must use spec-as-source skill
   tasks:
     - Must use spec-as-source skill
+    - "La suite de aceptación completa se lanza una sola vez por change: la última task del `tasks.md` la lanza, y ninguna otra task la lanza antes de implementar (no hay task de pasada completa de base). Antes de esa pasada, esa task hace `git fetch` y, si la rama de origen ha avanzado, propone al usuario traerla a la rama del change, para que la pasada pruebe lo que llegará a la rama de origen; traerla lo decide el usuario."
   adr:
     - "Haz `git fetch` antes de numerar un ADR nuevo, para ver los ADRs de las ramas concurrentes."
     - "Su número es uno más que el número más alto de `adr/` en `origin/<rama de origen>` y en todas las ramas remotas (`origin/*`), y en la rama de trabajo; léelo con `git ls-tree --name-only <ref> adr/` en cada una. La rama de origen es la última de x-main, o main."
