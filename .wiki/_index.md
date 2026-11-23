@@ -2,11 +2,11 @@
 
 > Conocimiento de la plantilla intent-driven: decisiones, comprobaciones empíricas y fuentes del propio repositorio
 
-Last updated: 2026-11-22
+Last updated: 2026-11-23
 
 ## Statistics
 
-- Sources: 76 raw documents
+- Sources: 77 raw documents
 - Articles: 13 compiled wiki articles
 - Inventory records: 8 tracked items
 - Datasets: 0 manifests

@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-23-ll-limite-de-verificacion-y-mcp-de-depuracion-3.md](2026-11-23-ll-limite-de-verificacion-y-mcp-de-depuracion-3.md) | 1 lección: el resumen de la suite completa no sale con tail cuando hay pasos sin definir; guarda toda la salida | lessons-learned, acceptance-tests, cucumber-js | 2026-11-23 |
 | [2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion-2.md](2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion-2.md) | 1 lección: --name de cucumber-js filtra por escenario; el nombre de un requisito (Rule:) no selecciona nada | lessons-learned, acceptance-tests, cucumber-js | 2026-11-22 |
 | [2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion.md](2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion.md) | 5 lecciones de la planificación de limite-de-verificacion-y-mcp-de-depuracion: texto tras la casilla de una task, ## Purpose en deltas nuevas, ajv estricto con if/then, git merge-tree y openliberty.io desde la nube | lessons-learned, openspec, json-schema, git, liberty | 2026-11-22 |
 | [2026-11-22-ll-fusion-supuestos-invalidados.md](2026-11-22-ll-fusion-supuestos-invalidados.md) | 1 lección: al fusionar main, lo que llega sin conflicto puede apoyarse en lo que el change cambió (las revisiones con plan) | lessons-learned, git, merge, openspec-autopilot, llm-wiki | 2026-11-22 |
@@ -47,6 +48,7 @@ Last updated: 2026-11-22
 
 ## Recent Changes
 
+- 2026-11-23: Lección sobre leer el resultado de la suite completa
 - 2026-11-22: 5 lecciones de la planificación de limite-de-verificacion-y-mcp-de-depuracion
 
 - 2026-11-22: Lección sobre los supuestos que invalida un change al fusionar main
