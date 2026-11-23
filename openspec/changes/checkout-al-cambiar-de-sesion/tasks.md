@@ -28,4 +28,4 @@ Ciclo por task: paso sin definir → implementarlo en `acceptance-tests/step-def
 ## 4. Cierre
 
 - [x] 4.1 Ejecutar `openspec validate checkout-al-cambiar-de-sesion --type change --strict` y `npm run lint:specs` en `acceptance-tests/`.
-- [ ] 4.2 Hacer `git fetch` y, si `origin/main` ha avanzado, proponer al usuario traerlo a la rama. Ejecutar las pruebas de núcleo (`npm run test:core`) y la suite completa (`npm test`): todo pasa, también los escenarios de los requisitos que no cambian, ningún paso pendiente o sin definir, informe HTML generado.
+- [x] 4.2 Hacer `git fetch` y, si `origin/main` ha avanzado, proponer al usuario traerlo a la rama. Ejecutar las pruebas de núcleo (`npm run test:core`) y la suite completa (`npm test`): todo pasa, también los escenarios de los requisitos que no cambian, ningún paso pendiente o sin definir, informe HTML generado.
