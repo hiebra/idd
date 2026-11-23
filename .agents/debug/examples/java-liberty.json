@@ -1,0 +1,111 @@
+{
+  "title": "Java sobre WLP con VS Code",
+  "note": "Ejemplo ilustrativo: los nombres, las rutas y los puertos son de un proyecto inventado, y no se ha probado en una máquina real. Supone la extensión Liberty Tools en VS Code y una suite de aceptación con cucumber-js.",
+  "calls": [
+    {
+      "tool": "debug_targets",
+      "arguments": {
+        "workspace": "/home/ana/pedidos",
+        "files": ["backend/src/main/java/com/acme/pedidos/ExportarPedidos.java", "README.md"]
+      },
+      "result": {
+        "contractVersion": "1.0",
+        "workspace": "/home/ana/pedidos",
+        "ides": [{ "id": "vscode", "name": "Visual Studio Code", "available": true }],
+        "targets": [
+          {
+            "id": "backend",
+            "title": "API de pedidos (Java sobre WLP)",
+            "technology": "java-liberty",
+            "sources": ["backend/src/main/java/**"],
+            "files": ["backend/src/main/java/com/acme/pedidos/ExportarPedidos.java"],
+            "ides": ["vscode"],
+            "state": "stopped"
+          }
+        ],
+        "unmatchedFiles": ["README.md"]
+      }
+    },
+    {
+      "tool": "debug_launch_plan",
+      "arguments": {
+        "workspace": "/home/ana/pedidos",
+        "targets": ["backend"],
+        "ide": "vscode",
+        "breakpoints": [{ "file": "backend/src/main/java/com/acme/pedidos/ExportarPedidos.java", "line": 42 }],
+        "scenarios": ["Exportar los pedidos del mes en CSV"]
+      },
+      "result": {
+        "contractVersion": "1.0",
+        "workspace": "/home/ana/pedidos",
+        "ide": "vscode",
+        "targets": ["backend"],
+        "summary": "Liberty en modo dev, con el depurador de Java de VS Code adjunto en el puerto 7777.",
+        "steps": [
+          {
+            "id": "open-ide",
+            "title": "Abrir el proyecto en VS Code",
+            "actor": "agent",
+            "command": { "argv": ["code", "/home/ana/pedidos"] }
+          },
+          {
+            "id": "open-breakpoint-1",
+            "title": "Abrir ExportarPedidos.java en la línea 42",
+            "actor": "agent",
+            "command": { "argv": ["code", "--goto", "/home/ana/pedidos/backend/src/main/java/com/acme/pedidos/ExportarPedidos.java:42"] }
+          },
+          {
+            "id": "set-breakpoints",
+            "title": "Poner el punto de ruptura",
+            "actor": "user",
+            "instruction": "En VS Code, haz clic en el margen, a la izquierda del número de la línea 42 de ExportarPedidos.java: aparece un círculo rojo."
+          },
+          {
+            "id": "start-debug",
+            "title": "Arrancar Liberty en modo depuración",
+            "actor": "user",
+            "instruction": "En VS Code, ejecuta «Liberty: Start in debug mode» desde la paleta de comandos y elige `backend`. Liberty arranca en modo dev en un terminal de VS Code, y el depurador de Java se adjunta solo cuando el servidor está listo.",
+            "longRunning": true
+          },
+          {
+            "id": "run-scenario",
+            "title": "Lanzar el escenario que ejercita el código",
+            "actor": "user",
+            "instruction": "Con el depurador adjunto, lanza en otro terminal el escenario «Exportar los pedidos del mes en CSV». La ejecución se detiene en el punto de ruptura y sigue cuando la reanudas.",
+            "command": { "argv": ["npx", "cucumber-js", "--name", "Exportar los pedidos del mes en CSV"], "cwd": "acceptance-tests" },
+            "longRunning": true
+          }
+        ],
+        "cleanup": [
+          {
+            "id": "stop-debug",
+            "title": "Parar la depuración y Liberty",
+            "actor": "user",
+            "instruction": "En VS Code, para la sesión de depuración y para la aplicación con el comando Stop de Liberty Tools."
+          }
+        ],
+        "breakpoints": [
+          { "file": "backend/src/main/java/com/acme/pedidos/ExportarPedidos.java", "line": 42, "status": "planned" }
+        ],
+        "configurations": [
+          {
+            "name": "Liberty: adjuntar a backend",
+            "origin": "generated",
+            "definition": {
+              "type": "java",
+              "request": "attach",
+              "name": "Liberty: adjuntar a backend",
+              "hostName": "localhost",
+              "port": 7777,
+              "projectName": "backend"
+            }
+          }
+        ],
+        "endpoints": [
+          { "target": "backend", "kind": "debug", "protocol": "jdwp", "host": "localhost", "port": 7777 },
+          { "target": "backend", "kind": "app", "url": "http://localhost:9080" }
+        ]
+      }
+    }
+  ]
+}
