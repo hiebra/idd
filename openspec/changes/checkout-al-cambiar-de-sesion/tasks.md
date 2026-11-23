@@ -22,7 +22,7 @@ Ciclo por task: paso sin definir → implementarlo en `acceptance-tests/step-def
   - cambia con el árbol sucio y los cambios viajan; crea la rama local desde `origin/<rama>` si solo existe en el remoto;
   - devuelve el error de git si rechaza el cambio, sin tocar nada.
 - [x] 3.2 `enterSession` en `lib/screen.mjs` (D2, D3), con pruebas de núcleo en `core-tests/autopilot-product.test.js`: `protected` y una rama de `x-main` dan `checkout` con `via: 'permanent'` con el árbol sucio y con otra rama permanente; otra sesión trabajando da `back`; sin el veto no cambia ninguna salida de hoy; `carried` dice si había cambios.
-- [ ] 3.3 `switchTo` en `lib/project.mjs` con la vía `permanent`; `enter` en `server.js` pasa `protected` de `branchChange(directory)`, registra `pluginCheckout` y avisa con los cambios que han pasado (D3, D4).
+- [x] 3.3 `switchTo` en `lib/project.mjs` con la vía `permanent`; `enter` en `server.js` pasa `protected` de `branchChange(directory)`, registra `pluginCheckout` y avisa con los cambios que han pasado (D3, D4).
 - [ ] 3.4 Documentar en `README.md` el checkout con `x-main-protected`: qué hace, que los cambios sin commit pasan a la rama y que git puede rechazarlo. Documentar la clave en `openspec/config.yaml` solo si ya está comentada allí.
 
 ## 4. Cierre
