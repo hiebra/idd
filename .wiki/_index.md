@@ -2,11 +2,11 @@
 
 > Conocimiento de la plantilla intent-driven: decisiones, comprobaciones empíricas y fuentes del propio repositorio
 
-Last updated: 2026-11-22
+Last updated: 2026-11-23
 
 ## Statistics
 
-- Sources: 69 raw documents
+- Sources: 86 raw documents
 - Articles: 13 compiled wiki articles
 - Inventory records: 9 tracked items
 - Datasets: 0 manifests
@@ -30,11 +30,15 @@ Last updated: 2026-11-22
 
 ## Recent Changes
 
+- 2026-11-22: Fuente de SmartBear y 5 lecciones de la planificación de limite-de-verificacion-y-mcp-de-depuracion; sin compilar todavía
+
 - 2026-11-22: 1 lección sobre el archivo de rerun de cucumber-js; suite-de-aceptacion-y-spec-as-source actualizado
 
 - 2026-11-22: Resincronizado con el archivado de apply-one-task-per-session-in-normal-mode: manifiesto en idd@f9f014c, ADR-0025 y el bloque de apply del autopilot en el artículo del ciclo, y 1 cita a ADR-0006 matizada
 
 - 2026-11-22: 1 lección de apply-one-task-per-session-in-normal-mode (unref() y node --test); suite-de-aceptacion-y-spec-as-source actualizado
+
+- 2026-11-22: 12 fuentes ingeridas para definir el MCP de depuración (MCP 2026-07-28, VS Code, Liberty, Vite, OpenCode y DebugMCP); sin compilar todavía
 
 - 2026-11-22: Resincronizado con reorder-wiki-resync (idd@fc31fe5): manifiesto, flujo-wiki-first con la secuencia nueva y 1 lección en suite-de-aceptacion-y-spec-as-source
 

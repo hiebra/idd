@@ -1,0 +1,116 @@
+{
+  "title": "React sobre Vite con VS Code",
+  "note": "Ejemplo ilustrativo: los nombres, las rutas y los puertos son de un proyecto inventado, y no se ha probado en una máquina real. Supone una configuración «Vite: frontend» en el `.vscode/launch.json` del proyecto.",
+  "calls": [
+    {
+      "tool": "debug_targets",
+      "arguments": {
+        "workspace": "/home/ana/pedidos",
+        "files": ["frontend/src/pedidos/BotonExportar.tsx", "frontend/src/pedidos/BotonExportar.css"]
+      },
+      "result": {
+        "contractVersion": "1.0",
+        "workspace": "/home/ana/pedidos",
+        "ides": [{ "id": "vscode", "name": "Visual Studio Code", "available": true }],
+        "targets": [
+          {
+            "id": "frontend",
+            "title": "Web de pedidos (React sobre Vite)",
+            "technology": "react-vite",
+            "sources": ["frontend/src/**"],
+            "files": ["frontend/src/pedidos/BotonExportar.tsx", "frontend/src/pedidos/BotonExportar.css"],
+            "ides": ["vscode"],
+            "state": "stopped"
+          }
+        ],
+        "unmatchedFiles": []
+      }
+    },
+    {
+      "tool": "debug_launch_plan",
+      "arguments": {
+        "workspace": "/home/ana/pedidos",
+        "targets": ["frontend"],
+        "breakpoints": [
+          { "file": "frontend/src/pedidos/BotonExportar.tsx", "line": 18 },
+          { "file": "frontend/src/pedidos/BotonExportar.css", "line": 3 }
+        ],
+        "scenarios": ["Exportar los pedidos del mes en CSV"]
+      },
+      "result": {
+        "contractVersion": "1.0",
+        "workspace": "/home/ana/pedidos",
+        "ide": "vscode",
+        "targets": ["frontend"],
+        "summary": "El servidor de desarrollo de Vite en el puerto 5173 y un navegador lanzado por el depurador de VS Code.",
+        "steps": [
+          {
+            "id": "open-ide",
+            "title": "Abrir el proyecto en VS Code",
+            "actor": "agent",
+            "command": { "argv": ["code", "/home/ana/pedidos"] }
+          },
+          {
+            "id": "open-breakpoint-1",
+            "title": "Abrir BotonExportar.tsx en la línea 18",
+            "actor": "agent",
+            "command": { "argv": ["code", "--goto", "/home/ana/pedidos/frontend/src/pedidos/BotonExportar.tsx:18"] }
+          },
+          {
+            "id": "set-breakpoints",
+            "title": "Poner el punto de ruptura",
+            "actor": "user",
+            "instruction": "En VS Code, haz clic en el margen, a la izquierda del número de la línea 18 de BotonExportar.tsx: aparece un círculo rojo."
+          },
+          {
+            "id": "start-dev-server",
+            "title": "Arrancar el servidor de desarrollo de Vite",
+            "actor": "user",
+            "instruction": "En un terminal, arranca el servidor de desarrollo y déjalo en marcha. Está listo cuando muestra la dirección http://localhost:5173.",
+            "command": { "argv": ["npm", "run", "dev", "--", "--port", "5173", "--strictPort"], "cwd": "frontend" },
+            "longRunning": true
+          },
+          {
+            "id": "start-debug",
+            "title": "Iniciar la depuración en el navegador",
+            "actor": "user",
+            "instruction": "En la vista Run and Debug de VS Code, elige «Vite: frontend» e inicia la depuración. Se abre un navegador en http://localhost:5173 con el depurador puesto.",
+            "longRunning": true
+          },
+          {
+            "id": "run-scenario",
+            "title": "Seguir el escenario en el navegador",
+            "actor": "user",
+            "instruction": "En ese navegador, sigue a mano los pasos del escenario «Exportar los pedidos del mes en CSV». Si el código del punto de ruptura se ejecuta al cargar la página, recárgala."
+          }
+        ],
+        "cleanup": [
+          {
+            "id": "stop-debug",
+            "title": "Parar la depuración y el servidor de desarrollo",
+            "actor": "user",
+            "instruction": "Para la sesión de depuración en VS Code y el servidor de desarrollo en su terminal."
+          }
+        ],
+        "breakpoints": [
+          { "file": "frontend/src/pedidos/BotonExportar.tsx", "line": 18, "status": "planned" },
+          { "file": "frontend/src/pedidos/BotonExportar.css", "line": 3, "status": "rejected", "reason": "No es código en el que el depurador pueda detenerse." }
+        ],
+        "configurations": [
+          {
+            "name": "Vite: frontend",
+            "origin": "project",
+            "definition": {
+              "type": "msedge",
+              "request": "launch",
+              "name": "Vite: frontend",
+              "url": "http://localhost:5173",
+              "webRoot": "${workspaceFolder}/frontend"
+            }
+          }
+        ],
+        "endpoints": [{ "target": "frontend", "kind": "app", "url": "http://localhost:5173" }]
+      }
+    }
+  ]
+}

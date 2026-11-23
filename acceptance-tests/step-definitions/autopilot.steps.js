@@ -100,6 +100,10 @@ async function reachReview(world, what) {
     await ap.prepareChange(world, { artifacts: ['proposal', 'specs'] });
     await seedOperational(world, { kind: 'artifact', id: 'design' });
     await produce(world, ARTIFACT_FILES.design());
+  } else if (what === 'el artefacto `tasks`') {
+    await ap.prepareChange(world, { artifacts: ['proposal', 'specs', 'design', 'adr'] });
+    await seedOperational(world, { kind: 'artifact', id: 'tasks' });
+    await produce(world, ARTIFACT_FILES.tasks());
   } else if (what === 'la task 3') {
     await ap.prepareChange(world, { tasks: TASKS_1_2_DONE });
     await seedOperational(world, { kind: 'task', id: '3', label: '3' }, { zone: 'code' });
@@ -1893,11 +1897,13 @@ async function reachPlanReview(world) {
   return review;
 }
 
-When(/^el plugin abre la revisión (?:de |del )(la task 3|el verify|artefacto `design`|los cambios en el plan)$/, async function (what) {
+When(/^el plugin abre la revisión (?:de |del )(la task 3|el verify|verify|artefacto `design`|artefacto `tasks`|los cambios en el plan)$/, async function (what) {
   const reach = {
     'la task 3': () => reachReview(this, 'la task 3'),
     'el verify': () => reachVerifyReview(this),
+    verify: () => reachVerifyReview(this),
     'artefacto `design`': () => reachReview(this, 'el artefacto `design`'),
+    'artefacto `tasks`': () => reachReview(this, 'el artefacto `tasks`'),
     'los cambios en el plan': () => reachPlanReview(this),
   }[what];
   const review = await reach();
@@ -1920,6 +1926,63 @@ Then('la instrucción pide ofrecer al usuario la orden para ejecutar en modo dep
   assert.match(text, /modo depuración/, text);
   assert.match(text, /código fuente que se puede ejecutar/, text);
   assert.match(text, /la ejecuta el usuario/, text);
+});
+
+// The debug MCP of the session, by the names of its tools (design D13 of
+// limite-de-verificacion-y-mcp-de-depuracion)
+Then('la instrucción pide usar las tools `debug_targets` y `debug_launch_plan` si la sesión tiene un MCP de depuración', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /Si la sesión tiene un MCP de depuración/, text);
+  assert.match(text, /`debug_targets`/, text);
+  assert.match(text, /`debug_launch_plan`/, text);
+  assert.match(text, /úsalo/, text);
+});
+
+Then('la instrucción pide enseñar el plan al usuario antes de ejecutar ningún paso', function () {
+  assert.match(this.reviewInstruction, /Enseña el plan al usuario antes de ejecutar ningún paso/, this.reviewInstruction);
+});
+
+Then('la instrucción pide que el modelo ejecute solo los pasos de `agent` y diga al usuario los de `user`', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /ejecuta tú solo los de `agent`/, text);
+  assert.match(text, /los de `user` díselos al usuario/, text);
+});
+
+Then('la instrucción pide seguir los pasos de limpieza cuando el usuario termine de depurar', function () {
+  assert.match(this.reviewInstruction, /Cuando el usuario termine de depurar, sigue igual los pasos de `cleanup`/, this.reviewInstruction);
+});
+
+// The verification estimate of the task and the project's limit (design D4 of
+// limite-de-verificacion-y-mcp-de-depuracion): the model reads both from the files
+Then('la instrucción pide empezar por la estimación de verificación de la task y por el límite', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /Empieza por decir al usuario cuánto se estimó que lleva verificar esta task/, text);
+  assert.match(text, /la estimación del final de su línea en `tasks\.md`/, text);
+  assert.match(text, /cuál es el límite del proyecto \(la regla de `rules\.tasks` de `openspec\/config\.yaml`\)/, text);
+});
+
+Then('la instrucción pide avisar si lo que hay que verificar los supera con claridad', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /Si lo que hay que verificar los supera con claridad, avísale/, text);
+  assert.match(text, /puede rechazar la revisión para que la task se divida/, text);
+});
+
+// The estimates of the plan of tasks (design D4 of
+// limite-de-verificacion-y-mcp-de-depuracion): the model checks them in the files
+Then('la instrucción pide comprobar que cada task lleva su estimación de verificación y que ninguna pasa del límite', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /[Cc]omprueba que cada task lleva su estimación de verificación al final de su línea/, text);
+  assert.match(text, /que ninguna pasa del límite de `rules\.tasks` de `openspec\/config\.yaml`/, text);
+  assert.match(text, /señala las que no la lleven o lo pasen/, text);
+});
+
+Then('la instrucción pide dar el total de verificación del change', function () {
+  assert.match(this.reviewInstruction, /da el total de verificación del change/, this.reviewInstruction);
+});
+
+Then('la instrucción no habla de la estimación ni del límite de verificación', function () {
+  const text = this.reviewInstruction;
+  assert.doesNotMatch(text, /estimación|estimó|límite|rules\.tasks/i, text);
 });
 
 Then('la instrucción de la revisión no pide ejecutar los tests de aceptación ni el código', function () {
