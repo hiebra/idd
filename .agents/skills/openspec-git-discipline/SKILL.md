@@ -157,6 +157,26 @@ Las uniones mecánicas (dos filas de un índice, dos fuentes en un frontmatter) 
 
 El squash también se admite. El squash se admite porque ningún paso del ciclo depende de que los commits de la rama lleguen a la rama de origen: las citas del wiki a commits de la rama se resuelven entonces por su blob, que guardan los manifiestos de las fuentes. Tras un squash, el change fusionado deja de contar en la rama temporal.
 
+<!-- lifecycle:merge-checks -->
+### Qué se comprueba tras traer una rama permanente
+
+Tras traer una rama permanente a la rama del change, comprueba lo traído en `acceptance-tests/`:
+
+1. `npm run lint:specs`. Detecta una resolución mal unida en una spec, como el cierre perdido de un bloque al juntar los dos lados de un conflicto.
+2. `npm run test:core`. Si falla «two sessions taking control at once», repítela sola antes de atribuírsela a la fusión: es intermitente con la máquina cargada.
+3. Con `--name`, los escenarios de las specs que cambiaron en cualquiera de los dos lados desde su base común. `<antes>` es la rama del change antes de la fusión (`HEAD` con la fusión en curso, `HEAD^1` tras su commit) y `<traída>`, la rama permanente (`MERGE_HEAD`, o `HEAD^2`):
+
+   ```bash
+   base=$(git merge-base <antes> <traída>)
+   git diff -U0 "$base" <antes> -- 'openspec/specs/*/spec.md'
+   git diff -U0 "$base" <traída> -- 'openspec/specs/*/spec.md'
+   ```
+
+   Cada línea cambiada es de la última cabecera `#### Scenario` anterior; si cambia la cabecera de un requisito, cuentan todos sus escenarios. Junta sus títulos en un solo `--name`, `^(título|título)$`, con los caracteres especiales de las expresiones regulares escapados. Las rutas de `.feature` no acotan la pasada: solo `--name` o los tags.
+4. Comprueba que se ejecutó el número de escenarios esperado: un `--name` que no casa con ninguno da `0 scenarios` y sale con 0, sin error.
+
+No lances la suite completa: esa pasada la hace una sola vez la última task del change.
+
 ## Señales de alarma
 
 <!-- lifecycle:red-flags -->

@@ -1137,3 +1137,28 @@ Then('los dos indican que en un contenedor efímero la fusión con una rama perm
     assertIn(text, /[Ee]n un contenedor efímero, la fusión con una rama permanente se hace por PR/, what);
   }
 });
+
+// --- What is checked after bringing a permanent branch (run-full-suite-once-per-change) ---
+
+Then('indica ejecutar `lint:specs` y `test:core`', function () {
+  const checks = section(this, 'merge-checks');
+  assertIn(checks, /`npm run lint:specs`/, 'the merge checks section');
+  assertIn(checks, /`npm run test:core`/, 'the merge checks section');
+});
+
+Then('indica ejecutar con `--name` los escenarios de las specs que cambiaron en cualquiera de los dos lados', function () {
+  const checks = section(this, 'merge-checks');
+  assertIn(checks, /`--name`/, 'the merge checks section');
+  assertIn(checks, /cualquiera de los dos lados/, 'the merge checks section');
+  assertIn(checks, /git diff -U0/, 'the merge checks section');
+});
+
+Then('indica comprobar que se ejecutó el número de escenarios esperado', function () {
+  const checks = section(this, 'merge-checks');
+  assertIn(checks, /número de escenarios/, 'the merge checks section');
+  assertIn(checks, /`0 scenarios`/, 'the merge checks section');
+});
+
+Then('indica no lanzar la suite completa', function () {
+  assertIn(section(this, 'merge-checks'), /No lances la suite completa/, 'the merge checks section');
+});
