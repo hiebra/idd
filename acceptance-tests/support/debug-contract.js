@@ -28,6 +28,10 @@ class DebugContract {
     return this.contract.tools ?? [];
   }
 
+  get errors() {
+    return this.contract.errors ?? {};
+  }
+
   tool(name) {
     const tool = this.tools.find((t) => t.name === name);
     if (!tool) throw new Error(`the debug contract declares no tool '${name}'`);

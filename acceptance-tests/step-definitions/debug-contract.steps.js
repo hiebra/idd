@@ -62,3 +62,52 @@ Then(
     );
   }
 );
+
+Then('acepta el parámetro opcional `workspace`', function () {
+  const schema = this.debugTool.inputSchema ?? {};
+  assert.ok(schema.properties?.workspace, `'${this.debugTool.name}' has no 'workspace' parameter`);
+  assert.ok(!(schema.required ?? []).includes('workspace'), `'workspace' is required in '${this.debugTool.name}'`);
+});
+
+function assertRequired(tool, expected) {
+  assert.deepEqual([...(tool.inputSchema?.required ?? [])].sort(), expected, `the required parameters of '${tool.name}'`);
+}
+
+Then('sus parámetros obligatorios son ninguno', function () {
+  assertRequired(this.debugTool, []);
+});
+
+Then('sus parámetros obligatorios son solo `{word}`', function (name) {
+  assertRequired(this.debugTool, [name]);
+});
+
+Then('su descripción dice que un paso de `agent` termina solo y enseguida', function () {
+  assert.match(this.debugTool.description, /un paso de `agent` termina solo y enseguida/i, `the description of '${this.debugTool.name}'`);
+});
+
+Then('su descripción dice que seguir un plan no deja archivos que git no ignore', function () {
+  assert.match(
+    this.debugTool.description,
+    /seguir un plan no deja (en el árbol de trabajo )?archivos que git no ignore/i,
+    `the description of '${this.debugTool.name}'`
+  );
+});
+
+When('se leen los errores de ejecución del contrato', function () {
+  this.debugErrors = contractOf(this).errors;
+});
+
+Then('están `invalid-workspace`, `unknown-target` e `ide-unavailable`, cada uno con cuándo se da', function () {
+  const codes = this.debugErrors.codes ?? [];
+  for (const code of ['invalid-workspace', 'unknown-target', 'ide-unavailable']) {
+    const entry = codes.find((c) => c.code === code);
+    assert.ok(entry, `the debug contract does not list the error '${code}'`);
+    assert.ok(typeof entry.when === 'string' && entry.when.trim(), `the error '${code}' does not say when it happens`);
+  }
+});
+
+Then('el contrato dice que se devuelven con `isError` y un texto que empieza por el código', function () {
+  const description = this.debugErrors.description ?? '';
+  assert.match(description, /`isError(: true)?`/, 'the errors description does not mention isError');
+  assert.match(description, /texto que empieza por el código/, 'the errors description does not say the text starts with the code');
+});
