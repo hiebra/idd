@@ -6,11 +6,21 @@
 // El veredicto es una función pura; lo demás ejecuta git con límite de tiempo.
 
 import { createHash } from 'node:crypto';
-import { run } from './run.mjs';
+import { run as runCommand } from './run.mjs';
+
+// git, sin los bloqueos opcionales: el plugin lee git en cada pantalla, y un
+// `git status` o un `git diff HEAD` normales refrescan el índice tomando su
+// bloqueo, con lo que un `git add` del plugin a la vez falla («index.lock:
+// File exists»). Las órdenes que escriben siguen tomando el que necesitan
+const GIT = ['--no-optional-locks'];
+const run = (command, args, options) => runCommand(command, command === 'git' ? [...GIT, ...args] : args, options);
 
 async function git(dir, args, { timeoutMs = 15000 } = {}) {
   const result = await run('git', args, { cwd: dir, timeoutMs });
-  if (result.code !== 0) throw new Error(`git ${args[0]} ha fallado: ${(result.stderr || result.stdout).trim().slice(0, 200)}`);
+  if (result.code !== 0) {
+    // El mensaje, recortado; la salida de error entera, para saber la causa
+    throw Object.assign(new Error(`git ${args[0]} ha fallado: ${(result.stderr || result.stdout).trim().slice(0, 200)}`), { stderr: result.stderr ?? '' });
+  }
   return result.stdout;
 }
 
@@ -36,7 +46,9 @@ export function parsePorcelain(text) {
 export async function gitState(dir) {
   const head = (await run('git', ['rev-parse', '-q', '--verify', 'HEAD'], { cwd: dir, timeoutMs: 10000 })).stdout.trim();
   const porcelain = await git(dir, ['status', '--porcelain=v1', '--untracked-files=all']);
-  const diff = await git(dir, ['diff', 'HEAD', '--no-color', '--no-ext-diff'], { timeoutMs: 30000 }).catch(() => '');
+  // diff-index y no `git diff HEAD`, que refresca el índice aun con
+  // --no-optional-locks; la salida es la misma
+  const diff = await git(dir, ['diff-index', '-p', '--no-color', '--no-ext-diff', 'HEAD'], { timeoutMs: 30000 }).catch(() => '');
   const untracked = (await git(dir, ['ls-files', '--others', '--exclude-standard'])).split('\n').filter(Boolean);
   let hashes = '';
   if (untracked.length > 0) {
@@ -61,13 +73,25 @@ export function verdict(start, now) {
   return 'ko';
 }
 
-// Pasa al stage las rutas dadas, o todo (`git add -A`) si no se dan
+// Las pausas antes de reintentar un `git add` que encuentra el índice
+// bloqueado por otro proceso (git, un editor): 750 ms en total
+const LOCK_RETRY_MS = [50, 100, 200, 400];
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Pasa al stage las rutas dadas, o todo (`git add -A`) si no se dan. Si otro
+// proceso tiene el bloqueo del índice, espera un poco a que lo suelte; si no
+// lo suelta, falla con el error de git
 export async function stage(dir, paths = null) {
-  if (Array.isArray(paths) && paths.length > 0) {
-    await git(dir, ['add', '-A', '--', ...paths]);
-    return;
+  const args = Array.isArray(paths) && paths.length > 0 ? ['add', '-A', '--', ...paths] : ['add', '-A'];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await git(dir, args);
+      return;
+    } catch (error) {
+      if (attempt >= LOCK_RETRY_MS.length || !/index\.lock/.test(error.stderr ?? error.message)) throw error;
+      await sleep(LOCK_RETRY_MS[attempt]);
+    }
   }
-  await git(dir, ['add', '-A']);
 }
 
 // La rama de HEAD, o null con HEAD separado

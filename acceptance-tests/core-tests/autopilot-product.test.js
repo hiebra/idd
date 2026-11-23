@@ -239,3 +239,49 @@ test('the first metadata does not overwrite an owner written in the meantime', a
   await firstMeta(api2, structuredClone(fresh), { worktree: '/p', branch: 'feature/x' });
   assert.deepEqual(meta(fresh), { v: 1, worktree: '/p', branch: 'feature/x', role: 'free' });
 });
+
+// A plain `git status` or `git diff HEAD` refreshes the index and takes its
+// lock to write it. The plugin reads git on every screen, so a read that takes
+// the lock while the plugin stages a product makes that `git add` fail
+// ("index.lock: File exists"). Its reads pass --no-optional-locks
+test("the plugin's reads of git do not write the index", async (t) => {
+  const { gitState, treeClean } = await load('git.mjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autopilot-locks-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const sh = (...args) => spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
+  sh('init', '-q', '-b', 'main');
+  fs.writeFileSync(path.join(dir, 'a.txt'), 'a\n');
+  sh('add', '-A');
+  sh('-c', 'user.email=suite@example.com', '-c', 'user.name=Suite', 'commit', '-q', '-m', 'inicio');
+  const index = path.join(dir, '.git', 'index');
+  for (const [name, read] of [['treeClean', () => treeClean(dir)], ['gitState', () => gitState(dir)]]) {
+    // Only the timestamp changes: a plain read would refresh the index
+    const when = new Date(Date.now() + 60000 * (name === 'treeClean' ? 1 : 2));
+    fs.utimesSync(path.join(dir, 'a.txt'), when, when);
+    const before = fs.readFileSync(index);
+    await read();
+    assert.ok(fs.readFileSync(index).equals(before), `${name} rewrote the index`);
+  }
+});
+
+// Another process can hold the index lock for a moment (git itself, an
+// editor): the plugin's `git add` waits for it a little before giving up
+test('staging waits for an index lock that goes away, and fails on one that stays', async (t) => {
+  const { stage } = await load('git.mjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autopilot-stage-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const sh = (...args) => spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
+  sh('init', '-q', '-b', 'main');
+  fs.writeFileSync(path.join(dir, 'a.txt'), 'a\n');
+  sh('add', '-A');
+  sh('-c', 'user.email=suite@example.com', '-c', 'user.name=Suite', 'commit', '-q', '-m', 'inicio');
+  const lock = path.join(dir, '.git', 'index.lock');
+  fs.writeFileSync(path.join(dir, 'b.txt'), 'b\n');
+  fs.writeFileSync(lock, '');
+  setTimeout(() => fs.rmSync(lock, { force: true }), 150);
+  await stage(dir, ['b.txt']);
+  assert.match(sh('diff', '--cached', '--name-only').stdout, /^b\.txt$/m);
+  fs.writeFileSync(path.join(dir, 'c.txt'), 'c\n');
+  fs.writeFileSync(lock, '');
+  await assert.rejects(stage(dir, ['c.txt']), /index\.lock/);
+});

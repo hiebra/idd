@@ -137,8 +137,15 @@ function selfCommand(dir) {
   return /\s/.test(shown) ? `"${shown}"` : shown;
 }
 
+// git, sin los bloqueos opcionales: el plugin autopilot importa este módulo y
+// lo lee en cada pantalla, y un `git status` o un `git diff` normales
+// refrescan el índice tomando su bloqueo, con lo que un `git add` a la vez
+// falla («index.lock: File exists»). Las órdenes que escriben siguen tomando
+// el que necesitan
+const NO_LOCKS = '--no-optional-locks';
+
 function git(dir, ...args) {
-  const result = spawnSync('git', args, { cwd: dir, encoding: 'utf8', timeout: 10000 });
+  const result = spawnSync('git', [NO_LOCKS, ...args], { cwd: dir, encoding: 'utf8', timeout: 10000 });
   return { ok: result.status === 0, out: (result.stdout ?? '').trim() };
 }
 
@@ -309,7 +316,7 @@ export function zoneOf(file) {
 
 // Las rutas con cambios sin commit o sin seguimiento
 function pendingPaths(dir) {
-  const status = spawnSync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], { cwd: dir, encoding: 'utf8', timeout: 10000 });
+  const status = spawnSync('git', [NO_LOCKS, 'status', '--porcelain', '-z', '--untracked-files=all'], { cwd: dir, encoding: 'utf8', timeout: 10000 });
   const entries = (status.stdout ?? '').split('\0').filter(Boolean);
   const paths = [];
   for (let i = 0; i < entries.length; i++) {

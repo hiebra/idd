@@ -391,9 +391,12 @@ test('the worktree strategy: one registration across reloads and worktree instan
   await w.opencodeCall('home', { directory });
   assert.ok(w.opencode.instances.includes(directory), JSON.stringify(w.opencode.instances));
   assert.deepEqual(w.opencode.strategies.map((s) => s.id), ['openspec-autopilot'], JSON.stringify(w.opencode.strategies));
-  // Every TUI call goes to the instance of the directory the TUI is in
-  const screens = w.opencode.rpcCalls.filter((c) => c.method === 'screen');
-  assert.equal(screens.at(-1).directory, directory, JSON.stringify(screens));
+  // Every TUI call goes to the instance of the directory the TUI is in. On a
+  // loaded machine, the TUI's first poll there can come after home() returns:
+  // wait for it, up to a few polls
+  const screens = () => w.opencode.rpcCalls.filter((c) => c.method === 'screen');
+  for (let i = 0; i < 10 && screens().at(-1)?.directory !== directory; i++) await w.opencodeCall('waitScreen');
+  assert.equal(screens().at(-1)?.directory, directory, JSON.stringify(screens()));
   await w.opencodeCall('close');
   assert.deepEqual(w.opencode.strategies, []);
   assert.deepEqual(w.opencode.crashes, []);

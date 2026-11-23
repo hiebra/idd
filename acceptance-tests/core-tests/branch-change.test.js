@@ -429,3 +429,24 @@ test('merge title: towards another permanent branch, the changes are still those
     assert.ok(gate.message.includes(`-m "Merge exportar-datos into ${target}"`), gate.message);
   }
 });
+
+// The autopilot imports this module and reads the branch on every screen: its
+// reads must not take the index lock, or a `git add` of the plugin at the
+// same time fails ("index.lock: File exists"). They pass --no-optional-locks.
+// checkCommit, in an ephemeral container on the session's branch, reads the
+// pending paths with `git status`
+test('the reads of the gates do not write the index', async (t) => {
+  const { checkCommit } = await import(MODULE);
+  const dir = repo(t);
+  git(dir, 'checkout', '-q', '-b', 'claude/exportar');
+  git(dir, 'config', 'idd.sessionBranch', 'claude/exportar');
+  const env = { ...process.env, CLAUDE_CODE_CONTAINER_ID: 'container_suite', CLAUDE_CODE_REMOTE: 'true' };
+  const index = path.join(dir, '.git', 'index');
+  // Only the timestamp changes: a plain read would refresh the index
+  const when = new Date(Date.now() + 60000);
+  fs.utimesSync(path.join(dir, 'openspec', 'config.yaml'), when, when);
+  const before = fs.readFileSync(index);
+  const result = checkCommit(dir, env);
+  assert.equal(result.ok, true, result.message);
+  assert.ok(fs.readFileSync(index).equals(before), 'checkCommit rewrote the index');
+});

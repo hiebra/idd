@@ -164,6 +164,14 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
     - **Fallo intermitente:** en una de cuatro pasadas de los `core-tests` del autopilot falló «the worktree strategy: one registration across reloads…». No se ha buscado la causa.
   - Después: rehacer los deltas de `session-bootstrap` y `openspec-autopilot` sobre las specs nuevas, hacer que ADR-0024 tenga en cuenta ADR-0021 y ADR-0022, y que el instalador y la variante adelgazada incluyan el ajuste del wiki. Orden recomendado: la 7.5, después la 7.4 en Windows y por último la 8.3, porque la 7.5 cambia código que la 7.4 verifica.
 
+- [x] 7.6 Arreglar la carrera de `index.lock` que hizo fallar el job de Linux en la ejecución de `9a6f9a9` (run 45086056154). Fallaba «after a hot reload with the modal open, closing it chains once through the new server» (`core-tests/autopilot-plugin.test.js:549`): el `git add` del plugin fallaba con «index.lock: File exists» y la sesión quedaba libre. Un `git status` o un `git diff` normales refrescan el índice y toman su bloqueo, y el plugin lee git en cada pantalla (ADR-0022 lo hace más a menudo).
+  - Las lecturas:
+    - `lib/git.mjs` y `branch-change.mjs` ejecutan git con `--no-optional-locks`;
+    - la firma de `gitState` usa `git diff-index -p HEAD`, que da la misma salida que `git diff HEAD` sin refrescar el índice, porque `git diff` lo refresca aun con `--no-optional-locks`;
+    - casos nuevos en `autopilot-product.test.js` y `branch-change.test.js`: esas lecturas no reescriben `.git/index` cuando un archivo solo cambia de fecha. Rojo sin el arreglo, verde con él.
+  - El `git diff --name-only <merge-base> -- openspec/changes` de `branchChange` también refresca el índice, y no se puede pasar a `diff-index`: un archivo que solo cambia de fecha contaría como cambiado y cambiaría qué changes tiene la rama. Por eso, con el ok del usuario, `stage()` reintenta el `git add` si encuentra el índice bloqueado: cuatro veces, durante 750 ms en total, y después falla con el error de git. Eso cubre también a cualquier otro proceso que lea git a la vez, como un editor. Caso nuevo en `autopilot-product.test.js`: un bloqueo que se va a los 150 ms y otro que no se va. Rojo sin el arreglo, verde con él.
+  - Aparte, también intermitente: «the worktree strategy: one registration across reloads…» (`autopilot-plugin.test.js:379`) fallaba a veces dentro del fichero completo, nunca a solas. Con la máquina cargada, la primera consulta de pantalla de la TUI en el worktree llegaba después de que volviera `home()`, y `screens.at(-1)` era indefinido. Ahora el test espera esa consulta, hasta diez sondeos. El fallo no se provoca a voluntad: antes fallaba una de cada tres o cuatro pasadas del fichero, y después del arreglo pasaron seis de seis.
+
 ## 8. Documentación y cierre
 
 - [x] 8.1 README:
