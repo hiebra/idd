@@ -41,9 +41,12 @@
 #       El recordatorio es un solo párrafo: sus líneas no vacías se juntan con
 #       un espacio.
 #   session-bootstrap.sh wiki <status|on|off> <directorio del proyecto>
+#   session-bootstrap.sh wiki mode <full|lite> <directorio del proyecto>
 #       La parte determinista de /toggle-wiki (design D3 de
-#       add-project-wiki-toggle). Por stdout, líneas "clave=valor":
-#       - status: enabled=true|false, wiki-dir=true|false (si existe .wiki/) y,
+#       add-project-wiki-toggle, D5 de add-wiki-lite-mode). Por stdout, líneas
+#       "clave=valor":
+#       - status: enabled=true|false, mode=full|lite (el modo efectivo; con
+#         el wiki habilitado, avisa si "mode" no es un modo), wiki-dir=true|false (si existe .wiki/) y,
 #         para la ingesta inicial, source=<ruta> por cada archivo versionado
 #         que entraría y excluded=<ruta>|<motivo> por cada uno que no (lo
 #         generado, informes, lockfiles, la copia del motor, enlaces, archivos
@@ -58,7 +61,15 @@
 #       - off: pone "enabled": false, quita lo que hay entre las marcas, marcas
 #         incluidas (y guidance, si se queda vacía), retira los symlinks del
 #         motor y pasa al stage los mismos dos archivos. No toca .wiki/.
-#       Ni on ni off hacen commit. Con las marcas mal formadas o repetidas no
+#       - mode full|lite: escribe solo "mode" en engine.json (inserta la clave
+#         si falta y crea el archivo si no existe o está vacío), sin tocar
+#         "enabled", config.yaml, el motor ni .wiki/. No escribe si el modo
+#         declarado ya es el pedido, o si falta y el pedido es full; un valor
+#         que no es un modo sí se reescribe. Imprime changed=true|false,
+#         mode=, enabled= y, si ha cambiado, staged=engine.json, que es lo
+#         único que pasa al stage. Con otro valor no escribe nada y avisa.
+#       on y off conservan "mode".
+#       Ni on, ni off, ni mode hacen commit. Con las marcas mal formadas o repetidas no
 #       cambian nada y avisan. La edición de config.yaml es de texto, línea a
 #       línea: conserva byte a byte el resto del archivo.
 #   session-bootstrap.sh comments-rule <agente> <directorio del proyecto>
@@ -414,23 +425,31 @@ warn_invalid_mode() {
   warn "el modo del wiki de $ENGINE_JSON ($value) no existe: los modos son full y lite, y se usa full; para corregirlo, ejecuta /toggle-wiki full o /toggle-wiki lite y haz el commit"
 }
 
-# set_enabled true|false: cambia "enabled" en engine.json sin reescribir el resto
-set_enabled() {
-  local value="$1" tmp
+# set_field NOMBRE VALOR: cambia el campo NOMBRE de engine.json a VALOR (texto
+# JSON tal cual, con sus comillas si es una cadena) sin reescribir el resto; si
+# falta, lo inserta tras la llave de apertura, y si engine.json no existe o está
+# vacío, lo crea con solo ese campo (design D5 de add-wiki-lite-mode)
+set_field() {
+  local name="$1" value="$2" tmp
   if [ ! -f "$ENGINE_JSON" ] || ! grep -q '"' "$ENGINE_JSON" 2>/dev/null; then
-    mkdir -p "$WIKI_DIR" && printf '{\n  "enabled": %s\n}\n' "$value" >"$ENGINE_JSON"
+    mkdir -p "$WIKI_DIR" && printf '{\n  "%s": %s\n}\n' "$name" "$value" >"$ENGINE_JSON"
     return
   fi
   tmp="$(mktemp)" || return 1
-  if grep -qE '"enabled"[[:space:]]*:' "$ENGINE_JSON"; then
-    sed -E "s/(\"enabled\"[[:space:]]*:[[:space:]]*)(\"[^\"]*\"|[A-Za-z0-9_.+-]+)/\1$value/" "$ENGINE_JSON" >"$tmp"
+  if grep -qE "\"$name\"[[:space:]]*:" "$ENGINE_JSON"; then
+    sed -E "s/(\"$name\"[[:space:]]*:[[:space:]]*)(\"[^\"]*\"|[A-Za-z0-9_.+-]+)/\1$value/" "$ENGINE_JSON" >"$tmp"
   elif grep -qE '^[[:space:]]*\{[[:space:]]*$' "$ENGINE_JSON"; then
-    awk -v v="$value" '!done && /^[[:space:]]*\{[[:space:]]*$/ { print; print "  \"enabled\": " v ","; done = 1; next } { print }' "$ENGINE_JSON" >"$tmp"
+    awk -v f="  \"$name\": $value," '!done && /^[[:space:]]*\{[[:space:]]*$/ { print; print f; done = 1; next } { print }' "$ENGINE_JSON" >"$tmp"
   else
-    awk -v v="$value" '!done && sub(/\{/, "{ \"enabled\": " v ",") { done = 1 } { print }' "$ENGINE_JSON" >"$tmp"
+    awk -v f="{ \"$name\": $value," '!done && sub(/\{/, f) { done = 1 } { print }' "$ENGINE_JSON" >"$tmp"
   fi
   cat "$tmp" >"$ENGINE_JSON"
   rm -f "$tmp"
+}
+
+# set_enabled true|false: cambia "enabled" en engine.json sin tocar el resto, "mode" incluido
+set_enabled() {
+  set_field enabled "$1"
 }
 
 # Edición de texto, línea a línea, del bloque de pasos del wiki en
@@ -599,7 +618,13 @@ warn_stale_block() {
 
 # wiki_status: el ajuste, si existe .wiki/ y qué entraría en la ingesta inicial
 wiki_status() {
-  if wiki_enabled; then echo "enabled=true"; else echo "enabled=false"; fi
+  if wiki_enabled; then
+    echo "enabled=true"
+    warn_invalid_mode
+  else
+    echo "enabled=false"
+  fi
+  echo "mode=$(wiki_current_mode)"
   if [ -d .wiki ]; then echo "wiki-dir=true"; else echo "wiki-dir=false"; fi
   git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
   local mode file reason
@@ -657,13 +682,43 @@ wiki_toggle() {
   if wiki_enabled; then echo "enabled=true"; else echo "enabled=false"; fi
 }
 
-# wiki_mode status|on|off DIRECTORIO
+# wiki_set_mode full|lite: declara el modo del wiki en engine.json (design D5 de
+# add-wiki-lite-mode). Solo cambia "mode"; no escribe si ya es el pedido, o si
+# falta y el pedido es full. Pasa al stage solo engine.json, sin commit
+wiki_set_mode() {
+  local wanted="$1" changed=true
+  if [ "$(wiki_declared_mode)" = "\"$wanted\"" ] || { [ "$wanted" = full ] && ! wiki_mode_declared; }; then
+    changed=false
+  fi
+  if [ "$changed" = true ]; then
+    set_field mode "\"$wanted\"" || { warn "no se ha podido cambiar \"mode\" en $ENGINE_JSON"; changed=false; }
+  fi
+  echo "changed=$changed"
+  echo "mode=$(wiki_current_mode)"
+  if wiki_enabled; then echo "enabled=true"; else echo "enabled=false"; fi
+  if [ "$changed" = true ] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git add -- "$ENGINE_JSON" 2>/dev/null || warn "no se ha podido pasar al stage $ENGINE_JSON"
+    echo "staged=$ENGINE_JSON"
+  fi
+}
+
+# wiki_mode status|on|off DIRECTORIO, o wiki_mode mode full|lite DIRECTORIO
 wiki_mode() {
-  local action="${1:-}" dir="${2:-}"
-  case "$action" in status | on | off) ;; *)
-    warn "uso: session-bootstrap.sh wiki <status|on|off> <directorio del proyecto>"
-    return
-    ;;
+  local action="${1:-}" value="" dir
+  case "$action" in
+    status | on | off) dir="${2:-}" ;;
+    mode)
+      value="${2:-}" dir="${3:-}"
+      case "$value" in full | lite) ;; *)
+        warn "el modo del wiki '$value' no existe: los modos son full y lite; no se cambia nada"
+        return
+        ;;
+      esac
+      ;;
+    *)
+      warn "uso: session-bootstrap.sh wiki <status|on|off|mode full|mode lite> <directorio del proyecto>"
+      return
+      ;;
   esac
   if [ -z "$dir" ] || ! cd "$dir" 2>/dev/null; then
     warn "no se puede entrar en el directorio del proyecto ('$dir')"
@@ -671,6 +726,7 @@ wiki_mode() {
   fi
   case "$action" in
     status) wiki_status ;;
+    mode) wiki_set_mode "$value" ;;
     *) wiki_toggle "$action" ;;
   esac
 }

@@ -32,7 +32,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
   - `on` y `off` conservan `"mode"`.
 
   Rojo sin la acción
-- [ ] 3.2 Implementar `set_field` (generalizando `set_enabled`), la acción `mode` del modo `wiki` y `mode=` en `status` → verde la prueba de 3.1 → commit
+- [x] 3.2 Implementar `set_field` (generalizando `set_enabled`), la acción `mode` del modo `wiki` y `mode=` en `status` → verde la prueba de 3.1 → commit
 
 ## 4. Guía y recordatorio: los bloques de modo (D2, D3, D4)
 
