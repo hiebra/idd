@@ -20,12 +20,21 @@
 //                                          va antes y después de la línea
 //                                          «El script es: …», que el .bat escribe
 //                                          con la ruta absoluta del script
+//     pieces/toggle-wiki/                  el comando /toggle-wiki de OpenCode en
+//                                          dos piezas, toggle-wiki.head.md y
+//                                          toggle-wiki.tail.md, alrededor de la
+//                                          línea «El script es: …», que el .bat
+//                                          escribe en <config>/opencode/commands/
+//                                          con la ruta absoluta del núcleo
+//                                          (toggle-wiki-command.mjs)
 // - idd-<versión>.bat, el instalador, con la versión y la URL del zip dentro;
 // - idd-slim-<versión>.zip, la variante adelgazada: el árbol del tag sin
 //   openspec/schemas/, .agents/, .opencode/, .claude/ ni los changes de la
 //   plantilla, en curso o archivados, y sin lo que describe o prueba la plantilla completa: sus
 //   specs, su suite (en su lugar va una vacía, con las copias de la skill
-//   acceptance-test-authoring) y sus herramientas de release.
+//   acceptance-test-authoring), sus herramientas de release y su wiki, .wiki/.
+//   Sin .agents/wiki/engine.json, el wiki del proyecto empieza deshabilitado, y
+//   lo habilita el /toggle-wiki de la instalación global.
 //
 // Uso:
 //   node scripts/release/build.mjs --repo <repositorio> --tag v<x.y.z> --out <dir>
@@ -42,6 +51,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { COMMAND as TOGGLE_WIKI, globalPieces } from './toggle-wiki-command.mjs';
 import { writeZip } from './zip.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -77,6 +87,7 @@ const NOT_IN_SLIM = [
   /^acceptance-tests\//,
   /^scripts\/release\//,
   /^\.github\/workflows\/release\.yml$/,
+  /^\.wiki\//,
 ];
 // La suite vacía de la variante adelgazada: las copias de la skill
 // acceptance-test-authoring y, de la suite de la plantilla, sus dependencias
@@ -207,6 +218,12 @@ function globalZip(tree, engine, file) {
     }
     top(`config/opencode/plugins/${plugin}`);
   }
+
+  // El comando lo escribe el .bat, con la ruta del núcleo instalado
+  const { head, tail } = globalPieces(fs.readFileSync(path.join(tree, ...TOGGLE_WIKI.split('/')), 'utf8'));
+  entries.file('pieces/toggle-wiki/toggle-wiki.head.md', head);
+  entries.file('pieces/toggle-wiki/toggle-wiki.tail.md', tail);
+  top('config/opencode/commands/toggle-wiki.md');
 
   entries.file('installed.txt', installed.map((line) => `${line}\r\n`).join(''));
   writeZip(file, entries.list);

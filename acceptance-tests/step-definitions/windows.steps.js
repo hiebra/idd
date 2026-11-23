@@ -12,7 +12,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { Given, When, Then } = require('@cucumber/cucumber');
 const { tagRelease, buildRelease, unzip, filesUnder, artifactNames } = require('../support/release');
-const { GlobalInstall, scriptPathIn, GIT_DISCIPLINE } = require('../support/global');
+const { GlobalInstall, scriptPathIn, corePathIn, GIT_DISCIPLINE } = require('../support/global');
 const { WindowsProfile, ReleaseServer, runBat, onPath } = require('../support/windows');
 
 const outDir = (world) => path.join(world.workDir, 'release');
@@ -189,6 +189,11 @@ Then(/^no queda ningún archivo de la versión `([^`]+)` que la `([^`]+)` no tra
   for (const entry of entries) {
     const [root, ...rest] = entry.split('\\');
     const target = path.join(root === 'data' ? this.win.data : this.win.config, ...rest);
+    // The /toggle-wiki command is a file that the .bat writes from the pieces of the zip
+    if (rest.at(-2) === 'commands') {
+      assert.equal(corePathIn(fs.readFileSync(target, 'utf8')), path.join(this.win.config, 'opencode', 'plugins', 'session-bootstrap', 'session-bootstrap.mjs'), entry);
+      continue;
+    }
     const expected = filesUnder(path.join(unpacked, root, ...rest));
     if (rest.at(-1) === GIT_DISCIPLINE) expected.push('SKILL.md');
     assert.deepEqual(filesUnder(target), expected.sort(), entry);

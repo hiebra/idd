@@ -11,7 +11,8 @@ rem    que instala (installed.txt) y las piezas del SKILL.md.
 rem 4. Borra lo que lista <data>\idd\installed.txt, la instalacion anterior, y
 rem    solo eso: no toca otras skills ni otros plugins de <config>\opencode.
 rem 5. Descomprime lo nuevo en su sitio y escribe el SKILL.md de
-rem    openspec-git-discipline con la ruta absoluta de su script.
+rem    openspec-git-discipline con la ruta absoluta de su script, y el comando
+rem    /toggle-wiki de OpenCode con la del nucleo del arranque.
 rem 6. Escribe installed.txt y, al final, version. Si algo falla antes, la
 rem    version guardada no cambia y la siguiente ejecucion lo vuelve a intentar.
 rem
@@ -67,6 +68,15 @@ type "%IDD_PIECES%\SKILL.head.md" > "%IDD_SKILL%\SKILL.md" || goto :fail
 rem La ruta va por una variable de for, que se expande despues de analizar la linea
 for %%S in ("%IDD_SKILL%\scripts\branch-change.mjs") do (echo El script es: `%%~S`) >> "%IDD_SKILL%\SKILL.md"
 type "%IDD_PIECES%\SKILL.tail.md" >> "%IDD_SKILL%\SKILL.md" || goto :fail
+
+set "IDD_COMMANDS=%IDD_CONFIG%\opencode\commands"
+set "IDD_PIECES=%IDD_TMP%\x\pieces\toggle-wiki"
+set "IDD_CORE=%IDD_CONFIG%\opencode\plugins\session-bootstrap\session-bootstrap.mjs"
+if not exist "%IDD_CORE%" goto :fail
+if not exist "%IDD_COMMANDS%" mkdir "%IDD_COMMANDS%" || goto :fail
+type "%IDD_PIECES%\toggle-wiki.head.md" > "%IDD_COMMANDS%\toggle-wiki.md" || goto :fail
+for %%S in ("%IDD_CORE%") do (echo El script es: `%%~S`) >> "%IDD_COMMANDS%\toggle-wiki.md"
+type "%IDD_PIECES%\toggle-wiki.tail.md" >> "%IDD_COMMANDS%\toggle-wiki.md" || goto :fail
 
 rem 6. El manifiesto y, al final, la version
 if not exist "%IDD_HOME%" mkdir "%IDD_HOME%" || goto :fail

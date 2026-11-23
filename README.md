@@ -31,13 +31,12 @@ La plantilla se usa de dos formas, y cada release publica las dos con su versió
 
 Un proyecto adelgazado solo guarda lo que es suyo:
 - `openspec/config.yaml`, con `schema: intent-driven`;
-- `.wiki/`;
 - `package.json`, con OpenSpec fijado;
 - los ADRs de `adr/`;
 - `openspec/specs/` sin ninguna spec;
 - una suite de aceptación vacía y en verde, lista para sus propias specs.
 
-No hereda las specs ni la suite de la plantilla, que describen y prueban la plantilla completa, ni sus changes ni sus herramientas de release. Lo que en la plantilla completa vive en el proyecto lo aporta la instalación global, y su arranque de sesión, su autopilot y su regla de comentarios solo actúan en proyectos que declaran `schema: intent-driven`. Un proyecto que tenga los suyos propios, como un clon de la plantilla completa, usa los suyos y la instalación global no hace nada en él.
+No hereda las specs ni la suite de la plantilla, que describen y prueban la plantilla completa, ni sus changes, ni sus herramientas de release, ni su wiki. Su wiki empieza deshabilitado: el `/toggle-wiki` que trae la instalación global crea el ajuste del proyecto, `.agents/wiki/engine.json`, y propone la ingesta inicial del propio proyecto. Lo que en la plantilla completa vive en el proyecto lo aporta la instalación global, y su arranque de sesión, su autopilot y su regla de comentarios solo actúan en proyectos que declaran `schema: intent-driven`. Un proyecto que tenga los suyos propios, como un clon de la plantilla completa, usa los suyos y la instalación global no hace nada en él.
 
 Las decisiones están en [ADR-0023](adr/0023-session-bootstrap-core-in-node.md), el núcleo del arranque en Node, y [ADR-0024](adr/0024-windows-global-install-and-slim-template.md), la instalación global y la variante adelgazada.
 
@@ -420,7 +419,7 @@ npx openspec --version
 
 ## Qué heredan los proyectos creados desde la plantilla
 
-Además de los archivos de arriba, un proyecto creado desde la plantilla completa hereda su registro de OpenSpec, como cualquier proyecto que ya se haya trabajado con él. Uno creado desde la variante adelgazada solo hereda los ADRs y `.wiki/` (ver [Dos variantes](#dos-variantes-completa-y-adelgazada)):
+Además de los archivos de arriba, un proyecto creado desde la plantilla completa hereda su registro de OpenSpec, como cualquier proyecto que ya se haya trabajado con él. Uno creado desde la variante adelgazada solo hereda los ADRs (ver [Dos variantes](#dos-variantes-completa-y-adelgazada)):
 
 - **Specs** en `openspec/specs/`: describen el comportamiento que el proyecto hereda (por ejemplo, `session-bootstrap`). Un change del proyecto que lo altere las modifica como cualquier otra spec.
 - **ADRs** en `adr/`: las decisiones duraderas de la plantilla, vigentes también para el proyecto mientras ningún ADR posterior las sustituya.

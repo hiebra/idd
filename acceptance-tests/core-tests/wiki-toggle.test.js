@@ -203,6 +203,18 @@ test('off from a committed enabled wiki stages both files and does not commit', 
   assert.equal(git(dir, 'rev-parse', 'HEAD').trim(), head);
 });
 
+// The global /toggle-wiki uses it as CLAUDE_PLUGIN_ROOT in the session that
+// enables the wiki, which the session start has not exported yet
+test('on gives the path of the engine it exposes, and off gives none', (t) => {
+  const { dir } = setUp(t);
+  const on = wiki(dir, 'on');
+  const engine = on.lines.find((l) => l.startsWith('wiki-engine='))?.slice('wiki-engine='.length);
+  assert.equal(engine, path.join(fs.realpathSync(dir), '.agents', 'wiki-engine', 'claude-plugin'), on.stdout + on.stderr);
+  assert.ok(fs.existsSync(engine));
+  const off = wiki(dir, 'off');
+  assert.equal(off.lines.some((l) => l.startsWith('wiki-engine=')), false, off.stdout);
+});
+
 test('on twice leaves a single block', (t) => {
   const { dir } = setUp(t);
   wiki(dir, 'on');

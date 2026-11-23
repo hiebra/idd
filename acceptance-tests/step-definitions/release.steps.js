@@ -24,10 +24,15 @@ const NOT_IN_SLIM = [
   /^acceptance-tests\//,
   /^scripts\/release\//,
   /^\.github\/workflows\/release\.yml$/,
+  // The template's own wiki: a slim project starts with the wiki disabled,
+  // and /toggle-wiki proposes its own initial ingest
+  /^\.wiki\//,
 ];
 
 function release(world, tag, { laterCommit = false } = {}) {
   const project = world.ensureProject();
+  // The tag of a real release has the template's wiki, which the copy leaves out
+  if (!fs.existsSync(project.path('.wiki'))) project.addCommittedWiki();
   tagRelease(project, tag);
   if (laterCommit) {
     // A commit after the tag, which the release must not carry
@@ -84,8 +89,8 @@ Given('la variante adelgazada de una release', function () {
   slim(this);
 });
 
-When(/^se buscan en ella `openspec\/schemas\/`, `\.agents\/`, `\.opencode\/` y `\.claude\/`$/, function () {
-  this.found = ['openspec/schemas', '.agents', '.opencode', '.claude'].filter((rel) => fs.existsSync(path.join(this.slimDir, rel)));
+When(/^se buscan en ella `openspec\/schemas\/`, `\.agents\/`, `\.opencode\/`, `\.claude\/` y `\.wiki\/`$/, function () {
+  this.found = ['openspec/schemas', '.agents', '.opencode', '.claude', '.wiki'].filter((rel) => fs.existsSync(path.join(this.slimDir, rel)));
 });
 
 Then('no está ninguno', function () {
@@ -110,7 +115,7 @@ module.exports = { release, build, slim };
 
 // --- Lo que instala el .bat, sin Windows -------------------------------------------------
 
-const { GlobalInstall, scriptPathIn, GIT_DISCIPLINE } = require('../support/global');
+const { GlobalInstall, scriptPathIn, corePathIn, GIT_DISCIPLINE } = require('../support/global');
 const skills = require('../support/skills');
 
 const SCHEMA_ORIGIN = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', '.agents', 'release', 'origins.json'), 'utf8')).schema;
@@ -160,13 +165,23 @@ When('se lee el `SKILL.md` de la skill `openspec-git-discipline` instalada', fun
 });
 
 Then('la ruta de `branch-change.mjs` que da es la del script instalado junto a la skill', function () {
-  this.installedScript = scriptPathIn(this.installedSkill);
-  assert.equal(this.installedScript, path.join(this.global.skillDir(GIT_DISCIPLINE), 'scripts', 'branch-change.mjs'));
-  assert.ok(fs.existsSync(this.installedScript));
+  this.installedPath = scriptPathIn(this.installedSkill);
+  assert.equal(this.installedPath, path.join(this.global.skillDir(GIT_DISCIPLINE), 'scripts', 'branch-change.mjs'));
+  assert.ok(fs.existsSync(this.installedPath));
+});
+
+When('se lee el comando `\\/toggle-wiki` instalado', function () {
+  this.installedCommand = fs.readFileSync(this.global.toggleWikiCommand, 'utf8');
+});
+
+Then('la ruta del núcleo del arranque que da es la del núcleo instalado con el plugin `session-bootstrap`', function () {
+  this.installedPath = corePathIn(this.installedCommand);
+  assert.equal(this.installedPath, this.global.bootstrapCore, this.installedCommand);
+  assert.ok(fs.existsSync(this.installedPath));
 });
 
 Then('esa ruta es absoluta', function () {
-  assert.ok(path.isAbsolute(this.installedScript), this.installedScript);
+  assert.ok(path.isAbsolute(this.installedPath), this.installedPath);
 });
 
 When('se compara el schema instalado con el del origen en la versión que fija la release', function () {

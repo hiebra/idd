@@ -28,6 +28,10 @@ const GIT_DISCIPLINE = 'openspec-git-discipline';
 // The single line of the skill's SKILL.md that gives the script's path (design D4)
 const SCRIPT_LINE = /^El script es: `([^`]+)`$/m;
 
+// The /toggle-wiki command of the global install, made from the project's
+// OpenCode command (scripts/release/toggle-wiki-command.mjs, shared with build.mjs)
+const TOGGLE_WIKI = require('../../scripts/release/toggle-wiki-command.mjs');
+
 // The wiki engine's skills that OpenCode uses, and where they are in the engine
 const ENGINE_SKILLS = {
   'wiki-query': ['plugins', 'llm-wiki-opencode', 'skills', 'wiki-query'],
@@ -48,6 +52,23 @@ class GlobalInstall {
 
   get pluginsDir() {
     return path.join(this.config, 'opencode', 'plugins');
+  }
+
+  get commandsDir() {
+    return path.join(this.config, 'opencode', 'commands');
+  }
+
+  get toggleWikiCommand() {
+    return path.join(this.commandsDir, 'toggle-wiki.md');
+  }
+
+  // The /toggle-wiki command, with the absolute path of the installed core in
+  // its single line, as the .bat writes it from the pieces of the zip
+  installToggleWiki() {
+    fs.mkdirSync(this.commandsDir, { recursive: true });
+    const source = fs.readFileSync(path.join(REPO_ROOT, ...TOGGLE_WIKI.COMMAND.split('/')), 'utf8');
+    fs.writeFileSync(this.toggleWikiCommand, TOGGLE_WIKI.globalCommand(source, this.bootstrapCore));
+    return this.toggleWikiCommand;
   }
 
   skillDir(id) {
@@ -118,6 +139,14 @@ class GlobalInstall {
         `El script es: \`${script}\`\n` +
         fs.readFileSync(path.join(pieces, 'SKILL.tail.md'), 'utf8')
     );
+    const commandPieces = path.join(unpacked, 'pieces', 'toggle-wiki');
+    fs.mkdirSync(this.commandsDir, { recursive: true });
+    fs.writeFileSync(
+      this.toggleWikiCommand,
+      fs.readFileSync(path.join(commandPieces, 'toggle-wiki.head.md'), 'utf8') +
+        `${TOGGLE_WIKI.coreLine(this.bootstrapCore)}\n` +
+        fs.readFileSync(path.join(commandPieces, 'toggle-wiki.tail.md'), 'utf8')
+    );
     const home = path.join(this.data, 'idd');
     fs.copyFileSync(path.join(unpacked, 'installed.txt'), path.join(home, 'installed.txt'));
     fs.writeFileSync(path.join(home, 'version'), `${version}\n`);
@@ -150,6 +179,7 @@ class GlobalInstall {
     this.installPlugin('session-bootstrap');
     this.installPlugin('response-comments');
     this.installGitDiscipline();
+    this.installToggleWiki();
     if (engine) {
       this.installEngine(engine.url, engine.pinnedRef);
       this.installEngineSkills();
@@ -163,4 +193,9 @@ function scriptPathIn(skillText) {
   return skillText.match(SCRIPT_LINE)?.[1] ?? null;
 }
 
-module.exports = { GlobalInstall, scriptPathIn, SCRIPT_LINE, GIT_DISCIPLINE };
+// The core path that the installed /toggle-wiki command gives, or null
+function corePathIn(commandText) {
+  return commandText.match(TOGGLE_WIKI.CORE_LINE)?.[1] ?? null;
+}
+
+module.exports = { GlobalInstall, scriptPathIn, corePathIn, SCRIPT_LINE, GIT_DISCIPLINE };

@@ -130,7 +130,7 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
   - el `.bat` de una release, en una instalación nueva y en una actualización;
   - una sesión real de OpenCode 2 en un proyecto adelgazado: arranque, guía del wiki, regla de comentarios y autopilot.
 
-- [ ] 7.5 Volver a integrar `main`, que ha avanzado desde la 7.1 (`git merge`, sin rebase, y el ok del usuario a la resolución antes del commit de fusión). Han llegado el change del ON/OFF del wiki (ADR-0021), el del autopilot dueño de su rama y sus worktrees (ADR-0022) y el ADR-0025: 148 archivos. `git merge-tree` da conflictos en 17:
+- [x] 7.5 Volver a integrar `main`, que ha avanzado desde la 7.1 (`git merge`, sin rebase, y el ok del usuario a la resolución antes del commit de fusión). Han llegado el change del ON/OFF del wiki (ADR-0021), el del autopilot dueño de su rama y sus worktrees (ADR-0022) y el ADR-0025: 148 archivos. `git merge-tree` da conflictos en 17:
   - `.agents/hooks/session-bootstrap.sh`: borrado aquí y modificado en `main`. Los cambios del ON/OFF del wiki hay que portarlos a `session-bootstrap.mjs` y al modo global, y comprobar la guía y el recordatorio que instala el `.bat`;
   - el autopilot: `server.js`, `lib/project.mjs`, `lib/prompts.mjs` y `lib/screen.mjs`. Hay que conservar a la vez lo de ADR-0022 y lo nuestro (`branchScript()`, el control de una rama de uno en uno con `claim` y `contend`, y que una sesión que acaba de pasar el control no se trate como ajena);
   - `openspec-git-discipline`: `SKILL.md` (otra vez la línea «El script es: …») y `branch-change.mjs`;
@@ -146,9 +146,21 @@ Se trabaja con el ciclo de `spec-as-source`: rojo → implementar → verde → 
     - **Autopilot:** `server.js` conserva ADR-0022 y también `claim`, `contend` y el plugin global. `prompts.mjs` es el de `main`: con ADR-0022, ningún prompt pide al modelo ejecutar `branch-change.mjs`. `lib/worktree.mjs` lee la rama de origen con `branchScript()`.
     - **La 6.6:** `screen.mjs` es el de `main`, sin la guarda de `phase: 'done'` y sin su caso en `autopilot-product.test.js`. ADR-0022 quita el modal de ventana ajena. El único modal que queda, el de `/new`, solo sale en la pantalla de inicio o en una sesión sin mensajes, así que una sesión que acaba de pasar el control ya no puede dar un diálogo.
     - **Deltas:** el de `openspec-change-lifecycle` se ha rehecho sobre la spec de `main`: el título de la fusión, la propuesta de fusión con el wiki deshabilitado y el requisito nuevo de volver a la rama de origen. Solo cambia la ruta del script. En el de `openspec-autopilot`, la ruta del script ya no la comprueba el prompt del paso `new`, sino la estrategia de worktree, que lee la rama de origen con ese script.
-    - **Pendiente:**
-      - el ajuste del wiki en la variante adelgazada. Va en `.agents/wiki/engine.json`, que no lleva el zip y crea `/toggle-wiki on`. Pero la instalación global no instala el comando `/toggle-wiki`, y el comando llama a `.agents/hooks/session-bootstrap.mjs`;
-      - ADR-0024.
+  - Terminada el 2026-11-23, después de la fusión:
+    - **El ajuste del wiki en la variante adelgazada:** va en `.agents/wiki/engine.json`, que el zip no lleva. El zip tampoco lleva el `.wiki/` de la plantilla (decisión del usuario), así que un proyecto adelgazado empieza con el wiki deshabilitado y sin wiki.
+    - **`/toggle-wiki` global:** la instalación global trae el comando de OpenCode, en `<config>/opencode/commands/toggle-wiki.md`.
+      - Sale del comando de OpenCode del proyecto (`scripts/release/toggle-wiki-command.mjs`, que usan `build.mjs` y la suite). Sus órdenes llaman a `node <script> --global wiki …`.
+      - El `.bat` lo escribe con la línea «El script es: …», con la ruta absoluta del núcleo. Es la misma línea, solo ASCII, que la del `SKILL.md`, porque el `.bat` la escribe con `echo`.
+      - Si el comando de la plantilla cambia y la adaptación ya no encaja, el montaje falla.
+      - `wiki on` imprime `wiki-engine=<ruta>`, que el comando usa como `CLAUDE_PLUGIN_ROOT` en la misma sesión.
+    - **Specs:**
+      - en `slim-template`, la variante no lleva `.wiki/` y hay un requisito nuevo: «El wiki de un proyecto adelgazado se habilita con /toggle-wiki»;
+      - en `windows-global-install`, el comando entra en lo que instala, con el escenario «El comando /toggle-wiki da la ruta del núcleo instalado».
+    - **Tests:**
+      - un `core-test` de `wiki-engine=`;
+      - los escenarios nuevos y «Qué no contiene», vistos en rojo sin el cambio de producto y en verde con él. Para que «Qué no contiene» detecte `.wiki/`, la release de la suite lleva un `.wiki/` versionado, como el tag real;
+      - el step de Windows que compara `installed.txt` con el zip trata aparte la entrada del comando, que escribe el `.bat`. No se ha ejecutado en Windows: queda para la 7.4.
+    - **ADR-0024 y design:** tienen en cuenta ADR-0021 (el ajuste es del proyecto y la instalación global trae `/toggle-wiki`) y ADR-0022 (sustituye a ADR-0014, y la estrategia de worktree usa el mismo `branch-change.mjs`).
     - **Fallo intermitente:** en una de cuatro pasadas de los `core-tests` del autopilot falló «the worktree strategy: one registration across reloads…». No se ha buscado la causa.
   - Después: rehacer los deltas de `session-bootstrap` y `openspec-autopilot` sobre las specs nuevas, hacer que ADR-0024 tenga en cuenta ADR-0021 y ADR-0022, y que el instalador y la variante adelgazada incluyan el ajuste del wiki. Orden recomendado: la 7.5, después la 7.4 en Windows y por último la 8.3, porque la 7.5 cambia código que la 7.4 verifica.
 

@@ -83,12 +83,23 @@ function manifests(project) {
   });
 }
 
-// Runs /toggle-wiki in an open session. When the command stops to propose the
-// initial ingest, the result has a `proposal` and `answer(confirmed)` goes on.
-function runToggleWiki(project, session, agent) {
-  const file = commandFile(project, agent);
+// The command of the global install gives the core's path in one line, and
+// its commands say `<script>`, as the model reads them (windows-global-distro)
+const { CORE_LINE } = require('../../scripts/release/toggle-wiki-command.mjs');
+
+function withCorePath(text) {
+  const core = CORE_LINE.exec(text)?.[1];
+  if (!core) return text;
+  return text.replaceAll('<script>', /\s/.test(core) ? `"${core}"` : core);
+}
+
+// Runs /toggle-wiki in an open session: the project's command of the agent,
+// or the one at `file` (the global install's). When the command stops to
+// propose the initial ingest, the result has a `proposal` and
+// `answer(confirmed)` goes on.
+function runToggleWiki(project, session, agent, file = commandFile(project, agent)) {
   if (!fs.existsSync(file)) throw new Error(`${agent} has no /toggle-wiki command (${file})`);
-  const steps = sections(fs.readFileSync(file, 'utf8'));
+  const steps = sections(withCorePath(fs.readFileSync(file, 'utf8')));
   const runs = [];
   const run = (command) => {
     const result = session.run(command);

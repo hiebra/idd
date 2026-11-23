@@ -47,7 +47,9 @@
 //         openspec/config.yaml, entre "# wiki:archive-guidance:begin" y
 //         "# wiki:archive-guidance:end" (crea las claves que falten, dentro de
 //         las marcas), instala y expone el motor como el arranque y pasa al
-//         stage engine.json y config.yaml. Imprime staged= y enabled=.
+//         stage engine.json y config.yaml. Imprime staged= y enabled= y, si el
+//         motor está, wiki-engine=<ruta del paquete de Claude Code del motor>,
+//         el valor de CLAUDE_PLUGIN_ROOT, que la sesión aún no tiene.
 //       - off: pone "enabled": false, quita lo que hay entre las marcas, marcas
 //         incluidas (y guidance, si se queda vacía), retira los symlinks del
 //         motor y pasa al stage los mismos dos archivos. No toca .wiki/.
@@ -836,7 +838,8 @@ function wikiToggle(action) {
     } catch {
       warn(`no se ha podido cambiar "enabled" en ${toPosix(ENGINE_JSON)}`);
     }
-    guard('motor del wiki', installWikiEngine);
+    const engine = guard('motor del wiki', installWikiEngine);
+    if (engine) out.push(`wiki-engine=${engine}`);
     guard('wiki versionado', keepWikiVersioned);
   } else {
     if (!editBlock('remove')) return out;

@@ -276,9 +276,9 @@ class Project {
   }
 
   // The project as the slim template leaves it (slim-template): without what
-  // the global install brings nor anything of Claude Code
+  // the global install brings, anything of Claude Code or the template's wiki
   slim() {
-    for (const rel of [['openspec', 'schemas'], ['.agents'], ['.opencode'], ['.claude']]) {
+    for (const rel of [['openspec', 'schemas'], ['.agents'], ['.opencode'], ['.claude'], ['.wiki']]) {
       fs.rmSync(this.path(...rel), { recursive: true, force: true });
     }
     git(this.dir, 'add', '-A');

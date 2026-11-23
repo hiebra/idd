@@ -199,7 +199,8 @@ function snapshot(dir) {
   return files;
 }
 
-function toggleWiki(world, agent) {
+// file: the command to run, if it is not the project's (the global install's)
+function toggleWiki(world, agent, file = undefined) {
   const project = world.ensureProject();
   if (world.session?.agent !== agent) world.openSetupSession(agent);
   world.beforeToggle = {
@@ -208,7 +209,7 @@ function toggleWiki(world, agent) {
     status: project.gitStatus(),
     head: require('../support/engine').git(project.dir, 'rev-parse', 'HEAD').trim(),
   };
-  world.toggle = runToggleWiki(project, world.session, agent);
+  world.toggle = runToggleWiki(project, world.session, agent, file);
   return world.toggle;
 }
 
@@ -219,6 +220,16 @@ When(new RegExp(`^el usuario ejecuta \`/toggle-wiki\` en ${AGENT}$`), function (
 
 When('el usuario ejecuta `\\/toggle-wiki`', function () {
   toggleWiki(this, 'Claude Code');
+});
+
+// A slim project has no command of its own: the global install brings it
+// (windows-global-distro)
+When('el usuario ejecuta en OpenCode el `\\/toggle-wiki` de la instalación global', function () {
+  assert.equal(fs.existsSync(this.project.path('.opencode')), false, 'the project has commands of its own');
+  const found = skillsSupport.discoverCommands('OpenCode', this.project.dir, { globalConfigDir: require('node:path').dirname(this.global.commandsDir) });
+  const command = found.find((c) => c.name === '/toggle-wiki');
+  assert.ok(command, `OpenCode does not find /toggle-wiki: ${JSON.stringify(found)}`);
+  toggleWiki(this, 'OpenCode', command.file);
 });
 
 When(new RegExp('^(confirma|no confirma) la ingesta inicial que se le propone$'), function (answer) {
@@ -234,7 +245,10 @@ Then(new RegExp(`^el wiki del proyecto (queda|sigue) ${STATE}$`), function (_, s
 });
 
 Then('las indicaciones de archivado de OpenSpec incluyen la resincronización del wiki', function () {
-  const source = YAML.parse(fs.readFileSync(this.project.path('.agents', 'wiki', 'archive-guidance.yaml'), 'utf8'));
+  // The project's source or, in a slim project, the one of the global install
+  const own = this.project.path('.agents', 'wiki', 'archive-guidance.yaml');
+  const file = fs.existsSync(own) ? own : require('node:path').join(this.global.pluginsDir, 'session-bootstrap', 'wiki', 'archive-guidance.yaml');
+  const source = YAML.parse(fs.readFileSync(file, 'utf8'));
   const guidance = archiveGuidanceOf(this);
   for (const entry of source) assert.ok(guidance.includes(entry), `the archive guidance lacks: ${entry}\n${JSON.stringify(guidance, null, 2)}`);
 });
