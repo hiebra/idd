@@ -96,12 +96,17 @@ const WHAT = (step) =>
   ({ artifact: `el artefacto \`${step.id}\``, task: `la task ${step.label ?? step.id}`, verify: 'el informe del verify', plan: 'los cambios en el plan' })[step.of] ?? step.id;
 
 // La verificación guiada de lo que es código: una task o el verify (design D1 y
-// D2 de guiar-revision-con-tests). El plugin no ejecuta nada: lo hace el
-// modelo, y la depuración, el usuario.
+// D2 de guiar-revision-con-tests), con el MCP de depuración si la sesión lo
+// tiene (design D13 de limite-de-verificacion-y-mcp-de-depuracion). El plugin
+// no ejecuta nada: lo hace el modelo, y la depuración, el usuario.
 const ACCEPTANCE = (step, change) =>
   `Guía la verificación con los escenarios de aceptación del change: en las specs de \`openspec/changes/${change}/specs/\`, ${step.of === 'verify' ? 'toma todos los del change' : `localiza los que cubren ${WHAT(step)}`}, recórrelos con el usuario como guion de lo que hay que comprobar y ejecútalos con el runner de aceptación del proyecto (el que documente su suite)${step.of === 'verify' ? '' : ', solo esos'}; explica qué pasa y qué falla. ` +
   'Haz que las ejecuciones no dejen en el árbol de trabajo archivos que git no ignore, porque la revisión la cierra git. ' +
-  'Si lo revisado incluye código fuente que se puede ejecutar, ofrece al usuario ejecutarlo en modo depuración: dale la orden exacta para lanzarlo con el depurador del stack del proyecto (por ejemplo, el escenario de aceptación que lo ejercita, bajo `node --inspect-brk` en JavaScript o `python -m debugpy --wait-for-client` en Python) y dónde le conviene poner los puntos de ruptura. Esa orden la ejecuta el usuario en su terminal, no tú: se queda esperando al depurador.';
+  'Si lo revisado incluye código fuente que se puede ejecutar, ofrece al usuario depurarlo y dile dónde le conviene poner los puntos de ruptura. ' +
+  'Si la sesión tiene un MCP de depuración (las tools `debug_targets` y `debug_launch_plan`, con el prefijo de su servidor o dentro de Code Mode), úsalo: pregunta a `debug_targets` por los archivos revisados y, si da algún objetivo y el usuario quiere depurar, pide a `debug_launch_plan` el plan con esos puntos de ruptura y con los escenarios que ejercitan el código. ' +
+  'Enseña el plan al usuario antes de ejecutar ningún paso. Después sigue los pasos en orden: ejecuta tú solo los de `agent`, y los de `user` díselos al usuario, que es quien arranca lo que se queda en marcha y quien depura. ' +
+  'Si un IDE o un objetivo trae problemas, díselos con su arreglo, sin arreglarlos tú. Cuando el usuario termine de depurar, sigue igual los pasos de `cleanup`. ' +
+  'Si la sesión no lo tiene, o no da ningún objetivo para lo revisado, ofrécele ejecutarlo en modo depuración: dale la orden exacta para lanzarlo con el depurador del stack del proyecto (por ejemplo, el escenario de aceptación que lo ejercita, bajo `node --inspect-brk` en JavaScript o `python -m debugpy --wait-for-client` en Python). Esa orden la ejecuta el usuario en su terminal, no tú: se queda esperando al depurador.';
 
 export function reviewPrompt({ step, change, review = null }) {
   const errors = review?.errors?.length ? `\n\n\`openspec validate\` da estos errores en el change; señálalos en la revisión:\n\n${review.errors.map((e) => `- ${e}`).join('\n')}` : '';

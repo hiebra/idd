@@ -1385,6 +1385,30 @@ Then('la instrucción pide ofrecer al usuario la orden para ejecutar en modo dep
   assert.match(text, /la ejecuta el usuario/, text);
 });
 
+// The debug MCP of the session, by the names of its tools (design D13 of
+// limite-de-verificacion-y-mcp-de-depuracion)
+Then('la instrucción pide usar las tools `debug_targets` y `debug_launch_plan` si la sesión tiene un MCP de depuración', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /Si la sesión tiene un MCP de depuración/, text);
+  assert.match(text, /`debug_targets`/, text);
+  assert.match(text, /`debug_launch_plan`/, text);
+  assert.match(text, /úsalo/, text);
+});
+
+Then('la instrucción pide enseñar el plan al usuario antes de ejecutar ningún paso', function () {
+  assert.match(this.reviewInstruction, /Enseña el plan al usuario antes de ejecutar ningún paso/, this.reviewInstruction);
+});
+
+Then('la instrucción pide que el modelo ejecute solo los pasos de `agent` y diga al usuario los de `user`', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /ejecuta tú solo los de `agent`/, text);
+  assert.match(text, /los de `user` díselos al usuario/, text);
+});
+
+Then('la instrucción pide seguir los pasos de limpieza cuando el usuario termine de depurar', function () {
+  assert.match(this.reviewInstruction, /Cuando el usuario termine de depurar, sigue igual los pasos de `cleanup`/, this.reviewInstruction);
+});
+
 Then('la instrucción de la revisión no pide ejecutar los tests de aceptación ni el código', function () {
   const text = this.reviewInstruction;
   assert.doesNotMatch(text, /escenarios de aceptación|modo depuración|ejecútalos/i, text);
