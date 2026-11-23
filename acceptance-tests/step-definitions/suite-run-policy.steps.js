@@ -7,9 +7,11 @@
 // text: each step looks for the key terms of its rule, in one same rule.
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const { Given, When, Then } = require('@cucumber/cucumber');
 
 const CHANGE = 'exportar-datos';
+const TASKS_TEMPLATE = ['.agents', 'skills', 'spec-as-source', 'references', 'tasks.md'];
 
 // The artifact's rules, as the CLI gives them
 function rulesOf(world) {
@@ -73,4 +75,35 @@ Then('las indicaciones de apply no mencionan la suite de aceptación', function 
   assert.ok(this.applyGuidance, 'the apply instructions were not asked for');
   const mentions = this.applyGuidance.filter((entry) => SUITE_TERMS.test(entry));
   assert.deepEqual(mentions, [], `the apply guidance mentions the acceptance suite:\n${mentions.join('\n')}`);
+});
+
+// The tasks template of the project's spec-as-source skill: the step
+// definitions section (one task per pending step) and the completion one
+function templateSection(world, heading) {
+  const text = world.tasksTemplate;
+  assert.ok(text, 'the tasks template was not read');
+  const at = text.search(heading);
+  assert.ok(at !== -1, `the tasks template has no section ${heading}:\n${text}`);
+  const next = text.slice(at + 1).search(/^## /m);
+  return next === -1 ? text.slice(at) : text.slice(at, at + 1 + next);
+}
+
+Given('la plantilla de tasks de la skill `spec-as-source` del proyecto', function () {
+  this.tasksTemplate = fs.readFileSync(this.ensureProject().path(...TASKS_TEMPLATE), 'utf8');
+});
+
+Then('indica que cada task de implementación ejecuta solo sus escenarios, con `--name`', function () {
+  const steps = templateSection(this, /^## 2\. /m);
+  assert.match(steps, /`--name`/, `the step definitions section does not say --name:\n${steps}`);
+  assert.match(steps, /only (its|the) scenarios|only that scenario/i, `the step definitions section does not run only the task's scenarios:\n${steps}`);
+  assert.match(steps, /number of scenarios|`0 scenarios`/i, `the step definitions section does not check how many scenarios ran:\n${steps}`);
+});
+
+Then('indica que la suite completa se lanza una sola vez, en la task de cierre', function () {
+  const completion = templateSection(this, /^## 3\. /m);
+  assert.match(completion, /full suite/i, `the completion section does not run the full suite:\n${completion}`);
+  assert.match(completion, /only (time|once)|once per change/i, `the completion section does not say it runs once:\n${completion}`);
+  assert.match(completion, /`git fetch`/, `the completion section does not fetch before the run:\n${completion}`);
+  const steps = templateSection(this, /^## 2\. /m);
+  assert.doesNotMatch(steps, /full suite/i, `the step definitions section runs the full suite:\n${steps}`);
 });
