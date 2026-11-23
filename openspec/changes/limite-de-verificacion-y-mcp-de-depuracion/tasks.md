@@ -40,7 +40,7 @@ archivos.forEach((archivo, i) => {
 
 ## 4. Documentación (zona de código)
 
-- [ ] 4.1 `README.md`: el límite de verificación y cómo se cambia; el contrato del MCP de depuración, con lo que hace cada tool y lo que el servidor no hace; y cómo se conecta un servidor que lo cumpla (design D15), con enlace a ADR-0027. `acceptance-tests/README.md`: los pasos nuevos y `ajv`. Cabecera de `prompts.mjs`: los textos nuevos de la revisión. (verificación: ~9 min)
+- [x] 4.1 `README.md`: el límite de verificación y cómo se cambia; el contrato del MCP de depuración, con lo que hace cada tool y lo que el servidor no hace; y cómo se conecta un servidor que lo cumpla (design D15), con enlace a ADR-0027. `acceptance-tests/README.md`: los pasos nuevos y `ajv`. Cabecera de `prompts.mjs`: los textos nuevos de la revisión. (verificación: ~9 min)
 
 ## 5. Cierre
 
