@@ -1,6 +1,6 @@
 # Tasks: checkout-al-cambiar-de-sesion
 
-La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace falta montarla. Cada task de las secciones 2 y 3 sigue el ciclo: el escenario falla por la razón esperada, se implementa, pasa y se hace commit. Los commits no mezclan `openspec/` con el resto, salvo este `tasks.md`. Los escenarios de los requisitos que no cambian siguen en verde en todo momento.
+La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace falta montarla. Las tasks de las secciones 2 y 3 no ejecutan pruebas (ni escenarios de aceptación ni pruebas de núcleo): escriben el código y sus pruebas y hacen commit. Las pruebas se ejecutan solo en la sección 4, antes de archivar. Los commits no mezclan `openspec/` con el resto, salvo este `tasks.md`.
 
 ## 1. Estado de partida (zona de código)
 
@@ -28,4 +28,4 @@ Ciclo por task: paso sin definir → implementarlo en `acceptance-tests/step-def
 ## 4. Cierre
 
 - [ ] 4.1 Ejecutar `openspec validate checkout-al-cambiar-de-sesion --type change --strict` y `npm run lint:specs` en `acceptance-tests/`.
-- [ ] 4.2 Ejecutar la suite completa: todos los escenarios pasan, ningún paso pendiente o sin definir, informe HTML generado.
+- [ ] 4.2 Hacer `git fetch` y, si `origin/main` ha avanzado, proponer al usuario traerlo a la rama. Ejecutar las pruebas de núcleo (`npm run test:core`) y la suite completa (`npm test`): todo pasa, también los escenarios de los requisitos que no cambian, ningún paso pendiente o sin definir, informe HTML generado.
