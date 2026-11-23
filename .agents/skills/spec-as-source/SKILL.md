@@ -5,7 +5,7 @@ description: Use when a user or project explicitly adopts OpenSpec spec-as-sourc
 
 # Spec As Source
 
-<!-- Copia del origen (intent-driven-dev/intent-driven-template) reescrita a propósito en las reglas de zona: aquí `openspec/config.yaml` es neutro, como los `tasks.md` (ADR-0021, D11 de add-project-wiki-toggle). No la sobrescribas al actualizar desde el origen sin revisarlo. -->
+<!-- Copia del origen (intent-driven-dev/intent-driven-template) reescrita a propósito en las reglas de zona: aquí `openspec/config.yaml` es neutro, como los `tasks.md` (ADR-0021, D11 de add-project-wiki-toggle), y `references/tasks.md`: cada task ejecuta solo sus escenarios con `--name` y la suite completa se lanza una sola vez, en la task de cierre (run-full-suite-once-per-change). No la sobrescribas al actualizar desde el origen sin revisarlo. -->
 
 ## Overview
 

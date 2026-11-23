@@ -18,6 +18,14 @@ Suite efectiva (specs vigentes con los deltas de los changes activos aplicados):
 npm test
 ```
 
+Una pasada completa tardó 9 min 49 s en un contenedor de la nube de 4 CPUs (332 escenarios, el 2026-11-22). Por eso se lanza una sola vez por change, en la última task, y mientras tanto se acota con `--name` y una expresión regular sobre los títulos de los escenarios:
+
+```bash
+npx cucumber-js --name '^(Título de un escenario|Título de otro)$'
+```
+
+Solo `--name` o los tags acotan la pasada: las rutas de `.feature` que se pasen se suman a las del perfil. Un `--name` que no casa con ningún escenario da `0 scenarios` y sale con 0, así que comprueba cuántos se ejecutaron. Con `--parallel 4`, una pasada tardó 3 min 28 s con el mismo resultado, pero el proyecto no lo usa: una sola pasada no prueba que sea estable, y una prueba del núcleo del autopilot ya falla a veces con la máquina cargada.
+
 Solo las specs vigentes de `openspec/specs/`, tal cual:
 
 ```bash
