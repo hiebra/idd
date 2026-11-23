@@ -6,7 +6,7 @@
 
 const assert = require('node:assert/strict');
 const { Given, When, Then } = require('@cucumber/cucumber');
-const { DebugContract, CONTRACT_PATH, responseVariant } = require('../support/debug-contract');
+const { DebugContract, CONTRACT_PATH, EXAMPLES_PATH, responseVariant } = require('../support/debug-contract');
 
 const TOOLS = ['debug_targets', 'debug_launch_plan'];
 
@@ -136,4 +136,52 @@ Then('la respuesta no cumple el contrato', function () {
   const { tool, variant, baseValid, valid } = this.debugValidation;
   assert.ok(baseValid, `the valid response of '${tool}' in the support does not meet the contract`);
   assert.ok(!valid, `the response of '${tool}' ${variant} meets the contract`);
+});
+
+// The examples of the contract: each call's arguments are validated with the
+// tool's inputSchema and its result with the outputSchema
+Given('el ejemplo `{word}` del contrato del MCP de depuración', function (name) {
+  this.debugContract = new DebugContract(this.ensureProject());
+  const example = contractOf(this).example(name);
+  assert.ok(example, `the project has no debug contract example at ${EXAMPLES_PATH}/${name}.json`);
+  this.debugExample = { name, ...example };
+});
+
+When('se validan sus llamadas y sus respuestas con los esquemas del contrato', function () {
+  const calls = this.debugExample.calls ?? [];
+  assert.ok(calls.length, `the example '${this.debugExample.name}' has no calls`);
+  this.debugExampleResults = calls.flatMap((call, i) =>
+    [
+      ['inputSchema', 'arguments'],
+      ['outputSchema', 'result'],
+    ].map(([which, field]) => {
+      const validate = this.debugContract.compile(call.tool, which);
+      return { call: i, tool: call.tool, field, valid: validate(call[field]), errors: validate.errors };
+    })
+  );
+});
+
+Then('todas cumplen el contrato', function () {
+  const tools = new Set(this.debugExampleResults.map((r) => r.tool));
+  assert.deepEqual([...tools].sort(), [...TOOLS].sort(), `the example '${this.debugExample.name}' does not call each tool`);
+  for (const r of this.debugExampleResults) {
+    assert.ok(r.valid, `call ${r.call} (${r.tool}) of '${this.debugExample.name}': its ${r.field} does not meet the contract: ${JSON.stringify(r.errors)}`);
+  }
+});
+
+function launchPlanOf(example) {
+  const call = (example.calls ?? []).find((c) => c.tool === 'debug_launch_plan');
+  assert.ok(call?.result, `the example '${example.name}' has no debug_launch_plan response`);
+  return call.result;
+}
+
+Then('el plan del ejemplo es para el IDE `{word}`', function (ide) {
+  assert.equal(launchPlanOf(this.debugExample).ide, ide);
+});
+
+Then('el plan del ejemplo tiene pasos de `agent` y pasos de `user`', function () {
+  const actors = new Set((launchPlanOf(this.debugExample).steps ?? []).map((s) => s.actor));
+  for (const actor of ['agent', 'user']) {
+    assert.ok(actors.has(actor), `the plan of '${this.debugExample.name}' has no '${actor}' step`);
+  }
 });

@@ -9,9 +9,11 @@ const fs = require('node:fs');
 const Ajv2020 = require('ajv/dist/2020');
 
 const CONTRACT = ['.agents', 'debug', 'contract.json'];
+const EXAMPLES = ['.agents', 'debug', 'examples'];
 
 class DebugContract {
   constructor(project) {
+    this.project = project;
     this.file = project.path(...CONTRACT);
     this.contract = fs.existsSync(this.file) ? JSON.parse(fs.readFileSync(this.file, 'utf8')) : null;
   }
@@ -44,6 +46,13 @@ class DebugContract {
     const schema = this.tool(name)[which];
     if (!schema || typeof schema !== 'object') throw new Error(`tool '${name}' has no ${which}`);
     return new Ajv2020({ strict: true, allErrors: true }).compile(schema);
+  }
+
+  // An example of the contract (.agents/debug/examples/<name>.json), or null if
+  // the project copy has none with that name
+  example(name) {
+    const file = this.project.path(...EXAMPLES, `${name}.json`);
+    return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
   }
 }
 
@@ -154,4 +163,4 @@ function responseVariant(tool, variant) {
   return { valid: structuredClone(valid), response };
 }
 
-module.exports = { DebugContract, CONTRACT_PATH: CONTRACT.join('/'), responseVariant };
+module.exports = { DebugContract, CONTRACT_PATH: CONTRACT.join('/'), EXAMPLES_PATH: EXAMPLES.join('/'), responseVariant };
