@@ -48,7 +48,7 @@ La task de cierre incluye, antes de la pasada, `git fetch` y, si la rama de orig
 
 ### D3. Tras traer una rama permanente, una comprobación acotada
 
-Antes de pedir el ok a la resolución (y por tanto antes del commit de fusión), el agente ejecuta:
+Tras traer una rama permanente, el agente ejecuta lo que sigue. Con conflictos, lo hace antes de pedir el ok a la resolución, y por tanto antes del commit de fusión. Sin conflictos, `git merge --no-edit`, la orden que da `check merge`, hace el commit de fusión él solo: el agente lo hace después de ese commit y antes del push, y arregla lo que falle en un commit aparte antes de subir. Se descartó traer siempre con `--no-commit`, que contradice la orden de la puerta y obligaría a cambiar `branch-change.mjs`, y exigirlo solo con conflictos, porque una fusión limpia también rompe escenarios (hiebra/idd#14).
 
 1. `npm run lint:specs`, que detectó una resolución mal unida (se perdió el cierre de un bloque) y cuesta 0,4 s.
 2. `npm run test:core`, unos 66 s. Si falla `two sessions taking control at once`, se repite sola antes de atribuirlo (lecciones de allow-user-requested-merges).
