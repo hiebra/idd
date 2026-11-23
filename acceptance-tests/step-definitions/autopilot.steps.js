@@ -1628,6 +1628,40 @@ Given(/^la sesión libre de la rama `([^`]+)` está en el mismo directorio$/, as
   this.target = { branch, session: await ap.seed(this, { title: `Sesión de la rama ${branch}`, step: null, meta: { branch, role: 'free' } }) };
 });
 
+When(/^la TUI entra en la sesión de la rama `([^`]+)`$/, async function (branch) {
+  assert.equal(this.target?.branch, branch, 'the session of that branch was prepared');
+  await this.opencodeCall('goto', { sessionID: this.target.session });
+  await this.opencodeCall('waitScreen');
+});
+
+// The main directory is on `branch` (`exportar-datos` names the change's
+// branch), and the uncommitted change is still there, as it was before
+// entering the session
+function onBranchWithChanges(world, branch) {
+  assert.equal(ap.branchAt(world.project.dir), branch === ap.CHANGE ? ap.BRANCH : branch, detail(world));
+  assert.equal(fs.readFileSync(world.project.path(world.uncommitted.file), 'utf8'), world.uncommitted.content, 'the uncommitted change is kept');
+  assert.ok(world.project.gitStatus().some((line) => line.includes(world.uncommitted.file)), 'the change is still uncommitted');
+}
+
+Then(/^el directorio pasa a la rama `([^`]+)` con sus cambios sin commit$/, function (branch) {
+  onBranchWithChanges(this, branch);
+});
+
+Then(/^el directorio sigue en la rama `([^`]+)` con sus cambios sin commit$/, function (branch) {
+  onBranchWithChanges(this, branch);
+});
+
+Then('la TUI vuelve a la sesión de la rama `exportar-datos`', function () {
+  assert.deepEqual(this.opencode.route, { type: 'session', sessionID: this.owner }, detail(this));
+});
+
+// git's refusal names the uncommitted file it would overwrite
+Then('se avisa con el error de git', function () {
+  const shown = ap.toasts(this);
+  assert.match(shown, new RegExp(`no se ha podido cambiar a la rama ${this.target.branch}`), shown);
+  assert.ok(shown.includes(this.uncommitted.file), shown);
+});
+
 // --- El modal de `/new` ---
 
 async function newFromOperational(world, { dirty = false } = {}) {
