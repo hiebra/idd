@@ -115,6 +115,18 @@ const ESTIMATE =
   'Empieza por decir al usuario cuánto se estimó que lleva verificar esta task (la estimación del final de su línea en `tasks.md`) y cuál es el límite del proyecto (la regla de `rules.tasks` de `openspec/config.yaml`). ' +
   'Si lo que hay que verificar los supera con claridad, avísale: puede rechazar la revisión para que la task se divida.';
 
+// Las estimaciones del plan de tasks (design D4 de
+// limite-de-verificacion-y-mcp-de-depuracion): en la revisión del artefacto
+// `tasks` y, si tocan `tasks.md`, en la de los cambios en el plan
+const ESTIMATES =
+  'Comprueba que cada task lleva su estimación de verificación al final de su línea y que ninguna pasa del límite de `rules.tasks` de `openspec/config.yaml`; señala las que no la lleven o lo pasen, y da el total de verificación del change.';
+
+const PLAN_CHECK = (step) => {
+  if (step.of === 'artifact' && step.id === 'tasks') return ` ${ESTIMATES}`;
+  if (step.of === 'plan') return ` Si los cambios tocan \`tasks.md\`, ${ESTIMATES.charAt(0).toLowerCase()}${ESTIMATES.slice(1)}`;
+  return '';
+};
+
 export function reviewPrompt({ step, change, review = null }) {
   const errors = review?.errors?.length ? `\n\n\`openspec validate\` da estos errores en el change; señálalos en la revisión:\n\n${review.errors.map((e) => `- ${e}`).join('\n')}` : '';
   const verify = step.of === 'verify' && review?.report ? `\n\nInforme del verify:\n\n${review.report}` : '';
@@ -124,7 +136,7 @@ export function reviewPrompt({ step, change, review = null }) {
       : 'Lo que hay que revisar está en el stage de git (`git diff --cached`). Para darla por buena, el usuario hace el commit; para rechazarla, lo saca del stage (`git restore --staged .`) y escribe sus conclusiones.';
   return (
     `${MARK} Esta sesión es la revisión humana ${`de ${WHAT(step)}`.replace(/^de el /, 'del ')} de \`${change}\`. No modifiques ningún archivo, no hagas commits y no pidas commits.${errors}${verify}\n\n` +
-    `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas.${step.of === 'task' ? ` ${ESTIMATE}` : ''}${step.of === 'task' || step.of === 'verify' ? ` ${ACCEPTANCE(step, change)}` : ''} ${staged} ` +
+    `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas.${step.of === 'task' ? ` ${ESTIMATE}` : ''}${PLAN_CHECK(step)}${step.of === 'task' || step.of === 'verify' ? ` ${ACCEPTANCE(step, change)}` : ''} ${staged} ` +
     `La revisión la cierra git cuando el usuario envía su siguiente mensaje, no tú. Si das tus conclusiones, pásalas con \`${HANDOFF_TOOL}\` en \`conclusions\`. ${LESSONS}`
   );
 }
