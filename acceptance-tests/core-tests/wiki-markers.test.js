@@ -303,3 +303,117 @@ for (const [agent] of Object.entries(OPERATIONS)) {
     }
   }
 }
+
+// --- The guide and the reminder of the mode lite (design D3 and D4 of add-wiki-lite-mode) ---
+
+const GUIDE_MAX = 6000;
+const REMINDER_MAX = 600;
+// The section identifiers of the consultation, the only ones that change with
+// the mode (design D3)
+const QUERY_SECTIONS = {
+  full: ['peticiones-con-conocimiento', 'operaciones-sin-conocimiento', 'discernir-peticiones', 'consultar-antes'],
+  lite: ['consultar-a-peticion', 'no-consultar-por-iniciativa'],
+};
+// The headings that only one mode has (design D3)
+const QUERY_HEADINGS = {
+  full: ['## Consultar antes de responder'],
+  lite: ['## Cómo consultar'],
+};
+const VISIBLE_ID = /^@@wiki-guide:([a-z0-9-]+)@@$/;
+
+// The project of the working tree in a mode. With visibleIds, the section
+// identifiers of the guide are rewritten so that the core keeps them, and the
+// guide delivered shows which sections it has
+function projectInMode(mode, { visibleIds = false } = {}) {
+  const dir = projectAt(null);
+  setEngine(dir, { field: `"${mode}"` });
+  if (visibleIds) {
+    const file = path.join(dir, '.agents', 'wiki', 'guide.md');
+    const guide = fs.readFileSync(file, 'utf8').replace(/^<!-- wiki-guide:([a-z0-9-]+) -->$/gm, '@@wiki-guide:$1@@');
+    fs.writeFileSync(file, guide);
+  }
+  return dir;
+}
+
+function deliveredIn(mode, text, agent, options) {
+  const dir = projectInMode(mode, options);
+  try {
+    return wikiRun(text, agent, dir).stdout;
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+function sectionIds(guide) {
+  return guide.split('\n').map((line) => VISIBLE_ID.exec(line)?.[1]).filter(Boolean);
+}
+
+// The guide without the sections and the headings of the consultation of a
+// mode: a section is its identifier line and the lines after it, up to the
+// next identifier, heading or blank line. Runs of blank lines become one
+function withoutQuery(mode, guide) {
+  const kept = [];
+  let skipping = false;
+  for (const line of guide.split('\n')) {
+    const id = VISIBLE_ID.exec(line)?.[1];
+    if (id) skipping = QUERY_SECTIONS[mode].includes(id);
+    else if (line === '' || line.startsWith('#')) skipping = false;
+    if (skipping || QUERY_HEADINGS[mode].includes(line)) continue;
+    if (line === '' && kept.at(-1) === '') continue;
+    kept.push(line);
+  }
+  return kept.join('\n');
+}
+
+for (const [agent, ops] of Object.entries(OPERATIONS)) {
+  test(`${agent}, mode lite: the guide has the sections of the consultation on request, not those of full`, () => {
+    const ids = sectionIds(deliveredIn('lite', 'guide', agent, { visibleIds: true }));
+    for (const id of QUERY_SECTIONS.lite) assert.ok(ids.includes(id), `the guide of lite has ${id}: ${ids}`);
+    for (const id of QUERY_SECTIONS.full) assert.ok(!ids.includes(id), `the guide of lite does not have ${id}`);
+  });
+
+  test(`${agent}, mode full: the guide does not have the sections of the consultation of lite`, () => {
+    const ids = sectionIds(deliveredIn('full', 'guide', agent, { visibleIds: true }));
+    for (const id of QUERY_SECTIONS.full) assert.ok(ids.includes(id), `the guide of full has ${id}: ${ids}`);
+    for (const id of QUERY_SECTIONS.lite) assert.ok(!ids.includes(id), `the guide of full does not have ${id}`);
+  });
+
+  test(`${agent}, mode lite: outside the consultation, the guide has the same lines as in full`, () => {
+    const lite = deliveredIn('lite', 'guide', agent, { visibleIds: true });
+    const full = deliveredIn('full', 'guide', agent, { visibleIds: true });
+    assert.notEqual(lite, '', 'the guide of lite is delivered');
+    assert.notEqual(lite, full, 'the guide of lite is not that of full');
+    assert.equal(withoutQuery('lite', lite), withoutQuery('full', full));
+  });
+
+  test(`${agent}, mode lite: the guide is delivered clean and within ${GUIDE_MAX} characters`, () => {
+    const guide = deliveredIn('lite', 'guide', agent);
+    assert.notEqual(guide, '', 'the guide of lite is delivered');
+    assert.doesNotMatch(guide, /\{\{|wiki-guide:|wiki-mode:|@@/, guide);
+    assert.ok(guide.includes(ops.query), `the guide of lite names ${ops.query}`);
+    assert.ok([...guide].length <= GUIDE_MAX, `the guide of lite has ${[...guide].length} characters`);
+  });
+
+  test(`${agent}, mode lite: the reminder asks not to consult unless the user asks for it`, () => {
+    const lite = deliveredIn('lite', 'reminder', agent);
+    const full = deliveredIn('full', 'reminder', agent);
+    assert.notEqual(lite, '', 'the reminder of lite is delivered');
+    assert.equal(lite.trimEnd().split('\n').length, 1, `the reminder is one paragraph: ${lite}`);
+    assert.ok(lite.includes('salvo que el usuario lo pida expresamente'), lite);
+    assert.ok(!lite.includes('consulta antes'), lite);
+    assert.ok(lite.includes(ops.query) && lite.includes(ops.ingest), `the reminder names the operations of ${agent}: ${lite}`);
+    assert.ok([...lite.trimEnd()].length <= REMINDER_MAX, `the reminder of lite has ${[...lite.trimEnd()].length} characters`);
+  });
+
+  test(`${agent}, mode lite: outside the consultation, the reminder is the same as in full`, () => {
+    const lite = deliveredIn('lite', 'reminder', agent);
+    const full = deliveredIn('full', 'reminder', agent);
+    assert.notEqual(lite, full, 'the reminder of lite is not that of full');
+    // What comes before the consultation and from the lessons on (design D4)
+    const head = full.slice(0, full.indexOf(':') + 1);
+    const tail = full.slice(full.indexOf('Lo que compruebes'));
+    assert.ok(head.length > 1 && tail.length < full.length, `the reminder of full: ${full}`);
+    assert.ok(lite.startsWith(head), `the reminder of lite starts as in full: ${lite}`);
+    assert.ok(lite.endsWith(tail), `the reminder of lite ends as in full: ${lite}`);
+  });
+}

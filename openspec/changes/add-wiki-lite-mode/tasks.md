@@ -36,7 +36,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 4. Guía y recordatorio: los bloques de modo (D2, D3, D4)
 
-- [ ] 4.1 Añadir a `core-tests/wiki-markers.test.js` pruebas de que la guía y el recordatorio de `lite`, para los dos agentes:
+- [x] 4.1 Añadir a `core-tests/wiki-markers.test.js` pruebas de que la guía y el recordatorio de `lite`, para los dos agentes:
   - tienen los identificadores `consultar-a-peticion` y `no-consultar-por-iniciativa`, y no `consultar-antes`, `peticiones-con-conocimiento`, `operaciones-sin-conocimiento` ni `discernir-peticiones`;
   - fuera de la consulta, tienen las mismas líneas que los de `full`;
   - la guía no pasa de 6.000 caracteres y el recordatorio, de 600;
