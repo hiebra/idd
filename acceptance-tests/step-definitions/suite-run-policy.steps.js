@@ -59,3 +59,18 @@ Then('las reglas piden ejecutar solo esos escenarios, con `--name`', function ()
 Then('las reglas piden comprobar que se ejecutó el número de escenarios esperado', function () {
   assertRule(this, [/número de escenarios/, /esperado/, /`0 scenarios`|ninguno/], 'checking that the expected number of scenarios ran');
 });
+
+// What an apply guidance entry would say if it carried the suite rule
+const SUITE_TERMS = /suite|aceptaci[oó]n|acceptance|cucumber|`--name`/i;
+
+When('se piden las instrucciones de `apply` con `openspec instructions apply --change exportar-datos`', function () {
+  const result = this.branches.openspec(this.lifecycleProject(), ['instructions', 'apply', '--change', CHANGE, '--json']);
+  assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+  this.applyGuidance = (JSON.parse(result.stdout).operationGuidance ?? []).map(String);
+});
+
+Then('las indicaciones de apply no mencionan la suite de aceptación', function () {
+  assert.ok(this.applyGuidance, 'the apply instructions were not asked for');
+  const mentions = this.applyGuidance.filter((entry) => SUITE_TERMS.test(entry));
+  assert.deepEqual(mentions, [], `the apply guidance mentions the acceptance suite:\n${mentions.join('\n')}`);
+});
