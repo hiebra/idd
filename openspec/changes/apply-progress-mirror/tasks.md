@@ -20,7 +20,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 3. Documentación (zona de código), D4
 
-- [ ] 3.1 README, en la sección del modo auto: la lista de apply tiene la indicación de la lista de tareas además de las cuatro de una task por sesión, y es igual en los dos modos. Añadir cómo activar la lista en local en cada agente: `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` en `.claude/settings.local.json` o en el entorno, y `experimental.todo: true` en la configuración global de OpenCode. Explicar que sin la herramienta la indicación no hace nada.
+- [x] 3.1 README, en la sección del modo auto: la lista de apply tiene la indicación de la lista de tareas además de las cuatro de una task por sesión, y es igual en los dos modos. Añadir cómo activar la lista en local en cada agente: `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` en `.claude/settings.local.json` o en el entorno, y `experimental.todo: true` en la configuración global de OpenCode. Explicar que sin la herramienta la indicación no hace nada.
 
 ## 4. Cierre
 

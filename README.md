@@ -267,7 +267,31 @@ El modo auto quita las sesiones de revisión: el producto de cada paso pasa al s
 
 OpenCode recarga el plugin al cambiar la opción, y el modo nuevo vale desde el paso siguiente.
 
-**El modo también decide cuántas tasks hace el apply por sesión** ([ADR-0025](adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md)). En el modo normal, `openspec/config.yaml` lleva en `operations.apply.guidance` cuatro indicaciones: el apply hace una sola task por sesión, sin delegarla en un subagente, y al terminarla se para. Así lo hace también un apply que lances a mano, en OpenCode o en Claude Code. En el modo auto, esas indicaciones no están. Al cargarse, el plugin ajusta el archivo al modo: añade el bloque si falta o lo quita si sobra, sin tocar nada más. El proyecto lo versiona como lo deja el modo normal, que es el modo por defecto. Así, al activar el modo auto verás `openspec/config.yaml` modificado: haz su commit aparte o descarta el cambio. Mientras siga sin commit, el autopilot espera con el árbol sucio. Claude Code lee el archivo tal como lo dejó la última carga del plugin.
+**El modo también decide cuántas tasks hace el apply por sesión** ([ADR-0025](adr/0025-asymmetry-policy-with-mode-managed-versioned-block.md)). En el modo normal, `openspec/config.yaml` lleva en `operations.apply.guidance`, detrás de la indicación de la lista de tareas (ver abajo), cuatro indicaciones más: el apply hace una sola task por sesión, sin delegarla en un subagente, y al terminarla se para. Así lo hace también un apply que lances a mano, en OpenCode o en Claude Code. En el modo auto, esas cuatro no están; la de la lista de tareas está igual en los dos modos. Al cargarse, el plugin ajusta el archivo al modo: añade el bloque si falta o lo quita si sobra, sin tocar nada más. El proyecto lo versiona como lo deja el modo normal, que es el modo por defecto. Así, al activar el modo auto verás `openspec/config.yaml` modificado: haz su commit aparte o descarta el cambio. Mientras siga sin commit, el autopilot espera con el árbol sucio. Claude Code lee el archivo tal como lo dejó la última carga del plugin.
+
+### Ver el progreso del apply en la lista de tareas
+
+La primera indicación de `operations.apply.guidance` pide al apply que, si el agente tiene una lista de tareas para el usuario, la use como reflejo de solo lectura de `tasks.md`: la carga con las tasks del change, en su orden y con las hechas ya completadas (o una entrada por grupo, con su recuento, si son más de una docena), y marca cada una completada solo cuando su checkbox está `- [x]` y el CLI lo confirma. `tasks.md` sigue siendo la única fuente de verdad, y la lista no escribe nada en el repositorio. La indicación es la misma en los dos modos del autopilot, en OpenCode y en Claude Code, y el plugin no la toca.
+
+Si el agente no tiene la herramienta, la indicación no hace nada: el progreso se ve, como siempre, en la salida del apply. Tenerla es una preferencia de cada usuario, así que ningún archivo versionado del proyecto la activa. Actívala en local:
+
+- **Claude Code** la da por defecto solo en algunos modelos y en las sesiones en la nube. En los demás, con `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` en `.claude/settings.local.json`:
+
+  ```json
+  {
+    "env": { "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1" }
+  }
+  ```
+
+  o en el entorno desde el que lo lanzas. La lista se ve con Ctrl+T.
+
+- **OpenCode** la da solo con la opción experimental `experimental.todo`, en tu configuración global, `~/.config/opencode/opencode.json`:
+
+  ```json
+  {
+    "experimental": { "todo": true }
+  }
+  ```
 
 ### Desactivar el plugin en local
 
