@@ -31,7 +31,15 @@
 #   session-bootstrap.sh reminder <agente> <directorio del proyecto>
 #       Por stdout, la guía del wiki o el recordatorio por mensaje, ya
 #       preparados para el agente (claude-code u opencode), o nada si el wiki
-#       está deshabilitado o no se puede generar.
+#       está deshabilitado o no se puede generar. Los dos textos son los del
+#       modo del wiki (design D2 de add-wiki-lite-mode): lo que va entre
+#       "<!-- wiki-mode:full -->" o "<!-- wiki-mode:lite -->" y
+#       "<!-- wiki-mode:end -->", cada marca sola en su línea, es propio de ese
+#       modo; se quitan las líneas del otro modo y todas las marcas, y lo
+#       demás es común. Un bloque sin cerrar, una marca de un modo que no
+#       existe o un bloque dentro de otro hacen que no se entregue el texto.
+#       El recordatorio es un solo párrafo: sus líneas no vacías se juntan con
+#       un espacio.
 #   session-bootstrap.sh wiki <status|on|off> <directorio del proyecto>
 #       La parte determinista de /toggle-wiki (design D3 de
 #       add-project-wiki-toggle). Por stdout, líneas "clave=valor":
@@ -71,6 +79,10 @@
 # quedan vacíos. Del proyecto solo se leen engine.json, openspec/config.yaml y
 # .wiki/; la guía, el recordatorio, opencode-note.md y archive-guidance.yaml se
 # buscan en ../wiki/ respecto a este script (design D8).
+# Con el wiki habilitado, su modo es "mode" de engine.json (design D1 de
+# add-wiki-lite-mode): "full" o "lite", tal cual; si falta, full. Cualquier
+# otro valor deja el wiki en full, y el modo principal avisa de ello; guide y
+# reminder usan full sin avisar. Con el wiki deshabilitado no se lee el modo.
 # La regla de comentarios se desactiva en local con PROJECT_COMMENTS=off.
 #
 # Cada agente tiene su adaptador, que lanza este script, ajusta el entorno de
@@ -374,6 +386,34 @@ wiki_disabled() {
   ! wiki_enabled
 }
 
+# El valor de "mode" en engine.json tal como está escrito (con sus comillas), o
+# nada si falta (design D1 de add-wiki-lite-mode)
+wiki_declared_mode() {
+  sed -nE 's/.*"mode"[[:space:]]*:[[:space:]]*("[^"]*"|[^,}[:space:]]*).*/\1/p' "$ENGINE_JSON" 2>/dev/null | head -n 1
+}
+
+# Éxito si engine.json tiene la clave "mode"
+wiki_mode_declared() {
+  grep -qE '"mode"[[:space:]]*:' "$ENGINE_JSON" 2>/dev/null
+}
+
+# wiki_current_mode: full o lite. Sin "mode", o con un valor que no es un modo, full
+wiki_current_mode() {
+  case "$(wiki_declared_mode)" in
+    '"lite"') echo lite ;;
+    *) echo full ;;
+  esac
+}
+
+# Avisa si "mode" tiene un valor que no es un modo (design D1)
+warn_invalid_mode() {
+  wiki_mode_declared || return 0
+  local value
+  value="$(wiki_declared_mode)"
+  case "$value" in '"full"' | '"lite"') return 0 ;; esac
+  warn "el modo del wiki de $ENGINE_JSON ($value) no existe: los modos son full y lite, y se usa full; para corregirlo, ejecuta /toggle-wiki full o /toggle-wiki lite y haz el commit"
+}
+
 # set_enabled true|false: cambia "enabled" en engine.json sin reescribir el resto
 set_enabled() {
   local value="$1" tmp
@@ -643,7 +683,7 @@ main() {
   prepare_git
   # El motor no depende de Node, así que va antes y se instala aunque falte npm
   install_wiki_engine
-  wiki_disabled || keep_wiki_versioned
+  wiki_disabled || { keep_wiki_versioned; warn_invalid_mode; }
   warn_stale_block
   install_dependencies
 }
@@ -656,17 +696,21 @@ wiki_text() {
   if [ -z "$dir" ] || ! cd "$dir" 2>/dev/null; then return; fi
   wiki_disabled && return
   case "$agent" in claude-code | opencode) ;; *) return ;; esac
-  local text
+  local text wmode
+  wmode="$(wiki_current_mode)"
   if [ "$mode" = "guide" ]; then
+    text="$(mode_blocks "$wmode" "$GUIDE_MD")" || return
     # Sin los identificadores de sección, que solo sirven para revisarla
-    text="$(sed '/^<!-- wiki-guide:[a-z0-9-]* -->$/d' "$GUIDE_MD" 2>/dev/null)" || return
+    text="$(printf '%s\n' "$text" | sed '/^<!-- wiki-guide:[a-z0-9-]* -->$/d')" || return
     [ -n "$text" ] || return
     if [ "$agent" = "opencode" ]; then
       local note
       note="$(cat "$OPENCODE_NOTE" 2>/dev/null)" && [ -n "$note" ] && text="$note"$'\n\n'"$text"
     fi
   else
-    text="$(cat "$REMINDER_MD" 2>/dev/null)" || return
+    text="$(mode_blocks "$wmode" "$REMINDER_MD")" || return
+    # Un solo párrafo: las líneas no vacías, juntas con un espacio
+    text="$(printf '%s\n' "$text" | awk 'NF { printf "%s%s", sep, $0; sep = " " }')" || return
   fi
   text="$(fill_markers "$agent" "$text")"
   # Un texto vacío o con marcadores desconocidos no se entrega
@@ -676,6 +720,33 @@ wiki_text() {
     [ "$(printf '%s' "$text" | wc -m)" -le "$REMINDER_MAX" ] || return
   fi
   printf '%s\n' "$text"
+}
+
+# mode_blocks MODO ARCHIVO: ARCHIVO sin las líneas de los bloques del otro modo
+# ni las marcas de bloque (design D2 de add-wiki-lite-mode). Falla, sin
+# imprimir nada útil, si el archivo no se puede leer o los bloques están mal
+# formados: sin cerrar, de un modo que no existe, dentro de otro, o un cierre
+# sin apertura
+mode_blocks() {
+  [ -r "$2" ] || return 1
+  awk -v mode="$1" '
+    index($0, "<!-- wiki-mode:") {
+      if ($0 == "<!-- wiki-mode:end -->") {
+        if (block == "") { bad = 1; exit }
+        block = ""
+        next
+      }
+      if ($0 == "<!-- wiki-mode:full -->" || $0 == "<!-- wiki-mode:lite -->") {
+        if (block != "") { bad = 1; exit }
+        block = substr($0, 16, 4)
+        next
+      }
+      bad = 1
+      exit
+    }
+    block == "" || block == mode { print }
+    END { if (bad || block != "") exit 1 }
+  ' "$2" 2>/dev/null
 }
 
 # fill_markers AGENTE TEXTO: TEXTO con cada marcador de operación del motor

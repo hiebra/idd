@@ -18,7 +18,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
   - los bloques mal formados (sin cerrar, de un modo que no existe, anidados), que no entregan el texto.
 
   Rojo sin la lectura del modo
-- [ ] 2.2 Implementar en `.agents/hooks/session-bootstrap.sh` `wiki_current_mode`, el aviso del modo principal y el tratamiento de los bloques de modo en `wiki_text` (D2), con el recordatorio como párrafo único. Documentarlo en la cabecera del script → verde la prueba de 2.1 → commit
+- [x] 2.2 Implementar en `.agents/hooks/session-bootstrap.sh` `wiki_current_mode`, el aviso del modo principal y el tratamiento de los bloques de modo en `wiki_text` (D2), con el recordatorio como párrafo único. Documentarlo en la cabecera del script → verde la prueba de 2.1 → commit
 
 ## 3. Núcleo: cambiar el modo (D5)
 
