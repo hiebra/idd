@@ -4,7 +4,12 @@
 // recordatorio de cada petición, lo que se inyecta al cambiar entre build y
 // plan, el aviso de lo modificado con plan, el aviso de las sesiones ajenas,
 // la verificación guiada con los tests de aceptación y la depuración en la
-// revisión de una task y del verify, y el workflow y el agente de cada paso
+// revisión de una task y del verify (con el MCP de depuración si la sesión lo
+// tiene, y si no, la orden de terminal: design D13 de
+// limite-de-verificacion-y-mcp-de-depuracion), la estimación de verificación
+// y el límite del proyecto en la revisión de una task, la comprobación de las
+// estimaciones en la revisión del artefacto `tasks` y de los cambios en el
+// plan (design D4 del mismo change), y el workflow y el agente de cada paso
 // (siempre build). Ningún texto pide commits: el plugin
 // pasa el producto al stage y el usuario hace el commit (ADR-0013).
 
@@ -97,12 +102,36 @@ const WHAT = (step) =>
   ({ artifact: `el artefacto \`${step.id}\``, task: `la task ${step.label ?? step.id}`, verify: 'el informe del verify', plan: 'los cambios en el plan' })[step.of] ?? step.id;
 
 // La verificación guiada de lo que es código: una task o el verify (design D1 y
-// D2 de guiar-revision-con-tests). El plugin no ejecuta nada: lo hace el
-// modelo, y la depuración, el usuario.
+// D2 de guiar-revision-con-tests), con el MCP de depuración si la sesión lo
+// tiene (design D13 de limite-de-verificacion-y-mcp-de-depuracion). El plugin
+// no ejecuta nada: lo hace el modelo, y la depuración, el usuario.
 const ACCEPTANCE = (step, change) =>
   `Guía la verificación con los escenarios de aceptación del change: en las specs de \`openspec/changes/${change}/specs/\`, ${step.of === 'verify' ? 'toma todos los del change' : `localiza los que cubren ${WHAT(step)}`}, recórrelos con el usuario como guion de lo que hay que comprobar y ejecútalos con el runner de aceptación del proyecto (el que documente su suite)${step.of === 'verify' ? '' : ', solo esos'}; explica qué pasa y qué falla. ` +
   'Haz que las ejecuciones no dejen en el árbol de trabajo archivos que git no ignore, porque la revisión la cierra git. ' +
-  'Si lo revisado incluye código fuente que se puede ejecutar, ofrece al usuario ejecutarlo en modo depuración: dale la orden exacta para lanzarlo con el depurador del stack del proyecto (por ejemplo, el escenario de aceptación que lo ejercita, bajo `node --inspect-brk` en JavaScript o `python -m debugpy --wait-for-client` en Python) y dónde le conviene poner los puntos de ruptura. Esa orden la ejecuta el usuario en su terminal, no tú: se queda esperando al depurador.';
+  'Si lo revisado incluye código fuente que se puede ejecutar, ofrece al usuario depurarlo y dile dónde le conviene poner los puntos de ruptura. ' +
+  'Si la sesión tiene un MCP de depuración (las tools `debug_targets` y `debug_launch_plan`, con el prefijo de su servidor o dentro de Code Mode), úsalo: pregunta a `debug_targets` por los archivos revisados y, si da algún objetivo y el usuario quiere depurar, pide a `debug_launch_plan` el plan con esos puntos de ruptura y con los escenarios que ejercitan el código. ' +
+  'Enseña el plan al usuario antes de ejecutar ningún paso. Después sigue los pasos en orden: ejecuta tú solo los de `agent`, y los de `user` díselos al usuario, que es quien arranca lo que se queda en marcha y quien depura. ' +
+  'Si un IDE o un objetivo trae problemas, díselos con su arreglo, sin arreglarlos tú. Cuando el usuario termine de depurar, sigue igual los pasos de `cleanup`. ' +
+  'Si la sesión no lo tiene, o no da ningún objetivo para lo revisado, ofrécele ejecutarlo en modo depuración: dale la orden exacta para lanzarlo con el depurador del stack del proyecto (por ejemplo, el escenario de aceptación que lo ejercita, bajo `node --inspect-brk` en JavaScript o `python -m debugpy --wait-for-client` en Python). Esa orden la ejecuta el usuario en su terminal, no tú: se queda esperando al depurador.';
+
+// La estimación de verificación de una task y el límite del proyecto (design D4
+// de limite-de-verificacion-y-mcp-de-depuracion): el modelo los lee de los
+// archivos; el plugin no calcula nada.
+const ESTIMATE =
+  'Empieza por decir al usuario cuánto se estimó que lleva verificar esta task (la estimación del final de su línea en `tasks.md`) y cuál es el límite del proyecto (la regla de `rules.tasks` de `openspec/config.yaml`). ' +
+  'Si lo que hay que verificar los supera con claridad, avísale: puede rechazar la revisión para que la task se divida.';
+
+// Las estimaciones del plan de tasks (design D4 de
+// limite-de-verificacion-y-mcp-de-depuracion): en la revisión del artefacto
+// `tasks` y, si tocan `tasks.md`, en la de los cambios en el plan
+const ESTIMATES =
+  'Comprueba que cada task lleva su estimación de verificación al final de su línea y que ninguna pasa del límite de `rules.tasks` de `openspec/config.yaml`; señala las que no la lleven o lo pasen, y da el total de verificación del change.';
+
+const PLAN_CHECK = (step) => {
+  if (step.of === 'artifact' && step.id === 'tasks') return ` ${ESTIMATES}`;
+  if (step.of === 'plan') return ` Si los cambios tocan \`tasks.md\`, ${ESTIMATES.charAt(0).toLowerCase()}${ESTIMATES.slice(1)}`;
+  return '';
+};
 
 export function reviewPrompt({ step, change, review = null }) {
   const errors = review?.errors?.length ? `\n\n\`openspec validate\` da estos errores en el change; señálalos en la revisión:\n\n${review.errors.map((e) => `- ${e}`).join('\n')}` : '';
@@ -113,7 +142,7 @@ export function reviewPrompt({ step, change, review = null }) {
       : 'Lo que hay que revisar está en el stage de git (`git diff --cached`). Para darla por buena, el usuario hace el commit; para rechazarla, lo saca del stage (`git restore --staged .`) y escribe sus conclusiones.';
   return (
     `${MARK} Esta sesión es la revisión humana ${`de ${WHAT(step)}`.replace(/^de el /, 'del ')} de \`${change}\`. No modifiques ningún archivo, no hagas commits y no pidas commits.${errors}${verify}\n\n` +
-    `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas.${step.of === 'task' || step.of === 'verify' ? ` ${ACCEPTANCE(step, change)}` : ''} ${staged} ` +
+    `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas.${step.of === 'task' ? ` ${ESTIMATE}` : ''}${PLAN_CHECK(step)}${step.of === 'task' || step.of === 'verify' ? ` ${ACCEPTANCE(step, change)}` : ''} ${staged} ` +
     `La revisión la cierra git cuando el usuario envía su siguiente mensaje, no tú. Si das tus conclusiones, pásalas con \`${HANDOFF_TOOL}\` en \`conclusions\`. ${LESSONS}`
   );
 }
