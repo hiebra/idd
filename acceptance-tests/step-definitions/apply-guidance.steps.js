@@ -31,6 +31,20 @@ function specBlock() {
   throw new Error('no yaml block in the openspec-autopilot spec');
 }
 
+// The todo list item of the apply-progress spec, as lines under `    guidance:`
+function progressItem() {
+  const candidates = [
+    path.join(REPO_ROOT, 'openspec', 'specs', 'apply-progress', 'spec.md'),
+    path.join(REPO_ROOT, 'openspec', 'changes', 'apply-progress-mirror', 'specs', 'apply-progress', 'spec.md'),
+  ];
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    const m = /```yaml\noperations:\n {2}apply:\n {4}guidance:\n([\s\S]*?)```/.exec(fs.readFileSync(file, 'utf8'));
+    if (m) return m[1].replace(/\n$/, '');
+  }
+  throw new Error('no yaml block in the apply-progress spec');
+}
+
 const configFile = (world) => world.lifecycleProject().path(CONFIG);
 const readConfig = (world) => fs.readFileSync(configFile(world), 'utf8');
 
@@ -40,14 +54,20 @@ function writeConfig(world, text) {
   fs.utimesSync(configFile(world), new Date(0), new Date(0));
 }
 
-// The config.yaml without the block, as the project has it
-function withoutBlock(text) {
-  const block = specBlock();
+// The config.yaml without the given guidance lines; `guidance:` and `apply:`
+// go too if they are left with no items, as the plugin's adjust() does
+function withoutItems(text, lines) {
   return text
-    .replace(`\n${block}`, '')
-    .replace(/\noperations:\n {2}apply:\n {4}guidance:(?=\n|$)/, '\noperations:')
-    .replace(/\n {2}apply:\n {4}guidance:(?=\n|$)/, '');
+    .replace(`\n${lines}`, '')
+    .replace(/\n {4}guidance:[ \t]*(?=\n(?! {4,}- | {6,}\S)|$)/, '')
+    .replace(/\n {2}apply:[ \t]*(?=\n(?! {4,}\S)|$)/, '');
 }
+
+// The config.yaml without the block, as the project has it
+const withoutBlock = (text) => withoutItems(text, specBlock());
+
+// The config.yaml without the block nor the todo list item: no other apply guidance
+const withoutApplyGuidance = (text) => withoutItems(withoutBlock(text), progressItem());
 
 // The config.yaml with the block where the plugin puts it: at the end of
 // operations.apply.guidance, or in the keys it creates
@@ -112,14 +132,14 @@ function foldedItems() {
 }
 
 Given('un clon del proyecto cuyo `openspec\\/config.yaml` tiene en apply la indicación {string}', function (item) {
-  const base = withoutBlock(fs.readFileSync(this.lifecycleProject().path(CONFIG), 'utf8'));
+  const base = withoutApplyGuidance(fs.readFileSync(this.lifecycleProject().path(CONFIG), 'utf8'));
   writeConfig(this, base.replace(/^operations:\n/m, `operations:\n  apply:\n    guidance:\n      - ${item}\n`));
   this.configBefore = readConfig(this);
 });
 
 Given('un clon del proyecto cuyo `openspec\\/config.yaml` no tiene la clave `operations.apply`', function () {
-  const base = withoutBlock(fs.readFileSync(this.lifecycleProject().path(CONFIG), 'utf8'));
-  assert.equal(/^ {2}apply:/m.test(base), false, 'the project config.yaml has operations.apply besides the block');
+  const base = withoutApplyGuidance(fs.readFileSync(this.lifecycleProject().path(CONFIG), 'utf8'));
+  assert.equal(/^ {2}apply:/m.test(base), false, 'the project config.yaml has operations.apply besides the block and the todo list item');
   writeConfig(this, base);
   this.configBefore = readConfig(this);
 });
@@ -174,4 +194,4 @@ Then('OpenCode sigue funcionando', async function () {
   assert.match(ap.toasts(this), /no hay `openspec\/config\.yaml`/);
 });
 
-module.exports = { specBlock, withBlock, withoutBlock, readConfig, writeConfig, loadPlugin, CONFIG };
+module.exports = { specBlock, progressItem, withBlock, withoutBlock, withoutItems, readConfig, writeConfig, loadPlugin, CONFIG };

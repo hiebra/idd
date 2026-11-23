@@ -4,7 +4,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 
 ## 1. Helpers de la suite (zona de código), D5
 
-- [ ] 1.1 Generalizar los helpers para que admitan otras indicaciones de apply junto al bloque de «una task por sesión»:
+- [x] 1.1 Generalizar los helpers para que admitan otras indicaciones de apply junto al bloque de «una task por sesión»:
   - `withoutBlock` de `step-definitions/apply-guidance.steps.js` quita solo las líneas del bloque y poda `guidance:` y `apply:` si quedan sin elementos;
   - el `Given` de «Sin indicaciones de apply previas no quedan claves vacías» parte del proyecto sin la indicación de la lista de tareas;
   - `core-tests/apply-guidance.test.js` («the project config.yaml keeps every other byte in both modes») compara con el resultado de `adjust`, sin contar las claves que crea.
