@@ -14,6 +14,7 @@ Plantilla para proyectos JavaScript que se desarrollan con [OpenSpec](https://gi
 - **Workflows de OpenSpec como skills** (sin comandos), en `.claude/skills/`: `openspec-explore`, `openspec-new-change`, `openspec-continue-change`, `openspec-apply-change`, `openspec-update-change`, `openspec-verify-change`, `openspec-sync-specs` y `openspec-archive-change`. Claude Code los ofrece como `/openspec-explore`, etc., y OpenCode 2 los lee de la misma carpeta.
 - **Skills del schema** en `.agents/skills/`, su única copia: `acceptance-test-authoring`, `architectural-decision-records`, `c4-diagrams`, `gherkin-authoring`, `glossary`, `grill-me`, `openspec-git-discipline` y `spec-as-source`. Claude Code las ve a través de sus enlaces en `.claude/skills/` y OpenCode 2 las lee directamente de `.agents/skills/` ([ADR-0003](adr/0003-single-source-for-schema-skills.md)).
 - **LLM wiki**: una base de conocimiento del proyecto que el agente consulta antes de responder y amplía con lo que descubre, con el motor [nvk/llm-wiki](https://github.com/nvk/llm-wiki) instalado en los dos agentes (ver abajo).
+- **Un límite de verificación por task** (15 minutos, estimados al planificar) y **el contrato de un MCP de depuración** para que la revisión te ofrezca depurar con tu IDE lo que revisas (ver abajo).
 - **Regla de comentarios**: comentas partes de una respuesta del agente sin que conteste a cada comentario, y luego le pides que los procese todos (`p`) o que reformule la respuesta (`r`) (ver abajo).
 - **Arranque de sesión** que prepara el proyecto en los dos agentes (ver abajo).
 - **El ciclo de un change de la skill estándar de intent-driven**, con una única excepción (el change entero en una rama y una sola fusión con `--no-ff`) cuando el acceso directo a las ramas permanentes está vetado, igual en los dos agentes, y en OpenCode 2 un plugin que lo automatiza con una sesión por paso (ver abajo).
@@ -260,6 +261,51 @@ Quítalo en tu configuración global de OpenCode, como el arranque de sesión:
 ```
 
 Así no se carga la parte de servidor, que es la que orquesta; la de TUI se sigue cargando, pero sin servidor no hace nada. Las sesiones que eran operativas siguen siendo sesiones normales.
+
+## El límite de verificación de las tasks
+
+Cada task se dimensiona para quien la verifica: leer su diff, recorrer y ejecutar los escenarios de aceptación que la cubren y, si quiere, depurarla no debe llevar a una persona más de **15 minutos**. Lo pide una regla de `rules.tasks` de `openspec/config.yaml`, que llega al modelo con las instrucciones del artefacto `tasks` (`openspec instructions tasks`), en los dos agentes y también cuando `openspec-update-change` rehace las tasks:
+
+- **La estimación va escrita en cada task**, al final de su línea, como `(verificación: ~10 min)`. No cambia el seguimiento de las tasks: el CLI las sigue contando por su casilla.
+- **La referencia para estimar:** 1 minuto por cada 8 líneas de diff que haya que leer (con los tests y sin los archivos generados) y 2 minutos por cada escenario que haya que recorrer. Con ella, 15 minutos son unas 100 líneas y uno o dos escenarios.
+- **La task que pase del límite se divide** en tasks que se puedan verificar por separado.
+
+Es una estimación al planificar: nada mide cuánto lleva de verdad, y el plugin no la valida. En OpenCode, la revisión del artefacto `tasks` (y la de los cambios en el plan, si tocan `tasks.md`) comprueba que cada task lleva su estimación y que ninguna pasa del límite, y da el total del change; la revisión de cada task empieza por su estimación y el límite, y si lo que hay que verificar los supera con claridad, te avisa de que puedes rechazarla para que la task se divida.
+
+**Cambiar el límite o la referencia:** edita los números en el texto de la regla, en `openspec/config.yaml`. Valen para las tasks que se planifiquen o se rehagan después; los `tasks.md` ya escritos no cambian. Los tres números son valores de partida: lo que enseñe el uso se registra como lección en el wiki.
+
+## El MCP de depuración
+
+La revisión de una task y la del verify te ofrecen depurar lo revisado. Sin más, te dan una orden de terminal del stack de la plantilla (`node --inspect-brk`, `python -m debugpy --wait-for-client`), que lanzas tú. Para depurar con tu IDE el código de otro stack (por ejemplo, Java sobre WLP o React sobre Vite con VS Code), la plantilla define el contrato de un servidor MCP que dice cómo hacerlo ([ADR-0027](adr/0027-debugging-through-an-information-only-mcp-contract.md)). La plantilla no incluye ningún servidor: lo pone otro, y tiene que cumplir el contrato.
+
+### El contrato
+
+Vive en `.agents/debug/`: `contract.json`, legible por máquina, con la versión (`1.0`), las dos tools con la forma de una definición de tool de MCP (un servidor puede registrarlas copiándolas de ahí) y los errores; y `examples/java-liberty.json` y `examples/react-vite.json`, con una llamada a cada tool y su respuesta. Los ejemplos cumplen los esquemas, pero no se han ejecutado en una máquina con VS Code, Liberty y Vite.
+
+- **`debug_targets`** dice qué se puede depurar en un árbol de trabajo: los IDE con los que el servidor sabe lanzar la depuración, y cada objetivo con su tecnología, el código que cubre, los archivos revisados que le pertenecen y su estado (`stopped`, `running`, `debuggable` o `unknown`). Un árbol de trabajo sin nada que depurar no es un error: devuelve la lista de objetivos vacía.
+- **`debug_launch_plan`** da los pasos para lanzar el IDE en modo depuración sobre unos objetivos, con los puntos de ruptura que propone el modelo y los escenarios que ejercitan el código. Cada paso dice quién lo hace: `agent`, el modelo, que ejecuta una orden (`argv`, sin sintaxis de shell) que termina sola y enseguida; o `user`, la persona, que sigue una instrucción, arranca lo que se queda en marcha y depura. Además da los pasos de `cleanup` para dejarlo todo como estaba, y cada punto de ruptura como `planned` o `rejected`, con su motivo.
+
+Lo que el servidor **no** hace: las dos tools son de solo lectura y sin estado. No arrancan ni paran procesos, no abren el IDE, no escriben en el árbol de trabajo y no manejan el depurador (paso a paso, variables): depura la persona. Seguir un plan no deja en el árbol de trabajo archivos que git no ignore, porque la revisión la cierra git. Las dos tools reciben el árbol de trabajo como parámetro (`workspace`; por defecto, el directorio del servidor), así que valen también para una revisión en un worktree. Los errores que el modelo puede corregir (`invalid-workspace`, `unknown-target`, `ide-unavailable`) vuelven con `isError` y un texto que empieza por el código. Un cambio incompatible del contrato sube su versión mayor.
+
+### Conectar un servidor que lo cumpla
+
+En OpenCode, declara el servidor en `mcp.servers`, en la configuración del proyecto o en tu configuración global (`opencode mcp add <nombre> -- <orden>` lo escribe por ti):
+
+```jsonc
+{
+  "mcp": {
+    "servers": {
+      "ide": { "type": "local", "command": ["<orden>", "<argumentos>"] }
+    }
+  }
+}
+```
+
+- El nombre del servidor es libre: la revisión reconoce el servidor por el nombre de sus tools, `debug_targets` y `debug_launch_plan`. Con el servidor `ide`, OpenCode las llama `ide_debug_targets` e `ide_debug_launch_plan`.
+- Code Mode es cosa tuya: por defecto, OpenCode da las tools dentro de Code Mode (`tools.ide.debug_targets(…)`), y con `"codemode": false` las da directamente. La revisión las usa de las dos formas.
+- OpenCode arranca un servidor local en la carpeta de cada directorio abierto, que es el `workspace` por defecto del contrato.
+
+Con el servidor conectado, la revisión pregunta a `debug_targets` por los archivos revisados y, si quieres depurar, pide el plan a `debug_launch_plan`, te lo enseña antes de ejecutar nada, ejecuta solo los pasos de `agent` y te da los de `user`. Si un IDE o un objetivo trae problemas, te los dice con su arreglo, sin arreglarlos. Sin servidor, o si no da ningún objetivo para lo revisado, la revisión vuelve a la orden de terminal. El plugin no habla con el servidor: lo usa el modelo de la revisión. En Claude Code no hay sesiones de revisión; con el servidor conectado (sus tools se llaman `mcp__<servidor>__debug_targets`, etc.), puedes pedir lo mismo a mano.
 
 ## Ejecutar la suite de aceptación
 

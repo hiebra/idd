@@ -4,7 +4,12 @@
 // recordatorio de cada petición, lo que se inyecta al cambiar entre build y
 // plan, el aviso de lo modificado con plan, el aviso de las sesiones ajenas,
 // la verificación guiada con los tests de aceptación y la depuración en la
-// revisión de una task y del verify, y el workflow y el agente de cada paso
+// revisión de una task y del verify (con el MCP de depuración si la sesión lo
+// tiene, y si no, la orden de terminal: design D13 de
+// limite-de-verificacion-y-mcp-de-depuracion), la estimación de verificación
+// y el límite del proyecto en la revisión de una task, la comprobación de las
+// estimaciones en la revisión del artefacto `tasks` y de los cambios en el
+// plan (design D4 del mismo change), y el workflow y el agente de cada paso
 // (siempre build). Ningún texto pide commits: el plugin
 // pasa el producto al stage y el usuario hace el commit (ADR-0013).
 
