@@ -53,6 +53,20 @@ operations:
   apply:
     guidance:
       - >-
+        If this agent has a built-in way to show the user a todo or task list
+        (a progress checklist tool), use it while implementing tasks as a
+        read-only mirror of the tracking file, so the user can follow the
+        plan at a glance. At the start, load the tasks the CLI returns, in
+        the same order and with their numbering, with the ones already done
+        marked as completed; if that is more than about a dozen entries, use
+        one entry per task group with its done/total count instead. Mark a
+        task in progress when you start it, and completed only after its
+        checkbox is `- [x]` and the rerun of the apply instructions confirms
+        it. The tracking file stays the only source of truth: never show as
+        completed something that is not checked there, and write nothing to
+        the repository for this. If the agent has no such tool, this entry
+        asks for nothing: the built-in progress output is enough.
+      - >-
         Standing instruction from the project owner: apply runs one tracked
         task per session. Take it as given that the user interrupts after every
         completed task; this is the built-in "User interrupts" pause, declared

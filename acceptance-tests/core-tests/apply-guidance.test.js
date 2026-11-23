@@ -85,12 +85,15 @@ test('the project config.yaml keeps every other byte in both modes', async () =>
   const text = await projectConfig();
   const added = adjust(text, 'normal');
   assert.equal(added.changed, true);
-  // Only the block lines (and the keys it needs) are new
+  // Without the block, what adjust gives is the file as it was, except for the
+  // keys the block needs if the file has no apply guidance
   const before = text.split('\n');
   const after = added.text.split('\n');
-  const extra = after.filter((l) => !before.includes(l));
-  for (const line of extra) assert.ok(BLOCK.includes(line) || ['  apply:', '    guidance:'].includes(line), line);
-  assert.equal(after.length, before.length + BLOCK.length + 2);
+  const at = after.findIndex((_, i) => BLOCK.every((l, k) => after[i + k] === l));
+  assert.ok(at >= 0, 'the block is not in the output of adjust');
+  const keys = before.includes('  apply:') ? 0 : 2;
+  if (keys) assert.deepEqual(after.slice(at - keys, at), ['  apply:', '    guidance:']);
+  assert.deepEqual([...after.slice(0, at - keys), ...after.slice(at + BLOCK.length)], before);
   assert.equal(adjust(added.text, 'auto').text, text);
   assert.equal(adjust(text, 'auto').changed, false);
 });
