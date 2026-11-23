@@ -5,7 +5,7 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 ## 1. Estado de partida (zona de código)
 
 - [x] 1.1 Traer `origin/main` a la rama de trabajo (`git fetch` y fusión) y comprobar que `git diff --check` no deja marcadores; si hay conflictos, presentar cada decisión de la resolución al usuario antes del commit de fusión.
-- [ ] 1.2 Ejecutar la suite con los deltas del change (`npm test` en `acceptance-tests/`): los 6 escenarios nuevos de «Pasar a una sesión es pasar a su rama» salen con pasos sin definir y el resto pasa. Anotar aquí el recuento.
+- [x] 1.2 Ejecutar la suite con los deltas del change (`npm test` en `acceptance-tests/`): los 6 escenarios nuevos de «Pasar a una sesión es pasar a su rama» salen con pasos sin definir y el resto pasa. Anotar aquí el recuento. Recuento: 338 escenarios (332 pasan, 6 sin definir: los de «Pasar a una sesión es pasar a su rama»); 1850 pasos (1816 pasan, 2 omitidos, 32 sin definir).
 
 ## 2. Escenarios de la excepción (zona de código), un paso a la vez
 
