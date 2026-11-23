@@ -13,7 +13,7 @@ Ciclo por task: paso sin definir → implementarlo en `acceptance-tests/step-def
 
 - [x] 2.1 Pasos de preparación: «un proyecto cuyo `openspec/config.yaml` declara `x-main: [develop, main]` y `x-main-protected: <protegido>`» (y la variante con solo `x-main-protected: true`); «la TUI está en una sesión de la rama temporal `exportar-datos`, con cambios sin commit» (y con un cambio sin commit en un archivo que difiere en `main`); «la sesión libre de la rama `<destino>` está en el mismo directorio». Reutilizar las preparaciones de ramas y sesiones de `support/autopilot.js` y `support/branches.js`.
 - [x] 2.2 Pasos de acción y resultado: «la TUI entra en la sesión de la rama `<destino>`»; «el directorio pasa a la rama `<destino>` con sus cambios sin commit»; «el directorio sigue en la rama `exportar-datos` con sus cambios sin commit»; «la TUI vuelve a la sesión de la rama `exportar-datos`»; «se avisa con el error de git».
-- [ ] 2.3 Comprobar que los escenarios nuevos fallan por la razón esperada (el plugin vuelve atrás con «cambios sin commit» o rechaza la rama permanente) y que los demás pasan.
+- [x] 2.3 Comprobar que los escenarios nuevos fallan por la razón esperada (el plugin vuelve atrás con «cambios sin commit» o rechaza la rama permanente) y que los demás pasan.
 
 ## 3. Implementación (zona de código), un escenario a la vez
 
