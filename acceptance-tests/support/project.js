@@ -11,6 +11,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { ENGINE_JSON, git } = require('./engine');
+const { effectiveMode } = require('./wiki-modes');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const EXCLUDED_AT_ROOT = new Set(['.git', 'acceptance-tests', '.wiki']);
@@ -145,6 +146,30 @@ class Project {
   // The project switch of the wiki (design D1 of add-project-wiki-toggle)
   wikiEnabled() {
     return this.hasEngineConfig() && this.engineConfig().enabled === true;
+  }
+
+  // The mode of the wiki the project declares, as written in engine.json
+  // (design D1 of add-wiki-lite-mode): undefined when it declares none
+  wikiMode() {
+    return this.hasEngineConfig() ? this.engineConfig().mode : undefined;
+  }
+
+  // The mode the core uses: lite only when the clone declares exactly "lite"
+  wikiEffectiveMode() {
+    return effectiveMode(this.hasEngineConfig() ? this.engineConfig() : {});
+  }
+
+  // Declares the mode (any value, also one that is not a mode) or, with
+  // undefined, removes it, and folds it into the clone's commit, as if the
+  // project had always had it. Only "mode" changes: the switch stays
+  setWikiMode(mode) {
+    const config = { ...this.engineConfig() };
+    if (mode === undefined) delete config.mode;
+    else config.mode = mode;
+    this.writeEngineConfig(config);
+    if (git(this.dir, 'status', '--porcelain', '--untracked-files=no').trim()) {
+      git(this.dir, 'commit', '-q', '-a', '--amend', '--no-edit');
+    }
   }
 
   // Sets the switch alone and folds it into the clone's commit, as if the

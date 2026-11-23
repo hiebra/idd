@@ -74,6 +74,42 @@ Given(new RegExp(`^un (?:clon del )?proyecto con el wiki ${STATE}$`), function (
   if (state === 'habilitado') project.addCommittedWiki();
 });
 
+// --- Modo del wiki del clon (design D1 y D8 de add-wiki-lite-mode) -------------
+
+// "Un modo que no existe" is "light" (design D8)
+const UNKNOWN_MODE = 'light';
+const DECLARATION = '(sin declarar ningún modo|en el modo (?:full|lite)|en un modo que no existe)';
+
+function declaredMode(declaration) {
+  if (declaration === 'sin declarar ningún modo') return undefined;
+  if (declaration === 'en un modo que no existe') return UNKNOWN_MODE;
+  return declaration.replace('en el modo ', '');
+}
+
+function cloneWithWikiMode(world, state, mode) {
+  const project = cloneWithWiki(world, state);
+  project.setWikiMode(mode);
+  assert.deepEqual(
+    [project.wikiEnabled(), project.wikiMode()],
+    [state === 'habilitado', mode],
+    JSON.stringify(project.engineConfig())
+  );
+  return project;
+}
+
+Given(new RegExp(`^un (?:clon del )?proyecto con el wiki habilitado ${DECLARATION}$`), function (declaration) {
+  cloneWithWikiMode(this, 'habilitado', declaredMode(declaration)).addCommittedWiki();
+});
+
+Given('un clon del proyecto con el wiki deshabilitado y declarado el modo lite', function () {
+  cloneWithWikiMode(this, 'deshabilitado', 'lite');
+});
+
+Given(new RegExp(`^una sesión de ${AGENT} abierta en un proyecto con el wiki habilitado en el modo (full|lite)$`), function (agent, mode) {
+  cloneWithWikiMode(this, 'habilitado', mode);
+  this.openSetupSession(agent);
+});
+
 Given('un clon del proyecto con el wiki deshabilitado y con `.wiki\\/`', function () {
   cloneWithWiki(this, 'deshabilitado').addCommittedWiki();
 });
@@ -149,13 +185,41 @@ Then('git no muestra como cambio nada de lo retirado', function () {
 
 // Claude Code: in .claude/settings.local.json, the user's own and not
 // versioned; OpenCode: in the environment it is launched from
-Given(new RegExp(`^el usuario tiene \`PROJECT_WIKI=off\` en el entorno de ${AGENT}$`), function (agent) {
-  if (agent === 'Claude Code') this.project.writeClaudeLocalSettings({ env: { PROJECT_WIKI: 'off' } });
-  else this.machine.userEnv.PROJECT_WIKI = 'off';
+Given(new RegExp(`^el usuario tiene \`PROJECT_WIKI=(off|lite)\` en el entorno de ${AGENT}$`), function (value, agent) {
+  if (agent === 'Claude Code') this.project.writeClaudeLocalSettings({ env: { PROJECT_WIKI: value } });
+  else this.machine.userEnv.PROJECT_WIKI = value;
 });
 
 Then('el agente recibe la guía del wiki', function () {
   assert.ok(deliveredContext(this).includes(this.guideAsDelivered()), `${this.session.agent}:\n${this.session.log}`);
+});
+
+// The guide of a mode, and not the other mode's: the two guides differ only
+// in the mode blocks, so neither is a part of the other (design D2)
+Then(/^el agente recibe la guía del wiki del modo (full|lite)$/, function (mode) {
+  const other = mode === 'full' ? 'lite' : 'full';
+  const context = deliveredContext(this);
+  const detail = `${this.session.agent}:\n${this.session.log}`;
+  assert.ok(context.includes(this.guideAsDelivered(this.session.agent, mode)), `no guide of the ${mode} mode\n${detail}`);
+  assert.ok(!context.includes(this.guideAsDelivered(this.session.agent, other)), `the guide of the ${other} mode\n${detail}`);
+});
+
+// The warning about a mode that does not exist: the one line that names the
+// value the project declares (design D1)
+function unknownModeWarning(world) {
+  const lines = world.session.warnings.filter((line) => line.includes(UNKNOWN_MODE));
+  assert.equal(lines.length, 1, `expected one warning naming '${UNKNOWN_MODE}':\n${shown(world)}\n${world.session.log}`);
+  return lines[0];
+}
+
+Then('se avisa de que ese modo del wiki no existe', function () {
+  assert.match(unknownModeWarning(this), new RegExp(`modo del wiki.*${UNKNOWN_MODE}.*no existe`));
+});
+
+Then('el aviso nombra los modos `full` y `lite`', function () {
+  const warning = unknownModeWarning(this);
+  assert.match(warning, /\bfull\b/);
+  assert.match(warning, /\blite\b/);
 });
 
 // The archive guidance as `openspec instructions archive` gives it, for a
@@ -181,6 +245,7 @@ Then('no mencionan el wiki', function () {
 // --- /toggle-wiki (design D4 de add-project-wiki-toggle) ------------------------
 
 const { runToggleWiki, manifests } = require('../support/toggle-wiki');
+const wikiModes = require('../support/wiki-modes');
 const skillsSupport = require('../support/skills');
 const YAML = require('../../node_modules/yaml');
 
@@ -199,16 +264,17 @@ function snapshot(dir) {
   return files;
 }
 
-function toggleWiki(world, agent) {
+function toggleWiki(world, agent, argument = '') {
   const project = world.ensureProject();
   if (world.session?.agent !== agent) world.openSetupSession(agent);
   world.beforeToggle = {
     config: project.readConfig(),
+    engine: project.engineConfig(),
     wiki: snapshot(project.path('.wiki')),
     status: project.gitStatus(),
     head: require('../support/engine').git(project.dir, 'rev-parse', 'HEAD').trim(),
   };
-  world.toggle = runToggleWiki(project, world.session, agent);
+  world.toggle = runToggleWiki(project, world.session, agent, argument);
   return world.toggle;
 }
 
@@ -276,6 +342,79 @@ Given('un clon del proyecto en el que se acaba de habilitar el wiki con `\\/togg
   assert.equal(this.project.wikiEnabled(), true, JSON.stringify(this.toggle.runs, null, 2));
 });
 
+// --- /toggle-wiki con argumento (design D5 y D6 de add-wiki-lite-mode) --------
+
+When(new RegExp(`^el usuario ejecuta \`/toggle-wiki ([^\`]+)\` en ${AGENT}$`), function (argument, agent) {
+  toggleWiki(this, agent, argument);
+});
+
+function toggleDetail(world) {
+  return `${JSON.stringify(world.toggle?.runs, null, 2)}\n${JSON.stringify(world.project.engineConfig())}`;
+}
+
+Then(/^el wiki del proyecto queda en el modo (full|lite)$/, function (mode) {
+  assert.equal(this.project.wikiEffectiveMode(), mode, toggleDetail(this));
+});
+
+Then('el modo del wiki queda declarado como lite', function () {
+  assert.equal(this.project.wikiMode(), 'lite', toggleDetail(this));
+});
+
+Then('el wiki del proyecto queda habilitado en el modo lite', function () {
+  assert.equal(this.project.wikiEnabled(), true, toggleDetail(this));
+  assert.equal(this.project.wikiMode(), 'lite', toggleDetail(this));
+});
+
+// engine.json as it was, but for "mode"
+Then('el resto de `.agents\\/wiki\\/engine.json` no ha cambiado', function () {
+  const { mode: _before, ...before } = this.beforeToggle.engine;
+  const { mode: _after, ...after } = this.project.engineConfig();
+  assert.deepEqual(after, before);
+});
+
+Then('`openspec\\/config.yaml` no ha cambiado', function () {
+  assert.equal(this.project.readConfig(), this.beforeToggle.config);
+});
+
+// Only engine.json: changing the mode does not touch config.yaml
+Then('el cambio queda en el stage de git, sin commit', function () {
+  const { git } = require('../support/engine');
+  assert.equal(git(this.project.dir, 'rev-parse', 'HEAD').trim(), this.beforeToggle.head, 'the command made a commit');
+  assert.deepEqual(this.project.stagedFiles(), ['.agents/wiki/engine.json'], toggleDetail(this));
+  assert.equal(git(this.project.dir, 'diff', '--name-only').trim(), '', 'changes left unstaged');
+});
+
+Then(/^se informa de que el wiki queda en el modo (full|lite) y de qué vale desde el mensaje siguiente y desde la sesión siguiente$/, function (mode) {
+  assert.match(this.toggle.report, new RegExp(`queda en el modo ${mode}\\b`));
+  assert.match(this.toggle.report, /mensaje siguiente/);
+  assert.match(this.toggle.report, /sesión siguiente/);
+});
+
+Then('se informa de que el wiki sigue deshabilitado y de que el modo valdrá cuando se habilite', function () {
+  assert.match(this.toggle.report, /sigue deshabilitado/);
+  assert.match(this.toggle.report, /valdrá cuando se habilite/);
+});
+
+Then('se informa de que el wiki ya estaba en el modo lite', function () {
+  assert.match(this.toggle.report, /ya estaba en el modo lite\b/);
+});
+
+Then('se informa de que ese modo no existe', function () {
+  assert.equal(this.toggle.runs.length, 0, toggleDetail(this));
+  assert.match(this.toggle.report, new RegExp(`${this.toggle.argument}\\b.*no existe`));
+});
+
+Then('se nombran los modos `full` y `lite`', function () {
+  assert.match(this.toggle.report, /\bfull\b/);
+  assert.match(this.toggle.report, /\blite\b/);
+});
+
+Given('un clon del proyecto en el que se acaba de cambiar el modo del wiki a lite con `\\/toggle-wiki lite`', function () {
+  cloneWithWikiMode(this, 'habilitado', undefined).addCommittedWiki();
+  toggleWiki(this, 'Claude Code', 'lite');
+  assert.equal(this.project.wikiMode(), 'lite', toggleDetail(this));
+});
+
 Then('`.wiki\\/` tiene como fuentes los productos del proyecto, fijados al commit actual', function () {
   const found = manifests(this.project);
   assert.equal(found.length, 1, JSON.stringify(found));
@@ -317,6 +456,11 @@ When('se comprueba el ajuste del wiki del proyecto', function () {
 // but the template says so explicitly
 Then('el wiki está deshabilitado', function () {
   assert.strictEqual(this.templateEngine.enabled, false, JSON.stringify(this.templateEngine));
+});
+
+// Without "mode", the mode is full (design D1 of add-wiki-lite-mode)
+Then('no declara ningún modo del wiki', function () {
+  assert.equal(Object.hasOwn(this.templateEngine, 'mode'), false, JSON.stringify(this.templateEngine));
 });
 
 // --- Motor del wiki ------------------------------------------------------------
@@ -497,6 +641,22 @@ Then('esa guía procede del único archivo de guía del proyecto', function () {
   );
 });
 
+// What is only of the other mode: the lines of its blocks that are not also
+// in the guide of the clone's mode, such as a heading both blocks have
+// (design D8 of add-wiki-lite-mode)
+Then(/^esa guía no incluye lo propio del modo (full|lite)$/, function (other) {
+  const mode = this.project.wikiEffectiveMode();
+  assert.notEqual(mode, other, `the clone is in the ${other} mode`);
+  const own = new Set(this.guideAsDelivered(this.session.agent, mode).split('\n'));
+  const context = deliveredContext(this);
+  const found = wikiModes
+    .modeLines(this.project.readGuide())
+    .filter((entry) => entry.mode === other && entry.line.trim() !== '' && !own.has(entry.line))
+    .map((entry) => entry.line.replace(/<!--[\s\S]*?-->/g, '').trim())
+    .filter((line) => line !== '' && context.includes(line));
+  assert.deepEqual(found, [], `${this.session.agent} received lines of the ${other} mode:\n${this.session.log}`);
+});
+
 Then(new RegExp(`^el adaptador del arranque de ${AGENT} entrega la guía del wiki$`), function (agent) {
   assert.equal(this.session.agent, agent);
   assert.ok(deliveredContext(this).includes(this.guideAsDelivered()), `${agent}:\n${this.session.log}`);
@@ -523,6 +683,16 @@ Then('el agente recibe el mensaje junto con el recordatorio del flujo del wiki',
 Then('el recordatorio recuerda consultar antes de responder y preguntar ante un hueco', function () {
   assert.match(this.reminder, /consult/i);
   assert.match(this.reminder, /pregunt/i);
+});
+
+// The lite reminder (design D4, D8): the query is only on the user's express
+// request, and the full-mode "consult before" phrase is absent
+Then('el recordatorio recuerda no consultar el wiki salvo que el usuario lo pida expresamente', function () {
+  assert.match(this.reminder, /no consultes el wiki salvo que el usuario lo pida expresamente/i);
+});
+
+Then('el recordatorio no recuerda consultar antes de responder', function () {
+  assert.doesNotMatch(this.reminder, /consulta antes/i);
 });
 
 Then(new RegExp(`^el recordatorio nombra la consulta y la ingesta de fuentes como se invocan en ${AGENT}$`), function (agent) {
@@ -570,6 +740,9 @@ Then('el agente recibe el mensaje del usuario', function () {
 const GUIDE_SECTIONS = {
   'indica consultar el wiki en modo de solo lectura antes de usar el conocimiento interno': 'consultar-antes',
   'indica consultar primero el wiki del proyecto y después el hub del usuario, si existe': 'orden-de-consulta',
+  'indica consultarlo solo cuando el usuario lo pide expresamente': 'consultar-a-peticion',
+  'indica no consultarlo por iniciativa propia, aunque la petición requiera conocimiento': 'no-consultar-por-iniciativa',
+  'indica consultarlo entonces en modo de solo lectura': 'consultar-a-peticion',
   'incluye las peticiones sobre dominio, decisiones técnicas, herramientas y hechos externos': 'peticiones-con-conocimiento',
   'excluye las operaciones sobre el código que no requieren conocimiento': 'operaciones-sin-conocimiento',
   'indica que el agente discierne en cada caso': 'discernir-peticiones',
@@ -613,6 +786,80 @@ function assertGuideSection(world, id) {
 
 Given('la guía del wiki del proyecto', function () {
   this.guideText = this.ensureProject().readGuide();
+});
+
+// The guide file as the core prepares it for a mode, still with its section
+// identifiers (design D2 and D8 of add-wiki-lite-mode)
+Given(/^la guía del wiki del proyecto en el modo (full|lite)$/, function (mode) {
+  this.guideMode = mode;
+  this.guideText = wikiModes.modeText(this.ensureProject().readGuide(), mode);
+});
+
+// What the guide of a mode does not say: its section identifier is not there
+const GUIDE_ABSENT_SECTIONS = {
+  'no indica consultar el wiki antes de usar el conocimiento interno': ['consultar-antes'],
+  'no indica discernir qué peticiones requieren conocimiento': [
+    'peticiones-con-conocimiento',
+    'operaciones-sin-conocimiento',
+    'discernir-peticiones',
+  ],
+};
+
+for (const [text, ids] of Object.entries(GUIDE_ABSENT_SECTIONS)) {
+  Then(text, function () {
+    for (const id of ids) {
+      const marker = `<!-- wiki-guide:${id} -->`;
+      assert.ok(!this.guideText.includes(marker), `the wiki guide of the ${this.guideMode} mode has the section ${marker}`);
+    }
+  });
+}
+
+// The sections of the guide about when to consult, the only ones of a mode
+// (design D3 of add-wiki-lite-mode)
+const QUERY_SECTIONS = [
+  'peticiones-con-conocimiento',
+  'operaciones-sin-conocimiento',
+  'discernir-peticiones',
+  'consultar-antes',
+  'consultar-a-peticion',
+  'no-consultar-por-iniciativa',
+];
+const SECTION_MARKER = /^<!-- wiki-guide:([\w-]+) -->$/;
+
+function sectionIds(text) {
+  return new Set(text.split('\n').map((line) => line.match(SECTION_MARKER)?.[1]).filter(Boolean));
+}
+
+When(/^se compara con la guía del modo (full|lite)$/, function (mode) {
+  this.comparedMode = mode;
+  this.comparedGuideText = wikiModes.modeText(this.project.readGuide(), mode);
+});
+
+Then('solo cambia lo que indica sobre cuándo consultar el wiki', function () {
+  assert.notEqual(this.guideMode, this.comparedMode, 'the guide is compared with the guide of the same mode');
+  // Outside the mode blocks, both guides have the same lines, from the one
+  // file; inside them, every line but headings and blank lines is in a
+  // section about when to consult
+  const lines = wikiModes.modeLines(this.project.readGuide());
+  let current = null;
+  let previousMode = null;
+  for (const { line, mode } of lines) {
+    if (mode !== previousMode) current = null;
+    previousMode = mode;
+    if (mode === null) continue;
+    const id = line.match(SECTION_MARKER)?.[1];
+    if (id) {
+      assert.ok(QUERY_SECTIONS.includes(id), `the ${mode} mode has its own section ${id}, which is not about when to consult`);
+      current = id;
+    } else if (line.trim() !== '' && !line.startsWith('#')) {
+      assert.ok(current, `a line of the ${mode} mode outside a section about when to consult: ${line}`);
+    }
+  }
+  // And the sections that only one of them has are about when to consult
+  const [ids, comparedIds] = [sectionIds(this.guideText), sectionIds(this.comparedGuideText)];
+  const onlyOne = [...ids].filter((id) => !comparedIds.has(id)).concat([...comparedIds].filter((id) => !ids.has(id)));
+  assert.ok(onlyOne.length > 0, 'the guides of the two modes have the same sections');
+  assert.deepEqual(onlyOne.filter((id) => !QUERY_SECTIONS.includes(id)), []);
 });
 
 When(/^se revisa (?:qué|cómo|cuándo) (?:indica|peticiones exigen) .+$/, function () {
@@ -703,6 +950,19 @@ Then('incluyen resincronizar el wiki del proyecto con estos pasos, en este orden
     assert.ok(at > last, `the archive guidance has no '${paso}' after the previous step:\n${JSON.stringify(guidance, null, 2)}`);
     last = at;
   }
+});
+
+// The resync does not depend on the mode: the wiki entries of the guidance
+// are exactly those of .agents/wiki/archive-guidance.yaml, as in full
+Then('incluyen resincronizar el wiki del proyecto, igual que en el modo full', function () {
+  assert.equal(this.project.wikiEffectiveMode(), 'lite');
+  const source = YAML.parse(fs.readFileSync(this.project.path('.agents', 'wiki', 'archive-guidance.yaml'), 'utf8'));
+  const guidance = this.archiveGuidance.map(String);
+  assert.deepEqual(
+    guidance.filter((entry) => source.includes(entry)),
+    source,
+    `the archive guidance in the lite mode:\n${JSON.stringify(guidance, null, 2)}`
+  );
 });
 
 Then('no incluyen la revisión con el librarian', function () {

@@ -65,7 +65,7 @@ Un *LLM wiki* es una base de conocimiento en Markdown que el propio agente consu
 - **El wiki del proyecto**, en `.wiki/`, versionado con el repositorio: lo específico del proyecto y lo externo que le concierne.
 - **El hub del usuario**, fuera del repositorio y opcional: tus topics personales. Si no lo tienes (por ejemplo, en la nube), no pasa nada.
 
-La **guía del wiki** (`.agents/wiki/guide.md`) es la única fuente del flujo, y la entrega el arranque de sesión. Indica al agente que, ante una petición que requiere conocimiento:
+La **guía del wiki** (`.agents/wiki/guide.md`) es la única fuente del flujo, y la entrega el arranque de sesión. En el modo `full`, el de por defecto (ver [Los modos del wiki](#los-modos-del-wiki-full-y-lite)), indica al agente que, ante una petición que requiere conocimiento:
 
 - consulte el wiki antes de responder de memoria;
 - si el wiki no responde, te pregunte si prefieres que responda con su conocimiento interno, investigue y lo registre, o lo deje;
@@ -99,6 +99,21 @@ Para cambiarlo, ejecuta `/toggle-wiki` en Claude Code o en OpenCode (`.claude/co
 No hace commits: deja `engine.json`, `config.yaml` (y `.wiki/`, tras la ingesta) en el stage, y haz tú el commit para que valga para todos. Al terminar te dice qué vale ya en la sesión y qué desde la siguiente: en Claude Code, `/wiki:*` y `wiki-manager` se pueden usar en la misma sesión y el recordatorio llega desde el mensaje siguiente, pero la guía y `CLAUDE_PLUGIN_ROOT` llegan en la sesión siguiente; en OpenCode 2.3.2, las skills, la guía y el recordatorio llegan al volver a abrirlo, porque lee las skills con el primer mensaje de la sesión y el plugin prepara la guía y el recordatorio al cargarse.
 
 La parte determinista la hace el núcleo, también a mano: `bash .agents/hooks/session-bootstrap.sh wiki <status|on|off> .`.
+
+### Los modos del wiki: `full` y `lite`
+
+El wiki habilitado tiene dos modos ([ADR-0029](adr/0029-wiki-modes-declared-by-the-project.md)):
+
+- **`full`**, el flujo descrito arriba: ante una petición que requiere conocimiento, el agente consulta el wiki antes de responder, y es él quien discierne qué peticiones lo requieren.
+- **`lite`**: el agente no consulta el wiki por iniciativa propia, aunque la petición requiera conocimiento. Lo consulta solo cuando se lo pides expresamente, y entonces igual que en `full`: en solo lectura, primero el wiki del proyecto y después el hub, y te pregunta si el wiki no responde.
+
+Lo demás es igual en los dos modos: el motor y sus operaciones, proponer registrar lo que descubre e ingerir lo que encuentra en internet, y la resincronización del wiki al archivar un change, para que el wiki siga al día cuando se consulte.
+
+El modo también es del proyecto: es el ajuste `"mode"` de `.agents/wiki/engine.json`, versionado y el mismo para todos los que usan el repositorio. Si falta, el modo es `full`, y la plantilla no lo declara. Ninguna preferencia local lo cambia. Un valor que no es un modo (por ejemplo, `"light"` o `"Lite"`) no impide arrancar: el arranque avisa, nombra los modos que existen y usa `full`. La guía y el recordatorio siguen teniendo una sola fuente cada uno: lo propio de cada modo va marcado en el mismo archivo, entre `<!-- wiki-mode:full -->` o `<!-- wiki-mode:lite -->` y `<!-- wiki-mode:end -->`, y el núcleo entrega solo lo del modo del proyecto.
+
+Para cambiarlo, ejecuta `/toggle-wiki lite` o `/toggle-wiki full`. Solo cambian `"mode"`: no habilitan ni deshabilitan el wiki ni tocan `config.yaml`, y, como sin argumento, no hacen commit y dejan `engine.json` en el stage. Con el wiki deshabilitado, declaran el modo, que valdrá cuando lo habilites. Si el wiki ya está en ese modo, no cambian nada, y con otro argumento te dicen que ese modo no existe. Habilitar y deshabilitar con `/toggle-wiki`, sin argumento, conservan el modo. Desde cuándo vale: en Claude Code, el recordatorio cambia desde tu mensaje siguiente y la guía, desde la sesión siguiente; en OpenCode, los dos cambian al volver a abrirlo.
+
+A mano: `bash .agents/hooks/session-bootstrap.sh wiki mode <full|lite> .`, y `wiki status` incluye `mode=`.
 
 **Migración desde una versión anterior de la plantilla:**
 
