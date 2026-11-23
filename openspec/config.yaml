@@ -29,6 +29,7 @@ rules:
     - Must use spec-as-source skill
   tasks:
     - Must use spec-as-source skill
+    - "Dimensiona cada task para quien la verifica: leer su diff, recorrer y ejecutar los escenarios de aceptación que la cubren y, si quiere, depurarla no debe llevar a una persona más de 15 minutos. Para estimarlo, cuenta 1 minuto por cada 8 líneas de diff que haya que leer, con los tests y sin los archivos generados, y 2 minutos por cada escenario que haya que recorrer. Escribe la estimación al final de la línea de cada task, como «(verificación: ~10 min)». Si la estimación de una task pasa del límite, divídela en tasks que se puedan verificar por separado."
     - "La suite de aceptación completa se lanza una sola vez por change: la última task del `tasks.md` la lanza, y ninguna otra task la lanza antes de implementar (no hay task de pasada completa de base). Antes de esa pasada, esa task hace `git fetch` y, si la rama de origen ha avanzado, propone al usuario traerla a la rama del change, para que la pasada pruebe lo que llegará a la rama de origen; traerla lo decide el usuario."
     - "Cada task de implementación dice qué escenarios de aceptación cubre (sus títulos) y ejecuta solo esos escenarios, acotados con `--name`; las rutas de `.feature` no acotan la pasada. Después comprueba que se ejecutó el número de escenarios esperado: un `--name` que no casa con ninguno da `0 scenarios` y sale con 0, sin error."
   adr:
