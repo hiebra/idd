@@ -18,29 +18,32 @@ And las reglas piden no incluir una task que la lance antes de implementar
 And las reglas piden hacer `git fetch` antes de esa pasada y proponer traer la rama de origen si ha avanzado
 ```
 
-### Requirement: Durante una task se ejecutan solo sus escenarios
-Las indicaciones de apply de `openspec/config.yaml` DEBEN pedir que, al implementar una task, se ejecuten solo los escenarios que esa task cubre, acotados con `--name`, y que la suite completa quede para la última task. Esa indicación DEBE estar con las indicaciones de una task por sesión del autopilot y sin ellas, y NO DEBE depender del modo del autopilot.
+### Requirement: Cada task ejecuta solo sus escenarios
+Las reglas de `tasks` de `openspec/config.yaml` DEBEN pedir que cada task que implementa un paso diga qué escenarios cubre y que se ejecuten solo esos, acotados con `--name`, y comprobar que se ejecutó el número de escenarios esperado, porque un `--name` que no casa con ninguno termina con 0 y sin error. La plantilla de tasks de la skill `spec-as-source` del proyecto DEBE indicarlo en el paso de cada task de implementación y dejar la suite completa para la task de cierre. Las indicaciones de `apply` de `openspec/config.yaml`, incluidas las que gestiona el plugin del autopilot, NO DEBEN cambiar por esto.
 
-#### Scenario Outline: El CLI da la indicación de apply con y sin las indicaciones del autopilot
+#### Scenario: El CLI da la regla de acotar con --name al planificar las tasks
 
 ```gherkin
-Given un clon del proyecto cuyo `openspec/config.yaml` <estado> las indicaciones de una task por sesión
-When se piden las instrucciones de `apply` con `openspec instructions apply --change exportar-datos`
-Then las indicaciones piden ejecutar solo los escenarios de la task en curso, con `--name`
-And las indicaciones piden dejar la suite completa para la última task
-
-Examples:
-  | estado       |
-  | tiene        |
-  | no tiene     |
+Given un change en curso `exportar-datos`
+When se piden las instrucciones del artefacto `tasks` con `openspec instructions tasks --change exportar-datos`
+Then las reglas piden que cada task de implementación diga qué escenarios cubre
+And las reglas piden ejecutar solo esos escenarios, con `--name`
+And las reglas piden comprobar que se ejecutó el número de escenarios esperado
 ```
 
-#### Scenario: Cargar el plugin del autopilot conserva la indicación
+#### Scenario: La plantilla de tasks acota cada task y deja la suite completa para el cierre
 
 ```gherkin
-Given un usuario con el plugin en modo normal
-And un clon del proyecto cuyo `openspec/config.yaml` no tiene las indicaciones de una task por sesión
-When se carga el plugin
-Then `openspec/config.yaml` tiene las indicaciones de una task por sesión
-And las instrucciones de `apply` siguen pidiendo ejecutar solo los escenarios de la task en curso
+Given la plantilla de tasks de la skill `spec-as-source` del proyecto
+When se revisa qué indica sobre la ejecución de los escenarios
+Then indica que cada task de implementación ejecuta solo sus escenarios, con `--name`
+And indica que la suite completa se lanza una sola vez, en la task de cierre
+```
+
+#### Scenario: Las indicaciones de apply no cambian
+
+```gherkin
+Given un clon del proyecto con un change en curso `exportar-datos`
+When se piden las instrucciones de `apply` con `openspec instructions apply --change exportar-datos`
+Then las indicaciones de apply no mencionan la suite de aceptación
 ```
