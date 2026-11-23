@@ -43,7 +43,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
   - el recordatorio dice «salvo que el usuario lo pida expresamente» y no «consulta antes».
 
   Rojo sin los bloques de `lite`
-- [ ] 4.2 Marcar en `.agents/wiki/guide.md` y `.agents/wiki/reminder.md` lo propio de cada modo y añadir lo de `lite` (D3, D4) → verde la prueba de 4.1 y la de 2.1 (`full` sin cambios) → commit
+- [x] 4.2 Marcar en `.agents/wiki/guide.md` y `.agents/wiki/reminder.md` lo propio de cada modo y añadir lo de `lite` (D3, D4) → verde la prueba de 4.1 y la de 2.1 (`full` sin cambios) → commit
 
 ## 5. Suite: el modo es del clon (D8)
 

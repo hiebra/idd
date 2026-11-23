@@ -9,6 +9,7 @@ Este proyecto guarda su conocimiento en un *LLM wiki*: una base de conocimiento 
 <!-- wiki-guide:ambito-hub -->
 - **Hub del usuario**, fuera del repositorio y opcional: el conocimiento general del usuario, por topics. Si no existe (por ejemplo, en una sesión en la nube), sigue solo con el del proyecto, sin avisar.
 
+<!-- wiki-mode:full -->
 ## Cuándo consultar
 
 <!-- wiki-guide:peticiones-con-conocimiento -->
@@ -22,6 +23,18 @@ Tú disciernes en cada caso; ante la duda, consulta.
 
 <!-- wiki-guide:consultar-antes -->
 Ante una petición que requiere conocimiento, consulta el wiki en modo de solo lectura antes de usar tu conocimiento interno.
+<!-- wiki-mode:end -->
+<!-- wiki-mode:lite -->
+## Cuándo consultar
+
+<!-- wiki-guide:consultar-a-peticion -->
+Consulta el wiki solo cuando el usuario te lo pide expresamente, y entonces en modo de solo lectura.
+<!-- wiki-guide:no-consultar-por-iniciativa -->
+No lo consultes por iniciativa propia, aunque la petición requiera conocimiento.
+
+## Cómo consultar
+
+<!-- wiki-mode:end -->
 <!-- wiki-guide:orden-de-consulta -->
 Consulta primero el wiki del proyecto y, si no basta, el topic que corresponda del hub del usuario, si existe. Cita los artículos en los que te basas.
 <!-- wiki-guide:consultar-con-lectura -->
