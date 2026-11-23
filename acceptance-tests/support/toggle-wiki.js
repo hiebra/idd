@@ -4,7 +4,12 @@
 // add-project-wiki-toggle). It follows the agent's command as written: it
 // reads the step sections of the command file (marked with
 // `<!-- toggle-wiki:<step> -->`), runs the bash of each step it takes in the
-// session, and reports with the text the command gives in step 5.
+// session, and reports with the text the command gives in its last step.
+//
+// With an argument (design D6 of add-wiki-lite-mode), it takes the `mode`
+// step: the item of the list labelled with the argument as is, and its bash,
+// or, for any other argument, no bash and the report of a mode that does not
+// exist. Without one, it goes on with the steps of the state.
 //
 // The only thing it does not take from the command is the engine's part of
 // the initial ingest, which needs a real model and the real engine (section 10
@@ -45,11 +50,18 @@ function bashBlocks(section) {
   return blocks;
 }
 
-// The text step 5 gives for a state: the quoted text of its list item
-function reportText(section, label) {
+// The text the report step gives for a state: the quoted text of its list
+// item, with the blanks the command says to fill in
+function reportText(section, label, blanks = {}) {
   const match = new RegExp(`^- \\*\\*${label}\\*\\*: «([^»]+)»`, 'm').exec(section ?? '');
   if (!match) throw new Error(`the command does not say how to report the wiki ${label.toLowerCase()}:\n${section}`);
-  return match[1];
+  return Object.entries(blanks).reduce((text, [blank, value]) => text.replaceAll(`<${blank}>`, value), match[1]);
+}
+
+// The item of a list of a section whose bold label is exactly `label`
+function listItem(section, label) {
+  const items = (section ?? '').split(/^(?=- \*\*)/m).slice(1);
+  return items.find((item) => item.startsWith(`- **${label}**:`)) ?? null;
 }
 
 function keyValues(stdout) {
@@ -85,7 +97,7 @@ function manifests(project) {
 
 // Runs /toggle-wiki in an open session. When the command stops to propose the
 // initial ingest, the result has a `proposal` and `answer(confirmed)` goes on.
-function runToggleWiki(project, session, agent) {
+function runToggleWiki(project, session, agent, argument = '') {
   const file = commandFile(project, agent);
   if (!fs.existsSync(file)) throw new Error(`${agent} has no /toggle-wiki command (${file})`);
   const steps = sections(fs.readFileSync(file, 'utf8'));
@@ -101,7 +113,25 @@ function runToggleWiki(project, session, agent) {
     if (!command) throw new Error(`step '${id}' of the /toggle-wiki command of ${agent} has no bash block ${index + 1}`);
     return command;
   };
-  const toggle = { agent, runs, report: null, proposal: null, answer: null };
+  const toggle = { agent, argument, runs, report: null, proposal: null, answer: null };
+  if (!steps.mode) throw new Error(`the /toggle-wiki command of ${agent} has no 'mode' step`);
+  if (!steps.mode.includes('$ARGUMENTS')) throw new Error(`the 'mode' step of the /toggle-wiki command of ${agent} does not take $ARGUMENTS`);
+  if (argument !== '') {
+    const item = listItem(steps.mode, `\`${argument}\``);
+    if (!item) {
+      toggle.report = reportText(steps.report, 'Modo inexistente', { argumento: argument });
+      return toggle;
+    }
+    const [command] = bashBlocks(item);
+    if (!command) throw new Error(`the item '${argument}' of the 'mode' step of the /toggle-wiki command of ${agent} has no bash block`);
+    const result = keyValues(run(command).stdout);
+    toggle.mode = { changed: result.value('changed'), mode: result.value('mode'), enabled: result.value('enabled') };
+    let label = 'Modo cambiado';
+    if (toggle.mode.changed === 'false') label = 'Modo sin cambio';
+    else if (toggle.mode.enabled === 'false') label = 'Modo con el wiki deshabilitado';
+    toggle.report = reportText(steps.report, label, { modo: toggle.mode.mode });
+    return toggle;
+  }
   const status = keyValues(run(block('status')).stdout);
   toggle.status = { enabled: status.value('enabled'), wikiDir: status.value('wiki-dir') };
   if (toggle.status.enabled === 'true') {

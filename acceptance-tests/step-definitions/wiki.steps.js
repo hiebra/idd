@@ -264,16 +264,17 @@ function snapshot(dir) {
   return files;
 }
 
-function toggleWiki(world, agent) {
+function toggleWiki(world, agent, argument = '') {
   const project = world.ensureProject();
   if (world.session?.agent !== agent) world.openSetupSession(agent);
   world.beforeToggle = {
     config: project.readConfig(),
+    engine: project.engineConfig(),
     wiki: snapshot(project.path('.wiki')),
     status: project.gitStatus(),
     head: require('../support/engine').git(project.dir, 'rev-parse', 'HEAD').trim(),
   };
-  world.toggle = runToggleWiki(project, world.session, agent);
+  world.toggle = runToggleWiki(project, world.session, agent, argument);
   return world.toggle;
 }
 
@@ -339,6 +340,79 @@ Given('un clon del proyecto en el que se acaba de habilitar el wiki con `\\/togg
   cloneWithWiki(this, 'deshabilitado').addCommittedWiki();
   toggleWiki(this, 'Claude Code');
   assert.equal(this.project.wikiEnabled(), true, JSON.stringify(this.toggle.runs, null, 2));
+});
+
+// --- /toggle-wiki con argumento (design D5 y D6 de add-wiki-lite-mode) --------
+
+When(new RegExp(`^el usuario ejecuta \`/toggle-wiki ([^\`]+)\` en ${AGENT}$`), function (argument, agent) {
+  toggleWiki(this, agent, argument);
+});
+
+function toggleDetail(world) {
+  return `${JSON.stringify(world.toggle?.runs, null, 2)}\n${JSON.stringify(world.project.engineConfig())}`;
+}
+
+Then(/^el wiki del proyecto queda en el modo (full|lite)$/, function (mode) {
+  assert.equal(this.project.wikiEffectiveMode(), mode, toggleDetail(this));
+});
+
+Then('el modo del wiki queda declarado como lite', function () {
+  assert.equal(this.project.wikiMode(), 'lite', toggleDetail(this));
+});
+
+Then('el wiki del proyecto queda habilitado en el modo lite', function () {
+  assert.equal(this.project.wikiEnabled(), true, toggleDetail(this));
+  assert.equal(this.project.wikiMode(), 'lite', toggleDetail(this));
+});
+
+// engine.json as it was, but for "mode"
+Then('el resto de `.agents\\/wiki\\/engine.json` no ha cambiado', function () {
+  const { mode: _before, ...before } = this.beforeToggle.engine;
+  const { mode: _after, ...after } = this.project.engineConfig();
+  assert.deepEqual(after, before);
+});
+
+Then('`openspec\\/config.yaml` no ha cambiado', function () {
+  assert.equal(this.project.readConfig(), this.beforeToggle.config);
+});
+
+// Only engine.json: changing the mode does not touch config.yaml
+Then('el cambio queda en el stage de git, sin commit', function () {
+  const { git } = require('../support/engine');
+  assert.equal(git(this.project.dir, 'rev-parse', 'HEAD').trim(), this.beforeToggle.head, 'the command made a commit');
+  assert.deepEqual(this.project.stagedFiles(), ['.agents/wiki/engine.json'], toggleDetail(this));
+  assert.equal(git(this.project.dir, 'diff', '--name-only').trim(), '', 'changes left unstaged');
+});
+
+Then(/^se informa de que el wiki queda en el modo (full|lite) y de qué vale desde el mensaje siguiente y desde la sesión siguiente$/, function (mode) {
+  assert.match(this.toggle.report, new RegExp(`queda en el modo ${mode}\\b`));
+  assert.match(this.toggle.report, /mensaje siguiente/);
+  assert.match(this.toggle.report, /sesión siguiente/);
+});
+
+Then('se informa de que el wiki sigue deshabilitado y de que el modo valdrá cuando se habilite', function () {
+  assert.match(this.toggle.report, /sigue deshabilitado/);
+  assert.match(this.toggle.report, /valdrá cuando se habilite/);
+});
+
+Then('se informa de que el wiki ya estaba en el modo lite', function () {
+  assert.match(this.toggle.report, /ya estaba en el modo lite\b/);
+});
+
+Then('se informa de que ese modo no existe', function () {
+  assert.equal(this.toggle.runs.length, 0, toggleDetail(this));
+  assert.match(this.toggle.report, new RegExp(`${this.toggle.argument}\\b.*no existe`));
+});
+
+Then('se nombran los modos `full` y `lite`', function () {
+  assert.match(this.toggle.report, /\bfull\b/);
+  assert.match(this.toggle.report, /\blite\b/);
+});
+
+Given('un clon del proyecto en el que se acaba de cambiar el modo del wiki a lite con `\\/toggle-wiki lite`', function () {
+  cloneWithWikiMode(this, 'habilitado', undefined).addCommittedWiki();
+  toggleWiki(this, 'Claude Code', 'lite');
+  assert.equal(this.project.wikiMode(), 'lite', toggleDetail(this));
 });
 
 Then('`.wiki\\/` tiene como fuentes los productos del proyecto, fijados al commit actual', function () {

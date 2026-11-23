@@ -55,7 +55,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 6. `/toggle-wiki` con argumento (D6)
 
-- [ ] 6.1 `llm-wiki: Cambiar el modo del wiki con /toggle-wiki lite y /toggle-wiki full` y el escenario `Deshabilitar y habilitar el wiki conserva su modo`. Rojo → añadir el paso `toggle-wiki:mode` y los textos del paso 5 a `.claude/commands/toggle-wiki.md` y `.opencode/commands/toggle-wiki.md`, y extender `support/toggle-wiki.js` y los pasos con el argumento → verde → commit. Escenarios, acotados con `--name`: `Cambiar el modo del wiki`, `Cambiar el modo con el wiki deshabilitado`, `El wiki ya está en ese modo`, `Un argumento que no es un modo`, `La sesión siguiente a cambiar el modo` y `Deshabilitar y habilitar el wiki conserva su modo` (14 escenarios)
+- [x] 6.1 `llm-wiki: Cambiar el modo del wiki con /toggle-wiki lite y /toggle-wiki full` y el escenario `Deshabilitar y habilitar el wiki conserva su modo`. Rojo → añadir el paso `toggle-wiki:mode` y los textos del paso 5 a `.claude/commands/toggle-wiki.md` y `.opencode/commands/toggle-wiki.md`, y extender `support/toggle-wiki.js` y los pasos con el argumento → verde → commit. Escenarios, acotados con `--name`: `Cambiar el modo del wiki`, `Cambiar el modo con el wiki deshabilitado`, `El wiki ya está en ese modo`, `Un argumento que no es un modo`, `La sesión siguiente a cambiar el modo` y `Deshabilitar y habilitar el wiki conserva su modo` (14 escenarios)
 - [ ] 6.2 Comprobar en real, con el banco de la tarea 1.2 y un proyecto de prueba, `/toggle-wiki lite`, `/toggle-wiki full`, `/toggle-wiki light` y `/toggle-wiki` en los dos agentes. Lo que no se pueda comprobar en la nube se dice al usuario
 
 ## 7. Documentación y cierre
