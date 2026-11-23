@@ -66,6 +66,7 @@ Si el proyecto tiene su propio arranque de sesión para OpenCode, el arranque in
 ```gherkin
 Given el arranque de sesión instalado de forma global
 And un clon de la plantilla completa, con su propio arranque de sesión
+And el wiki habilitado en el proyecto
 When se abre una sesión de OpenCode en el proyecto
 Then el arranque se ejecuta una sola vez
 And es el del proyecto
