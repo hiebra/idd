@@ -526,7 +526,7 @@ async function start(ctx) {
   const enter = async (session, m, previous) => {
     const head = await currentBranch(directory);
     const others = (await allSessions(api).catch(() => [])).filter((s) => s.id !== session.id && !isArchived(s) && (sessionDir(s) ?? directory) === directory && isWorking(s));
-    const { permanent, origin } = await branchChange(directory);
+    const { permanent, origin, protected: vetoed } = await branchChange(directory);
     const d = enterSession({
       target: { id: session.id, dir: directory, branch: m?.branch ?? null, archived: isArchived(session) },
       fromDir: previous?.directory ?? null,
@@ -535,12 +535,16 @@ async function start(ctx) {
       working: others[0]?.title ?? null,
       permanent,
       origin,
+      protected: vetoed,
     });
     if (d.action !== 'checkout') return d;
     const result = await switchTo(directory, d.branch, d.via);
     if (!result.ok) return { action: 'back', reason: 'checkout', message: `openspec-autopilot: no se ha podido cambiar a la rama ${d.branch}: ${result.message}` };
     pluginCheckout(head, d.branch);
-    return { action: 'toast', message: checkedOut(d.branch, directory) };
+    // Con la excepción, el aviso dice que los cambios han pasado (D3 de
+    // checkout-al-cambiar-de-sesion)
+    const carried = d.via === 'permanent' && d.carried ? '; tus cambios sin commit han pasado a esa rama' : '';
+    return { action: 'toast', message: checkedOut(d.branch, directory).replace(/\.$/, `${carried}.`) };
   };
 
   const onScreen = guard('screen', async (input) => {
