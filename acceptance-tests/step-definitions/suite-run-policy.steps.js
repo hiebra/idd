@@ -47,3 +47,15 @@ Then('las reglas piden no incluir una task que la lance antes de implementar', f
 Then('las reglas piden hacer `git fetch` antes de esa pasada y proponer traer la rama de origen si ha avanzado', function () {
   assertRule(this, [/`git fetch`/, /rama de origen/, /avanzado/, /traer/], 'git fetch before that run and proposing to bring the origin branch');
 });
+
+Then('las reglas piden que cada task de implementación diga qué escenarios cubre', function () {
+  assertRule(this, [/cada task de implementación/i, /escenarios[^.]*cubre/], 'each implementation task saying which scenarios it covers');
+});
+
+Then('las reglas piden ejecutar solo esos escenarios, con `--name`', function () {
+  assertRule(this, [/solo esos/, /`--name`/], 'running only those scenarios, with --name');
+});
+
+Then('las reglas piden comprobar que se ejecutó el número de escenarios esperado', function () {
+  assertRule(this, [/número de escenarios/, /esperado/, /`0 scenarios`|ninguno/], 'checking that the expected number of scenarios ran');
+});
