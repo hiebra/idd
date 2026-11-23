@@ -1162,3 +1162,15 @@ Then('indica comprobar que se ejecutó el número de escenarios esperado', funct
 Then('indica no lanzar la suite completa', function () {
   assertIn(section(this, 'merge-checks'), /No lances la suite completa/, 'the merge checks section');
 });
+
+Then('indica comprobarlo antes de pedir el ok del usuario a la resolución, si hay conflictos', function () {
+  assertIn(section(this, 'merge-checks'), /[Cc]on conflictos[^.]*antes de pedir[^.]*ok[^.]*resolución/, 'the merge checks section');
+});
+
+Then('indica comprobarlo tras el commit de fusión que hace git y antes del push, si no los hay', function () {
+  assertIn(section(this, 'merge-checks'), /[Ss]in conflictos[^.]*commit de fusión[\s\S]*?antes del push/, 'the merge checks section');
+});
+
+Then('indica arreglar lo que falle en un commit aparte antes del push', function () {
+  assertIn(section(this, 'merge-checks'), /falla[^.]*commit aparte[^.]*antes del push/, 'the merge checks section');
+});
