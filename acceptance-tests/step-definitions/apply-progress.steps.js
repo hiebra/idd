@@ -52,3 +52,73 @@ Then(/^las indicaciones de una task por sesión (van después de ella|no están)
     assert.ok(block > item, `the block is before the todo list item:\n${text}`);
   }
 });
+
+// --- La lista de tareas no se activa desde el proyecto -----------------------
+
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
+const { REPO_ROOT } = require('../support/project');
+
+// Where each agent's project configuration lives, and the setting that turns
+// its todo list tool on
+const AGENT_CONFIGS = [
+  { file: path.join('.claude', 'settings.json'), setting: ['env', 'CLAUDE_CODE_ENABLE_TODO_TOOLS'] },
+  { file: 'opencode.json', setting: ['experimental', 'todo'] },
+  { file: 'opencode.jsonc', setting: ['experimental', 'todo'] },
+  { file: path.join('.opencode', 'opencode.json'), setting: ['experimental', 'todo'] },
+  { file: path.join('.opencode', 'opencode.jsonc'), setting: ['experimental', 'todo'] },
+];
+
+// JSON with comments and trailing commas, as OpenCode reads it
+function parseJsonc(text) {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') {
+      const end = /"(?:[^"\\]|\\.)*"/y;
+      end.lastIndex = i;
+      const m = end.exec(text);
+      out += m[0];
+      i += m[0].length - 1;
+    } else if (c === '/' && text[i + 1] === '/') {
+      while (i < text.length && text[i] !== '\n') i++;
+      out += '\n';
+    } else if (c === '/' && text[i + 1] === '*') {
+      i = text.indexOf('*/', i + 2) + 1;
+    } else {
+      out += c;
+    }
+  }
+  return JSON.parse(out.replace(/,(\s*[}\]])/g, '$1'));
+}
+
+// The files git tracks in the project; null if it is not a git checkout
+function versionedFiles(root) {
+  try {
+    const out = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' });
+    return new Set(out.split('\0').filter(Boolean).map((f) => path.normalize(f)));
+  } catch {
+    return null;
+  }
+}
+
+Given('el proyecto', function () {
+  this.projectRoot = REPO_ROOT;
+});
+
+When('se leen sus archivos de configuración de los agentes', function () {
+  const tracked = versionedFiles(this.projectRoot);
+  this.agentConfigs = AGENT_CONFIGS
+    .filter(({ file }) => fs.existsSync(path.join(this.projectRoot, file)))
+    .filter(({ file }) => !tracked || tracked.has(file))
+    .map((config) => ({ ...config, content: parseJsonc(fs.readFileSync(path.join(this.projectRoot, config.file), 'utf8')) }));
+  assert.ok(this.agentConfigs.length > 0, 'the project has no agent configuration file');
+});
+
+Then('ninguno activa la herramienta de lista de tareas', function () {
+  for (const { file, setting, content } of this.agentConfigs) {
+    const parent = content?.[setting[0]];
+    const set = parent != null && typeof parent === 'object' && Object.hasOwn(parent, setting[1]);
+    assert.equal(set, false, `${file} sets ${setting.join('.')}: ${JSON.stringify(parent?.[setting[1]])}`);
+  }
+});
