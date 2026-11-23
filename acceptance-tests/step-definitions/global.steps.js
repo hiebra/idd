@@ -90,11 +90,16 @@ Given('un proyecto creado desde la variante adelgazada de esa release', function
   this.ensureProject().slim();
 });
 
-// The slim variant has no .agents/wiki/engine.json: the setting is created by
-// /toggle-wiki and committed with the project
+// As a committed /toggle-wiki leaves it. A clone of the full template enables
+// it with its own core; the slim variant has no .agents/wiki/engine.json, and
+// the global install's /toggle-wiki creates it
 Given('el wiki habilitado en el proyecto', function () {
-  this.global.toggleWiki(this.project, true);
-  this.branches.commitAll(this.project, 'habilitar el wiki');
+  if (fs.existsSync(this.project.path('.agents', 'hooks', 'session-bootstrap.mjs'))) {
+    this.project.setWiki(true);
+  } else {
+    this.global.toggleWiki(this.project, true);
+    this.branches.commitAll(this.project, 'habilitar el wiki');
+  }
   assert.equal(this.project.wikiEnabled(), true);
 });
 
