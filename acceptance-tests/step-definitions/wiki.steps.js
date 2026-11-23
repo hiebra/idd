@@ -74,6 +74,42 @@ Given(new RegExp(`^un (?:clon del )?proyecto con el wiki ${STATE}$`), function (
   if (state === 'habilitado') project.addCommittedWiki();
 });
 
+// --- Modo del wiki del clon (design D1 y D8 de add-wiki-lite-mode) -------------
+
+// "Un modo que no existe" is "light" (design D8)
+const UNKNOWN_MODE = 'light';
+const DECLARATION = '(sin declarar ningún modo|en el modo (?:full|lite)|en un modo que no existe)';
+
+function declaredMode(declaration) {
+  if (declaration === 'sin declarar ningún modo') return undefined;
+  if (declaration === 'en un modo que no existe') return UNKNOWN_MODE;
+  return declaration.replace('en el modo ', '');
+}
+
+function cloneWithWikiMode(world, state, mode) {
+  const project = cloneWithWiki(world, state);
+  project.setWikiMode(mode);
+  assert.deepEqual(
+    [project.wikiEnabled(), project.wikiMode()],
+    [state === 'habilitado', mode],
+    JSON.stringify(project.engineConfig())
+  );
+  return project;
+}
+
+Given(new RegExp(`^un (?:clon del )?proyecto con el wiki habilitado ${DECLARATION}$`), function (declaration) {
+  cloneWithWikiMode(this, 'habilitado', declaredMode(declaration)).addCommittedWiki();
+});
+
+Given('un clon del proyecto con el wiki deshabilitado y declarado el modo lite', function () {
+  cloneWithWikiMode(this, 'deshabilitado', 'lite');
+});
+
+Given(new RegExp(`^una sesión de ${AGENT} abierta en un proyecto con el wiki habilitado en el modo (full|lite)$`), function (agent, mode) {
+  cloneWithWikiMode(this, 'habilitado', mode);
+  this.openSetupSession(agent);
+});
+
 Given('un clon del proyecto con el wiki deshabilitado y con `.wiki\\/`', function () {
   cloneWithWiki(this, 'deshabilitado').addCommittedWiki();
 });
@@ -317,6 +353,11 @@ When('se comprueba el ajuste del wiki del proyecto', function () {
 // but the template says so explicitly
 Then('el wiki está deshabilitado', function () {
   assert.strictEqual(this.templateEngine.enabled, false, JSON.stringify(this.templateEngine));
+});
+
+// Without "mode", the mode is full (design D1 of add-wiki-lite-mode)
+Then('no declara ningún modo del wiki', function () {
+  assert.equal(Object.hasOwn(this.templateEngine, 'mode'), false, JSON.stringify(this.templateEngine));
 });
 
 // --- Motor del wiki ------------------------------------------------------------

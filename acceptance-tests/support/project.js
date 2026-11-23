@@ -147,6 +147,25 @@ class Project {
     return this.hasEngineConfig() && this.engineConfig().enabled === true;
   }
 
+  // The mode of the wiki the project declares, as written in engine.json
+  // (design D1 of add-wiki-lite-mode): undefined when it declares none
+  wikiMode() {
+    return this.hasEngineConfig() ? this.engineConfig().mode : undefined;
+  }
+
+  // Declares the mode (any value, also one that is not a mode) or, with
+  // undefined, removes it, and folds it into the clone's commit, as if the
+  // project had always had it. Only "mode" changes: the switch stays
+  setWikiMode(mode) {
+    const config = { ...this.engineConfig() };
+    if (mode === undefined) delete config.mode;
+    else config.mode = mode;
+    this.writeEngineConfig(config);
+    if (git(this.dir, 'status', '--porcelain', '--untracked-files=no').trim()) {
+      git(this.dir, 'commit', '-q', '-a', '--amend', '--no-edit');
+    }
+  }
+
   // Sets the switch alone and folds it into the clone's commit, as if the
   // project had always had it. The scenarios use setWiki, which also leaves
   // the archive steps as /toggle-wiki does
