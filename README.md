@@ -289,6 +289,8 @@ cd acceptance-tests && npm test
 
 El informe HTML queda en `acceptance-tests/reports/cucumber-report.html`. Los escenarios del arranque de sesión ejecutan `npm install` reales, así que necesitan acceso al registro de npm y tardan más de un minuto. Los del diagnóstico de Windows necesitan `pwsh` (PowerShell 7) en la máquina que ejecuta la suite; sin él fallan diciéndolo. Más detalles en [`acceptance-tests/README.md`](acceptance-tests/README.md).
 
+La suite completa se lanza una sola vez por change, en la última task de su `tasks.md` y con la rama de origen traída a la rama del change (antes, `git fetch`; traerla lo decide el usuario). Las demás tasks ejecutan solo los escenarios que cubren, con `--name`, y comprueban cuántos se ejecutaron. Tras traer una rama permanente a la rama del change se ejecutan `lint:specs`, `test:core` y los escenarios que cambiaron en cualquiera de los dos lados, no la suite completa (skill `openspec-git-discipline`). Lo piden las reglas de las tasks de `openspec/config.yaml` y la plantilla de tasks de `spec-as-source`: la suite completa tardó casi 10 minutos en un contenedor de la nube, y crece con cada change.
+
 ## Desactivar el arranque en local
 
 Si prefieres gestionar las dependencias a mano, desactiva el arranque en tu configuración local, sin tocar la del repositorio.

@@ -10,9 +10,9 @@
 
 ## 2. Step definitions — one task per pending step; each = fails for the right reason → implement → passes → commit
 
-- [ ] 2.1 <!-- feature: step --> — red → green → commit
-- [ ] 2.2 <!-- feature: step --> — red → green → commit
+- [ ] 2.1 <!-- feature: step --> — run only its scenarios, filtered with `--name` (paths to `.feature` files do not filter the run), and check the number of scenarios that ran (a `--name` that matches none reports `0 scenarios` and exits 0): red → green → commit
+- [ ] 2.2 <!-- feature: step --> — same: only its scenarios, with `--name`: red → green → commit
 
 ## 3. Completion
 
-- [ ] 3.1 Run the full suite: every scenario passes, zero pending/undefined steps, HTML report generated
+- [ ] 3.1 Run the full suite, the only time it runs in the change (no baseline run before implementing): first `git fetch` and, if the origin branch has moved, propose bringing it into the change branch; then every scenario passes, zero pending/undefined steps, HTML report generated
