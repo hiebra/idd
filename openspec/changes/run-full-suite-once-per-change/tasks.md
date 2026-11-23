@@ -37,7 +37,8 @@ Con la suite en marcha no se edita nada de lo que copia a cada escenario (todo s
 
 ## 4. Documentación
 
-- [ ] 4.1 `README.md` («Ejecutar la suite de aceptación») y `acceptance-tests/README.md` («Ejecutar»): la suite completa se lanza una vez por change, en su task de cierre y con la rama de origen traída; cada task ejecuta solo sus escenarios con `--name`, y se cuenta cuántos se ejecutaron. Con los 9 min 49 s medidos el 2026-11-23 en la nube, 332 escenarios, y los 3 min 28 s de una sola pasada con `--parallel 4` (no se adopta) → commit
+- [x] 4.1 `README.md` («Ejecutar la suite de aceptación») y `acceptance-tests/README.md` («Ejecutar»): la suite completa se lanza una vez por change, en su task de cierre y con la rama de origen traída; cada task ejecuta solo sus escenarios con `--name`, y se cuenta cuántos se ejecutaron. Con los 9 min 49 s medidos el 2026-11-23 en la nube, 332 escenarios, y los 3 min 28 s de una sola pasada con `--parallel 4` (no se adopta) → commit
+  - Resultado: un párrafo en «Ejecutar la suite de aceptación» del `README.md` (la regla y dónde se pide) y otro en «Ejecutar» de `acceptance-tests/README.md` (los tiempos, cómo acotar con `--name` y por qué no `--parallel 4`). La medida fue del 2026-11-22, no del 23 como decía esta task. Ninguna prueba compara el contenido de los README.
 
 ## 5. Cierre
 
