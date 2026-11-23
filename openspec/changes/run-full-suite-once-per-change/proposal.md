@@ -27,7 +27,7 @@ Fuera de alcance:
 - `suite-run-policy`: cuándo se lanza la suite de aceptación completa y cuándo solo una parte, según lo que dejan las reglas de `openspec/config.yaml` que entrega el CLI para las tasks y el apply.
 
 ### Modified Capabilities
-- `openspec-change-lifecycle`: qué indica la skill de disciplina de git que se ejecute tras traer una rama permanente a la rama del change, antes del ok del usuario (requisito «El agente fusiona solo cuando el usuario se lo pide»).
+- `openspec-change-lifecycle`: qué indica la skill de disciplina de git que se ejecute tras traer una rama permanente a la rama del change, antes del ok del usuario. Es un requisito nuevo (ADDED): no cambia ninguno de los existentes, como el de «El agente fusiona solo cuando el usuario se lo pide».
 
 ## Impact
 
