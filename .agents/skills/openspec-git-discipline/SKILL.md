@@ -144,6 +144,8 @@ Las uniones mecánicas (dos filas de un índice, dos fuentes en un frontmatter) 
 
 **El commit de una rama traída a la rama temporal.**
 
+Antes, comprueba lo traído (ver «Qué se comprueba tras traer una rama permanente», al final de esta sección). Si la fusión no tuvo conflictos, `git merge` ya hizo el commit: la comprobación va antes del push.
+
 - En un contenedor efímero lo haces tú, con el ok: `check commit`, que con una fusión en curso no mira las zonas pero rechaza conflictos sin resolver y marcadores; después, `git commit --no-edit` y el push a la rama de la sesión.
 - Fuera de un contenedor efímero lo hace el usuario: con su ok a la resolución, pídele el commit (`git commit --no-edit`) y espera.
 
@@ -156,6 +158,31 @@ Las uniones mecánicas (dos filas de un índice, dos fuentes en un frontmatter) 
 **Las formas de la fusión.** Según la regla, la propuesta y la implementación llegan a la rama de origen en fusiones separadas, y el archive y, con el wiki habilitado, el wiki se hacen después en ella. Con la excepción, la rama temporal llega a la rama de origen en una sola fusión, con `git merge --no-ff`: con `git log --first-parent`, cada change es una entrada cuyo diff junta el plan, el código, el archive y, si lo hay, el wiki, sin perder los commits provisionales.
 
 El squash también se admite. El squash se admite porque ningún paso del ciclo depende de que los commits de la rama lleguen a la rama de origen: las citas del wiki a commits de la rama se resuelven entonces por su blob, que guardan los manifiestos de las fuentes. Tras un squash, el change fusionado deja de contar en la rama temporal.
+
+<!-- lifecycle:merge-checks -->
+### Qué se comprueba tras traer una rama permanente
+
+Tras traer una rama permanente a la rama del change, comprueba lo traído en `acceptance-tests/`:
+
+- **Con conflictos**, hazlo antes de pedir al usuario el ok a la resolución, y por tanto antes del commit de fusión. Lo que arregles entra en la resolución que le presentas.
+- **Sin conflictos**, `git merge --no-edit` hace el commit de fusión él solo: hazlo tras ese commit y antes del push. Si algo falla, arréglalo en un commit aparte antes del push.
+
+Lo que se ejecuta:
+
+1. `npm run lint:specs`. Detecta una resolución mal unida en una spec, como el cierre perdido de un bloque al juntar los dos lados de un conflicto.
+2. `npm run test:core`. Si falla «two sessions taking control at once», repítela sola antes de atribuírsela a la fusión: es intermitente con la máquina cargada.
+3. Con `--name`, los escenarios de las specs que cambiaron en cualquiera de los dos lados desde su base común. `<antes>` es la rama del change antes de la fusión (`HEAD` con la fusión en curso, `HEAD^1` tras su commit) y `<traída>`, la rama permanente (`MERGE_HEAD`, o `HEAD^2`):
+
+   ```bash
+   base=$(git merge-base <antes> <traída>)
+   git diff -U0 "$base" <antes> -- 'openspec/specs/*/spec.md'
+   git diff -U0 "$base" <traída> -- 'openspec/specs/*/spec.md'
+   ```
+
+   Cada línea cambiada es de la última cabecera `#### Scenario` anterior; si cambia la cabecera de un requisito, cuentan todos sus escenarios. Junta sus títulos en un solo `--name`, `^(título|título)$`, con los caracteres especiales de las expresiones regulares escapados. Las rutas de `.feature` no acotan la pasada: solo `--name` o los tags.
+4. Comprueba que se ejecutó el número de escenarios esperado: un `--name` que no casa con ninguno da `0 scenarios` y sale con 0, sin error.
+
+No lances la suite completa: esa pasada la hace una sola vez la última task del change.
 
 ## Señales de alarma
 
@@ -174,6 +201,7 @@ El squash también se admite. El squash se admite porque ningún paso del ciclo 
 - Fusionar sin `check merge`, o llevar a una rama permanente una rama que no contiene `origin/<destino>`.
 - Dar a la fusión con una rama permanente, o al PR de una rama con change, un título distinto del que da `check merge`.
 - Hacer el commit de una fusión con conflictos sin el ok del usuario a la resolución.
+- Tras traer una rama permanente, pedir el ok o hacer el push sin comprobar lo traído, o relanzar la suite completa en vez de esa comprobación.
 - Cambiar de rama, crear ramas o hacer push a otra rama en un contenedor efímero, o hacer push a una rama permanente en vez de abrir un PR.
 - Numerar un ADR sin mirar `adr/` en todas las ramas remotas.
 
