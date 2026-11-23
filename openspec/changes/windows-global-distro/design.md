@@ -98,14 +98,16 @@ Supersede la ruta de ADR-0013.
 - `config\opencode\skills\`:
   - las skills de `.agents/skills/`, con el `SKILL.md` de `openspec-git-discipline` en sus tres piezas;
   - las dos skills del motor que usa OpenCode: `wiki-query` para la consulta y `wiki-manager` para la gestión. Las dos hacen falta para cumplir `llm-wiki`;
-- `config\opencode\plugins\`: los tres plugins, y en el de `session-bootstrap`, el núcleo, la guía, el recordatorio y la regla de comentarios.
+- `config\opencode\plugins\`: los tres plugins, y en el de `session-bootstrap`, el núcleo, la guía, el recordatorio, los pasos del wiki (`archive-guidance.yaml`) y la regla de comentarios;
+- `pieces\toggle-wiki\`: el comando `/toggle-wiki` de OpenCode en dos piezas, alrededor de la línea «El script es: …». El `.bat` lo escribe en `config\opencode\commands\` con la ruta absoluta del núcleo. Sale del comando de OpenCode de la plantilla completa (`scripts/release/toggle-wiki-command.mjs`): las órdenes llaman al núcleo en modo global, la skill `wiki-manager` ya está instalada, y el helper del motor se encuentra con la línea `wiki-engine=` que da `wiki on`. Si el comando de la plantilla ha cambiado y esa adaptación ya no encaja, el montaje falla.
 
 **`idd-<versión>.bat`**, con la versión y la URL del zip escritas dentro.
 
 **`idd-slim-<versión>.zip`**, con la variante adelgazada: el árbol del tag sin `openspec/schemas/`, `.agents/`, `.opencode/` ni `.claude/`, y sin los changes archivados del propio template. Tampoco lleva lo que describe o prueba la plantilla completa, porque en un proyecto adelgazado no pasaría:
 - las specs de `openspec/specs/`;
 - la suite de `acceptance-tests/`, que se sustituye por una vacía: las copias de la skill `acceptance-test-authoring` (`cucumber.cjs`, `extract-gherkin.cjs`, `openspec-effective-paths.cjs` y `.gplintrc`), el `package.json` y el `package-lock.json` de la suite, sin los scripts que dependen de la plantilla;
-- las herramientas de release: `scripts/release/` y `.github/workflows/release.yml`.
+- las herramientas de release: `scripts/release/` y `.github/workflows/release.yml`;
+- el wiki de la plantilla, `.wiki/`. Como tampoco lleva `.agents/wiki/engine.json`, el wiki del proyecto empieza deshabilitado (ADR-0021). El `/toggle-wiki` de la instalación global crea el ajuste y, sin `.wiki/`, propone la ingesta inicial del propio proyecto.
 
 Los ADRs sí se heredan, como en la plantilla completa: siguen en vigor para el proyecto mientras ningún ADR posterior los sustituya.
 

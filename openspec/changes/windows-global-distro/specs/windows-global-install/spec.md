@@ -49,6 +49,7 @@ El `.bat` DEBE instalar:
 - la skill `openspec-git-discipline` con su `scripts/branch-change.mjs`, y en su `SKILL.md` la ruta absoluta de ese script;
 - las skills del motor del wiki que usa OpenCode, la de consulta y la de gestión;
 - los plugins `openspec-autopilot`, `session-bootstrap` y `response-comments`, con el núcleo del arranque, la guía y el recordatorio del wiki y la regla de comentarios;
+- el comando `/toggle-wiki` de OpenCode, con la ruta absoluta del núcleo del arranque instalado;
 - el motor del wiki en la versión que fija la release.
 
 #### Scenario: OpenCode encuentra lo instalado en un proyecto intent-driven
@@ -70,6 +71,15 @@ And dispone de la gestión del wiki
 Given una máquina Windows en la que se ha ejecutado el `.bat` de una release
 When se lee el `SKILL.md` de la skill `openspec-git-discipline` instalada
 Then la ruta de `branch-change.mjs` que da es la del script instalado junto a la skill
+And esa ruta es absoluta
+```
+
+#### Scenario: El comando /toggle-wiki da la ruta del núcleo instalado
+
+```gherkin
+Given una máquina Windows en la que se ha ejecutado el `.bat` de una release
+When se lee el comando `/toggle-wiki` instalado
+Then la ruta del núcleo del arranque que da es la del núcleo instalado con el plugin `session-bootstrap`
 And esa ruta es absoluta
 ```
 

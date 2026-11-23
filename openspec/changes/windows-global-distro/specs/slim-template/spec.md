@@ -17,9 +17,8 @@ And se publica en la release `v1.2.0` junto al `.bat`
 ```
 
 ### Requirement: Solo contiene lo que es de cada proyecto
-La variante adelgazada NO DEBE contener nada de lo que aporta la instalación global ni de Claude Code: ni `openspec/schemas/`, ni `.agents/`, ni `.opencode/`, ni `.claude/`. Tampoco DEBE heredar las specs de la plantilla ni su suite de aceptación, que describen y prueban la plantilla completa, ni sus herramientas de release. DEBE contener:
+La variante adelgazada NO DEBE contener nada de lo que aporta la instalación global ni de Claude Code: ni `openspec/schemas/`, ni `.agents/`, ni `.opencode/`, ni `.claude/`. Tampoco DEBE heredar las specs de la plantilla ni su suite de aceptación, que describen y prueban la plantilla completa, ni sus herramientas de release, ni el wiki de la plantilla, `.wiki/`. DEBE contener:
 - `openspec/config.yaml` con `schema: intent-driven`;
-- el ajuste del wiki del proyecto y `.wiki/`;
 - `package.json` con el OpenSpec fijado;
 - `adr/`;
 - `openspec/specs/` sin ninguna spec;
@@ -29,7 +28,7 @@ La variante adelgazada NO DEBE contener nada de lo que aporta la instalación gl
 
 ```gherkin
 Given la variante adelgazada de una release
-When se buscan en ella `openspec/schemas/`, `.agents/`, `.opencode/` y `.claude/`
+When se buscan en ella `openspec/schemas/`, `.agents/`, `.opencode/`, `.claude/` y `.wiki/`
 Then no está ninguno
 ```
 
@@ -71,4 +70,20 @@ And un proyecto creado desde la variante adelgazada de esa release
 When se abre una sesión de OpenCode en el proyecto
 Then `openspec --version` en la sesión muestra la versión fijada por el proyecto
 And la puerta `check propose` de `branch-change.mjs` responde sobre el proyecto
+```
+
+### Requirement: El wiki de un proyecto adelgazado se habilita con /toggle-wiki
+Un proyecto creado desde la variante adelgazada DEBE empezar con el wiki del proyecto deshabilitado, porque no tiene su ajuste, `.agents/wiki/engine.json`. Con la instalación global, el `/toggle-wiki` de OpenCode DEBE poder habilitarlo como en la plantilla completa: crea el ajuste, añade los pasos del wiki a `openspec/config.yaml`, propone la ingesta inicial y deja los cambios en el stage. DEBE usar el motor de la instalación global, sin descargar ninguno.
+
+#### Scenario: Habilitar el wiki en un proyecto adelgazado
+
+```gherkin
+Given una máquina Windows en la que se ha ejecutado el `.bat` de una release
+And un proyecto creado desde la variante adelgazada de esa release
+When el usuario ejecuta en OpenCode el `/toggle-wiki` de la instalación global
+And confirma la ingesta inicial que se le propone
+Then el wiki del proyecto queda habilitado
+And las indicaciones de archivado de OpenSpec incluyen la resincronización del wiki
+And los cambios quedan en el stage de git, sin commit
+And no se descarga ningún motor del wiki
 ```
