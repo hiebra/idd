@@ -1409,6 +1409,21 @@ Then('la instrucción pide seguir los pasos de limpieza cuando el usuario termin
   assert.match(this.reviewInstruction, /Cuando el usuario termine de depurar, sigue igual los pasos de `cleanup`/, this.reviewInstruction);
 });
 
+// The verification estimate of the task and the project's limit (design D4 of
+// limite-de-verificacion-y-mcp-de-depuracion): the model reads both from the files
+Then('la instrucción pide empezar por la estimación de verificación de la task y por el límite', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /Empieza por decir al usuario cuánto se estimó que lleva verificar esta task/, text);
+  assert.match(text, /la estimación del final de su línea en `tasks\.md`/, text);
+  assert.match(text, /cuál es el límite del proyecto \(la regla de `rules\.tasks` de `openspec\/config\.yaml`\)/, text);
+});
+
+Then('la instrucción pide avisar si lo que hay que verificar los supera con claridad', function () {
+  const text = this.reviewInstruction;
+  assert.match(text, /Si lo que hay que verificar los supera con claridad, avísale/, text);
+  assert.match(text, /puede rechazar la revisión para que la task se divida/, text);
+});
+
 Then('la instrucción de la revisión no pide ejecutar los tests de aceptación ni el código', function () {
   const text = this.reviewInstruction;
   assert.doesNotMatch(text, /escenarios de aceptación|modo depuración|ejecútalos/i, text);

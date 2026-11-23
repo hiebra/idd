@@ -108,6 +108,13 @@ const ACCEPTANCE = (step, change) =>
   'Si un IDE o un objetivo trae problemas, díselos con su arreglo, sin arreglarlos tú. Cuando el usuario termine de depurar, sigue igual los pasos de `cleanup`. ' +
   'Si la sesión no lo tiene, o no da ningún objetivo para lo revisado, ofrécele ejecutarlo en modo depuración: dale la orden exacta para lanzarlo con el depurador del stack del proyecto (por ejemplo, el escenario de aceptación que lo ejercita, bajo `node --inspect-brk` en JavaScript o `python -m debugpy --wait-for-client` en Python). Esa orden la ejecuta el usuario en su terminal, no tú: se queda esperando al depurador.';
 
+// La estimación de verificación de una task y el límite del proyecto (design D4
+// de limite-de-verificacion-y-mcp-de-depuracion): el modelo los lee de los
+// archivos; el plugin no calcula nada.
+const ESTIMATE =
+  'Empieza por decir al usuario cuánto se estimó que lleva verificar esta task (la estimación del final de su línea en `tasks.md`) y cuál es el límite del proyecto (la regla de `rules.tasks` de `openspec/config.yaml`). ' +
+  'Si lo que hay que verificar los supera con claridad, avísale: puede rechazar la revisión para que la task se divida.';
+
 export function reviewPrompt({ step, change, review = null }) {
   const errors = review?.errors?.length ? `\n\n\`openspec validate\` da estos errores en el change; señálalos en la revisión:\n\n${review.errors.map((e) => `- ${e}`).join('\n')}` : '';
   const verify = step.of === 'verify' && review?.report ? `\n\nInforme del verify:\n\n${review.report}` : '';
@@ -117,7 +124,7 @@ export function reviewPrompt({ step, change, review = null }) {
       : 'Lo que hay que revisar está en el stage de git (`git diff --cached`). Para darla por buena, el usuario hace el commit; para rechazarla, lo saca del stage (`git restore --staged .`) y escribe sus conclusiones.';
   return (
     `${MARK} Esta sesión es la revisión humana ${`de ${WHAT(step)}`.replace(/^de el /, 'del ')} de \`${change}\`. No modifiques ningún archivo, no hagas commits y no pidas commits.${errors}${verify}\n\n` +
-    `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas.${step.of === 'task' || step.of === 'verify' ? ` ${ACCEPTANCE(step, change)}` : ''} ${staged} ` +
+    `Guía al usuario por la revisión: resume lo que hay que mirar, señala lo dudoso y responde a sus preguntas.${step.of === 'task' ? ` ${ESTIMATE}` : ''}${step.of === 'task' || step.of === 'verify' ? ` ${ACCEPTANCE(step, change)}` : ''} ${staged} ` +
     `La revisión la cierra git cuando el usuario envía su siguiente mensaje, no tú. Si das tus conclusiones, pásalas con \`${HANDOFF_TOOL}\` en \`conclusions\`. ${LESSONS}`
   );
 }
