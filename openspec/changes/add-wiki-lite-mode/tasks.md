@@ -11,7 +11,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 2. Núcleo: leer el modo y preparar los textos (D1, D2)
 
-- [ ] 2.1 Añadir a `core-tests/wiki-markers.test.js` pruebas de:
+- [x] 2.1 Añadir a `core-tests/wiki-markers.test.js` pruebas de:
   - la tabla de D1: modo ausente, `"full"`, `"lite"`, y los valores inválidos (`"light"`, `"Lite"`, `""`, `lite` sin comillas, un número), con el wiki habilitado y deshabilitado;
   - el aviso del modo principal ante un valor inválido, con el prefijo `session-start:`, los modos `full` y `lite` y el valor recibido, y que `guide` y `reminder` usan `full` sin avisar;
   - los textos de `full` iguales, carácter a carácter, a los de la tarea 1.1, para los dos agentes;
