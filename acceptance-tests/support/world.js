@@ -16,6 +16,7 @@ const { OpenCodeAgent } = require('./agents/opencode');
 const skills = require('./skills');
 const { FakeEngine, refIn, refInText, hasPinnedEngine } = require('./engine');
 const branches = require('./branches');
+const wikiModes = require('./wiki-modes');
 const { OpenCodeSim } = require('./agents/opencode-sim');
 
 // Steps run real `npm install`s
@@ -156,13 +157,14 @@ class SessionWorld extends World {
     this.reminderBroken = true;
   }
 
-  // The guide as the agent receives it: the project's guide file without its
-  // section identifiers (design D2), with each operation marker replaced by
-  // how the agent invokes it (design D1 of fix-wiki-flow-operations)
-  guideAsDelivered(agentName = this.session?.agent ?? DEFAULT_AGENT) {
+  // The guide as the agent receives it: the project's guide file in the given
+  // mode, by default the clone's (design D2 of add-wiki-lite-mode), without
+  // its section identifiers (design D2), with each operation marker replaced
+  // by how the agent invokes it (design D1 of fix-wiki-flow-operations)
+  guideAsDelivered(agentName = this.session?.agent ?? DEFAULT_AGENT, mode = this.project.wikiEffectiveMode()) {
     const operations = GUIDE_OPERATIONS[agentName];
-    return this.project
-      .readGuide()
+    return wikiModes
+      .modeText(this.project.readGuide(), mode)
       .replace(/<!--[\s\S]*?-->\n?/g, '')
       .replace(/\{\{(\w+)\}\}/g, (marker, name) => operations[name] ?? marker)
       .trim();

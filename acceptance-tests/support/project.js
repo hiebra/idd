@@ -11,6 +11,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { ENGINE_JSON, git } = require('./engine');
+const { effectiveMode } = require('./wiki-modes');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const EXCLUDED_AT_ROOT = new Set(['.git', 'acceptance-tests', '.wiki']);
@@ -151,6 +152,11 @@ class Project {
   // (design D1 of add-wiki-lite-mode): undefined when it declares none
   wikiMode() {
     return this.hasEngineConfig() ? this.engineConfig().mode : undefined;
+  }
+
+  // The mode the core uses: lite only when the clone declares exactly "lite"
+  wikiEffectiveMode() {
+    return effectiveMode(this.hasEngineConfig() ? this.engineConfig() : {});
   }
 
   // Declares the mode (any value, also one that is not a mode) or, with
