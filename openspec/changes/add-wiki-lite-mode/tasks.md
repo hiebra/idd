@@ -62,5 +62,5 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 ## 7. Documentación y cierre
 
 - [x] 7.1 Describir en `README.md` los dos modos, que el modo es el ajuste `"mode"` de `engine.json` y que se cambia con `/toggle-wiki lite|full` → commit
-- [ ] 7.2 Hacer `git fetch` y, si la rama de origen ha avanzado, proponer al usuario traerla a la rama del change (lo decide el usuario). Después, la única pasada completa del change: ejecutar la suite completa (`npm test`, `npm run test:core`, `npm run lint:specs`): cada escenario pasa, sin pasos pendientes ni sin definir, y el informe HTML generado
+- [x] 7.2 Hacer `git fetch` y, si la rama de origen ha avanzado, proponer al usuario traerla a la rama del change (lo decide el usuario). Después, la única pasada completa del change: ejecutar la suite completa (`npm test`, `npm run test:core`, `npm run lint:specs`): cada escenario pasa, sin pasos pendientes ni sin definir, y el informe HTML generado
 - [ ] 7.3 Ejecutar `openspec validate add-wiki-lite-mode --type change --strict` antes del archive
