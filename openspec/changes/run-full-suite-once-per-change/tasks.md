@@ -6,7 +6,7 @@ Con la suite en marcha no se edita nada de lo que copia a cada escenario (todo s
 
 ## 0. Antes del apply
 
-- [ ] 0.1 Pasar `node .agents/openspec/branch-change.mjs check apply run-full-suite-once-per-change`. Hacer `git fetch` y, si `origin/main` ha avanzado, decírselo al usuario; solo se trae si él lo pide. Hay ADRs en otras ramas (0023, 0024, 0027 y dos 0028) que no afectan a este change, que no crea ninguno
+- [x] 0.1 Pasar `node .agents/openspec/branch-change.mjs check apply run-full-suite-once-per-change`. Hacer `git fetch` y, si `origin/main` ha avanzado, decírselo al usuario; solo se trae si él lo pide. Hay ADRs en otras ramas (0023, 0024, 0027 y dos 0028) que no afectan a este change, que no crea ninguno
 
 ## 1. Preparación
 
