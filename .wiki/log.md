@@ -320,6 +320,10 @@
 
 ## [2026-11-22] ll | "main avanza mientras corre la suite de una fusión" → raw/notes/2026-11-22-ll-main-avanza-durante-la-suite.md (1 lesson, 1 article updated)
 
+## [2026-11-22] ll | "checkout-al-cambiar-de-sesion (changes concurrentes)" → raw/notes/2026-11-22-ll-changes-concurrentes-antes-de-proponer.md (1 lesson, 1 article updated)
+
+## [2026-11-22] lint | local command: 0 critical, 0 warnings, 0 suggestions, 0 auto-fixed
+
 ## [2026-11-22] ingest | MCP 2026-07-28: Key Changes, Deprecated Features y Discovery (raw/articles/2026-11-22-mcp-2026-07-28-key-changes.md)
 
 ## [2026-11-22] ingest | MCP 2026-07-28: Tools, ToolAnnotations y uso de JSON Schema (raw/articles/2026-11-22-mcp-2026-07-28-tools.md)

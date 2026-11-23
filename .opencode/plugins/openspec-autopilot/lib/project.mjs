@@ -25,13 +25,18 @@ export async function branchChange(directory) {
 
 // Los cambios de rama del plugin (design D3 y D7 de autopilot-rama-por-sesion),
 // con las reglas de branch-change.mjs: a una rama temporal con `switch`, a la
-// rama de origen con `origin`; ninguno con el árbol sucio. { ok, message }
+// rama de origen con `origin`; ninguno con el árbol sucio. Con `permanent`, a
+// una rama de x-main aunque haya cambios sin commit, si el proyecto declara
+// `x-main-protected: true` (D1 de checkout-al-cambiar-de-sesion: la excepción
+// la comprueba branch-change.mjs). { ok, message }
 // Se llaman sin las variables del entorno: el rechazo en un contenedor
 // efímero (ADR-0016) protege la rama de la sesión del agente, y estos cambios
 // los pide el usuario al entrar en una sesión desde OpenCode, no el modelo.
 export async function switchTo(directory, branch, via = 'switch') {
   const m = await module(directory);
-  return via === 'origin' ? m.originBranch(directory, {}) : m.switchBranch(directory, branch, {});
+  if (via === 'origin') return m.originBranch(directory, {});
+  if (via === 'permanent') return m.permanentBranch(directory, branch, {});
+  return m.switchBranch(directory, branch, {});
 }
 
 // El CLI de OpenSpec del proyecto, el mismo que el arranque pone en el PATH,

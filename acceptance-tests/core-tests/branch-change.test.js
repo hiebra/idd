@@ -354,6 +354,70 @@ test('start, switch and origin refuse in an ephemeral container before anything 
   assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'main');
 });
 
+// --- To a branch of x-main with the veto (checkout-al-cambiar-de-sesion, D1) ---
+
+const PROTECTED = 'schema: intent-driven\nx-main: [develop, main]\nx-main-protected: true\n';
+
+test('permanent: refuses without the veto, to a branch outside x-main, and in an ephemeral container', async (t) => {
+  const { permanentBranch } = await import(MODULE);
+  const plain = repo(t, 'schema: intent-driven\nx-main: [develop, main]\nx-main-protected: false\n');
+  git(plain, 'branch', 'develop');
+  git(plain, 'checkout', '-q', '-b', 'exportar-datos');
+  const unprotected = permanentBranch(plain, 'main', {});
+  assert.equal(unprotected.ok, false);
+  assert.match(unprotected.message, /x-main-protected/);
+  assert.equal(git(plain, 'symbolic-ref', '--short', 'HEAD').trim(), 'exportar-datos');
+  const dir = repo(t, PROTECTED);
+  git(dir, 'branch', 'importar-datos');
+  git(dir, 'checkout', '-q', '-b', 'exportar-datos');
+  for (const name of ['importar-datos', undefined]) {
+    const outside = permanentBranch(dir, name, {});
+    assert.equal(outside.ok, false, String(name));
+    assert.match(outside.message, /x-main/, String(name));
+  }
+  const ephemeral = permanentBranch(dir, 'main', EPHEMERAL);
+  assert.equal(ephemeral.ok, false);
+  assert.match(ephemeral.message, /sigue en la rama de la sesión/);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'exportar-datos');
+});
+
+test('permanent: with the veto, the uncommitted changes travel to the branch, also one only in origin', async (t) => {
+  const { permanentBranch } = await import(MODULE);
+  const dir = repo(t, PROTECTED);
+  git(dir, 'update-ref', 'refs/remotes/origin/develop', 'main');
+  git(dir, 'checkout', '-q', '-b', 'exportar-datos');
+  fs.writeFileSync(path.join(dir, 'sucio.txt'), 'x');
+  fs.appendFileSync(path.join(dir, 'openspec', 'config.yaml'), '# nota\n');
+  const toMain = permanentBranch(dir, 'main', {});
+  assert.equal(toMain.ok, true, toMain.message);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'main');
+  assert.match(git(dir, 'status', '--porcelain'), /sucio\.txt/);
+  assert.match(git(dir, 'status', '--porcelain'), /config\.yaml/);
+  const toDevelop = permanentBranch(dir, 'develop', {});
+  assert.equal(toDevelop.ok, true, toDevelop.message);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'develop');
+  assert.match(git(dir, 'status', '--porcelain'), /sucio\.txt/);
+  assert.equal(permanentBranch(dir, 'develop', {}).ok, true, 'already there');
+});
+
+test('permanent: when git refuses the switch, it returns the git error and touches nothing', async (t) => {
+  const { permanentBranch } = await import(MODULE);
+  const dir = repo(t, PROTECTED);
+  write(dir, 'datos.txt', 'main\n');
+  git(dir, 'add', '-A');
+  git(dir, ...IDENTITY, 'commit', '-q', '-m', 'datos');
+  git(dir, 'checkout', '-q', '-b', 'exportar-datos');
+  write(dir, 'datos.txt', 'rama\n');
+  git(dir, 'add', '-A');
+  git(dir, ...IDENTITY, 'commit', '-q', '-m', 'datos de la rama');
+  write(dir, 'datos.txt', 'sin commit\n');
+  const refused = permanentBranch(dir, 'main', {});
+  assert.equal(refused.ok, false);
+  assert.match(refused.message, /git switch ha fallado: .*datos\.txt/s);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD').trim(), 'exportar-datos');
+  assert.equal(fs.readFileSync(path.join(dir, 'datos.txt'), 'utf8'), 'sin commit\n');
+});
+
 // --- The title of the merge (name-change-in-merge-title, D1 to D3) ---
 
 // A temporary branch `feature/x` that contains origin/main, with a commit
