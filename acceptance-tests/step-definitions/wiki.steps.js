@@ -611,6 +611,16 @@ Then('el recordatorio recuerda consultar antes de responder y preguntar ante un 
   assert.match(this.reminder, /pregunt/i);
 });
 
+// The lite reminder (design D4, D8): the query is only on the user's express
+// request, and the full-mode "consult before" phrase is absent
+Then('el recordatorio recuerda no consultar el wiki salvo que el usuario lo pida expresamente', function () {
+  assert.match(this.reminder, /no consultes el wiki salvo que el usuario lo pida expresamente/i);
+});
+
+Then('el recordatorio no recuerda consultar antes de responder', function () {
+  assert.doesNotMatch(this.reminder, /consulta antes/i);
+});
+
 Then(new RegExp(`^el recordatorio nombra la consulta y la ingesta de fuentes como se invocan en ${AGENT}$`), function (agent) {
   const ops = REMINDER_OPERATIONS[agent];
   assert.match(this.reminder, ops.query);
