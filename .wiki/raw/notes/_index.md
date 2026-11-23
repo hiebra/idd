@@ -8,6 +8,7 @@ Last updated: 2026-11-22
 
 | File | Summary | Tags | Updated |
 |------|---------|------|---------|
+| [2026-11-23-ll-limite-de-verificacion-y-mcp-de-depuracion-4.md](2026-11-23-ll-limite-de-verificacion-y-mcp-de-depuracion-4.md) | 1 lección: un escenario temporal se ejecuta con un --config propio y una ruta relativa | lessons-learned, acceptance-tests, cucumber-js | 2026-11-23 |
 | [2026-11-23-ll-limite-de-verificacion-y-mcp-de-depuracion-3.md](2026-11-23-ll-limite-de-verificacion-y-mcp-de-depuracion-3.md) | 1 lección: el resumen de la suite completa no sale con tail cuando hay pasos sin definir; guarda toda la salida | lessons-learned, acceptance-tests, cucumber-js | 2026-11-23 |
 | [2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion-2.md](2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion-2.md) | 1 lección: --name de cucumber-js filtra por escenario; el nombre de un requisito (Rule:) no selecciona nada | lessons-learned, acceptance-tests, cucumber-js | 2026-11-22 |
 | [2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion.md](2026-11-22-ll-limite-de-verificacion-y-mcp-de-depuracion.md) | 5 lecciones de la planificación de limite-de-verificacion-y-mcp-de-depuracion: texto tras la casilla de una task, ## Purpose en deltas nuevas, ajv estricto con if/then, git merge-tree y openliberty.io desde la nube | lessons-learned, openspec, json-schema, git, liberty | 2026-11-22 |

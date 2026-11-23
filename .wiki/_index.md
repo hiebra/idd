@@ -6,7 +6,7 @@ Last updated: 2026-11-23
 
 ## Statistics
 
-- Sources: 77 raw documents
+- Sources: 78 raw documents
 - Articles: 13 compiled wiki articles
 - Inventory records: 8 tracked items
 - Datasets: 0 manifests
