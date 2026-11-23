@@ -102,7 +102,7 @@ La parte determinista la hace el núcleo, también a mano: `bash .agents/hooks/s
 
 ### Los modos del wiki: `full` y `lite`
 
-El wiki habilitado tiene dos modos ([ADR-0028](adr/0028-wiki-modes-declared-by-the-project.md)):
+El wiki habilitado tiene dos modos ([ADR-0029](adr/0029-wiki-modes-declared-by-the-project.md)):
 
 - **`full`**, el flujo descrito arriba: ante una petición que requiere conocimiento, el agente consulta el wiki antes de responder, y es él quien discierne qué peticiones lo requieren.
 - **`lite`**: el agente no consulta el wiki por iniciativa propia, aunque la petición requiera conocimiento. Lo consulta solo cuando se lo pides expresamente, y entonces igual que en `full`: en solo lectura, primero el wiki del proyecto y después el hub, y te pregunta si el wiki no responde.

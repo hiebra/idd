@@ -4,7 +4,7 @@ description: Habilita o deshabilita el wiki del proyecto, o cambia su modo (lite
 
 # /toggle-wiki
 
-Sin argumento, cambia el wiki del proyecto al estado contrario; con el argumento `lite` o `full`, cambia su modo y nada más. Los ajustes son `"enabled"` y `"mode"` en `.agents/wiki/engine.json`, van versionados y valen para todos los que usan el repositorio: no son una preferencia de este usuario (ADR-0021, ADR-0028). Sigue estos pasos en orden, desde la raíz del proyecto. No hagas commits: deja los cambios en el stage para que el usuario haga el commit.
+Sin argumento, cambia el wiki del proyecto al estado contrario; con el argumento `lite` o `full`, cambia su modo y nada más. Los ajustes son `"enabled"` y `"mode"` en `.agents/wiki/engine.json`, van versionados y valen para todos los que usan el repositorio: no son una preferencia de este usuario (ADR-0021, ADR-0029). Sigue estos pasos en orden, desde la raíz del proyecto. No hagas commits: deja los cambios en el stage para que el usuario haga el commit.
 
 <!-- toggle-wiki:mode -->
 ## 1. Mira el argumento

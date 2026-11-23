@@ -7,13 +7,13 @@
 
 ADR review completed for this change. Una decisión duradera es nueva: el wiki habilitado tiene dos modos, y los declara el proyecto en `"mode"` de `engine.json`, con `/toggle-wiki lite|full` como forma de cambiarlo. Complementa a ADR-0021 sin sustituirlo, porque «wiki primero» sigue siendo el modo por defecto.
 
-El número es 0028: tras `git fetch`, el más alto de `adr/` en `origin/main` y en las ramas remotas es 0027 (en `origin/claude/focused-rubin-2q927o`), y en esta rama, 0026 era el borrador anterior de este change, que no había llegado a ninguna otra rama y se ha renumerado.
+El número es 0029: se registró como 0028, pero al traer `origin/main` a la rama del change llegó otro ADR-0028 (`0028-autopilot-enters-protected-main-branches-with-dirty-tree.md`), y este se ha renumerado al siguiente libre. Antes, 0026 era el borrador anterior de este change, que no había llegado a ninguna otra rama y también se renumeró.
 
 No requieren ADR, por ser detalles de implementación: la forma de las marcas de bloque (design D2), qué secciones de la guía van en cada bloque (D3), la acción `mode` del núcleo (D5) y cómo lo comprueba la suite (D8).
 
 ## In-Force ADRs Reviewed
 
-- ADR-0021: el ajuste del wiki es del proyecto, versionado en `engine.json`; `/toggle-wiki` es la única forma de cambiarlo; sin preferencia local. Sustituye a ADR-0004, ADR-0005 y ADR-0010. Lo complementa ADR-0028.
+- ADR-0021: el ajuste del wiki es del proyecto, versionado en `engine.json`; `/toggle-wiki` es la única forma de cambiarlo; sin preferencia local. Sustituye a ADR-0004, ADR-0005 y ADR-0010. Lo complementa ADR-0029.
 - ADR-0009: consultar y modificar son operaciones distintas. Se mantiene en los dos modos.
 - ADR-0002: núcleo neutral y adaptadores finos. La lógica nueva va en el núcleo y los adaptadores no cambian.
 - ADR-0018: en OpenCode, el wiki sigue en `session-bootstrap`. No cambia.
@@ -24,4 +24,4 @@ No requieren ADR, por ser detalles de implementación: la forma de las marcas de
 
 ## New Durable ADRs Created
 
-- [ADR-0028](../../../adr/0028-wiki-modes-declared-by-the-project.md): el wiki habilitado tiene dos modos, y los declara el proyecto.
+- [ADR-0029](../../../adr/0029-wiki-modes-declared-by-the-project.md): el wiki habilitado tiene dos modos, y los declara el proyecto.

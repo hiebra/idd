@@ -1,4 +1,4 @@
-# ADR-0028: El wiki habilitado tiene dos modos, y los declara el proyecto
+# ADR-0029: El wiki habilitado tiene dos modos, y los declara el proyecto
 
 - Status: accepted
 - Date: 2026-11-22
