@@ -22,7 +22,7 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 3. Núcleo: cambiar el modo (D5)
 
-- [ ] 3.1 Añadir a `core-tests/wiki-toggle.test.js` pruebas de `wiki mode <full|lite>` y de `status`:
+- [x] 3.1 Añadir a `core-tests/wiki-toggle.test.js` pruebas de `wiki mode <full|lite>` y de `status`:
   - escribe `"mode"`, inserta la clave si falta y crea `engine.json` si no existe, sin reescribir el resto del archivo;
   - no cambia `enabled`, `config.yaml` ni el motor, con el wiki habilitado y deshabilitado;
   - con el modo ya declarado, o ausente y pedido `full`, `changed=false` y nada en el stage; con un valor inválido, lo reescribe;

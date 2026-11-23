@@ -11,6 +11,15 @@
 //   - with a malformed or repeated pair of markers they leave config.yaml
 //     alone and warn;
 //   - the mode always exits with 0.
+// And the `mode <full|lite>` action and `mode=` of status (design D5 of
+// add-wiki-lite-mode):
+//   - mode writes only "mode" in engine.json, inserting the key or creating the
+//     file when needed, and leaves enabled, config.yaml and the engine alone;
+//   - it does not write when nothing changes, rewrites an invalid value, stages
+//     only engine.json and never commits;
+//   - any other argument writes nothing and warns with the modes that exist;
+//   - status prints the effective mode and warns of an invalid value;
+//   - on and off keep "mode".
 //
 // Run with: npm run test:core
 
@@ -303,4 +312,213 @@ test('the session start warns of an out-of-date block only with the wiki enabled
 function set(dir, enabled) {
   const config = JSON.parse(read(dir, ENGINE_JSON));
   fs.writeFileSync(path.join(dir, ENGINE_JSON), JSON.stringify({ ...config, enabled }, null, 2) + '\n');
+}
+
+// ---- The mode of the wiki: `wiki mode <full|lite>` and `mode=` of status
+// (design D5 of add-wiki-lite-mode)
+
+function wikiMode(dir, value) {
+  const env = { ...process.env };
+  delete env.PROJECT_WIKI;
+  const result = spawnSync('bash', [CORE, 'wiki', 'mode', value, dir], { encoding: 'utf8', env });
+  const lines = result.stdout.split('\n').filter(Boolean);
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr, lines };
+}
+
+// engine.json with "mode" given as raw JSON text (or without it, when undefined)
+function engineText(engineUrl, { enabled = true, mode } = {}) {
+  const fields = [`  "enabled": ${enabled}`];
+  if (mode !== undefined) fields.push(`  "mode": ${mode}`);
+  fields.push(`  "repo": "${engineUrl}"`, '  "ref": "v1.0.0"');
+  return `{\n${fields.join(',\n')}\n}\n`;
+}
+
+// A project whose committed engine.json declares `mode` as raw JSON text
+function setUpMode(t, { enabled = true, mode, wiki: withWiki = false } = {}) {
+  const project = setUp(t, { enabled, wiki: withWiki });
+  const url = JSON.parse(read(project.dir, ENGINE_JSON)).repo;
+  fs.writeFileSync(path.join(project.dir, ENGINE_JSON), engineText(url, { enabled, mode }));
+  git(project.dir, 'commit', '-q', '--allow-empty', '-am', 'modo');
+  return { ...project, url, head: git(project.dir, 'rev-parse', 'HEAD').trim() };
+}
+
+const modeOf = (dir) => JSON.parse(read(dir, ENGINE_JSON)).mode;
+const linkExists = (dir) => {
+  try {
+    return fs.lstatSync(path.join(dir, '.claude', 'skills', 'wiki-manager')).isSymbolicLink();
+  } catch {
+    return false;
+  }
+};
+// Every file of the engine copy, with its content (its .git aside)
+function engineSnapshot(dir) {
+  const root = path.join(dir, '.agents', 'wiki-engine');
+  const files = {};
+  const walk = (at) => {
+    for (const entry of fs.readdirSync(at, { withFileTypes: true })) {
+      const full = path.join(at, entry.name);
+      if (entry.name === '.git') continue;
+      if (entry.isDirectory()) walk(full);
+      else files[path.relative(root, full)] = fs.readFileSync(full, 'utf8');
+    }
+  };
+  if (fs.existsSync(root)) walk(root);
+  return files;
+}
+const INVALID_MODES = ['"light"', '"Lite"', '""', 'lite', '3'];
+
+test('mode inserts "mode" without rewriting the rest of engine.json', (t) => {
+  const { dir } = setUpMode(t);
+  const before = read(dir, ENGINE_JSON);
+  const out = wikiMode(dir, 'lite');
+  assert.equal(out.status, 0, out.stderr);
+  const after = read(dir, ENGINE_JSON);
+  assert.equal(modeOf(dir), 'lite', after);
+  const rest = after.split('\n').filter((l) => !/"mode"/.test(l)).join('\n');
+  assert.equal(rest, before, after);
+
+  // On a single-line file too
+  const { dir: other } = setUp(t);
+  fs.writeFileSync(path.join(other, ENGINE_JSON), '{ "enabled": true, "repo": "x/y", "ref": "v1" }\n');
+  assert.equal(wikiMode(other, 'lite').status, 0);
+  assert.deepEqual(JSON.parse(read(other, ENGINE_JSON)), { enabled: true, mode: 'lite', repo: 'x/y', ref: 'v1' });
+});
+
+test('mode changes a declared "mode" in place', (t) => {
+  const { dir } = setUp(t);
+  const before = '{ "enabled": true, "mode": "full", "repo": "x/y", "ref": "v1" }\n';
+  fs.writeFileSync(path.join(dir, ENGINE_JSON), before);
+  assert.equal(wikiMode(dir, 'lite').status, 0);
+  assert.equal(read(dir, ENGINE_JSON), before.replace('"full"', '"lite"'));
+});
+
+test('mode creates engine.json with only "mode" when it is missing or empty, and the wiki stays disabled', (t) => {
+  for (const content of [null, '']) {
+    const { dir } = setUp(t);
+    if (content === null) fs.rmSync(path.join(dir, ENGINE_JSON));
+    else fs.writeFileSync(path.join(dir, ENGINE_JSON), content);
+    const out = wikiMode(dir, 'lite');
+    assert.equal(out.status, 0, out.stderr);
+    assert.deepEqual(JSON.parse(read(dir, ENGINE_JSON)), { mode: 'lite' }, String(content));
+    assert.ok(out.lines.includes('enabled=false'), out.stdout);
+    assert.ok(wiki(dir, 'status').lines.includes('enabled=false'));
+  }
+});
+
+for (const enabled of [true, false]) {
+  test(`mode leaves enabled, config.yaml and the engine alone with the wiki ${enabled ? 'enabled' : 'disabled'}`, (t) => {
+    const { dir } = setUp(t);
+    if (enabled) {
+      wiki(dir, 'on');
+      git(dir, 'commit', '-q', '-m', 'wiki on');
+    }
+    const config = read(dir, CONFIG);
+    const engineCopy = engineSnapshot(dir);
+    assert.notDeepEqual(engineCopy, {});
+    const link = linkExists(dir);
+    assert.equal(link, enabled);
+
+    const out = wikiMode(dir, 'lite');
+    assert.equal(out.status, 0, out.stderr);
+    assert.equal(modeOf(dir), 'lite');
+    assert.equal(enabledOf(dir), enabled);
+    assert.equal(read(dir, CONFIG), config);
+    assert.deepEqual(engineSnapshot(dir), engineCopy);
+    assert.equal(linkExists(dir), link);
+    assert.ok(out.lines.includes('changed=true'), out.stdout);
+    assert.ok(out.lines.includes('mode=lite'), out.stdout);
+    assert.ok(out.lines.includes(`enabled=${enabled}`), out.stdout);
+  });
+}
+
+test('mode stages only engine.json and does not commit', (t) => {
+  const { dir, head } = setUpMode(t);
+  // An unstaged change elsewhere must stay unstaged
+  fs.appendFileSync(path.join(dir, CONFIG), '# cambio sin stage\n');
+  const out = wikiMode(dir, 'lite');
+  assert.equal(out.status, 0, out.stderr);
+  assert.deepEqual(staged(dir), [ENGINE_JSON]);
+  assert.ok(out.lines.includes(`staged=${ENGINE_JSON}`), out.stdout);
+  assert.equal(git(dir, 'rev-parse', 'HEAD').trim(), head, 'mode must not commit');
+});
+
+for (const [declared, requested] of [['"lite"', 'lite'], ['"full"', 'full'], [undefined, 'full']]) {
+  test(`mode ${requested} with ${declared === undefined ? 'no mode declared' : `"mode": ${declared}`} changes nothing`, (t) => {
+    const { dir } = setUpMode(t, { mode: declared });
+    const before = read(dir, ENGINE_JSON);
+    const out = wikiMode(dir, requested);
+    assert.equal(out.status, 0, out.stderr);
+    assert.equal(read(dir, ENGINE_JSON), before);
+    assert.deepEqual(staged(dir), []);
+    assert.ok(out.lines.includes('changed=false'), out.stdout);
+    assert.ok(out.lines.includes(`mode=${requested}`), out.stdout);
+    assert.ok(out.lines.includes('enabled=true'), out.stdout);
+    assert.ok(!out.lines.some((l) => l.startsWith('staged=')), out.stdout);
+  });
+}
+
+for (const invalid of INVALID_MODES) {
+  test(`mode rewrites an invalid "mode": ${invalid}`, (t) => {
+    for (const requested of ['full', 'lite']) {
+      const { dir } = setUpMode(t, { mode: invalid });
+      const before = read(dir, ENGINE_JSON);
+      const out = wikiMode(dir, requested);
+      assert.equal(out.status, 0, out.stderr);
+      const after = read(dir, ENGINE_JSON);
+      assert.equal(modeOf(dir), requested, after);
+      assert.equal(after, before.replace(`"mode": ${invalid}`, `"mode": "${requested}"`));
+      assert.ok(out.lines.includes('changed=true'), out.stdout);
+      assert.deepEqual(staged(dir), [ENGINE_JSON]);
+    }
+  });
+}
+
+test('mode with any other argument writes nothing, warns with the modes that exist and exits with 0', (t) => {
+  for (const value of ['light', 'Lite', 'FULL', '', 'lite extra']) {
+    const { dir } = setUpMode(t);
+    const before = read(dir, ENGINE_JSON);
+    const out = wikiMode(dir, value);
+    assert.equal(out.status, 0, `${value}: ${out.stderr}`);
+    assert.equal(read(dir, ENGINE_JSON), before, value);
+    assert.deepEqual(staged(dir), [], value);
+    assert.match(out.stderr, /^session-start: .*\bfull\b.*\blite\b/m, `${value}: ${out.stderr}`);
+  }
+  for (const args of [['wiki', 'mode'], ['wiki', 'mode', 'lite'], ['wiki', 'mode', 'lite', '/no/existe']]) {
+    const result = spawnSync('bash', [CORE, ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 0, `${args.join(' ')}: ${result.stderr}`);
+  }
+});
+
+test('status prints the effective mode and warns of an invalid value', (t) => {
+  for (const [declared, effective] of [[undefined, 'full'], ['"full"', 'full'], ['"lite"', 'lite']]) {
+    const { dir } = setUpMode(t, { mode: declared });
+    const out = wiki(dir, 'status');
+    assert.equal(out.status, 0, out.stderr);
+    assert.ok(out.lines.includes(`mode=${effective}`), `${declared}: ${out.stdout}`);
+    assert.doesNotMatch(out.stderr, /modo del wiki/, out.stderr);
+  }
+  for (const invalid of INVALID_MODES) {
+    const { dir } = setUpMode(t, { mode: invalid });
+    const out = wiki(dir, 'status');
+    assert.equal(out.status, 0, out.stderr);
+    assert.ok(out.lines.includes('mode=full'), `${invalid}: ${out.stdout}`);
+    assert.match(out.stderr, /^session-start: .*modo del wiki.*\bfull\b.*\blite\b/m, `${invalid}: ${out.stderr}`);
+    assert.ok(out.stderr.includes(invalid), `${invalid}: ${out.stderr}`);
+
+    // With the wiki disabled, the mode does not matter: no warning
+    const { dir: off } = setUpMode(t, { enabled: false, mode: invalid });
+    assert.doesNotMatch(wiki(off, 'status').stderr, /modo del wiki/, invalid);
+  }
+});
+
+for (const declared of ['lite', 'full']) {
+  test(`on and off keep "mode": "${declared}"`, (t) => {
+    const { dir } = setUpMode(t, { enabled: false, mode: `"${declared}"` });
+    assert.equal(wiki(dir, 'on').status, 0);
+    assert.equal(enabledOf(dir), true);
+    assert.equal(modeOf(dir), declared);
+    assert.equal(wiki(dir, 'off').status, 0);
+    assert.equal(enabledOf(dir), false);
+    assert.equal(modeOf(dir), declared);
+  });
 }
