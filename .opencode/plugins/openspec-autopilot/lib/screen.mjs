@@ -2,12 +2,17 @@
 // autopilot-rama-por-sesion; D4 de autopilot-sesion-operativa): funciones
 // puras que deciden a partir del estado que les da el servidor.
 //
-// enterSession({ target, fromDir, head, clean, working, permanent, origin }) ->
+// enterSession({ target, fromDir, head, clean, working, permanent, origin, protected }) ->
 //   { action: "none" }                               nada que hacer
 //   { action: "toast", message }                     otro directorio: avisa de su rama
 //   { action: "checkout", branch, via }              mismo directorio, otra rama, árbol
 //                                                    limpio: via "switch" (temporal) u
 //                                                    "origin" (la rama de origen)
+//   { action: "checkout", branch, via: "permanent", carried }
+//                                                    con el veto, una rama de x-main,
+//                                                    aunque el árbol esté sucio; carried:
+//                                                    si había cambios sin commit (D2 y D3
+//                                                    de checkout-al-cambiar-de-sesion)
 //   { action: "back", reason, message }              no se cambia de rama: vuelve a la
 //                                                    ventana anterior (reason "dirty" o
 //                                                    "working")
@@ -17,6 +22,7 @@
 //   clean: si el árbol de target.dir está limpio
 //   working: el título de otra sesión de ese directorio que trabaja, o null
 //   permanent, origin: las ramas permanentes y la de origen
+//   protected: si el proyecto declara `x-main-protected: true` (el veto)
 //
 // newWindow({ route, isNew, routeIsOperational, operational, temporary, clean }) ->
 //   { action: "none" } | { action: "modal", message, options }
@@ -30,7 +36,7 @@ export const OPTION = {
 
 const where = (dir) => (dir ? ` (${dir})` : '');
 
-export function enterSession({ target, fromDir = null, head, clean, working = null, permanent = ['main'], origin = 'main' }) {
+export function enterSession({ target, fromDir = null, head, clean, working = null, permanent = ['main'], origin = 'main', protected: vetoed = false }) {
   if (!target || target.archived || !target.branch) return { action: 'none' };
   const otherDir = Boolean(fromDir) && fromDir !== target.dir;
   if (head === target.branch) {
@@ -38,6 +44,13 @@ export function enterSession({ target, fromDir = null, head, clean, working = nu
     return { action: 'none' };
   }
   const why = `no se cambia a la rama ${target.branch} de esta sesión`;
+  const busy = () => ({ action: 'back', reason: 'working', message: `openspec-autopilot: ${why}: hay una sesión trabajando en ese directorio («${working}»). Espera a que termine, o usa un worktree.` });
+  // Con el veto, una rama de x-main: checkout aunque haya cambios sin commit,
+  // pero no con otra sesión trabajando (D2 de checkout-al-cambiar-de-sesion)
+  if (vetoed === true && permanent.includes(target.branch)) {
+    if (working) return busy();
+    return { action: 'checkout', branch: target.branch, via: 'permanent', carried: !clean };
+  }
   if (!clean) {
     return {
       action: 'back',
@@ -45,9 +58,7 @@ export function enterSession({ target, fromDir = null, head, clean, working = nu
       message: `openspec-autopilot: ${why}: el directorio${where(target.dir)} tiene cambios sin commit en la rama ${head ?? '(HEAD separado)'}. Haz el commit, o usa un worktree para trabajar en otra rama a la vez.`,
     };
   }
-  if (working) {
-    return { action: 'back', reason: 'working', message: `openspec-autopilot: ${why}: hay una sesión trabajando en ese directorio («${working}»). Espera a que termine, o usa un worktree.` };
-  }
+  if (working) return busy();
   if (target.branch === origin) return { action: 'checkout', branch: target.branch, via: 'origin' };
   if (permanent.includes(target.branch)) {
     return { action: 'toast', message: `openspec-autopilot: ${why}: ${target.branch} es una rama permanente y el plugin solo cambia a la rama de origen o a una temporal.` };

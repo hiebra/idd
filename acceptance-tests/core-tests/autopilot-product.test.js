@@ -173,6 +173,38 @@ test('entering a session: its branch, or back to the previous window (D3 of auto
   assert.deepEqual(enterSession({ ...same, target: { ...same.target, branch: null } }), { action: 'none' });
 });
 
+test('entering a session with x-main-protected: a branch of x-main even with a dirty tree (D2 and D3 of checkout-al-cambiar-de-sesion)', async () => {
+  const { enterSession } = await load('screen.mjs');
+  const target = { id: 'ses_main', dir: '/clon', branch: 'main', archived: false };
+  const base = { target, fromDir: '/clon', head: 'feature/x', clean: false, working: null, permanent: ['develop', 'main'], origin: 'main', protected: true };
+  // The veto and a branch of x-main: checkout via "permanent", with a dirty tree and with another permanent branch
+  assert.deepEqual(enterSession(base), { action: 'checkout', branch: 'main', via: 'permanent', carried: true });
+  const develop = { ...base, target: { ...target, branch: 'develop' } };
+  assert.deepEqual(enterSession(develop), { action: 'checkout', branch: 'develop', via: 'permanent', carried: true });
+  // carried says whether there were uncommitted changes
+  assert.deepEqual(enterSession({ ...develop, clean: true }), { action: 'checkout', branch: 'develop', via: 'permanent', carried: false });
+  assert.deepEqual(enterSession({ ...base, clean: true }), { action: 'checkout', branch: 'main', via: 'permanent', carried: false });
+  // Another session working: back, even with the veto
+  const working = enterSession({ ...base, working: 'Otra sesión' });
+  assert.deepEqual([working.action, working.reason], ['back', 'working']);
+  assert.match(working.message, /sesión trabajando/);
+  // A temporary branch with a dirty tree: back, as today
+  const temporary = enterSession({ ...base, target: { ...target, branch: 'importar-datos' } });
+  assert.deepEqual([temporary.action, temporary.reason], ['back', 'dirty']);
+  // Already in the branch: nothing
+  assert.deepEqual(enterSession({ ...base, head: 'main' }), { action: 'none' });
+  // Without the veto (no key or any other value), the same outputs as today
+  for (const p of [undefined, false, 'true', null]) {
+    const noVeto = { ...base, protected: p };
+    assert.deepEqual([enterSession(noVeto).action, enterSession(noVeto).reason], ['back', 'dirty']);
+    assert.deepEqual(enterSession({ ...noVeto, clean: true }), { action: 'checkout', branch: 'main', via: 'origin' });
+    const other = enterSession({ ...noVeto, clean: true, target: { ...target, branch: 'develop' } });
+    assert.equal(other.action, 'toast');
+    assert.match(other.message, /permanente/);
+    assert.deepEqual(enterSession({ ...noVeto, clean: true, target: { ...target, branch: 'importar-datos' } }), { action: 'checkout', branch: 'importar-datos', via: 'switch' });
+  }
+});
+
 test("the modal of `/new`: its options by the tree, and where it does not show (D4 of autopilot-rama-por-sesion)", async () => {
   const { newWindow, OPTION } = await load('screen.mjs');
   const operational = { id: 'ses_op', title: 'T', change: 'x', branch: 'feature/x' };
