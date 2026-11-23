@@ -1568,6 +1568,66 @@ Then('se avisa de que hay una sesión trabajando en ese directorio', function ()
   assert.match(ap.toasts(this), /sesión trabajando/, ap.toasts(this));
 });
 
+// --- Con x-main-protected, los cambios sin commit pasan a una rama de x-main (checkout-al-cambiar-de-sesion) ---
+
+const UNCOMMITTED = 'README.md';
+
+// `x-main` (a list, or null without the key) and `x-main-protected` in the
+// origin branch's openspec/config.yaml, with the branches of `x-main` created
+function protectedProject(world, permanent, value) {
+  const project = world.lifecycleProject();
+  world.branches.setPermanent(project, permanent);
+  world.branches.setProtected(project, value);
+  for (const name of permanent ?? []) {
+    if (!world.branches.revParse(project, `refs/heads/${name}`)) ap.gitIn(world, 'branch', name, 'main');
+  }
+}
+
+Given(/^un proyecto cuyo `openspec\/config\.yaml` declara `x-main: \[develop, main\]` y `x-main-protected: (true|false)`$/, function (value) {
+  protectedProject(this, ['develop', 'main'], value === 'true');
+});
+
+Given('un proyecto cuyo `openspec\\/config.yaml` declara `x-main-protected: true`', function () {
+  protectedProject(this, null, true);
+});
+
+// The TUI in the operational session of the temporary branch, in the main
+// directory, with an uncommitted change; with `differs`, the changed file has
+// a committed version in the branch that `main` does not have, so git refuses
+// to carry it to `main`
+async function dirtyTemporarySession(world, { differs = false } = {}) {
+  await ap.prepareChange(world, { artifacts: ['proposal', 'specs'] });
+  const file = world.project.path(UNCOMMITTED);
+  if (differs) {
+    fs.appendFileSync(file, '\nVersión de la rama temporal.\n');
+    world.branches.commitAll(world.project, `${UNCOMMITTED} en la rama temporal`);
+  }
+  await ap.ensureOpenCode(world);
+  world.owner = await ap.seed(world, { title: OWNER_TITLE, step: { kind: 'artifact', id: 'design' }, meta: { snapshot: { change: ap.CHANGE, artifacts: ['proposal', 'specs'], tasks: [], git: null } } });
+  world.ownerDir = world.project.dir;
+  await world.opencodeCall('goto', { sessionID: world.owner });
+  await world.opencodeCall('waitScreen');
+  fs.appendFileSync(file, '\nCambio sin commit.\n');
+  world.uncommitted = { file: UNCOMMITTED, content: fs.readFileSync(file, 'utf8') };
+  assert.equal(world.branches.currentBranch(world.project), ap.BRANCH);
+  assert.ok(world.project.gitStatus().length > 0, 'the tree has uncommitted changes');
+}
+
+Given('la TUI está en una sesión de la rama temporal `exportar-datos`, con cambios sin commit', async function () {
+  await dirtyTemporarySession(this);
+});
+
+Given('la TUI está en una sesión de la rama temporal `exportar-datos`, con un cambio sin commit en un archivo que difiere en `main`', async function () {
+  await dirtyTemporarySession(this, { differs: true });
+});
+
+// A free session of `branch` in the main directory; a temporary branch that
+// does not exist is created from the origin branch
+Given(/^la sesión libre de la rama `([^`]+)` está en el mismo directorio$/, async function (branch) {
+  if (!this.branches.revParse(this.project, `refs/heads/${branch}`)) ap.gitIn(this, 'branch', branch, 'main');
+  this.target = { branch, session: await ap.seed(this, { title: `Sesión de la rama ${branch}`, step: null, meta: { branch, role: 'free' } }) };
+});
+
 // --- El modal de `/new` ---
 
 async function newFromOperational(world, { dirty = false } = {}) {
