@@ -67,6 +67,36 @@ const VALID_RESPONSES = {
     ],
     unmatchedFiles: ['README.md'],
   },
+  debug_launch_plan: {
+    contractVersion: '1.0',
+    workspace: '/home/ana/pedidos',
+    ide: 'vscode',
+    targets: ['backend'],
+    steps: [
+      {
+        id: 'open-ide',
+        title: 'Abrir el proyecto en VS Code',
+        actor: 'agent',
+        command: { argv: ['code', '/home/ana/pedidos'] },
+      },
+      {
+        id: 'start-debug',
+        title: 'Arrancar Liberty en modo depuración',
+        actor: 'user',
+        instruction: 'En VS Code, ejecuta «Liberty: Start in debug mode» y elige `backend`.',
+        longRunning: true,
+      },
+    ],
+    cleanup: [
+      {
+        id: 'stop-debug',
+        title: 'Parar la depuración y Liberty',
+        actor: 'user',
+        instruction: 'En VS Code, para la sesión de depuración y la aplicación.',
+      },
+    ],
+    breakpoints: [{ file: 'backend/src/main/java/com/acme/pedidos/ExportarPedidos.java', line: 42, status: 'planned' }],
+  },
 };
 
 const VARIANTS = {
@@ -83,6 +113,31 @@ const VARIANTS = {
     },
     'con un estado que no es del contrato': (r) => {
       r.targets[0].state = 'paused';
+    },
+  },
+  // steps[0] is the `agent` step and steps[1] the `user` one. A plan may have
+  // no cleanup steps (design D7), so «sin pasos de limpieza» drops `cleanup`
+  debug_launch_plan: {
+    'con un plan sin pasos': (r) => {
+      r.steps = [];
+    },
+    'con un plan sin pasos de limpieza': (r) => {
+      delete r.cleanup;
+    },
+    'con un punto de ruptura sin decir si se ha planificado': (r) => {
+      delete r.breakpoints[0].status;
+    },
+    'con un paso de `agent` sin orden': (r) => {
+      delete r.steps[0].command;
+    },
+    'con un paso de `agent` de larga duración': (r) => {
+      r.steps[0].longRunning = true;
+    },
+    'con un paso de `user` sin instrucción': (r) => {
+      delete r.steps[1].instruction;
+    },
+    'con un paso sin decir quién lo hace': (r) => {
+      delete r.steps[0].actor;
     },
   },
 };
