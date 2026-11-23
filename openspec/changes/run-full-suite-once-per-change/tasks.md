@@ -42,7 +42,8 @@ Con la suite en marcha no se edita nada de lo que copia a cada escenario (todo s
 
 ## 5. Cierre
 
-- [ ] 5.1 Ejecutar `npm run lint:specs` y `npm run test:core` en `acceptance-tests/`, leyendo el código de salida sin tubería. Si falla `two sessions taking control at once`, repetirla sola antes de atribuirla al change
+- [x] 5.1 Ejecutar `npm run lint:specs` y `npm run test:core` en `acceptance-tests/`, leyendo el código de salida sin tubería. Si falla `two sessions taking control at once`, repetirla sola antes de atribuirla al change
+  - Resultado: `lint:specs` sale con 0, sin errores, sobre los 11 `spec.md` (con las dos deltas del change). `test:core` sale con 0: 234 de 234 pruebas, sin fallos ni canceladas; la prueba intermitente del autopilot pasó a la primera.
 - [ ] 5.2 Con la regla del change: `git fetch` y, si `origin/main` ha avanzado, proponer al usuario traerla antes de la pasada. Después, la única pasada completa (`npm test` en `acceptance-tests/`, en segundo plano, sin editar nada de lo que copia): todos los escenarios de este change y de las specs vigentes pasan, sin pasos pendientes ni sin definir, y se genera el informe HTML. En la nube, los 15 escenarios de `windows-readiness` fallan por falta de `pwsh`; este change no toca nada de Windows, y se decide con el usuario si se dan por cubiertos. Anotar aquí el resultado
 - [ ] 5.3 Ejecutar `openspec validate run-full-suite-once-per-change --type change` antes del archive. Como en el resto de specs del proyecto, el criterio es la validación sin `--strict` y revisar los demás avisos
 - [ ] 5.4 Al archivar: con el wiki del proyecto deshabilitado (`"enabled": false` en `.agents/wiki/engine.json`) no hay resincronización del wiki. Después del commit del archive, proponer la fusión con `merge-targets`
