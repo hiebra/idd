@@ -17,7 +17,7 @@ Ciclo por task: paso sin definir → implementarlo en `acceptance-tests/step-def
 
 ## 3. Implementación (zona de código), un escenario a la vez
 
-- [ ] 3.1 `permanentBranch(dir, name, env)` en `.agents/openspec/branch-change.mjs` (D1), con pruebas de núcleo en `acceptance-tests/core-tests/branch-change.test.js`:
+- [x] 3.1 `permanentBranch(dir, name, env)` en `.agents/openspec/branch-change.mjs` (D1), con pruebas de núcleo en `acceptance-tests/core-tests/branch-change.test.js`:
   - rechaza sin el veto, con el veto y una rama que no es de `x-main`, y en un contenedor efímero;
   - cambia con el árbol sucio y los cambios viajan; crea la rama local desde `origin/<rama>` si solo existe en el remoto;
   - devuelve el error de git si rechaza el cambio, sin tocar nada.
