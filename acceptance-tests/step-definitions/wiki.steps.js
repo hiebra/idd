@@ -185,13 +185,41 @@ Then('git no muestra como cambio nada de lo retirado', function () {
 
 // Claude Code: in .claude/settings.local.json, the user's own and not
 // versioned; OpenCode: in the environment it is launched from
-Given(new RegExp(`^el usuario tiene \`PROJECT_WIKI=off\` en el entorno de ${AGENT}$`), function (agent) {
-  if (agent === 'Claude Code') this.project.writeClaudeLocalSettings({ env: { PROJECT_WIKI: 'off' } });
-  else this.machine.userEnv.PROJECT_WIKI = 'off';
+Given(new RegExp(`^el usuario tiene \`PROJECT_WIKI=(off|lite)\` en el entorno de ${AGENT}$`), function (value, agent) {
+  if (agent === 'Claude Code') this.project.writeClaudeLocalSettings({ env: { PROJECT_WIKI: value } });
+  else this.machine.userEnv.PROJECT_WIKI = value;
 });
 
 Then('el agente recibe la guía del wiki', function () {
   assert.ok(deliveredContext(this).includes(this.guideAsDelivered()), `${this.session.agent}:\n${this.session.log}`);
+});
+
+// The guide of a mode, and not the other mode's: the two guides differ only
+// in the mode blocks, so neither is a part of the other (design D2)
+Then(/^el agente recibe la guía del wiki del modo (full|lite)$/, function (mode) {
+  const other = mode === 'full' ? 'lite' : 'full';
+  const context = deliveredContext(this);
+  const detail = `${this.session.agent}:\n${this.session.log}`;
+  assert.ok(context.includes(this.guideAsDelivered(this.session.agent, mode)), `no guide of the ${mode} mode\n${detail}`);
+  assert.ok(!context.includes(this.guideAsDelivered(this.session.agent, other)), `the guide of the ${other} mode\n${detail}`);
+});
+
+// The warning about a mode that does not exist: the one line that names the
+// value the project declares (design D1)
+function unknownModeWarning(world) {
+  const lines = world.session.warnings.filter((line) => line.includes(UNKNOWN_MODE));
+  assert.equal(lines.length, 1, `expected one warning naming '${UNKNOWN_MODE}':\n${shown(world)}\n${world.session.log}`);
+  return lines[0];
+}
+
+Then('se avisa de que ese modo del wiki no existe', function () {
+  assert.match(unknownModeWarning(this), new RegExp(`modo del wiki.*${UNKNOWN_MODE}.*no existe`));
+});
+
+Then('el aviso nombra los modos `full` y `lite`', function () {
+  const warning = unknownModeWarning(this);
+  assert.match(warning, /\bfull\b/);
+  assert.match(warning, /\blite\b/);
 });
 
 // The archive guidance as `openspec instructions archive` gives it, for a
