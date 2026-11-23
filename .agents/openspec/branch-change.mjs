@@ -739,6 +739,28 @@ export function originBranch(dir, env = process.env) {
   return { ok: true, message: `El clon está en la rama de origen '${origin}'.` };
 }
 
+// Cambia a una rama de `x-main` con el veto (design D1 de
+// checkout-al-cambiar-de-sesion, ADR-0028): la excepción por la que el plugin,
+// al entrar en la sesión de esa rama, cambia aunque haya cambios sin commit.
+// Solo con `x-main-protected: true` y una rama de `x-main`; no mira el árbol,
+// y los cambios pasan a la rama como en un `git switch` normal, sin forzar ni
+// guardarlos en un stash. Si git lo rechaza, devuelve su error sin tocar nada.
+export function permanentBranch(dir, name, env = process.env) {
+  if (isEphemeral(env)) return { ok: false, message: `No se cambia a la rama '${name ?? ''}'. ${SESSION_ONLY}` };
+  if (!readProtected(dir)) return { ok: false, message: `No se cambia a la rama '${name ?? ''}' con cambios sin commit: openspec/config.yaml no declara 'x-main-protected: true'.` };
+  const { permanent } = readPermanent(dir);
+  if (!name || !permanent.includes(name)) return { ok: false, message: `'${name ?? ''}' no es una rama de 'x-main' (${permanent.join(', ')}).` };
+  const current = git(dir, 'symbolic-ref', '--short', '-q', 'HEAD').out;
+  if (current === name) return { ok: true, message: `El clon ya está en la rama permanente '${name}'.` };
+  const hasLocal = git(dir, 'rev-parse', '--verify', '-q', `refs/heads/${name}`).ok;
+  const hasRemote = git(dir, 'rev-parse', '--verify', '-q', `refs/remotes/origin/${name}`).ok;
+  if (!hasLocal && !hasRemote) return { ok: false, message: `No se encuentra la rama '${name}' (ni local ni en origin).` };
+  const args = hasLocal ? ['switch', '-q', name] : ['switch', '-q', '-c', name, `origin/${name}`];
+  const switched = spawnSync('git', args, { cwd: dir, encoding: 'utf8', timeout: 10000 });
+  if (switched.status !== 0) return { ok: false, message: `git switch ha fallado: ${(switched.stderr ?? '').trim()}` };
+  return { ok: true, message: `El clon está en la rama permanente '${name}'.` };
+}
+
 function main(argv) {
   const dir = process.cwd();
   if (argv[0] === 'env') {
