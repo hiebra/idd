@@ -3,6 +3,8 @@ stack: javascript
 
 # El acceso directo a las ramas permanentes está vetado: activa la única excepción
 # a la regla estándar del ciclo, el change entero en una rama temporal (ADR-0020).
+# Con él, el autopilot de OpenCode cambia a la rama de una sesión de x-main aunque
+# haya cambios sin commit, que pasan a esa rama (ADR-0028).
 # Un proyecto creado desde la plantilla sin ese veto debe quitar esta línea.
 x-main-protected: true
 
