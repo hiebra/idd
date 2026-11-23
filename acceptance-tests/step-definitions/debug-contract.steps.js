@@ -6,7 +6,7 @@
 
 const assert = require('node:assert/strict');
 const { Given, When, Then } = require('@cucumber/cucumber');
-const { DebugContract, CONTRACT_PATH } = require('../support/debug-contract');
+const { DebugContract, CONTRACT_PATH, responseVariant } = require('../support/debug-contract');
 
 const TOOLS = ['debug_targets', 'debug_launch_plan'];
 
@@ -110,4 +110,30 @@ Then('el contrato dice que se devuelven con `isError` y un texto que empieza por
   const description = this.debugErrors.description ?? '';
   assert.match(description, /`isError(: true)?`/, 'the errors description does not mention isError');
   assert.match(description, /texto que empieza por el código/, 'the errors description does not say the text starts with the code');
+});
+
+// «sin objetivos», «con un objetivo sin identificador»…: the variant names one
+// change on the valid response of the tool in support/debug-contract.js
+When(/^se valida una respuesta de `(\w+)` (.+)$/, function (tool, variant) {
+  const contract = contractOf(this);
+  const { valid, response } = responseVariant(tool, variant);
+  const validate = contract.compile(tool, 'outputSchema');
+  this.debugValidation = {
+    tool,
+    variant,
+    baseValid: validate(valid),
+    valid: validate(response),
+    errors: validate.errors,
+  };
+});
+
+Then('la respuesta cumple el contrato', function () {
+  const { tool, variant, valid, errors } = this.debugValidation;
+  assert.ok(valid, `the response of '${tool}' ${variant} does not meet the contract: ${JSON.stringify(errors)}`);
+});
+
+Then('la respuesta no cumple el contrato', function () {
+  const { tool, variant, baseValid, valid } = this.debugValidation;
+  assert.ok(baseValid, `the valid response of '${tool}' in the support does not meet the contract`);
+  assert.ok(!valid, `the response of '${tool}' ${variant} meets the contract`);
 });
