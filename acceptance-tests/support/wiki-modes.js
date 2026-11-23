@@ -4,10 +4,12 @@
 // suite needs them to know what the session bootstrap core delivers:
 //   - the effective mode of an engine.json: "lite" only when it declares
 //     exactly "lite"; anything else, or nothing, is full
-//   - the text of a mode: a guide or reminder file without the lines of the
-//     other mode's blocks and without the block markers, each one alone on
-//     its line. Malformed blocks (unclosed, of a mode that does not exist,
-//     nested, or a close without an open) throw: the core delivers nothing
+//   - the lines of a guide or reminder file, each with the mode of the block
+//     it is in (null outside the blocks), without the block markers, each one
+//     alone on its line. Malformed blocks (unclosed, of a mode that does not
+//     exist, nested, or a close without an open) throw: the core delivers
+//     nothing
+//   - the text of a mode: those lines without the other mode's
 
 const MODES = ['full', 'lite'];
 const BLOCK_PREFIX = '<!-- wiki-mode:';
@@ -17,10 +19,9 @@ function effectiveMode(engineConfig = {}) {
   return engineConfig.mode === 'lite' ? 'lite' : 'full';
 }
 
-function modeText(text, mode) {
-  if (!MODES.includes(mode)) throw new Error(`'${mode}' is not a wiki mode (${MODES.join(', ')})`);
+function modeLines(text) {
   let block = null;
-  const kept = [];
+  const lines = [];
   text.split('\n').forEach((line, index) => {
     const where = `line ${index + 1}: ${line}`;
     if (line.includes(BLOCK_PREFIX)) {
@@ -35,10 +36,18 @@ function modeText(text, mode) {
       block = opened;
       return;
     }
-    if (block === null || block === mode) kept.push(line);
+    lines.push({ line, mode: block });
   });
   if (block !== null) throw new Error(`unclosed wiki mode block (${block})`);
-  return kept.join('\n');
+  return lines;
 }
 
-module.exports = { MODES, effectiveMode, modeText };
+function modeText(text, mode) {
+  if (!MODES.includes(mode)) throw new Error(`'${mode}' is not a wiki mode (${MODES.join(', ')})`);
+  return modeLines(text)
+    .filter((entry) => entry.mode === null || entry.mode === mode)
+    .map((entry) => entry.line)
+    .join('\n');
+}
+
+module.exports = { MODES, effectiveMode, modeLines, modeText };

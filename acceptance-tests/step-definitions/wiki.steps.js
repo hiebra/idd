@@ -245,6 +245,7 @@ Then('no mencionan el wiki', function () {
 // --- /toggle-wiki (design D4 de add-project-wiki-toggle) ------------------------
 
 const { runToggleWiki, manifests } = require('../support/toggle-wiki');
+const wikiModes = require('../support/wiki-modes');
 const skillsSupport = require('../support/skills');
 const YAML = require('../../node_modules/yaml');
 
@@ -566,6 +567,22 @@ Then('esa guía procede del único archivo de guía del proyecto', function () {
   );
 });
 
+// What is only of the other mode: the lines of its blocks that are not also
+// in the guide of the clone's mode, such as a heading both blocks have
+// (design D8 of add-wiki-lite-mode)
+Then(/^esa guía no incluye lo propio del modo (full|lite)$/, function (other) {
+  const mode = this.project.wikiEffectiveMode();
+  assert.notEqual(mode, other, `the clone is in the ${other} mode`);
+  const own = new Set(this.guideAsDelivered(this.session.agent, mode).split('\n'));
+  const context = deliveredContext(this);
+  const found = wikiModes
+    .modeLines(this.project.readGuide())
+    .filter((entry) => entry.mode === other && entry.line.trim() !== '' && !own.has(entry.line))
+    .map((entry) => entry.line.replace(/<!--[\s\S]*?-->/g, '').trim())
+    .filter((line) => line !== '' && context.includes(line));
+  assert.deepEqual(found, [], `${this.session.agent} received lines of the ${other} mode:\n${this.session.log}`);
+});
+
 Then(new RegExp(`^el adaptador del arranque de ${AGENT} entrega la guía del wiki$`), function (agent) {
   assert.equal(this.session.agent, agent);
   assert.ok(deliveredContext(this).includes(this.guideAsDelivered()), `${agent}:\n${this.session.log}`);
@@ -639,6 +656,9 @@ Then('el agente recibe el mensaje del usuario', function () {
 const GUIDE_SECTIONS = {
   'indica consultar el wiki en modo de solo lectura antes de usar el conocimiento interno': 'consultar-antes',
   'indica consultar primero el wiki del proyecto y después el hub del usuario, si existe': 'orden-de-consulta',
+  'indica consultarlo solo cuando el usuario lo pide expresamente': 'consultar-a-peticion',
+  'indica no consultarlo por iniciativa propia, aunque la petición requiera conocimiento': 'no-consultar-por-iniciativa',
+  'indica consultarlo entonces en modo de solo lectura': 'consultar-a-peticion',
   'incluye las peticiones sobre dominio, decisiones técnicas, herramientas y hechos externos': 'peticiones-con-conocimiento',
   'excluye las operaciones sobre el código que no requieren conocimiento': 'operaciones-sin-conocimiento',
   'indica que el agente discierne en cada caso': 'discernir-peticiones',
@@ -682,6 +702,80 @@ function assertGuideSection(world, id) {
 
 Given('la guía del wiki del proyecto', function () {
   this.guideText = this.ensureProject().readGuide();
+});
+
+// The guide file as the core prepares it for a mode, still with its section
+// identifiers (design D2 and D8 of add-wiki-lite-mode)
+Given(/^la guía del wiki del proyecto en el modo (full|lite)$/, function (mode) {
+  this.guideMode = mode;
+  this.guideText = wikiModes.modeText(this.ensureProject().readGuide(), mode);
+});
+
+// What the guide of a mode does not say: its section identifier is not there
+const GUIDE_ABSENT_SECTIONS = {
+  'no indica consultar el wiki antes de usar el conocimiento interno': ['consultar-antes'],
+  'no indica discernir qué peticiones requieren conocimiento': [
+    'peticiones-con-conocimiento',
+    'operaciones-sin-conocimiento',
+    'discernir-peticiones',
+  ],
+};
+
+for (const [text, ids] of Object.entries(GUIDE_ABSENT_SECTIONS)) {
+  Then(text, function () {
+    for (const id of ids) {
+      const marker = `<!-- wiki-guide:${id} -->`;
+      assert.ok(!this.guideText.includes(marker), `the wiki guide of the ${this.guideMode} mode has the section ${marker}`);
+    }
+  });
+}
+
+// The sections of the guide about when to consult, the only ones of a mode
+// (design D3 of add-wiki-lite-mode)
+const QUERY_SECTIONS = [
+  'peticiones-con-conocimiento',
+  'operaciones-sin-conocimiento',
+  'discernir-peticiones',
+  'consultar-antes',
+  'consultar-a-peticion',
+  'no-consultar-por-iniciativa',
+];
+const SECTION_MARKER = /^<!-- wiki-guide:([\w-]+) -->$/;
+
+function sectionIds(text) {
+  return new Set(text.split('\n').map((line) => line.match(SECTION_MARKER)?.[1]).filter(Boolean));
+}
+
+When(/^se compara con la guía del modo (full|lite)$/, function (mode) {
+  this.comparedMode = mode;
+  this.comparedGuideText = wikiModes.modeText(this.project.readGuide(), mode);
+});
+
+Then('solo cambia lo que indica sobre cuándo consultar el wiki', function () {
+  assert.notEqual(this.guideMode, this.comparedMode, 'the guide is compared with the guide of the same mode');
+  // Outside the mode blocks, both guides have the same lines, from the one
+  // file; inside them, every line but headings and blank lines is in a
+  // section about when to consult
+  const lines = wikiModes.modeLines(this.project.readGuide());
+  let current = null;
+  let previousMode = null;
+  for (const { line, mode } of lines) {
+    if (mode !== previousMode) current = null;
+    previousMode = mode;
+    if (mode === null) continue;
+    const id = line.match(SECTION_MARKER)?.[1];
+    if (id) {
+      assert.ok(QUERY_SECTIONS.includes(id), `the ${mode} mode has its own section ${id}, which is not about when to consult`);
+      current = id;
+    } else if (line.trim() !== '' && !line.startsWith('#')) {
+      assert.ok(current, `a line of the ${mode} mode outside a section about when to consult: ${line}`);
+    }
+  }
+  // And the sections that only one of them has are about when to consult
+  const [ids, comparedIds] = [sectionIds(this.guideText), sectionIds(this.comparedGuideText)];
+  const onlyOne = [...ids].filter((id) => !comparedIds.has(id)).concat([...comparedIds].filter((id) => !ids.has(id)));
+  assert.ok(onlyOne.length > 0, 'the guides of the two modes have the same sections');
+  assert.deepEqual(onlyOne.filter((id) => !QUERY_SECTIONS.includes(id)), []);
 });
 
 When(/^se revisa (?:qué|cómo|cuándo) (?:indica|peticiones exigen) .+$/, function () {
@@ -772,6 +866,19 @@ Then('incluyen resincronizar el wiki del proyecto con estos pasos, en este orden
     assert.ok(at > last, `the archive guidance has no '${paso}' after the previous step:\n${JSON.stringify(guidance, null, 2)}`);
     last = at;
   }
+});
+
+// The resync does not depend on the mode: the wiki entries of the guidance
+// are exactly those of .agents/wiki/archive-guidance.yaml, as in full
+Then('incluyen resincronizar el wiki del proyecto, igual que en el modo full', function () {
+  assert.equal(this.project.wikiEffectiveMode(), 'lite');
+  const source = YAML.parse(fs.readFileSync(this.project.path('.agents', 'wiki', 'archive-guidance.yaml'), 'utf8'));
+  const guidance = this.archiveGuidance.map(String);
+  assert.deepEqual(
+    guidance.filter((entry) => source.includes(entry)),
+    source,
+    `the archive guidance in the lite mode:\n${JSON.stringify(guidance, null, 2)}`
+  );
 });
 
 Then('no incluyen la revisión con el librarian', function () {
