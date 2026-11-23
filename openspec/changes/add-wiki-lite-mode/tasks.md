@@ -4,7 +4,8 @@ Los pasos pendientes salen de `npx cucumber-js --dry-run` sobre `.extracted/chan
 
 ## 1. Punto de partida
 
-- [ ] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core`, `npm run lint:specs`), y guardar la guía y el recordatorio de hoy (`.agents/wiki/guide.md` y `reminder.md`, ya entregados por el núcleo para los dos agentes) como referencia del texto de `full` que no debe cambiar (D2)
+- [x] 1.1 Comprobar que la suite efectiva está en verde antes de tocar nada, salvo los pasos sin definir de este change (`npm test`, `npm run test:core`, `npm run lint:specs`), y guardar la guía y el recordatorio de hoy (`.agents/wiki/guide.md` y `reminder.md`, ya entregados por el núcleo para los dos agentes) como referencia del texto de `full` que no debe cambiar (D2)
+  - Resultado: `npm run test:core` (234 tests) y `npm run lint:specs` en verde. En `npm test`, todos los escenarios pasan salvo los 44 sin definir de este change (118 pasos). Los 15 de `windows-readiness` necesitan `pwsh` (PowerShell 7) y pasan una vez instalado. En una de las dos ejecuciones falló por un `.git/index.lock` el paso `git add -A` de «Falla una operación de sesión» (autopilot), que pasa solo tres veces de tres: es intermitente y ajeno a este change. La referencia del texto de `full` son `.agents/wiki/guide.md` y `.agents/wiki/reminder.md` en el commit `22b779a`, que el test de 2.1 lee de git
 - [ ] 1.2 Comprobar en real que los dos comandos `/toggle-wiki` reciben el argumento con `$ARGUMENTS` (OpenCode 2.3.2 y Claude Code) y fijar con ello el paso `toggle-wiki:mode` de D6. Si no hay banco de OpenCode en la nube, avisar al usuario y seguir con lo que no dependa de él
 
 ## 2. Núcleo: leer el modo y preparar los textos (D1, D2)
