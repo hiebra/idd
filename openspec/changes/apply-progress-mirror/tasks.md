@@ -25,4 +25,4 @@ La suite ya existe (`acceptance-tests/`, `stack: javascript`), así que no hace 
 ## 4. Cierre
 
 - [x] 4.1 Ejecutar la suite completa (`npm test`, `npm run test:core` y `npm run lint:specs` en `acceptance-tests/`): todos los escenarios en verde, sin pasos pendientes ni sin definir, y con el informe HTML generado. Los de `windows-readiness` necesitan `pwsh`; si la máquina no lo tiene, anotarlo.
-- [ ] 4.2 Ejecutar `openspec validate apply-progress-mirror --type change --strict`: ningún `[ERROR]`.
+- [x] 4.2 Ejecutar `openspec validate apply-progress-mirror --type change --strict`: ningún `[ERROR]`.
