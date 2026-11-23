@@ -19,6 +19,7 @@ export const HANDOFF_TOOL = 'openspec_handoff';
 export const SESSION_TOOL = 'openspec_session';
 export const MARK = '[openspec-autopilot]';
 export const START_WORD = 'autopilot';
+export const WORKTREE_TOOL = 'openspec_worktree';
 
 // Workflow (skill) y agente de cada paso
 export const WORKFLOW = {
@@ -44,7 +45,7 @@ const GIT =
 
 const LESSONS =
   `Si en este paso has comprobado algo, o el usuario te ha corregido algo, que servirá en otra ocasión, pásalo en \`lessons\` al llamar a \`${HANDOFF_TOOL}\` (una frase por lección). ` +
-  'Las lecciones no se escriben en el repositorio: se registran en el wiki al archivar el change, si el usuario las confirma.';
+  'Las lecciones no se escriben en el repositorio: con el wiki del proyecto habilitado, se registran en el wiki al archivar el change, si el usuario las confirma; si no, se quedan en la metadata de las sesiones.';
 
 const CLOSE = (what) =>
   `Cuando ${what}, llama a la tool \`${HANDOFF_TOOL}\` una sola vez y termina tu respuesta: el plugin comprueba lo producido y sigue. ` +
@@ -59,7 +60,7 @@ export function stepPrompt({ step, change, description = '', conclusions = '', i
       return (
         `${header}\n\nUsa la skill \`openspec-new-change\` para crear el change de esta rama. ` +
         (description ? `Descripción del usuario:\n\n${description}\n\n` : 'Pregunta al usuario qué quiere construir o arreglar, y espera su respuesta. ') +
-        'Si la rama es permanente o ya tiene otro change, no crees la rama con git: ejecuta `node .agents/openspec/branch-change.mjs start <nombre-del-change>`, que la crea desde la rama de origen y cambia a ella (y `node .agents/openspec/branch-change.mjs list` para ver las ramas temporales con su change). ' +
+        'La rama del change es la de esta sesión, que ya es una rama temporal: no crees ramas ni cambies de rama. ' +
         `Crea solo el change, sin artefactos. ${CLOSE('el change exista en `openspec/changes/`')}`
       );
     case 'artifact':
@@ -75,7 +76,7 @@ export function stepPrompt({ step, change, description = '', conclusions = '', i
         `${header}\n\nUsa la skill \`openspec-verify-change\` para verificar \`${change}\`. No cambies ningún archivo. Al terminar el informe, llama a la tool \`${HANDOFF_TOOL}\` con \`result: "critical"\` si hay algún problema CRITICAL, o \`result: "clean"\` si no hay ninguno, y con un resumen del informe en \`conclusions\`. ${GIT} ${LESSONS}`
       );
     case 'archive':
-      return `${header}\n\nUsa la skill \`openspec-archive-change\` para archivar \`${change}\` en esta rama temporal, sin la resincronización del wiki, que va en el paso siguiente. ${CLOSE('el change esté archivado')}`;
+      return `${header}\n\nUsa la skill \`openspec-archive-change\` para archivar \`${change}\` en esta rama temporal, sin la resincronización del wiki: con el wiki del proyecto habilitado, va en el paso siguiente. ${CLOSE('el change esté archivado')}`;
     case 'wiki': {
       const list = lessons.length > 0 ? lessons.map((l) => `- ${l}`).join('\n') : '- (ninguna)';
       return (
@@ -191,11 +192,13 @@ export function planNoticeText() {
   );
 }
 
-// Lo que recibe el modelo en una sesión que no es la operativa (design D13)
+// Lo que recibe el modelo en una sesión que no es la operativa (design D13 de
+// autopilot-sesion-operativa, D6 de autopilot-rama-por-sesion)
 export function foreignPrompt({ change, title, sessionID }) {
   return (
     `${MARK} Esta sesión no es la sesión operativa. Mientras se edita ${change ? `el change \`${change}\`` : 'un change nuevo'} en modo autopilot, solo se opera con su sesión operativa «${title}» (${sessionID}). ` +
-    'No cambies archivos ni hagas nada del change aquí: di al usuario que vaya a esa sesión.'
+    'No cambies archivos ni hagas nada del change aquí: di al usuario que vaya a esa sesión. ' +
+    `Para trabajar en otro change a la vez, ofrécele crear un worktree nuevo: si lo pide, llama a la tool \`${WORKTREE_TOOL}\` con el nombre que dé (será también el de la rama), y dale lo que te devuelva para abrir la sesión operativa del worktree.`
   );
 }
 

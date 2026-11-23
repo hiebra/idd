@@ -1,17 +1,18 @@
 ---
 title: "Nombrar el change en el título del commit de fusión"
 kind: task
-status: active
+status: archived
 priority: p3
 created: 2026-11-22
 updated: 2026-11-22
 last_checked: 2026-11-22
-next_action: "Proponer un change pequeño para que la skill openspec-git-discipline (sección de la fusión con la rama de origen) recomiende al usuario poner el nombre del change en el título del commit de fusión, también al fusionar una PR en GitHub, y valorar si una puerta debe comprobarlo."
+next_action: "Ninguna: lo hizo name-change-in-merge-title; cerrada."
 sources:
+  - raw/repos/2026-11-22-idd-4b8d2b3-name-change-in-merge-title.md
   - raw/notes/2026-11-22-ll-fusion-no-ff-y-trazabilidad.md
 tags: [git, openspec, no-ff, task]
 confidence: high
-summary: "El título por defecto de una fusión de PR en GitHub no nombra el change, y git log --first-parent deja de servir de índice de changes por nombre."
+summary: "Cerrada: desde name-change-in-merge-title, check merge titula la fusión con una rama permanente Merge <change> into <destino>, y en la nube pide ese título para el PR."
 ---
 
 # Nombrar el change en el título del commit de fusión
@@ -22,8 +23,8 @@ La fusión con `--no-ff` hace que `git log --first-parent` muestre un change por
 
 ## Current State
 
-Ni la skill `openspec-git-discipline` ni ADR-0015 dicen nada sobre el título de la fusión. Hasta que se decida, el usuario puede editar el título al fusionar la PR.
+Cerrada. El change `name-change-in-merge-title` lo resolvió con una puerta, no solo con una recomendación: `check merge` titula la fusión con una rama permanente `Merge <change> into <destino>` (todos los changes en orden alfabético, o la rama si no lleva ninguno). En local es el mensaje del `commit-tree`; en la nube, el título del PR, recomendado también para su commit de fusión. La skill `openspec-git-discipline` lo indica (`idd@4b8d2b3c29273a705c880c0a08ed5fbfb26f71e6:.agents/openspec/branch-change.mjs`, `idd@4b8d2b3c29273a705c880c0a08ed5fbfb26f71e6:.agents/skills/openspec-git-discipline/SKILL.md`; [manifiesto](../../raw/repos/2026-11-22-idd-4b8d2b3-name-change-in-merge-title.md)).
 
 ## Next Action
 
-Proponer el change (p. ej., `name-change-in-merge-title`) que añada la recomendación a la skill y su escenario a la spec `openspec-change-lifecycle`.
+Ninguna.

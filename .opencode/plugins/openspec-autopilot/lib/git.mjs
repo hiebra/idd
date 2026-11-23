@@ -70,6 +70,12 @@ export async function stage(dir, paths = null) {
   await git(dir, ['add', '-A']);
 }
 
+// La rama de HEAD, o null con HEAD separado
+export async function currentBranch(dir) {
+  const result = await run('git', ['symbolic-ref', '--short', '-q', 'HEAD'], { cwd: dir, timeoutMs: 10000 });
+  return result.code === 0 ? result.stdout.trim() || null : null;
+}
+
 export async function treeClean(dir) {
   const porcelain = await git(dir, ['status', '--porcelain=v1']);
   return porcelain.trim() === '';

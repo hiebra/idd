@@ -2,6 +2,8 @@
 title: "La suite de aceptación y spec-as-source"
 category: topic
 sources:
+  - raw/notes/2026-11-22-ll-archive-autopilot-rama-por-sesion.md
+  - raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md
   - raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md
   - raw/notes/2026-11-22-ll-cucumber-rerun.md
   - raw/notes/2026-11-22-ll-apply-guidance-timeout.md
@@ -72,6 +74,7 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - **Repos git de prueba** (desde `manage-git-discipline`): `support/branches.js` monta un remoto bare por proyecto, ramas remotas por delante o divergidas, fusiones con squash, clones superficiales desde `file://` y el entorno de un contenedor efímero, con pruebas propias en `core-tests/branches-support.test.js` (`idd@5d7f5b0:acceptance-tests/support/branches.js`).
 - **Variables del entorno real**: la suite hereda el entorno de la máquina que la ejecuta. En la nube eso incluye `CLAUDE_CODE_CONTAINER_ID` y `CLAUDE_CODE_REMOTE`, que hacen que el proyecto se crea en un contenedor efímero. `cleanEnv` y `sessionEnv` las quitan y solo las pone el escenario que las pide; cualquier variable real que cambie el comportamiento debe tratarse igual (`idd@5d7f5b0:acceptance-tests/support/machine.js`; [lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 4).
 - **Regex con grupos opcionales**: cucumber pasa un argumento por cada grupo capturante y decide por la aridad si la función es de callback. Un grupo opcional que no captura descuadra la cuenta y el paso se cuelga hasta el timeout. Solo deben capturar los grupos que la función recibe ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 2).
+- **La `/` en los pasos definidos con cadena**: en una Cucumber Expression, `/` es una alternativa, así que un paso con `/new` no casa y sale sin definir; escápala (`\\/`) o usa una expresión regular ([lecciones de autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md), lección 1).
 - **Duración en la nube**: el entorno firma cada commit, también los de los repos de prueba, y la suite entera tardó 15-20 minutos en `manage-git-discipline` y 6-7 minutos en las cuatro pasadas de `allow-user-requested-merges`, en otro contenedor. Conviene ejecutarla en segundo plano e iterar con `--name` ([lecciones de manage-git-discipline](../../raw/notes/2026-11-22-ll-manage-git-discipline.md), lección 1; [corrección de allow-user-requested-merges](../../raw/notes/2026-11-22-ll-allow-user-requested-merges-2.md), lección 1).
 - **Dependencias para otra plataforma**: un `node_modules` instalado en Linux no sirve en Windows; los paquetes con `os`/`cpu` en el lockfile solo se instalan en su plataforma (en `acceptance-tests/`, `@esbuild/win32-x64` y `@typescript/typescript-win32-x64`). Se preparan en esa plataforma, y lo que falta se deduce de esos campos del lockfile ([lecciones de windows-support](../../raw/notes/2026-11-22-ll-windows-support.md), lección 2).
 - **`pwsh` es requisito de la suite** (desde `windows-support`, ADR-0017): los escenarios de `windows-readiness` ejecutan el diagnóstico con `pwsh -NoProfile -NonInteractive -File … -FactsFile …`, una vez en texto (del que leen el código de salida) y otra con `-Json` (del que leen el informe), y las dos tienen que terminar igual. Sin `pwsh` fallan diciéndolo; no se saltan. En la nube lo instala el script de configuración del entorno `idd` (`idd@3d2d8fe:acceptance-tests/README.md`).
@@ -90,6 +93,10 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 - Depende de que la simulación de cada agente siga el contrato real. Cuando un agente cambia su API, hay que actualizar el adaptador y su simulación (`idd@1cf0792:adr/0002-agent-neutral-session-bootstrap.md`). Ese contrato se comprueba aparte con los agentes reales (ver [[hook-context-opencode|El hook context de OpenCode]] ([El hook context de OpenCode](../concepts/hook-context-opencode.md)) y [[proveedor-falso-para-verificar-contexto|Proveedor falso para verificar el contexto]] ([Proveedor falso para verificar el contexto](../concepts/proveedor-falso-para-verificar-contexto.md))).
 - **En una sesión en la nube, `windows-readiness` no se ejecuta**: el contenedor no trae `pwsh`, que ADR-0017 exige a la suite, y el modo automático deniega descargarlo; los 15 escenarios fallan por eso. Se cuenta el resto y se decide con el usuario si quedan cubiertos, o se ejecutan en una máquina con `pwsh` ([lecciones de reorder-wiki-resync](../../raw/notes/2026-11-22-ll-reorder-wiki-resync.md), lección 1).
 
+## Entre el sync y el archive
+
+Con los deltas ya sincronizados y el change aún activo, el cargador de specs efectivas avisa de que un requisito REMOVED no existe en `openspec/specs/`: es lo esperado y confirma el sync. El sync puede hacerse por bloques, sustituyendo cada `### Requirement:` por nombre, porque los MODIFIED de los deltas llevan el requisito entero (como recuerda la lección de los escenarios renombrados, más arriba); después se comprueba que cada bloque del delta aparece literal en la spec principal ([lecciones del archive de autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-archive-autopilot-rama-por-sesion.md), lecciones 1 y 2).
+
 ## See Also
 
 - [[soporte-de-windows|El soporte de Windows]] ([El soporte de Windows](soporte-de-windows.md))
@@ -101,6 +108,8 @@ summary: "Cómo la plantilla usa los spec.md como fuente ejecutable de una suite
 
 ## Sources
 
+- [Lessons Learned: archive de autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-archive-autopilot-rama-por-sesion.md): lecciones 1 y 2.
+- [Lessons Learned: autopilot-rama-por-sesion](../../raw/notes/2026-11-22-ll-autopilot-rama-por-sesion.md): lección 1.
 - [Collection: archivado de autopilot-plan-explore (idd@9eae630)](../../raw/repos/2026-11-22-idd-9eae630-autopilot-plan-explore.md): `acceptance-tests/README.md`, `acceptance-tests/support/agents/opencode-sim.mjs`, `acceptance-tests/core-tests/opencode-sim.test.js`.
 - [Lessons Learned: el archivo de rerun de cucumber-js no acota la pasada](../../raw/notes/2026-11-22-ll-cucumber-rerun.md): lección 1.
 - [Lessons Learned: límite de tiempo de syncGuidance (apply-one-task-per-session-in-normal-mode)](../../raw/notes/2026-11-22-ll-apply-guidance-timeout.md): lección 1.

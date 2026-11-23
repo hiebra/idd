@@ -13,9 +13,12 @@
 #         git config idd.sessionBranch, si no hay una guardada. No toca el
 #         árbol de trabajo. Fuera de un contenedor efímero solo usa la red para
 #         completar un clon superficial.
-#       - Instala el motor del wiki en la versión fijada en
-#         .agents/wiki/engine.json, en .agents/wiki-engine/ (ignorado por git),
-#         y lo expone a cada agente con symlinks.
+#       - Con el wiki del proyecto habilitado, instala el motor del wiki en la
+#         versión fijada en .agents/wiki/engine.json, en .agents/wiki-engine/
+#         (ignorado por git), y lo expone a cada agente con symlinks; con el
+#         wiki deshabilitado, retira esos symlinks. Con el wiki habilitado,
+#         avisa si los pasos del wiki de openspec/config.yaml no coinciden con
+#         su fuente; nunca reescribe config.yaml.
 #       - Instala todas las dependencias del proyecto (npm install) en la raíz
 #         y en acceptance-tests/ cuando faltan o han cambiado package.json,
 #         package-lock.json o este script.
@@ -28,7 +31,28 @@
 #   session-bootstrap.sh reminder <agente> <directorio del proyecto>
 #       Por stdout, la guía del wiki o el recordatorio por mensaje, ya
 #       preparados para el agente (claude-code u opencode), o nada si el wiki
-#       está desactivado o no se puede generar.
+#       está deshabilitado o no se puede generar.
+#   session-bootstrap.sh wiki <status|on|off> <directorio del proyecto>
+#       La parte determinista de /toggle-wiki (design D3 de
+#       add-project-wiki-toggle). Por stdout, líneas "clave=valor":
+#       - status: enabled=true|false, wiki-dir=true|false (si existe .wiki/) y,
+#         para la ingesta inicial, source=<ruta> por cada archivo versionado
+#         que entraría y excluded=<ruta>|<motivo> por cada uno que no (lo
+#         generado, informes, lockfiles, la copia del motor, enlaces, archivos
+#         vacíos o de configuración trivial).
+#       - on: pone "enabled": true, inserta los pasos del wiki de
+#         archive-guidance.yaml en operations.archive.guidance de
+#         openspec/config.yaml, entre "# wiki:archive-guidance:begin" y
+#         "# wiki:archive-guidance:end" (crea las claves que falten, dentro de
+#         las marcas), instala y expone el motor como el arranque y pasa al
+#         stage engine.json y config.yaml. Imprime staged=, enabled= y, si el
+#         motor está instalado, wiki-engine=.
+#       - off: pone "enabled": false, quita lo que hay entre las marcas, marcas
+#         incluidas (y guidance, si se queda vacía), retira los symlinks del
+#         motor y pasa al stage los mismos dos archivos. No toca .wiki/.
+#       Ni on ni off hacen commit. Con las marcas mal formadas o repetidas no
+#       cambian nada y avisan. La edición de config.yaml es de texto, línea a
+#       línea: conserva byte a byte el resto del archivo.
 #   session-bootstrap.sh comments-rule <agente> <directorio del proyecto>
 #   session-bootstrap.sh comments-reminder <agente> <directorio del proyecto>
 #       Por stdout, la regla de comentarios, o su recordatorio si el mensaje
@@ -40,8 +64,13 @@
 # En todos los modos, avisos por stderr, uno por línea, con el prefijo
 # "session-start:", y termina siempre con 0: nunca bloquea la sesión.
 #
-# El wiki se desactiva en local con PROJECT_WIKI=off: no se instala el motor,
-# se retiran sus symlinks y la guía y el recordatorio quedan vacíos.
+# El wiki del proyecto está habilitado solo si .agents/wiki/engine.json dice
+# literalmente "enabled": true (design D1 de add-project-wiki-toggle, ADR-0021);
+# vale para todo el proyecto y ninguna variable local lo cambia. Deshabilitado,
+# no se instala el motor, se retiran sus symlinks y la guía y el recordatorio
+# quedan vacíos. Del proyecto solo se leen engine.json, openspec/config.yaml y
+# .wiki/; la guía, el recordatorio, opencode-note.md y archive-guidance.yaml se
+# buscan en ../wiki/ respecto a este script (design D8).
 # La regla de comentarios se desactiva en local con PROJECT_COMMENTS=off.
 #
 # Cada agente tiene su adaptador, que lanza este script, ajusta el entorno de
@@ -52,8 +81,21 @@ set -u
 # Ruta de este script relativa al proyecto, para que el sello no dependa de dónde está el clon
 CORE=".agents/hooks/session-bootstrap.sh"
 
+# Lo que se lee del proyecto (design D8 de add-project-wiki-toggle): el ajuste
+# y la versión del motor, config.yaml y .wiki/
 WIKI_DIR=".agents/wiki"
 ENGINE_JSON="$WIKI_DIR/engine.json"
+CONFIG_YAML="openspec/config.yaml"
+# Lo que viaja con la distribución se busca junto a este script, no en el
+# proyecto (design D8): en este repositorio las dos rutas coinciden
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+DIST_WIKI="${SELF_DIR%/*}/wiki"
+GUIDE_MD="$DIST_WIKI/guide.md"
+REMINDER_MD="$DIST_WIKI/reminder.md"
+OPENCODE_NOTE="$DIST_WIKI/opencode-note.md"
+ARCHIVE_GUIDANCE="$DIST_WIKI/archive-guidance.yaml"
+BLOCK_BEGIN="# wiki:archive-guidance:begin"
+BLOCK_END="# wiki:archive-guidance:end"
 ENGINE_DIR=".agents/wiki-engine"
 ENGINE_STAMP="$ENGINE_DIR/.wiki-engine-ref"
 # Lo que se expone a cada agente (design D1): ruta del agente y destino relativo a ella
@@ -71,9 +113,6 @@ warn() {
   echo "session-start: $*" >&2
 }
 
-wiki_disabled() {
-  [ "${PROJECT_WIKI:-}" = "off" ]
-}
 
 # engine_field NAME: el valor de texto NAME de engine.json, sin depender de Node
 engine_field() {
@@ -121,6 +160,43 @@ link_engine() {
   done
 }
 
+# fetch_engine REPO REF: descarga el motor del wiki en ENGINE_DIR, o avisa.
+# Es la única función que sabe de dónde sale el motor (design D8), para que
+# una instalación global pueda cambiarlo sin tocar el resto
+fetch_engine() {
+  local repo="$1" ref="$2" url want
+  url="$(engine_url "$repo")"
+  want="$ref $repo"
+  local manual="rm -rf $ENGINE_DIR && git clone --depth 1 --branch $ref $url $ENGINE_DIR && echo '$want' > $ENGINE_STAMP"
+  if ! command -v git >/dev/null 2>&1; then
+    warn "falló la instalación del motor del wiki ($repo $ref): hace falta git; se reintentará en la siguiente sesión. Para instalarlo a mano: $manual"
+  else
+    # Se descarga aparte y se sustituye al final, para no dejar nunca una copia a medias
+    local tmp="$ENGINE_DIR.tmp.$$" old="$ENGINE_DIR.old.$$" log stale
+    # Restos de un arranque que se interrumpió (su proceso ya no existe)
+    for stale in "$ENGINE_DIR".tmp.* "$ENGINE_DIR".old.*; do
+      [ -e "$stale" ] || continue
+      kill -0 "${stale##*.}" 2>/dev/null || rm -rf "$stale"
+    done
+    log="$(mktemp)"
+    rm -rf "$tmp"
+    if GIT_TERMINAL_PROMPT=0 timeout 300 git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$ref" "$url" "$tmp" >"$log" 2>&1 &&
+      rm -rf "$tmp/.git" && echo "$want" >"$tmp/.wiki-engine-ref"; then
+      if [ -e "$ENGINE_DIR" ]; then mv "$ENGINE_DIR" "$old"; fi
+      if mv "$tmp" "$ENGINE_DIR"; then
+        rm -rf "$old"
+      else
+        [ -e "$old" ] && mv "$old" "$ENGINE_DIR"
+        warn "no se ha podido sustituir $ENGINE_DIR por el motor del wiki $ref; se reintentará en la siguiente sesión"
+      fi
+    else
+      warn "falló la instalación del motor del wiki ($repo $ref, git clone); se reintentará en la siguiente sesión. Para instalarlo a mano: $manual"
+      tail -n 3 "$log" | sed 's/^/session-start:   /' >&2
+    fi
+    rm -rf "$tmp" "$log"
+  fi
+}
+
 # Instala el motor del wiki en la versión fijada, si falta o es otra (design D1)
 install_wiki_engine() {
   [ -f "$ENGINE_JSON" ] || return
@@ -128,44 +204,16 @@ install_wiki_engine() {
     remove_engine_links
     return
   fi
-  local repo ref url want
+  local repo ref want
   repo="$(engine_field repo)"
   ref="$(engine_field ref)"
   if [ -z "$repo" ] || [ -z "$ref" ]; then
     warn "$ENGINE_JSON no declara \"repo\" y \"ref\"; no se instala el motor del wiki"
     return
   fi
-  url="$(engine_url "$repo")"
   want="$ref $repo"
   if [ "$(cat "$ENGINE_STAMP" 2>/dev/null)" != "$want" ]; then
-    local manual="rm -rf $ENGINE_DIR && git clone --depth 1 --branch $ref $url $ENGINE_DIR && echo '$want' > $ENGINE_STAMP"
-    if ! command -v git >/dev/null 2>&1; then
-      warn "falló la instalación del motor del wiki ($repo $ref): hace falta git; se reintentará en la siguiente sesión. Para instalarlo a mano: $manual"
-    else
-      # Se descarga aparte y se sustituye al final, para no dejar nunca una copia a medias
-      local tmp="$ENGINE_DIR.tmp.$$" old="$ENGINE_DIR.old.$$" log stale
-      # Restos de un arranque que se interrumpió (su proceso ya no existe)
-      for stale in "$ENGINE_DIR".tmp.* "$ENGINE_DIR".old.*; do
-        [ -e "$stale" ] || continue
-        kill -0 "${stale##*.}" 2>/dev/null || rm -rf "$stale"
-      done
-      log="$(mktemp)"
-      rm -rf "$tmp"
-      if GIT_TERMINAL_PROMPT=0 timeout 300 git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$ref" "$url" "$tmp" >"$log" 2>&1 &&
-        rm -rf "$tmp/.git" && echo "$want" >"$tmp/.wiki-engine-ref"; then
-        if [ -e "$ENGINE_DIR" ]; then mv "$ENGINE_DIR" "$old"; fi
-        if mv "$tmp" "$ENGINE_DIR"; then
-          rm -rf "$old"
-        else
-          [ -e "$old" ] && mv "$old" "$ENGINE_DIR"
-          warn "no se ha podido sustituir $ENGINE_DIR por el motor del wiki $ref; se reintentará en la siguiente sesión"
-        fi
-      else
-        warn "falló la instalación del motor del wiki ($repo $ref, git clone); se reintentará en la siguiente sesión. Para instalarlo a mano: $manual"
-        tail -n 3 "$log" | sed 's/^/session-start:   /' >&2
-      fi
-      rm -rf "$tmp" "$log"
-    fi
+    fetch_engine "$repo" "$ref"
   fi
   [ -d "$ENGINE_DIR/claude-plugin" ] || return
   link_engine
@@ -289,10 +337,14 @@ prepare_git() {
     fi
   fi
   rm -f "$log"
-  local current name old new
+  local current name old new checked
   current="$(git symbolic-ref --short -q HEAD 2>/dev/null)"
+  # Las ramas sacadas en cualquier directorio del clon (el principal o un
+  # worktree): update-ref movería la referencia sin su árbol ni su índice
+  # (design D11 de autopilot-rama-por-sesion)
+  checked=" $current $(git worktree list --porcelain 2>/dev/null | sed -n 's|^branch refs/heads/||p' | tr '\n' ' ')"
   for name in $permanent; do
-    [ "$name" = "$current" ] && continue
+    case "$checked" in *" $name "*) continue ;; esac
     old="$(git rev-parse --verify -q "refs/heads/$name" 2>/dev/null)" || continue
     new="$(git rev-parse --verify -q "refs/remotes/origin/$name" 2>/dev/null)" || continue
     [ "$old" = "$new" ] && continue
@@ -309,6 +361,280 @@ prepare_git() {
   fi
 }
 
+# --- wiki: el ajuste del proyecto y /toggle-wiki (design D1-D3 de add-project-wiki-toggle) ---
+
+# El wiki está habilitado solo si engine.json dice literalmente "enabled": true.
+# Un archivo que falta, un error o cualquier otro valor lo dejan deshabilitado
+wiki_enabled() {
+  [ -f "$ENGINE_JSON" ] &&
+    grep -qE '"enabled"[[:space:]]*:[[:space:]]*true([^A-Za-z0-9_."]|$)' "$ENGINE_JSON" 2>/dev/null
+}
+
+wiki_disabled() {
+  ! wiki_enabled
+}
+
+# set_enabled true|false: cambia "enabled" en engine.json sin reescribir el resto
+set_enabled() {
+  local value="$1" tmp
+  if [ ! -f "$ENGINE_JSON" ] || ! grep -q '"' "$ENGINE_JSON" 2>/dev/null; then
+    mkdir -p "$WIKI_DIR" && printf '{\n  "enabled": %s\n}\n' "$value" >"$ENGINE_JSON"
+    return
+  fi
+  tmp="$(mktemp)" || return 1
+  if grep -qE '"enabled"[[:space:]]*:' "$ENGINE_JSON"; then
+    sed -E "s/(\"enabled\"[[:space:]]*:[[:space:]]*)(\"[^\"]*\"|[A-Za-z0-9_.+-]+)/\1$value/" "$ENGINE_JSON" >"$tmp"
+  elif grep -qE '^[[:space:]]*\{[[:space:]]*$' "$ENGINE_JSON"; then
+    awk -v v="$value" '!done && /^[[:space:]]*\{[[:space:]]*$/ { print; print "  \"enabled\": " v ","; done = 1; next } { print }' "$ENGINE_JSON" >"$tmp"
+  else
+    awk -v v="$value" '!done && sub(/\{/, "{ \"enabled\": " v ",") { done = 1 } { print }' "$ENGINE_JSON" >"$tmp"
+  fi
+  cat "$tmp" >"$ENGINE_JSON"
+  rm -f "$tmp"
+}
+
+# Edición de texto, línea a línea, del bloque de pasos del wiki en
+# operations.archive.guidance de config.yaml (design D2). No reescribe el YAML:
+# conserva comentarios, orden y formato del resto. Modos:
+#   check   imprime none, one o bad según las marcas
+#   remove  config.yaml sin el bloque (marcas incluidas); si guidance queda
+#           vacía, también sin ella
+#   insert  config.yaml con el bloque al final de guidance; crea guidance,
+#           archive u operations, dentro del bloque, si faltan
+#   extract las entradas que hay dentro del bloque, sin sangría
+# Códigos de salida: 0 bien; 2 marcas mal formadas; 3 no hay dónde ponerlo
+# (por ejemplo, "guidance: []"); 4 quitarlo dejaría líneas huérfanas
+BLOCK_AWK='
+function ind(s) { match(s, /^ */); return RLENGTH }
+function blankish(s) { return s ~ /^[ \t]*$/ || s ~ /^[ \t]*#/ }
+function keyonly(s) { return s ~ /^ *[A-Za-z_][A-Za-z0-9_-]*:[ \t]*(#.*)?$/ }
+function keyname(s,   t) { t = s; sub(/^ */, "", t); sub(/:.*/, "", t); return t }
+function ismarker(s, m,   t) { t = s; sub(/^[ \t]*/, "", t); sub(/[ \t]*$/, "", t); return t == m }
+# Última línea que pertenece a la clave de la línea k, sin las finales en blanco o de comentario
+function extent(k,   i, ki, last) {
+  ki = ind(L[k]); last = k
+  for (i = k + 1; i <= n; i++) {
+    if (blankish(L[i])) continue
+    if (ind(L[i]) > ki || (ind(L[i]) == ki && L[i] ~ /^ *-( |$)/)) { last = i; continue }
+    break
+  }
+  return last
+}
+# La sangría de los hijos de la clave de la línea k, o -1 si no tiene
+function childind(k,   e, i) {
+  e = extent(k)
+  for (i = k + 1; i <= e; i++) if (!blankish(L[i])) return ind(L[i])
+  return -1
+}
+# La línea de la clave hija NAME de la línea k (0 si no está, -1 si tiene un valor en línea)
+function child(k, name,   e, ci, i) {
+  e = extent(k); ci = childind(k)
+  for (i = k + 1; i <= e; i++) {
+    if (blankish(L[i]) || ind(L[i]) != ci) continue
+    if (keyname(L[i]) == name && L[i] ~ /^ *[A-Za-z_][A-Za-z0-9_-]*:/) return keyonly(L[i]) ? i : -1
+  }
+  return 0
+}
+function sp(k,   s) { s = ""; while (k-- > 0) s = s " "; return s }
+function emit(i) { print L[i] }
+BEGIN { b = 0; e = 0; nb = 0; ne = 0; bad = 0 }
+{ L[++n] = $0
+  if (ismarker($0, BEGIN_M)) { nb++; if (!b) b = n; if (e) bad = 1 }
+  if (ismarker($0, END_M)) { ne++; if (!e) e = n; if (!b) bad = 1 } }
+END {
+  if (nb > 1 || ne > 1 || nb != ne || bad || (b && e < b)) state = "bad"
+  else state = nb ? "one" : "none"
+  if (mode == "check") { print state; exit 0 }
+  if (state == "bad") exit 2
+  if (mode == "extract") {
+    if (state != "one") exit 0
+    first = 0
+    for (i = b + 1; i < e; i++) if (L[i] ~ /^ *-( |$)/) { first = i; break }
+    if (!first) exit 0
+    d = ind(L[first])
+    for (i = first; i < e; i++) print substr(L[i], d + 1)
+    exit 0
+  }
+  if (mode == "remove") {
+    if (state == "none") { for (i = 1; i <= n; i++) emit(i); exit 0 }
+    # Lo que va después del bloque no puede colgar de una clave que se quita con él
+    keys = 0
+    for (i = b + 1; i < e; i++) if (keyonly(L[i])) { keys = 1; top = ind(L[i]); break }
+    if (keys) for (i = e + 1; i <= n; i++) { if (blankish(L[i])) continue; if (ind(L[i]) > top) exit 4; break }
+    # La clave de la que cuelga el bloque, y si se queda sin hijos
+    owner = 0
+    for (i = b - 1; i >= 1; i--) if (keyonly(L[i]) && ind(L[i]) <= ind(L[b])) { owner = i; break }
+    drop = 0
+    if (owner && keyname(L[owner]) == "guidance") {
+      empty = 1
+      for (i = owner + 1; i <= n; i++) {
+        if (i >= b && i <= e) continue
+        if (blankish(L[i])) continue
+        if (ind(L[i]) > ind(L[owner]) || (ind(L[i]) == ind(L[owner]) && L[i] ~ /^ *-( |$)/)) empty = 0
+        break
+      }
+      if (empty) drop = owner
+    }
+    for (i = 1; i <= n; i++) if ((i < b || i > e) && i != drop) emit(i)
+    exit 0
+  }
+  # insert
+  if (state == "one") exit 2
+  nsrc = 0
+  while ((getline line < SRC) > 0) { if (!nsrc && (line ~ /^#/ || line ~ /^[ \t]*$/)) continue; S[++nsrc] = line }
+  o = 0
+  for (i = 1; i <= n; i++) if (L[i] ~ /^operations:/) { if (!keyonly(L[i])) exit 3; o = i; break }
+  if (!o) {
+    at = n; pre = "operations:\n  archive:\n    guidance:\n"; d = 6
+  } else {
+    ci = childind(o); if (ci < 0) ci = 2
+    a = child(o, "archive"); if (a < 0) exit 3
+    if (!a) { at = extent(o); pre = sp(ci) "archive:\n" sp(ci + 2) "guidance:\n"; d = ci + 4 }
+    else {
+      ai = childind(a); if (ai < 0) ai = ind(L[a]) + 2
+      g = child(a, "guidance"); if (g < 0) exit 3
+      if (!g) { at = extent(a); pre = sp(ai) "guidance:\n"; d = ai + 2 }
+      else { at = extent(g); pre = ""; gi = childind(g); d = gi < 0 ? ind(L[g]) + 2 : gi }
+    }
+  }
+  # Las claves que se crean van dentro del bloque, para que quitarlo las quite
+  mi = pre == "" ? d : (o ? (a ? ai : ci) : 0)
+  for (i = 1; i <= at; i++) emit(i)
+  print sp(mi) BEGIN_M
+  printf "%s", pre
+  for (j = 1; j <= nsrc; j++) print (S[j] == "" ? "" : sp(d) S[j])
+  print sp(mi) END_M
+  for (i = at + 1; i <= n; i++) emit(i)
+}'
+
+# block_awk MODO [ARCHIVO]: ejecuta BLOCK_AWK sobre config.yaml
+block_awk() {
+  awk -v mode="$1" -v SRC="$ARCHIVE_GUIDANCE" -v BEGIN_M="$BLOCK_BEGIN" -v END_M="$BLOCK_END" "$BLOCK_AWK" "${2:-$CONFIG_YAML}"
+}
+
+# edit_block insert|remove: aplica el cambio a config.yaml, o avisa y no lo toca
+edit_block() {
+  local action="$1" tmp status
+  if [ ! -f "$CONFIG_YAML" ]; then
+    warn "no existe $CONFIG_YAML; no se cambian las indicaciones de archivado"
+    return 0
+  fi
+  if [ "$(block_awk check)" = "bad" ]; then
+    warn "las marcas '$BLOCK_BEGIN' y '$BLOCK_END' de $CONFIG_YAML están mal formadas o repetidas; no se toca el archivo. Deja como mucho un par, con la de inicio antes que la de fin, y vuelve a ejecutar /toggle-wiki"
+    return 1
+  fi
+  if [ "$action" = "insert" ] && [ ! -f "$ARCHIVE_GUIDANCE" ]; then
+    warn "no se encuentra $ARCHIVE_GUIDANCE, la fuente de los pasos del wiki; no se toca $CONFIG_YAML"
+    return 1
+  fi
+  tmp="$(mktemp)" || return 1
+  if [ "$action" = "insert" ] && [ "$(block_awk check)" = "one" ]; then
+    # Se sustituye: primero se quita el bloque que hay
+    block_awk remove >"$tmp" && block_awk insert "$tmp" >"$tmp.2" && mv "$tmp.2" "$tmp"
+  else
+    block_awk "$action" >"$tmp"
+  fi
+  status=$?
+  case "$status" in
+    0) cat "$tmp" >"$CONFIG_YAML" ;;
+    3) warn "no se sabe dónde poner los pasos del wiki en $CONFIG_YAML (operations, archive o guidance tienen un valor en la misma línea); no se toca el archivo" ;;
+    4) warn "quitar los pasos del wiki de $CONFIG_YAML dejaría líneas sin la clave de la que cuelgan; no se toca el archivo" ;;
+    *) warn "no se ha podido editar $CONFIG_YAML; no se toca el archivo" ;;
+  esac
+  rm -f "$tmp" "$tmp.2"
+  [ "$status" -eq 0 ]
+}
+
+# Con el wiki habilitado, avisa si los pasos de config.yaml no coinciden con su fuente (design D2)
+warn_stale_block() {
+  wiki_enabled || return 0
+  [ -f "$CONFIG_YAML" ] && [ -f "$ARCHIVE_GUIDANCE" ] || return 0
+  [ "$(block_awk check)" = "one" ] || return 0
+  local current wanted
+  current="$(block_awk extract)"
+  wanted="$(awk 'started || !(/^#/ || /^[ \t]*$/) { started = 1; print }' "$ARCHIVE_GUIDANCE")"
+  [ "$current" = "$wanted" ] && return 0
+  warn "los pasos del wiki de $CONFIG_YAML no coinciden con su fuente ($ARCHIVE_GUIDANCE); para ponerlos al día, ejecuta /toggle-wiki dos veces y haz el commit"
+}
+
+# wiki_status: el ajuste, si existe .wiki/ y qué entraría en la ingesta inicial
+wiki_status() {
+  if wiki_enabled; then echo "enabled=true"; else echo "enabled=false"; fi
+  if [ -d .wiki ]; then echo "wiki-dir=true"; else echo "wiki-dir=false"; fi
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  local mode file reason
+  # Solo lo versionado; los symlinks son otra vía a lo que ya entra (ADR-0003)
+  git ls-files -s -z 2>/dev/null | while IFS= read -r -d '' line; do
+    mode="${line%% *}"
+    file="${line#*$'\t'}"
+    reason="$(ingest_exclusion "$file" "$mode")"
+    if [ -n "$reason" ]; then
+      echo "excluded=$file|$reason"
+    else
+      echo "source=$file"
+    fi
+  done
+}
+
+# ingest_exclusion RUTA MODO: por qué la ruta no entra en la ingesta inicial, o nada
+# (la lista de exclusiones de la guía del wiki)
+ingest_exclusion() {
+  local file="$1" mode="$2" base="${1##*/}"
+  case "/$file" in
+    /.wiki/*) echo "el propio wiki"; return ;;
+    /"$ENGINE_DIR"/* | /"$ENGINE_DIR".*) echo "la copia del motor"; return ;;
+    */node_modules/*) echo "generado"; return ;;
+    */.extracted/*) echo "generado"; return ;;
+    */reports/*) echo "informe"; return ;;
+  esac
+  case "$base" in
+    package-lock.json | npm-shrinkwrap.json | yarn.lock | pnpm-lock.yaml | bun.lockb | *.lock) echo "lockfile"; return ;;
+    .gitignore | .gitattributes | .editorconfig | .npmrc | .nvmrc | .node-version | .prettierignore) echo "configuración trivial"; return ;;
+  esac
+  if [ "$mode" = "120000" ]; then echo "enlace"; return; fi
+  if [ ! -s "$file" ]; then echo "vacío"; return; fi
+}
+
+# wiki_toggle on|off: la parte determinista de /toggle-wiki (design D3)
+wiki_toggle() {
+  local action="$1"
+  if [ "$action" = "on" ]; then
+    edit_block insert || return 0
+    set_enabled true || warn "no se ha podido cambiar \"enabled\" en $ENGINE_JSON"
+    install_wiki_engine
+    keep_wiki_versioned
+  else
+    edit_block remove || return 0
+    set_enabled false || warn "no se ha podido cambiar \"enabled\" en $ENGINE_JSON"
+    remove_engine_links
+  fi
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    local files=("$ENGINE_JSON")
+    [ -f "$CONFIG_YAML" ] && files+=("$CONFIG_YAML")
+    git add -- "${files[@]}" 2>/dev/null || warn "no se han podido pasar al stage ${files[*]}"
+    echo "staged=${files[*]}"
+  fi
+  if wiki_enabled; then echo "enabled=true"; else echo "enabled=false"; fi
+}
+
+# wiki_mode status|on|off DIRECTORIO
+wiki_mode() {
+  local action="${1:-}" dir="${2:-}"
+  case "$action" in status | on | off) ;; *)
+    warn "uso: session-bootstrap.sh wiki <status|on|off> <directorio del proyecto>"
+    return
+    ;;
+  esac
+  if [ -z "$dir" ] || ! cd "$dir" 2>/dev/null; then
+    warn "no se puede entrar en el directorio del proyecto ('$dir')"
+    return
+  fi
+  case "$action" in
+    status) wiki_status ;;
+    *) wiki_toggle "$action" ;;
+  esac
+}
+
 main() {
   if [ -z "${1:-}" ] || ! cd "$1"; then
     warn "no se puede entrar en el directorio del proyecto ('${1:-}')"
@@ -318,6 +644,7 @@ main() {
   # El motor no depende de Node, así que va antes y se instala aunque falte npm
   install_wiki_engine
   wiki_disabled || keep_wiki_versioned
+  warn_stale_block
   install_dependencies
 }
 
@@ -328,19 +655,18 @@ wiki_text() {
   local mode="$1" agent="$2" dir="${3:-}"
   if [ -z "$dir" ] || ! cd "$dir" 2>/dev/null; then return; fi
   wiki_disabled && return
-  [ -f "$ENGINE_JSON" ] || return
   case "$agent" in claude-code | opencode) ;; *) return ;; esac
   local text
   if [ "$mode" = "guide" ]; then
     # Sin los identificadores de sección, que solo sirven para revisarla
-    text="$(sed '/^<!-- wiki-guide:[a-z0-9-]* -->$/d' "$WIKI_DIR/guide.md" 2>/dev/null)" || return
+    text="$(sed '/^<!-- wiki-guide:[a-z0-9-]* -->$/d' "$GUIDE_MD" 2>/dev/null)" || return
     [ -n "$text" ] || return
     if [ "$agent" = "opencode" ]; then
       local note
-      note="$(cat "$WIKI_DIR/opencode-note.md" 2>/dev/null)" && [ -n "$note" ] && text="$note"$'\n\n'"$text"
+      note="$(cat "$OPENCODE_NOTE" 2>/dev/null)" && [ -n "$note" ] && text="$note"$'\n\n'"$text"
     fi
   else
-    text="$(cat "$WIKI_DIR/reminder.md" 2>/dev/null)" || return
+    text="$(cat "$REMINDER_MD" 2>/dev/null)" || return
   fi
   text="$(fill_markers "$agent" "$text")"
   # Un texto vacío o con marcadores desconocidos no se entrega
@@ -431,6 +757,7 @@ comments_text() {
 
 case "${1:-}" in
   guide | reminder) wiki_text "$@" ;;
+  wiki) shift; wiki_mode "$@" ;;
   comments-rule) shift; comments_text rule "$@" ;;
   comments-reminder) shift; comments_text reminder "$@" ;;
   *) main "$@" ;;
